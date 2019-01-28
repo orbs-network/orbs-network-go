@@ -7,11 +7,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("NO_LOG_STDOUT") == "true" {
-		logs := config.GetProjectSourceRootPath() + "/_logs/acceptance/"
-		os.RemoveAll(logs)
-		os.MkdirAll(logs, 0755)
-	}
+	logs := config.GetProjectSourceRootPath() + "/_logs/acceptance/"
+	os.RemoveAll(logs)
+	os.MkdirAll(logs, 0755)
 
 	os.Exit(m.Run())
 }
