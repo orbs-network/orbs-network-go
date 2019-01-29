@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -18,7 +16,7 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			contract := network.BenchmarkTokenContract()
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 			// leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
 
@@ -37,8 +35,7 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 			ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 			defer cancel()
 
-			contract := network.BenchmarkTokenContract()
-			contract.DeployBenchmarkToken(ctx, 5)
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			// In benchmark consensus, leader is nodeIndex 0, validator is nodeIndex 1
 			// In Lean Helix, leader and validators are random
@@ -70,8 +67,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
-			contract := network.BenchmarkTokenContract()
-			contract.DeployBenchmarkToken(ctx, 5)
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			// leader is nodeIndex 0, validator is nodeIndex 1
 
@@ -85,9 +81,6 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 				t.Errorf("failed waiting for block on node 1: %s", err)
 			}
 
-			requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 0, "expected to read initial getBalance result on leader")
-			requireBalanceInNodeEventually(ctx, t, contract, 0, 6, 1, "expected to read initial getBalance result on non-leader")
-
 			pausedTxForwards.StopTampering(ctx)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "eventual getBalance result on leader")
@@ -96,26 +89,12 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 		})
 }
 
-func requireBalanceInNodeEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient, expectedBalance uint64, forAddressIndex int, nodeIndex int, msgAndArguments ...interface{}) {
-	require.True(t, test.Eventually(3*time.Second, func() (success bool) {
-		defer func() { // silence panics
-			if err := recover(); err != nil {
-				t.Log("silenced panic in eventually loop", err)
-				success = false
-			}
-		}()
-		success = expectedBalance == contract.GetBalance(ctx, nodeIndex, forAddressIndex)
-		return
-	}), msgAndArguments)
-}
-
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
-		contract := network.BenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 5)
+		contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 		// leader is nodeIndex 0, validator is nodeIndex 1
 
