@@ -102,37 +102,29 @@ workflows:
   version: 2
   build:
     jobs:
-#      - tests
-#      - e2e
-#      - flakiness
-#      - notify_github_about_dashboard
-#      - autonomous_swap
-#      - success:
-#          requires:
-#            - tests
-#            - flakiness
-#            - autonomous_swap
-#      - deploy_testnet:
-#          requires:
-#            - e2e
+      - tests
+      - e2e
+      - flakiness
+      - notify_github_about_dashboard
+      - autonomous_swap
+      - success:
+          requires:
+            - tests
+            - flakiness
+            - autonomous_swap
+      - deploy_testnet:
+          requires:
+            - e2e
 #          filters:
 #            branches:
 #              only:
 #                - master
-      - e2e_testnet_benchmark
-#          requires:
-#            - deploy_testnet
-#          filters:
-#            branches:
-#              only:
-#                - master
-      - e2e_testnet_leanhelix
-#          requires:
-#            - deploy_testnet
-#          filters:
-#            branches:
-#              only:
-#                - master
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release_gamma:
           filters:
             tags:
