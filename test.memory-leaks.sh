@@ -1,6 +1,6 @@
 #!/bin/sh
 
-NO_LOG_STDOUT=true go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 > test.out
+go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 > test.out
 
 export EXIT_CODE=$?
 

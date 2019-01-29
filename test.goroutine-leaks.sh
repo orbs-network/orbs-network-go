@@ -1,7 +1,7 @@
 #!/bin/sh
 
 mkdir -p _out
-NO_LOG_STDOUT=true go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 > _out/test.out
+go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 > _out/test.out
 
 export EXIT_CODE=$?
 
