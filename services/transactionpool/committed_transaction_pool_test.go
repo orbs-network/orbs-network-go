@@ -28,7 +28,7 @@ func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 		p.add(r2, primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()), bh, bts)
 		p.add(r3, primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()), bh, bts)
 
-		p.clearTransactionsOlderThan(ctx, time.Now().Add(-30*time.Minute))
+		p.clearTransactionsOlderThan(ctx, primitives.TimestampNano(time.Now().Add(-30*time.Minute).UnixNano()))
 
 		require.True(t, p.has(r1.Txhash()), "cleared non-expired transaction")
 		require.True(t, p.has(r2.Txhash()), "cleared non-expired transaction")

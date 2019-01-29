@@ -53,8 +53,8 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, logger)
-	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, logger)
+	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger)
+	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger)
 
 	return s
 }

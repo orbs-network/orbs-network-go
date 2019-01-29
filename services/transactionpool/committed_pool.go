@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
-	"time"
 )
 
 type committedTxPool struct {
@@ -76,12 +75,12 @@ func (p *committedTxPool) has(txHash primitives.Sha256) bool {
 	return ok
 }
 
-func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, time time.Time) {
+func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano) {
 	p.Lock()
 	defer p.Unlock()
 
 	for _, tx := range p.transactions {
-		if int64(tx.submitted) < time.UnixNano() {
+		if tx.submitted < timestamp {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
 			fmt.Println("removed tx from pool", tx.receipt.Txhash().String())
 

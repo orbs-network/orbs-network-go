@@ -116,7 +116,7 @@ func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
 		tx3 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-31 * time.Minute)).Build()
 		add(p, tx1, tx2, tx3)
 
-		p.clearTransactionsOlderThan(ctx, time.Now().Add(-30*time.Minute))
+		p.clearTransactionsOlderThan(ctx, primitives.TimestampNano(time.Now().Add(-30*time.Minute).UnixNano()))
 
 		require.True(t, p.has(tx1), "cleared non-expired transaction")
 		require.True(t, p.has(tx2), "cleared non-expired transaction")
