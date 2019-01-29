@@ -139,7 +139,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				restart := func() NetworkHarness {
 					cancelNetwork()
 					network.Destroy()
-					time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+					time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 
 					// signal the old network to stop
 					networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
@@ -154,7 +154,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 
 				logger.Info("acceptance network running test")
 				f(ctx, network, restart)
-				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+				time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 			})
 		}
 
