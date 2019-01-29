@@ -24,8 +24,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	).Start(func(ctx context.Context, network NetworkHarness) {
 		ts := time.Now()
 
-		contract := network.BenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 1)
+		network.DeployBenchmarkTokenContract(ctx, 1)
 
 		// send three identical transactions to two nodes
 		tx := builders.TransferTransaction().WithTimestamp(ts).Builder()
@@ -64,8 +63,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ts := time.Now()
-		contract := network.BenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 1)
+		network.DeployBenchmarkTokenContract(ctx, 1)
 
 		// send three identical transactions to two nodes
 		tx := builders.TransferTransaction().WithTimestamp(ts).Builder()
