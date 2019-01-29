@@ -26,12 +26,12 @@ func (s *service) GetTransactionReceiptProof(parentCtx context.Context, input *s
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("get transaction receipt proof received input failed", log.Error(err))
-		return toGetTxProofOutput(toGetTxStatusOutput(&txOutput{transactionStatus: txStatus}), nil), err
+		return toGetTxProofOutput(toGetTxStatusOutput(s.config, &txOutput{transactionStatus: txStatus}), nil), err
 	}
 
 	logger.Info("get transaction receipt proof request received")
 
-	txStatusOutput, err := s.getTransactionStatus(ctx, txHash, tx.TransactionTimestamp())
+	txStatusOutput, err := s.getTransactionStatus(ctx, s.config, txHash, tx.TransactionTimestamp())
 	if err != nil || txStatusOutput == nil || txStatusOutput.ClientResponse.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
 		if err != nil || txStatusOutput == nil {
 			logger.Info("get transaction receipt proof failed to get transaction txStatus", log.Error(err))
@@ -57,7 +57,6 @@ func toGetTxProofOutput(txStatusOutput *services.GetTransactionStatusOutput, pro
 	var txStatus protocol.TransactionStatus
 	var requestResult *client.RequestResultBuilder
 	var transactionReceipt *protocol.TransactionReceiptBuilder
-
 	if txStatusOutput != nil {
 		txStatus = txStatusOutput.ClientResponse.TransactionStatus()
 		requestResult = client.RequestResultBuilderFromRaw(txStatusOutput.ClientResponse.RequestResult().Raw())

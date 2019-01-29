@@ -75,7 +75,7 @@ func newTransactionBatch(logger log.BasicLogger, transactions Transactions) *tra
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
 	//TODO(v1) fail if requested block height is in the past
-	s.logger.Info("GetTransactionsForOrdering called for block height", trace.LogFieldFrom(ctx), log.BlockHeight(input.CurrentBlockHeight))
+	s.logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), log.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()

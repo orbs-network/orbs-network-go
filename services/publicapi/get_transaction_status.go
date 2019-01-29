@@ -2,6 +2,7 @@ package publicapi
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -27,27 +28,27 @@ func (s *service) GetTransactionStatus(parentCtx context.Context, input *service
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("get transaction status received input failed", log.Error(err))
-		return toGetTxStatusOutput(&txOutput{transactionStatus: txStatus}), err
+		return toGetTxStatusOutput(s.config, &txOutput{transactionStatus: txStatus}), err
 	}
 
 	logger.Info("get transaction status request received")
 
-	return s.getTransactionStatus(ctx, txHash, tx.TransactionTimestamp())
+	return s.getTransactionStatus(ctx, s.config, txHash, tx.TransactionTimestamp())
 }
 
-func (s *service) getTransactionStatus(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*services.GetTransactionStatusOutput, error) {
+func (s *service) getTransactionStatus(ctx context.Context, config config.PublicApiConfig, txHash primitives.Sha256, txTimestamp primitives.TimestampNano) (*services.GetTransactionStatusOutput, error) {
 	start := time.Now()
 	defer s.metrics.getTransactionStatusTime.RecordSince(start)
 
-	if txReceipt, err, ok := s.getFromTxPool(ctx, txHash, timestamp); ok {
-		return toGetTxStatusOutput(txReceipt), err
+	if txReceipt, err, done := s.getFromTxPool(ctx, txHash, txTimestamp); done {
+		return toGetTxStatusOutput(config, txReceipt), err
 	}
 
-	blockReceipt, err := s.getFromBlockStorage(ctx, txHash, timestamp)
+	blockReceipt, err := s.getFromBlockStorage(ctx, txHash, txTimestamp)
 	if err != nil {
 		return nil, err
 	}
-	return toGetTxStatusOutput(blockReceipt), err
+	return toGetTxStatusOutput(config, blockReceipt), err
 }
 
 func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, timestamp primitives.TimestampNano) (*txOutput, error, bool) {
@@ -59,7 +60,7 @@ func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, t
 		s.logger.Info("get transaction txStatus failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 		return poolOutputToTxOutput(txReceipt), err, true
 	}
-	if txReceipt.TransactionStatus != protocol.TRANSACTION_STATUS_NO_RECORD_FOUND {
+	if txReceipt.TransactionStatus == protocol.TRANSACTION_STATUS_PENDING || txReceipt.TransactionStatus == protocol.TRANSACTION_STATUS_COMMITTED {
 		return poolOutputToTxOutput(txReceipt), nil, true
 	}
 	return nil, nil, false
@@ -99,7 +100,7 @@ func blockOutputToTxOutput(t *services.GetTransactionReceiptOutput) *txOutput {
 	}
 }
 
-func toGetTxStatusOutput(out *txOutput) *services.GetTransactionStatusOutput {
+func toGetTxStatusOutput(config config.PublicApiConfig, out *txOutput) *services.GetTransactionStatusOutput {
 	response := &client.GetTransactionStatusResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
 			RequestStatus:  translateTransactionStatusToRequestStatus(out.transactionStatus, protocol.EXECUTION_RESULT_RESERVED),
@@ -112,6 +113,9 @@ func toGetTxStatusOutput(out *txOutput) *services.GetTransactionStatusOutput {
 	if out.transactionReceipt != nil {
 		response.RequestResult.RequestStatus = translateTransactionStatusToRequestStatus(out.transactionStatus, out.transactionReceipt.ExecutionResult())
 		response.TransactionReceipt = protocol.TransactionReceiptBuilderFromRaw(out.transactionReceipt.Raw())
+	}
+	if response.TransactionReceipt == nil && isOutputPotentiallyOutOfSync(config, out.blockTimestamp) {
+		response.RequestResult.RequestStatus = protocol.REQUEST_STATUS_OUT_OF_SYNC
 	}
 	return &services.GetTransactionStatusOutput{ClientResponse: response.Build()}
 }

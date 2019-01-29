@@ -24,8 +24,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 	).Start(func(ctx context.Context, network NetworkHarness) {
 		ts := time.Now()
 
-		contract := network.BenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 1)
+		network.DeployBenchmarkTokenContract(ctx, 1)
 
 		// send three identical transactions to two nodes
 		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
@@ -79,8 +78,7 @@ func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
 	).Start(func(ctx context.Context, network NetworkHarness) {
 
 		ts := time.Now()
-		contract := network.BenchmarkTokenContract()
-		contract.DeployBenchmarkToken(ctx, 1)
+		network.DeployBenchmarkTokenContract(ctx, 1)
 
 		// this should be the same builder, but membuffers is not thread-safe for concurrent builds on same builder
 		tx1 := builders.TransferTransaction().WithTimestamp(ts).Builder()

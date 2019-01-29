@@ -55,7 +55,7 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
 		return
 	}
-	logger.Info("transport message received", log.Stringable("header", header))
+	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
 		s.receivedTransactionRelayMessage(ctx, header, payloads[1:])

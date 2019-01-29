@@ -7,7 +7,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+func (s *service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	return s.commitBlock(ctx, input, false)
+}
+
 func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+	return s.commitBlock(ctx, input, true)
+}
+
+func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
@@ -40,7 +48,9 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
-	s.nodeSync.HandleBlockCommitted(ctx)
+	if notifyNodeSync {
+		s.nodeSync.HandleBlockCommitted(ctx)
+	}
 
 	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
 

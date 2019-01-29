@@ -14,7 +14,7 @@ type stateFactory struct {
 	config                          blockSyncConfig
 	gossip                          gossiptopics.BlockSync
 	storage                         BlockSyncStorage
-	conduit                         *blockSyncConduit
+	conduit                         blockSyncConduit
 	createCollectTimeoutTimer       func() *synchronization.Timer
 	createNoCommitTimeoutTimer      func() *synchronization.Timer
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer
@@ -26,7 +26,7 @@ func NewStateFactory(
 	config blockSyncConfig,
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
-	conduit *blockSyncConduit,
+	conduit blockSyncConduit,
 	logger log.BasicLogger,
 	factory metric.Factory,
 ) *stateFactory {
@@ -46,7 +46,7 @@ func NewStateFactoryWithTimers(
 	config blockSyncConfig,
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
-	conduit *blockSyncConduit,
+	conduit blockSyncConduit,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
@@ -133,7 +133,6 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 		gossipClient:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:       f.createWaitForChunksTimeoutTimer,
 		logger:            f.logger,
-		abort:             make(chan struct{}),
 		conduit:           f.conduit,
 		metrics:           f.metrics.waitingStateMetrics,
 	}

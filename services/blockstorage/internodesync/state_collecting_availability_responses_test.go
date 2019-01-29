@@ -53,7 +53,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
 			h.verifyBroadcastOfBlockAvailabilityRequest(t)
-			state.gotAvailabilityResponse(ctx, message)
+			h.factory.conduit <- message
 			manualCollectResponsesTimer.ManualTick()
 		})
 
@@ -81,27 +81,4 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	require.Nil(t, nextState, "context terminated, next state should be nil")
 
 	h.verifyMocks(t)
-}
-
-func TestStateCollectingAvailabilityResponses_ReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
-	h := newBlockSyncHarness()
-	test.WithContextWithTimeout(h.config.collectResponses/2, func(ctx context.Context) {
-
-		state := h.factory.CreateCollectingAvailabilityResponseState()
-		// not calling the process state will not activate the reader part
-		message := builders.BlockAvailabilityResponseInput().Build().Message
-		state.gotAvailabilityResponse(ctx, message) // this will block if the test fails
-	})
-}
-
-func TestStateCollectingAvailabilityResponses_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-		state := h.factory.CreateCollectingAvailabilityResponseState()
-		// these calls should do nothing, this is just a sanity that they do not panic and return nothing
-		blockmessage := builders.BlockSyncResponseInput().Build().Message
-		state.gotBlocks(ctx, blockmessage)
-		state.blockCommitted(ctx)
-	})
-
 }

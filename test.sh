@@ -6,7 +6,10 @@ ulimit -S -n 20000
 
 go test -timeout 7m ./... -failfast -v &> _out/test.out
 go-junit-report -set-exit-code < _out/test.out > _out/results.xml
-check_exit_code_and_report
+EXIT_CODE=$?
+if [ $EXIT_CODE != 0 ]; then
+    exit $EXIT_CODE
+fi
 
 # this test must run separately since zero parallel package tests are allowed concurrently
 . ./test.goroutine-leaks.sh

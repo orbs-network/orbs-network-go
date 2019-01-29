@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
+	"time"
 )
 
 var LogTag = log.Service("transaction-pool")
@@ -53,8 +54,10 @@ func (s *service) createValidationContext() *validationContext {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return &validationContext{
-		expiryWindow:                s.config.TransactionExpirationWindow(),
+		nodeTime:                    time.Now(),
 		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
+		expiryWindow:                s.config.TransactionExpirationWindow(),
+		nodeSyncRejectInterval:      s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}
