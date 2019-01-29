@@ -54,7 +54,7 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	// notify the receiving service of a new block
 	requestedHeight, err := committer.commitBlockPair(ctx, block)
 	if err != nil {
-		logger.Error("failed committing block", log.Error(err), log.BlockHeight(h))
+		logger.Error("failed committing block - panic", log.Error(err), log.BlockHeight(h))
 		panic(fmt.Sprintf("failed committing block at height %d", h))
 	}
 	// if receiving service keep requesting the current height we are stuck
