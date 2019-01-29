@@ -1,5 +1,7 @@
 #!/bin/bash -xe
 
+export CONSENSUSALGO=${CONSENSUSALGO-benchmark}
+
 rm -rf _logs
 
 export GIT_BRANCH=$(source ./docker/tag.sh)
