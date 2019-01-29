@@ -59,6 +59,21 @@ func NewNetworkWithNumOfNodes(
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 
+	// This is an OPINIONATED list of important config properties to print to aid debugging
+	configStr := fmt.Sprintf("CONFIG_PROPS: public-api-tx-timeout=%s lh-election-timeout=%s node-sync-nocommit-interval=%s node-sync-collect-chunks-timeout=%s node-sync-collect-response-timeout=%s block-tracker-grace-timeout=%s gossip-timeout=%s, block-sync-num-blocks-in-batch=%d papi-node-sync-warning-time=%s txpool-time-between-empty-blocks=%s",
+		cfgTemplate.PublicApiSendTransactionTimeout(),
+		cfgTemplate.LeanHelixConsensusRoundTimeoutInterval(),
+		cfgTemplate.BlockSyncNoCommitInterval(),
+		cfgTemplate.BlockSyncCollectChunksTimeout(),
+		cfgTemplate.BlockSyncCollectResponseTimeout(),
+		cfgTemplate.BlockTrackerGraceTimeout(),
+		cfgTemplate.GossipNetworkTimeout(),
+		cfgTemplate.BlockSyncNumBlocksInBatch(),
+		cfgTemplate.PublicApiNodeSyncWarningTime(),
+		cfgTemplate.TransactionPoolTimeBetweenEmptyBlocks(),
+	)
+	parent.Info(configStr)
+
 	for _, address := range nodeOrder {
 		federationNode := federation[address.KeyForMap()]
 		cfg := cfgTemplate.ForNode(address, privateKeys[address.KeyForMap()])
