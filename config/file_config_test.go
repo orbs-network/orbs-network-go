@@ -184,7 +184,7 @@ func TestConfig_EthereumEndpoint(t *testing.T) {
 }
 
 func TestConfig_E2EConfigFile(t *testing.T) {
-	content, err := ioutil.ReadFile("../docker/test/e2e-config/node1.json")
+	content, err := ioutil.ReadFile("../docker/test/benchmark-config/node1.json")
 	require.NoError(t, err, "failed reading config file")
 	cfg, err := newEmptyFileConfig(string(content))
 	require.NoError(t, err, "failed parsing config file")
