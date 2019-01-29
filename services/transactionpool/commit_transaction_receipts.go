@@ -8,10 +8,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+	s.addCommitLock.Lock()
+	defer s.addCommitLock.Unlock()
+
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if bh, _ := s.lastCommittedBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
@@ -21,17 +23,17 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		}, nil
 	}
 
-	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
+	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
+		txTimestamp := s.getTxTimeOrBlockTime(receipt.Txhash(), input.ResultsBlockHeader.Timestamp()) //TODO(v1): is this the correct behavior? spec doesn't say where to take tx time if tx wasn't in pending pool, so we're using block time as best effort
+		s.committedPool.add(receipt, txTimestamp, bh, ts)                                             // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
 		removedTx := s.pendingPool.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
 		}
-
-		s.committedPool.add(receipt, timestampOrNow(removedTx), bh, ts)
 
 		logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 
@@ -62,11 +64,11 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 }
 
 func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.lastCommitted.Lock()
+	defer s.lastCommitted.Unlock()
 
-	s.mu.lastCommittedBlockHeight = header.BlockHeight()
-	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
+	s.lastCommitted.blockHeight = header.BlockHeight()
+	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
 	s.logger.Info("transaction pool reached block height", log.BlockHeight(header.BlockHeight()))
@@ -74,14 +76,14 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	return header.BlockHeight(), header.Timestamp()
 }
 
-func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {
-	if tx != nil {
-		return tx.transaction.Transaction().Timestamp()
-	} else {
-		return primitives.TimestampNano(time.Now().UnixNano())
-	}
-}
-
 func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {
 	return removedTx != nil && removedTx.gatewayNodeAddress.Equal(s.config.NodeAddress())
+}
+
+func (s *service) getTxTimeOrBlockTime(txhash primitives.Sha256, blockTime primitives.TimestampNano) primitives.TimestampNano {
+	if tx := s.pendingPool.get(txhash); tx != nil {
+		return tx.Transaction().Timestamp()
+	}
+
+	return blockTime
 }

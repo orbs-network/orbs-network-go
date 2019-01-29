@@ -13,11 +13,11 @@ import (
 )
 
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+	s.addCommitLock.RLock()
+	defer s.addCommitLock.RUnlock()
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
 	logger := s.logger.WithTags(log.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
-
-	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
 
 	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
 		height, nano := s.lastCommittedBlockHeightAndTime()
@@ -25,7 +25,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
-	if alreadyCommitted := s.committedPool.get(digest.CalcTxHash(input.SignedTransaction.Transaction())); alreadyCommitted != nil {
+	if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
 		logger.Info("transaction already committed")
 		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
 	}
@@ -37,10 +37,12 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	}
 
 	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodeAddress()); err != nil {
-		s.logger.Error("error adding transaction to pending pool", log.Error(err))
+		logger.Error("error adding transaction to pending pool", log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 
 	}
+
+	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
 
 	s.transactionForwarder.submit(input.SignedTransaction)
 

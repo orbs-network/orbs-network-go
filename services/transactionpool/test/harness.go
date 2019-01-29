@@ -213,6 +213,12 @@ func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeig
 	return err
 }
 
+func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransaction) (*services.GetCommittedTransactionReceiptOutput, error) {
+	return h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+		Txhash: digest.CalcTxHash(tx.Transaction()),
+	})
+}
+
 func newHarness(ctx context.Context) *harness {
 	return newHarnessWithSizeLimit(ctx, 20*1024*1024)
 }

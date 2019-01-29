@@ -8,9 +8,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sync"
 	"testing"
 	"time"
 )
@@ -113,47 +111,6 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 		require.Equal(t, digest.CalcTxHash(tx.Transaction()), receipt.TransactionReceipt.Txhash(), "expected transaction receipt to contain transaction hash")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
-	})
-}
-
-func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		const CONCURRENCY_COUNT = 500
-		duplicateStatuses := []protocol.TransactionStatus{
-			protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
-			protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
-		startBarrier := sync.WaitGroup{}
-		doneBarrier := sync.WaitGroup{}
-		startBarrier.Add(CONCURRENCY_COUNT)
-		doneBarrier.Add(CONCURRENCY_COUNT)
-
-		h := newHarness(ctx)
-		h.ignoringForwardMessages()
-		h.ignoringTransactionResults()
-		h.ignoringBlockHeightChecks()
-
-		tx := builders.TransferTransaction().Build()
-		_, err := h.addNewTransaction(ctx, tx)
-		require.NoError(t, err, "adding a transaction returned an unexpected error")
-
-		for i := 0; i < CONCURRENCY_COUNT; i++ {
-			go func() {
-				startBarrier.Done()
-				startBarrier.Wait() // wait for the others
-
-				receipt, _ := h.addNewTransaction(ctx, tx) // concurrently with h.reportTransactionsAsCommitted()
-
-				assert.Contains(t, duplicateStatuses, receipt.TransactionStatus, "transaction must receive a duplicate status while in transit between pending and committed pools")
-				doneBarrier.Done()
-			}()
-		}
-
-		startBarrier.Wait() // wait for the others
-
-		_, err = h.reportTransactionsAsCommitted(ctx, tx) // concurrently with h.addNewTransaction()
-		require.NoError(t, err, "committing a transaction returned an unexpected error")
-
-		doneBarrier.Wait()
 	})
 }
 

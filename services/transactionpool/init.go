@@ -47,7 +47,7 @@ func NewTransactionPool(ctx context.Context,
 		transactionWaiter:    waiter,
 	}
 
-	s.mu.lastCommittedBlockTimestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
+	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
 
 	gossip.RegisterTransactionRelayHandler(s)
