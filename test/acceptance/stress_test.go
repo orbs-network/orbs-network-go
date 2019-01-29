@@ -150,7 +150,7 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
-	contract := network.BenchmarkTokenContract()
+	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)
 
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
