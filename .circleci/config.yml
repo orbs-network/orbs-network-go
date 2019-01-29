@@ -63,14 +63,23 @@ jobs:
       - run: ./.circleci/set-aws-credentials.sh
       - run: ./.circleci/deploy-testnet.sh
 
-  e2e_testnet:
-    machine: true
+  e2e_testnet_benchmark:
+    docker:
+      - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
       - run: ./.circleci/e2e-testnet.sh 42
-      - run: ./.circleci/e2e-testnet.sh 2013
+
+  e2e_testnet_leanhelix:
+    docker:
+    - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+    - checkout
+    - run: ./git-submodule-checkout.sh
+    - run: ./.circleci/e2e-testnet.sh 2013
 
   release_gamma:
     machine: true
@@ -93,26 +102,33 @@ workflows:
   version: 2
   build:
     jobs:
-      - tests
-      - e2e
-      - flakiness
-      - notify_github_about_dashboard
-      - autonomous_swap
-      - success:
-          requires:
-            - tests
-            - flakiness
-            - autonomous_swap
-      - deploy_testnet:
-          requires:
-            - e2e
+#      - tests
+#      - e2e
+#      - flakiness
+#      - notify_github_about_dashboard
+#      - autonomous_swap
+#      - success:
+#          requires:
+#            - tests
+#            - flakiness
+#            - autonomous_swap
+#      - deploy_testnet:
+#          requires:
+#            - e2e
 #          filters:
 #            branches:
 #              only:
 #                - master
-      - e2e_testnet:
-          requires:
-            - deploy_testnet
+      - e2e_testnet_benchmark
+#          requires:
+#            - deploy_testnet
+#          filters:
+#            branches:
+#              only:
+#                - master
+      - e2e_testnet_leanhelix
+#          requires:
+#            - deploy_testnet
 #          filters:
 #            branches:
 #              only:
