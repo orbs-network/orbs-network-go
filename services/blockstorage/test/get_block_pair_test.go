@@ -32,13 +32,13 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 	})
 }
 
-func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
+func TestReturnErrorWhenBlockHeightInTheFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness, _ := generateAndCommitOneBlock(ctx)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 10})
 
-		require.NoError(t, err, "this is a happy flow test (ask in future)")
-		require.Nil(t, output.BlockPair, "block data should be nil")
+		require.Error(t, err, "expected error to be returned when requesting for a future block")
+		require.Nil(t, output, "block data should be nil")
 	})
 }
 
