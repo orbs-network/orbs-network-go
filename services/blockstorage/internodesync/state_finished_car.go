@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"math/rand"
 	"time"
 )
 
@@ -37,8 +38,9 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 		return s.factory.CreateIdleState()
 	}
 	s.metrics.timesWithResponses.Inc()
-	logger.Info("selecting from received sources", log.Int("sources-count", c))
-	syncSource := s.responses[0] //TODO V1 how do we pick the source?
+	randomSourceIdx := rand.Intn(len(s.responses))
+	syncSource := s.responses[randomSourceIdx]
+	logger.Info("selecting from sync sources", log.Int("sources-count", c), log.Int("selected", randomSourceIdx), log.String("selected-address", syncSource.Sender.StringSenderNodeAddress()))
 	syncSourceNodeAddress := syncSource.Sender.SenderNodeAddress()
 
 	if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
