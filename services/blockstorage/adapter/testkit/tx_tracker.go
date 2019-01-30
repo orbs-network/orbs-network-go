@@ -92,7 +92,7 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 			return txHeight
 		}
 
-		logger.Info("transaction not found in current block, will wait for next block look for it again", log.Transaction(txHash), log.BlockHeight(topHeight))
+		logger.Info("transaction not found in current block, will wait for next block look to for it again", log.Transaction(txHash), log.BlockHeight(topHeight))
 		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
 			logger.Error("txTracker - WaitForBlock panic - timed out waiting for transaction", log.Transaction(txHash), log.BlockHeight(topHeight+1), log.Error(err))
