@@ -8,10 +8,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"time"
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+	s.addCommitLock.Lock()
+	defer s.addCommitLock.Unlock()
+
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if bh, _ := s.lastCommittedBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
@@ -21,17 +23,16 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		}, nil
 	}
 
-	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader)
+	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
+		s.committedPool.add(receipt, ts, bh, ts) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
 		removedTx := s.pendingPool.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
 		}
-
-		s.committedPool.add(receipt, timestampOrNow(removedTx), bh, ts)
 
 		logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 
@@ -62,24 +63,16 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 }
 
 func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.lastCommitted.Lock()
+	defer s.lastCommitted.Unlock()
 
-	s.mu.lastCommittedBlockHeight = header.BlockHeight()
-	s.mu.lastCommittedBlockTimestamp = header.Timestamp()
+	s.lastCommitted.blockHeight = header.BlockHeight()
+	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
 	s.logger.Info("transaction pool reached block height", log.BlockHeight(header.BlockHeight()))
 
 	return header.BlockHeight(), header.Timestamp()
-}
-
-func timestampOrNow(tx *pendingTransaction) primitives.TimestampNano {
-	if tx != nil {
-		return tx.transaction.Transaction().Timestamp()
-	} else {
-		return primitives.TimestampNano(time.Now().UnixNano())
-	}
 }
 
 func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {

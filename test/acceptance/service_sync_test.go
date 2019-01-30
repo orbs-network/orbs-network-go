@@ -42,10 +42,10 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, leaderTxResponse.TransactionStatus(),
-			"expected a stale tx sent to leader to be rejected")
-		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, nonLeaderTxResponse.TransactionStatus(),
-			"expected a stale tx sent to non leader to be rejected")
+		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), leaderTxResponse.TransactionStatus().String(),
+			"expected a tx that is committed prior to restart and sent again to leader to be rejected")
+		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), nonLeaderTxResponse.TransactionStatus().String(),
+			"expected a tx that is committed prior to restart and sent again to non leader to be rejected")
 	})
 }
 

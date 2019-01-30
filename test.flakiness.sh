@@ -10,3 +10,9 @@ check_exit_code_and_report
 
 NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/blockstorage/internodesync -count 100 -timeout 7m -failfast > _out/test.out
 check_exit_code_and_report
+
+NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/blockstorage/servicesync -count 100 -timeout 7m -failfast > _out/test.out
+check_exit_code_and_report
+
+NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/transactionpool/test -count 100 -timeout 7m -failfast > _out/test.out
+check_exit_code_and_report

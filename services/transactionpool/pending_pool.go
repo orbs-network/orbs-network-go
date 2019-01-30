@@ -169,7 +169,7 @@ func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransactio
 	return nil
 }
 
-func (p *pendingTxPool) clearTransactionsOlderThan(ctx context.Context, time time.Time) {
+func (p *pendingTxPool) clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano) {
 	p.lock.RLock()
 	e := p.transactionList.Back()
 	p.lock.RUnlock()
@@ -183,7 +183,7 @@ func (p *pendingTxPool) clearTransactionsOlderThan(ctx context.Context, time tim
 
 		e = e.Prev()
 
-		if int64(tx.Transaction().Timestamp()) < time.UnixNano() {
+		if tx.Transaction().Timestamp() < timestamp {
 			p.remove(ctx, digest.CalcTxHash(tx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 		}
 	}
