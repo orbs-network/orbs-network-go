@@ -30,6 +30,7 @@ import (
 )
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 var LOG_DIR = "_logs/acceptance"
 
 type networkHarnessBuilder struct {
@@ -118,7 +119,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 	for _, consensusAlgo := range b.consensusAlgos {
 
 		restartableTest := func() {
-			test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
 				testId := b.testId + "-" + consensusAlgo.String()
 				logger, errorRecorder := b.makeLogger(testId)
