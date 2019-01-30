@@ -67,7 +67,7 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
+	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 500*time.Millisecond)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
 	cfg.SetUint32(TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES, sizeLimit)
 	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 2*time.Minute)
