@@ -63,7 +63,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 			var txHashes []primitives.Sha256
 			// generate some blocks with state
-			contract := network.BenchmarkTokenContract()
+			contract := network.DeployBenchmarkTokenContract(ctx, 0)
 			for i := 0; i < transfers; i++ {
 				_, txHash := contract.Transfer(ctx, 0, transferAmount, 0, 1)
 				txHashes = append(txHashes, txHash)
@@ -74,7 +74,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			}
 
 			network = restartPreservingBlocks()
-			contract = network.BenchmarkTokenContract()
+			contract = network.DeployBenchmarkTokenContract(ctx, 0)
 
 			// wait for all tx to reach state storage:
 			for _, txHash := range txHashes {

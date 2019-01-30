@@ -1,40 +1,60 @@
 version: 2
 jobs:
-  build:
+  tests:
+    docker:
+      - image: circleci/golang:1.11.4
+    resource_class: large
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: go get -u github.com/jstemmer/go-junit-report
+      - run: ./test.sh
+      - store_artifacts:
+          path: _out
+      - store_test_results:
+          path: _out
+
+  flakiness:
+    docker:
+      - image: circleci/golang:1.11.4
+    resource_class: xlarge
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: go get -u github.com/jstemmer/go-junit-report
+      - run:
+          command: ./test.flakiness.sh
+          no_output_timeout: 25m
+      - store_test_results:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_out
+
+  e2e:
     machine: true
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
-      - run: ./docker/test/test.sh
-      - run: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh
+      # Update docker-compose
+      - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
+      - run:
+          command: ./docker/test/test.sh
+          environment:
+            CONSENSUSALGO: benchmark
+      # Logs here belong to root
+      - run: sudo rm -rf _logs
+      - run:
+          command: ./docker/test/test.sh
+          environment:
+            CONSENSUSALGO: leanhelix
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
       - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/hash.sh)
       - run: $(aws ecr get-login --no-include-email --region us-west-2)
       - run: docker push $DOCKER_IMAGE
       - store_artifacts:
           path: _logs
-      - store_artifacts:
-          path: _out
-      - store_test_results:
-          path: _out
 
-
-  flakiness:
-    machine: true
-    steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.flakiness.sh
-      - run:
-          # remove logs if the test was successful for quicker feedback loop
-          command: ./docker/test/test.flakiness.sh #&& sudo find _logs/acceptance -type f -delete
-          no_output_timeout: 25m
-      - run:
-          command: sudo chown -R circleci:circleci _logs && ./.circleci/upload-node-metrics.sh && ./.circleci/archive-logs.sh
-          no_output_timeout: 25m
-      - store_artifacts:
-          path: _logs
 
   notify_github_about_dashboard:
     machine: true
@@ -51,19 +71,26 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: $(aws ecr get-login --no-include-email --region us-west-2)
-      - run: docker pull $DOCKER_IMAGE:master
       - run: ./.circleci/set-aws-credentials.sh
       - run: ./.circleci/deploy-testnet.sh
 
-  e2e_testnet:
-    machine: true
+  e2e_testnet_benchmark:
+    docker:
+      - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
       - run: ./.circleci/e2e-testnet.sh 42
-      - run: ./.circleci/e2e-testnet.sh 2013
+
+  e2e_testnet_leanhelix:
+    docker:
+    - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+    - checkout
+    - run: ./git-submodule-checkout.sh
+    - run: ./.circleci/e2e-testnet.sh 2013
 
   release_gamma:
     machine: true
@@ -73,35 +100,45 @@ jobs:
       - run: ./docker/build/build.sh
       - run: ./.circleci/release-gamma.sh
 
+  autonomous_swap:
+    machine: true
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./docker/build/build.sh
+      - run: docker tag orbs:gamma-server orbsnetwork/gamma:experimental
+      - run: cd vendor/github.com/orbs-network/orbs-ethereum-contracts/ && .circleci/main.sh
+
 workflows:
   version: 2
   build:
     jobs:
-      - build
+      - tests
+      - e2e
       - flakiness
       - notify_github_about_dashboard
+      - autonomous_swap
       - success:
           requires:
-            - build
+            - tests
             - flakiness
+            - autonomous_swap
       - deploy_testnet:
           requires:
-            - success
+            - e2e
           filters:
             branches:
               only:
                 - master
-      - e2e_testnet:
+      - e2e_testnet_benchmark:
           requires:
             - deploy_testnet
-          filters:
-            branches:
-              only:
-                - master
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release_gamma:
           filters:
             tags:
               only: /^v.*/
             branches:
-              only:
-                - master
+              ignore: /.*/
