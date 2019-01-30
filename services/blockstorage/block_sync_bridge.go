@@ -3,6 +3,7 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 )
@@ -16,6 +17,12 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 		return
 	}
 
+	var blockHeight primitives.BlockHeight
+	if lastCommittedBlock != nil {
+		blockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
+	}
+
+	s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", log.BlockHeight(blockHeight))
 	err = s.notifyConsensusAlgos(
 		ctx,
 		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block

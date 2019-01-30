@@ -51,7 +51,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			switch r := e.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				responses = append(responses, r)
-				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()))
+				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()), log.Stringable("first-block", r.SignedBatchRange.FirstBlockHeight()), log.Stringable("last-block", r.SignedBatchRange.LastBlockHeight()), log.Stringable("last-committed-block", r.SignedBatchRange.LastCommittedBlockHeight()))
 			}
 		case <-ctx.Done():
 			return nil
