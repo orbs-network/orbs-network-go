@@ -91,36 +91,15 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 		})
 }
 
-func AnyNthMessage(n int) MessagePredicate {
-	if n < 1 {
-		panic("illegal argument")
-	}
-
-	if n == 1 {
-		return func(data *adapter.TransportData) bool {
-			return true
-		}
-	}
-
-	count := 0
-	return func(data *adapter.TransportData) bool {
-		count++
-		m := count % n
-		return m == 0
-	}
-}
-
 func WithPercentChance(ctrlRand *test.ControlledRand, pct int) MessagePredicate {
-	var hit bool
-	if pct >= 100 {
-		hit = true
-	} else if pct <= 0 {
-		hit = false
-	} else {
-		hit = ctrlRand.Intn(101) <= pct
-	}
 	return func(data *adapter.TransportData) bool {
-		return hit
+		if pct >= 100 {
+			return true
+		} else if pct <= 0 {
+			return false
+		} else {
+			return ctrlRand.Intn(101) <= pct
+		}
 	}
 }
 
