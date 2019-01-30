@@ -32,27 +32,6 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	})
 }
 
-func TestCommitTransactionReceiptsNotifiesPublicAPIOnlyForOwnTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
-		myTx1 := builders.TransferTransaction().Build()
-		myTx2 := builders.TransferTransaction().Build()
-		otherTx := builders.TransferTransaction().Build()
-
-		h.ignoringForwardMessages()
-
-		h.addNewTransaction(ctx, myTx1)
-		h.addNewTransaction(ctx, myTx2)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, otherTx)
-
-		h.fastForwardTo(ctx, 2)
-		h.expectTransactionResultsCallbackFor(myTx1, myTx2)
-		h.reportTransactionsAsCommitted(ctx, myTx1, myTx2, otherTx)
-
-		require.NoError(t, h.verifyMocks(), "Mocks were not executed as planned")
-	})
-}
-
 func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		const CONCURRENCY_COUNT = 500

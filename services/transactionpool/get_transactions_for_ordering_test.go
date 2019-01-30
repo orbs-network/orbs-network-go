@@ -179,7 +179,7 @@ type fakeRemover struct {
 	removed map[string]protocol.TransactionStatus
 }
 
-func (r *fakeRemover) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
+func (r *fakeRemover) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *primitives.NodeAddress {
 	r.removed[txHash.KeyForMap()] = removalReason
 	return nil
 }

@@ -101,7 +101,7 @@ func (p *pendingTxPool) has(transaction *protocol.SignedTransaction) bool {
 	return ok
 }
 
-func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
+func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *primitives.NodeAddress {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -118,7 +118,7 @@ func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, re
 		p.metrics.transactionCountGauge.Dec()
 		p.metrics.poolSizeInBytesGauge.SubUint32(sizeOfSignedTransaction(pendingTx.transaction))
 
-		return pendingTx
+		return &pendingTx.gatewayNodeAddress
 	}
 
 	return nil

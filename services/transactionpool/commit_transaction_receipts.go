@@ -11,8 +11,6 @@ import (
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	s.addCommitLock.Lock()
-	defer s.addCommitLock.Unlock()
 
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -23,42 +21,25 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		}, nil
 	}
 
-	bh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
+	s.addCommitLock.Lock()
+	defer s.addCommitLock.Unlock()
 
-	var myReceipts []*protocol.TransactionReceipt
+	newBh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
-	for _, receipt := range input.TransactionReceipts {
-		s.committedPool.add(receipt, ts, bh, ts) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
-		removedTx := s.pendingPool.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
-		if s.originatedFromMyPublicApi(removedTx) {
-			myReceipts = append(myReceipts, receipt)
-		}
+	c := &committer{logger: logger, adder: s.committedPool, remover: s.pendingPool, nodeAddress: s.config.NodeAddress(), blockHeight: newBh, blockTime: ts}
 
-		logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
+	c.commit(ctx, input.TransactionReceipts...)
 
-	}
+	s.blockTracker.IncrementTo(newBh)
+	s.blockHeightReporter.IncrementTo(newBh)
 
-	s.blockTracker.IncrementTo(bh)
-	s.blockHeightReporter.IncrementTo(bh)
+	c.notify(ctx, s.transactionResultsHandlers...)
 
-	if len(myReceipts) > 0 {
-		for _, handler := range s.transactionResultsHandlers {
-			_, err := handler.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
-				BlockHeight:         bh,
-				Timestamp:           input.ResultsBlockHeader.Timestamp(),
-				TransactionReceipts: myReceipts,
-			})
-			if err != nil {
-				logger.Info("notify tx result failed", log.Error(err))
-			}
-		}
-	}
-
-	logger.Info("committed transaction receipts for block height", log.BlockHeight(bh))
+	logger.Info("committed transaction receipts for block height", log.BlockHeight(newBh))
 
 	return &services.CommitTransactionReceiptsOutput{
-		NextDesiredBlockHeight:   bh + 1,
-		LastCommittedBlockHeight: bh,
+		NextDesiredBlockHeight:   newBh + 1,
+		LastCommittedBlockHeight: newBh,
 	}, nil
 }
 
@@ -75,6 +56,56 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	return header.BlockHeight(), header.Timestamp()
 }
 
-func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {
-	return removedTx != nil && removedTx.gatewayNodeAddress.Equal(s.config.NodeAddress())
+type adder interface {
+	add(receipt *protocol.TransactionReceipt, submitted primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano)
+}
+
+type remover interface {
+	remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *primitives.NodeAddress
+}
+
+type committer struct {
+	adder       adder
+	remover     remover
+	nodeAddress primitives.NodeAddress
+	logger      log.BasicLogger
+	blockHeight primitives.BlockHeight
+	blockTime   primitives.TimestampNano
+
+	myReceipts []*protocol.TransactionReceipt
+}
+
+func (c *committer) commit(ctx context.Context, receipts ...*protocol.TransactionReceipt) (myReceipts []*protocol.TransactionReceipt) {
+
+	for _, receipt := range receipts {
+		c.adder.add(receipt, c.blockTime, c.blockHeight, c.blockTime) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
+		removedTxGateway := c.remover.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
+		if c.amITheGatewayOf(removedTxGateway) {
+			c.myReceipts = append(c.myReceipts, receipt)
+		}
+
+		c.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
+	}
+
+	return
+}
+
+func (c *committer) amITheGatewayOf(removedTxGateway *primitives.NodeAddress) bool {
+	return removedTxGateway != nil && removedTxGateway.Equal(c.nodeAddress)
+}
+
+func (c *committer) notify(ctx context.Context, resultsHandlers ...handlers.TransactionResultsHandler) {
+
+	if len(c.myReceipts) > 0 {
+		for _, handler := range resultsHandlers {
+			_, err := handler.HandleTransactionResults(ctx, &handlers.HandleTransactionResultsInput{
+				BlockHeight:         c.blockHeight,
+				Timestamp:           c.blockTime,
+				TransactionReceipts: c.myReceipts,
+			})
+			if err != nil {
+				c.logger.Info("notify tx result failed", log.Error(err))
+			}
+		}
+	}
 }
