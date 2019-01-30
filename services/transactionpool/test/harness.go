@@ -21,13 +21,14 @@ import (
 )
 
 type harness struct {
-	txpool             services.TransactionPool
-	gossip             *gossiptopics.MockTransactionRelay
-	vm                 *services.MockVirtualMachine
-	trh                *handlers.MockTransactionResultsHandler
-	lastBlockHeight    primitives.BlockHeight
-	lastBlockTimestamp primitives.TimestampNano
-	config             config.TransactionPoolConfig
+	txpool                  services.TransactionPool
+	gossip                  *gossiptopics.MockTransactionRelay
+	vm                      *services.MockVirtualMachine
+	trh                     *handlers.MockTransactionResultsHandler
+	lastBlockHeight         primitives.BlockHeight
+	lastBlockTimestamp      primitives.TimestampNano
+	config                  config.TransactionPoolConfig
+	ignoreBlockHeightChecks bool
 }
 
 var (
@@ -54,6 +55,10 @@ func (h *harness) expectNoTransactionsToBeForwarded() {
 
 func (h *harness) ignoringForwardMessages() {
 	h.gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(&gossiptopics.EmptyOutput{}, nil).AtLeast(0)
+}
+
+func (h *harness) ignoringBlockHeightChecks() {
+	h.ignoreBlockHeightChecks = true
 }
 
 func (h *harness) addNewTransaction(ctx context.Context, tx *protocol.SignedTransaction) (*services.AddNewTransactionOutput, error) {
@@ -153,7 +158,7 @@ func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHe
 
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
-		if input.CurrentBlockHeight != h.lastBlockHeight+1 {
+		if !h.ignoreBlockHeightChecks && input.CurrentBlockHeight != h.lastBlockHeight+1 {
 			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
@@ -206,6 +211,12 @@ func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeig
 	})
 
 	return err
+}
+
+func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransaction) (*services.GetCommittedTransactionReceiptOutput, error) {
+	return h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
+		Txhash: digest.CalcTxHash(tx.Transaction()),
+	})
 }
 
 func newHarness(ctx context.Context) *harness {

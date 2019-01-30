@@ -2,16 +2,16 @@ package transactionpool
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
-	"time"
 )
 
 type committedTxPool struct {
+	sync.RWMutex
 	transactions map[string]*committedTransaction
-	lock         *sync.RWMutex
 
 	metrics *committedPoolMetrics
 }
@@ -31,25 +31,24 @@ func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
 func NewCommittedPool(metricFactory metric.Factory) *committedTxPool {
 	return &committedTxPool{
 		transactions: make(map[string]*committedTransaction),
-		lock:         &sync.RWMutex{},
 		metrics:      newCommittedPoolMetrics(metricFactory),
 	}
 }
 
 type committedTransaction struct {
 	receipt        *protocol.TransactionReceipt
-	timestampAdded primitives.TimestampNano
+	submitted      primitives.TimestampNano
 	blockHeight    primitives.BlockHeight
 	blockTimestamp primitives.TimestampNano
 }
 
-func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, tsAdded primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, submitted primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
+	p.Lock()
+	defer p.Unlock()
 
 	transaction := &committedTransaction{
 		receipt:        receipt,
-		timestampAdded: tsAdded,
+		submitted:      submitted,
 		blockHeight:    blockHeight,
 		blockTimestamp: blockTs,
 	}
@@ -62,31 +61,28 @@ func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, tsAdded prim
 }
 
 func (p *committedTxPool) get(txHash primitives.Sha256) *committedTransaction {
-	key := txHash.KeyForMap()
+	p.RLock()
+	defer p.RUnlock()
 
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	tx := p.transactions[key]
-
-	return tx
+	return p.transactions[txHash.KeyForMap()]
 }
 
 func (p *committedTxPool) has(txHash primitives.Sha256) bool {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.RLock()
+	defer p.RUnlock()
 
 	_, ok := p.transactions[txHash.KeyForMap()]
 	return ok
 }
 
-func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, time time.Time) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano) {
+	p.Lock()
+	defer p.Unlock()
 
 	for _, tx := range p.transactions {
-		if int64(tx.timestampAdded) < time.UnixNano() {
+		if tx.submitted < timestamp {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
+			fmt.Println("removed tx from pool", tx.receipt.Txhash().String())
 
 			p.metrics.transactionCount.Dec()
 			p.metrics.poolSizeInBytes.SubUint32(sizeOfCommittedTransaction(tx))
