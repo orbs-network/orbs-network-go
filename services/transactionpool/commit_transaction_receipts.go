@@ -28,8 +28,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	var myReceipts []*protocol.TransactionReceipt
 
 	for _, receipt := range input.TransactionReceipts {
-		txTimestamp := s.getTxTimeOrBlockTime(receipt.Txhash(), input.ResultsBlockHeader.Timestamp()) //TODO(v1): is this the correct behavior? spec doesn't say where to take tx time if tx wasn't in pending pool, so we're using block time as best effort
-		s.committedPool.add(receipt, txTimestamp, bh, ts)                                             // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
+		s.committedPool.add(receipt, ts, bh, ts) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
 		removedTx := s.pendingPool.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if s.originatedFromMyPublicApi(removedTx) {
 			myReceipts = append(myReceipts, receipt)
@@ -78,12 +77,4 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 
 func (s *service) originatedFromMyPublicApi(removedTx *pendingTransaction) bool {
 	return removedTx != nil && removedTx.gatewayNodeAddress.Equal(s.config.NodeAddress())
-}
-
-func (s *service) getTxTimeOrBlockTime(txhash primitives.Sha256, blockTime primitives.TimestampNano) primitives.TimestampNano {
-	if tx := s.pendingPool.get(txhash); tx != nil {
-		return tx.Transaction().Timestamp()
-	}
-
-	return blockTime
 }
