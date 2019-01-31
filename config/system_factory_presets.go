@@ -119,6 +119,7 @@ func ForAcceptanceTestNetwork(
 	// LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL should be less than BLOCK_SYNC_NO_COMMIT_INTERVAL, or else node-sync will be triggered unnecessarily
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 100*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
+	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 10*time.Second)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 20*time.Millisecond)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
