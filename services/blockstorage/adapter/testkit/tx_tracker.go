@@ -95,7 +95,7 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 		logger.Info("transaction not found as of block", log.Transaction(txHash), log.BlockHeight(topHeight))
 		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
-			test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
+			test.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
 			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
 		}
 	}

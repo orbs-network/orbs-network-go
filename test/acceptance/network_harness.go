@@ -51,7 +51,7 @@ func (n *networkHarness) WaitForTransactionInNodeState(ctx context.Context, txHa
 	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
 	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
 	if err != nil {
-		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
+		test.DebugPrintGoroutineStacks(n.Logger) // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }
