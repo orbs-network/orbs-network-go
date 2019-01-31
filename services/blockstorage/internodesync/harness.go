@@ -172,7 +172,7 @@ func (h *blockSyncHarness) expectLastCommittedBlockHeightQueryFromStorage(expect
 }
 
 func (h *blockSyncHarness) expectPreSynchronizationUpdateOfConsensusAlgos(expectedHeight int) {
-	h.storage.When("UpdateConsensusAlgosAboutLatestCommittedBlock", mock.Any).Times(1)
+	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeightQueryFromStorage(expectedHeight)
 }
 

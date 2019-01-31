@@ -14,7 +14,7 @@ import (
 type waitingForChunksState struct {
 	factory           *stateFactory
 	sourceNodeAddress primitives.NodeAddress
-	gossipClient      *blockSyncGossipClient
+	gossipClient      *blockSyncClient
 	createTimer       func() *synchronization.Timer
 	logger            log.BasicLogger
 	conduit           blockSyncConduit

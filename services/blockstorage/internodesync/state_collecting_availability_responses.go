@@ -5,13 +5,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"time"
 )
 
 type collectingAvailabilityResponsesState struct {
 	factory      *stateFactory
-	gossipClient *blockSyncGossipClient
+	gossipClient *blockSyncClient
 	createTimer  func() *synchronization.Timer
 	logger       log.BasicLogger
 	conduit      blockSyncConduit
@@ -33,7 +34,11 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
-	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
+	supervised.GoOnce(logger, func() {
+		shortCtx, _ := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+		s.gossipClient.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
+	})
+
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		logger.Info("failed to broadcast block availability request", log.Error(err))
