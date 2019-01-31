@@ -86,7 +86,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			start(ctx)
 
 		// wait until we sent the broadcast (meaning the state machine is now at CAR state
-		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
+		require.NoError(t, test.EventuallyVerify(500*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
 		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
@@ -109,7 +109,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 
 		// latch until we pick a source and request blocks from it
-		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
+		require.NoError(t, test.EventuallyVerify(500*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		// senderKeyPair must be the same as the chosen BlockAvailabilityResponse
 		blockSyncResponse := builders.BlockSyncResponseInput().
@@ -123,7 +123,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)
 
 		// verify that we committed the blocks
-		harness.verifyMocks(t, 4)
+		harness.verifyMocks(t, 10)
 	})
 }
 
