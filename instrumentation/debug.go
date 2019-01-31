@@ -1,4 +1,4 @@
-package test
+package instrumentation
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
