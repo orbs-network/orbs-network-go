@@ -81,11 +81,11 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		harness := newBlockStorageHarness().
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withSyncBroadcast(1).
+			withSyncBroadcastAtLeast(1).
 			withValidateConsensusAlgos(4).
 			start(ctx)
 
-		// latch until we sent the broadcast (meaning the state machine is now at collecting car state
+		// wait until we sent the broadcast (meaning the state machine is now at CAR state
 		require.NoError(t, test.EventuallyVerify(200*time.Millisecond, harness.gossip), "availability response stage failed")
 
 		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
@@ -102,7 +102,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			WithLastBlockHeight(primitives.BlockHeight(4)).
 			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 
-		// fake the collecting car response
+		// fake the CAR reply
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 

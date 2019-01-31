@@ -131,7 +131,7 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 }
 
 func (h *blockSyncHarness) expectSyncOnStart() {
-	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+	h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
 }
 
@@ -171,7 +171,7 @@ func (h *blockSyncHarness) expectLastCommittedBlockHeightQueryFromStorage(expect
 	h.storage.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(out, nil).Times(1)
 }
 
-func (h *blockSyncHarness) expectPreSynchronizationUpdateOfConsensusAlgos(expectedHeight int) {
+func (h *blockSyncHarness) expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(expectedHeight int) {
 	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any).Times(1)
 	h.expectLastCommittedBlockHeightQueryFromStorage(expectedHeight)
 }

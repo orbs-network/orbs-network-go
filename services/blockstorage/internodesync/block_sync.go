@@ -138,9 +138,13 @@ func (bs *BlockSync) IsTerminated() bool {
 }
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
+	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
+		logger.Info("terminated on writing new block committed",
+			log.String("context-message", ctx.Err().Error()))
 	}
 }
 

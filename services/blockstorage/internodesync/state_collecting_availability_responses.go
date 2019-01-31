@@ -11,12 +11,12 @@ import (
 )
 
 type collectingAvailabilityResponsesState struct {
-	factory      *stateFactory
-	gossipClient *blockSyncClient
-	createTimer  func() *synchronization.Timer
-	logger       log.BasicLogger
-	conduit      blockSyncConduit
-	metrics      collectingStateMetrics
+	factory     *stateFactory
+	client      *blockSyncClient
+	createTimer func() *synchronization.Timer
+	logger      log.BasicLogger
+	conduit     blockSyncConduit
+	metrics     collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -36,10 +36,10 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 
 	supervised.GoOnce(logger, func() {
 		shortCtx, _ := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
-		s.gossipClient.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
+		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
 	})
 
-	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
+	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		logger.Info("failed to broadcast block availability request", log.Error(err))
 		return s.factory.CreateIdleState()

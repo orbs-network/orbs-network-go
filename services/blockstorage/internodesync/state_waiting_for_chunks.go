@@ -14,7 +14,7 @@ import (
 type waitingForChunksState struct {
 	factory           *stateFactory
 	sourceNodeAddress primitives.NodeAddress
-	gossipClient      *blockSyncClient
+	client            *blockSyncClient
 	createTimer       func() *synchronization.Timer
 	logger            log.BasicLogger
 	conduit           blockSyncConduit
@@ -34,7 +34,7 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	err := s.gossipClient.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceNodeAddress)
+	err := s.client.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceNodeAddress)
 	if err != nil {
 		logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceNodeAddress))
 		return s.factory.CreateIdleState()

@@ -13,14 +13,14 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 	test.WithContext(func(ctx context.Context) {
 		h := newBlockSyncHarness()
 
-		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+		h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 		h.expectBroadcastOfBlockAvailabilityRequestToFail()
 
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := state.processState(ctx)
 
 		require.IsType(t, &idleState{}, nextState, "next state should be idle on gossip error")
-		h.verifyMocks(t)
+		h.eventuallyVerifyMocks(t, 1)
 	})
 }
 
@@ -29,13 +29,13 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 		// this can probably happen only if BatchSize config is invalid
 		h := newBlockSyncHarness().withBatchSize(0)
 
-		h.expectPreSynchronizationUpdateOfConsensusAlgos(0) // new server
+		h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(0) // new server
 
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := state.processState(ctx)
 
 		require.IsType(t, &idleState{}, nextState, "next state should be idle on gossip error flow")
-		h.verifyMocks(t)
+		h.eventuallyVerifyMocks(t, 1)
 	})
 }
 
@@ -46,7 +46,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 			return manualCollectResponsesTimer
 		})
 
-		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+		h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 		h.expectBroadcastOfBlockAvailabilityRequest()
 
 		message := builders.BlockAvailabilityResponseInput().Build().Message
@@ -63,7 +63,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		require.Equal(t, message.Sender, fcar.responses[0].Sender, "state sender should match message sender")
 		require.Equal(t, message.SignedBatchRange, fcar.responses[0].SignedBatchRange, "state payload should match message")
 
-		h.verifyMocks(t)
+		h.eventuallyVerifyMocks(t, 1)
 	})
 }
 
@@ -72,7 +72,7 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	cancel()
 	h := newBlockSyncHarness()
 
-	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
+	h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
 
 	state := h.factory.CreateCollectingAvailabilityResponseState()
@@ -80,5 +80,5 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 
 	require.Nil(t, nextState, "context terminated, next state should be nil")
 
-	h.verifyMocks(t)
+	h.eventuallyVerifyMocks(t, 1)
 }
