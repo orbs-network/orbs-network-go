@@ -52,9 +52,13 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	memUsageAfterBytes := getMemUsageBytes()
 	pprof.WriteHeapProfile(after)
 
+	if memUsageAfterBytes < memUsageBeforeBytes {
+		return // its okay if the after is less in memory, no leak (and the rest of the math will overflow)
+	}
+
 	deltaMemBytes := memUsageAfterBytes - memUsageBeforeBytes
 	allowedMemIncreaseCalculatedFromMemBefore := uint64(0.1 * float64(memUsageBeforeBytes))
-	allowedMemIncreaseInAbsoluteBytes := uint64(512 * 1024)
+	allowedMemIncreaseInAbsoluteBytes := uint64(1 * 1024 * 1024) // 1MB
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
