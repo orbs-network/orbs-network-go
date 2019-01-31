@@ -27,26 +27,74 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 		network.DeployBenchmarkTokenContract(ctx, 1)
 
 		// send three identical transactions to two nodes
-		network.SendTransactionInBackground(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 0)
-		response0, txHash := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
-		response1, _ := network.SendTransaction(ctx, builders.TransferTransaction().WithTimestamp(ts).Builder(), 1)
+		tx := builders.TransferTransaction().WithTimestamp(ts).Builder()
+		identicalTx := builders.TransferTransaction().WithTimestamp(ts).Builder()
+
+		require.EqualValues(t, tx.Build().Raw(), identicalTx.Build().Raw())
+
+		go func(ctx context.Context) {
+			response, txHash := network.SendTransaction(ctx, tx, 0)
+			t.Log("node #0 send #1", response.TransactionStatus().String(), txHash.String())
+		}(ctx)
+
+		response0, txHash0 := network.SendTransaction(ctx, identicalTx, 1)
+		response1, txHash1 := network.SendTransaction(ctx, identicalTx, 1)
+
+		t.Log("node #1 send #1", response0.TransactionStatus().String(), txHash0)
+		t.Log("node #1 send #2", response1.TransactionStatus().String(), txHash1)
+
+		require.Equal(t, txHash0, txHash1, "expect same transactions to produce same txHash")
 
 		require.Contains(t, STATUS_COMMITTED_OR_PENDING_OR_DUPLICATE, response0.TransactionStatus(), "second transaction should be accepted into the pool or rejected as duplidate")
 		require.Contains(t, STATUS_DUPLICATE, response1.TransactionStatus(), "third transaction should be rejected as a duplicate")
 
-		requireTxCommittedOnce(ctx, t, network, txHash)
+		requireTxCommittedOnce(ctx, t, network, 0, txHash0)
+		requireTxCommittedOnce(ctx, t, network, 1, txHash0)
 	})
 }
 
-func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHarness, txHash primitives.Sha256) {
+// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
+func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
+	newHarness(t).AllowingErrors(
+		"error adding transaction to pending pool",
+		"error adding forwarded transaction to pending pool",
+		"error sending transaction",
+		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
+	).Start(func(ctx context.Context, network NetworkHarness) {
+
+		ts := time.Now()
+		network.DeployBenchmarkTokenContract(ctx, 1)
+
+		// send three identical transactions to two nodes
+		tx := builders.TransferTransaction().WithTimestamp(ts).Builder()
+		identicalTx := builders.TransferTransaction().WithTimestamp(ts).Builder()
+
+		go func(ctx context.Context) {
+			response, txHash := network.SendTransaction(ctx, tx, 0)
+			t.Log("node #0 send #1", response.TransactionStatus().String(), txHash.String())
+		}(ctx)
+
+		secondAttemptResponse, txHash := network.SendTransaction(ctx, identicalTx, 0)
+		t.Log("node #0 send #2", secondAttemptResponse.TransactionStatus().String(), txHash.String())
+
+		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return COMMITTED or DUPLICATE status")
+
+		requireTxCommittedOnce(ctx, t, network, 0, txHash)
+		requireTxCommittedOnce(ctx, t, network, 1, txHash)
+	})
+}
+
+func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHarness, nodeIndex int, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
-	txHeight, err := network.BlockPersistence(0).GetLastBlockHeight()
+	persistence := network.BlockPersistence(nodeIndex)
+
+	txHeight, err := persistence.GetLastBlockHeight()
 	require.NoError(t, err)
 
 	// wait for 5 more blocks to be committed
 	height := txHeight + 5
-	err = network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, height)
+	err = persistence.GetBlockTracker().WaitForBlock(ctx, height)
 	require.NoError(t, err, "expected to reach target block height before proceeding with test")
 
 	// count receipts for txHash in leader block storage
@@ -66,30 +114,4 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHa
 		}
 	}
 	require.Equal(t, 1, receiptCount, "blocks should include tx exactly once")
-}
-
-// LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
-func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
-	newHarness(t).AllowingErrors(
-		"error adding transaction to pending pool",
-		"error adding forwarded transaction to pending pool",
-		"error sending transaction",
-		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(func(ctx context.Context, network NetworkHarness) {
-
-		ts := time.Now()
-		network.DeployBenchmarkTokenContract(ctx, 1)
-
-		// this should be the same builder, but membuffers is not thread-safe for concurrent builds on same builder
-		tx1 := builders.TransferTransaction().WithTimestamp(ts).Builder()
-		tx2 := builders.TransferTransaction().WithTimestamp(ts).Builder()
-
-		network.SendTransactionInBackground(ctx, tx1, 0)
-		secondAttemptResponse, txHash := network.SendTransaction(ctx, tx2, 0)
-
-		t.Logf("received status %s in second SendTransaction", secondAttemptResponse.TransactionStatus().String())
-		require.Contains(t, STATUS_COMMITTED_OR_DUPLICATE, secondAttemptResponse.TransactionStatus(), "second attempt must return COMMITTED or DUPLICATE status")
-
-		requireTxCommittedOnce(ctx, t, network, txHash)
-	})
 }
