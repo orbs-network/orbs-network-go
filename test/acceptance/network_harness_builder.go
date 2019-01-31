@@ -193,7 +193,7 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
 		WithOutput(b.makeFormattingOutput(), errorRecorder).
-		WithFilters(log.IgnoreMessagesMatching("transport message received")).
+		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
