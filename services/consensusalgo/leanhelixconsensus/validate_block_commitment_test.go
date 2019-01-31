@@ -33,7 +33,7 @@ func TestValidateBlockCommitment_HappyFlow(t *testing.T) {
 		CalcStateDiffHash:      digest.CalcStateDiffHash,
 	}
 
-	require.True(t, validateBlockCommitmentInternal(1, ToLeanHelixBlock(block), blockHash, log.GetLogger(), vcx, &commitmentvalidators{
+	require.True(t, validateBlockCommitmentInternal(1, ToLeanHelixBlock(block), blockHash, log.DefaultTestingLogger(t), vcx, &commitmentvalidators{
 		validateBlockNotNil:                 func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error { return nil },
 		validateTransactionsBlockMerkleRoot: func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
 		validateTransactionsMetadataHash:    func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },

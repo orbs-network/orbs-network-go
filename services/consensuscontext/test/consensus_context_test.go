@@ -9,7 +9,7 @@ import (
 )
 
 func TestRequestOrderingCommittee(t *testing.T) {
-	h := newHarness()
+	h := newHarness(t)
 	blockHeight := primitives.BlockHeight(1)
 	federationSize := len(h.config.FederationNodes(uint64(blockHeight)))
 

@@ -52,7 +52,7 @@ func TestCommitTransactionReceipts_EnqueuesOnlyNodesTransactionsForNotification(
 		c := &committer{
 			adder:       fake,
 			remover:     fake,
-			logger:      log.GetLogger(),
+			logger:      log.DefaultTestingLogger(t),
 			nodeAddress: n1,
 		}
 
@@ -79,7 +79,7 @@ func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(
 		c := &committer{
 			adder:       fake,
 			remover:     fake,
-			logger:      log.GetLogger(),
+			logger:      log.DefaultTestingLogger(t),
 			blockTime:   1,
 			blockHeight: 2,
 		}
@@ -104,7 +104,7 @@ func TestCommitTransactionReceipts_NotifiesResultHandlers(t *testing.T) {
 		tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
 
 		c := &committer{
-			logger:      log.GetLogger(),
+			logger:      log.DefaultTestingLogger(t),
 			myReceipts:  []*protocol.TransactionReceipt{tx1, tx2},
 			blockHeight: 1,
 			blockTime:   2,

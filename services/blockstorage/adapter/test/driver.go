@@ -25,10 +25,10 @@ import (
 
 const blocksFilename = "blocks"
 
-func NewFilesystemAdapterDriver(conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
+func NewFilesystemAdapterDriver(logger log.BasicLogger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
-	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
+	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -111,7 +111,7 @@ func flipBitInFile(t *testing.T, conf *localConfig, offset int64, bitMask byte) 
 }
 
 func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, ctrlRand *test.ControlledRand) []*protocol.BlockPairContainer {
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(conf)
+	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.NoError(t, err)
 	defer closeAdapter()
 

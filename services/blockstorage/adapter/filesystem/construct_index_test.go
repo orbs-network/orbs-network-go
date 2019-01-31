@@ -34,7 +34,7 @@ func TestConstructIndexFromReader(t *testing.T) {
 		return block, bytes, nil
 	})
 
-	blockHeightIndex, err := buildIndex(rw, 0, log.GetLogger(), codec)
+	blockHeightIndex, err := buildIndex(rw, 0, log.DefaultTestingLogger(t), codec)
 
 	require.NoError(t, err, "expected index to construct with no error")
 	require.EqualValues(t, numBlocks, blockHeightIndex.topBlockHeight, "expected index to reach top block height")

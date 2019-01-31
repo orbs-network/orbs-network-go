@@ -18,7 +18,7 @@ import (
 // TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -68,7 +68,7 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncNoCommitTimeout(3 * time.Millisecond).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(3 * time.Millisecond).start(ctx)
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
 
@@ -78,7 +78,7 @@ func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withSyncBroadcast(1).
@@ -133,7 +133,7 @@ func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(5 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(10).

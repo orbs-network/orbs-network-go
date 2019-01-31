@@ -14,7 +14,7 @@ import (
 
 func TestRunQuery_CallsVirtualMachine(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Millisecond, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Millisecond, time.Minute)
 
 		harness.runTransactionSuccess()
 

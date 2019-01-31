@@ -10,7 +10,7 @@ import (
 
 func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		message := builders.BlockSyncResponseInput().
 			WithFirstBlockHeight(10).
@@ -31,7 +31,7 @@ func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilit
 
 func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		state := h.factory.CreateProcessingBlocksState(nil)
 		nextState := state.processState(ctx)
@@ -42,7 +42,7 @@ func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 
 func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		message := builders.BlockSyncResponseInput().
 			WithFirstBlockHeight(10).
@@ -63,7 +63,7 @@ func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabili
 
 func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		message := builders.BlockSyncResponseInput().
 			WithFirstBlockHeight(10).
@@ -85,7 +85,7 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 
 func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	message := builders.BlockSyncResponseInput().
 		WithFirstBlockHeight(10).

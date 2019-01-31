@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 )
 
@@ -116,8 +115,8 @@ func (h *harness) expectStateHashToReturn(hash []byte) {
 
 }
 
-func newHarness() *harness {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newHarness(tb testing.TB) *harness {
+	log := log.DefaultTestingLogger(tb)
 
 	txPool := &services.MockTransactionPool{}
 	machine := &services.MockVirtualMachine{}

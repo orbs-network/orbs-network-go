@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/stretchr/testify/require"
 	"os/exec"
 	"path/filepath"
@@ -52,17 +53,17 @@ func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 	c := newTempFileConfig()
 	defer c.cleanDir()
 
-	err := lockAndRelease(c)
+	err := lockAndRelease(t, c)
 	require.NoError(t, err, "should succeed in creating an adapter for a non-existing temp file")
 
 	time.Sleep(500 * time.Millisecond)
 
-	err = lockAndRelease(c)
+	err = lockAndRelease(t, c)
 	require.NoError(t, err, "should succeed in creating a second adapter for same file after closing first adapter")
 }
 
-func lockAndRelease(c config.FilesystemBlockPersistenceConfig) error {
-	_, cancel, err := NewFilesystemAdapterDriver(c)
+func lockAndRelease(tb testing.TB, c config.FilesystemBlockPersistenceConfig) error {
+	_, cancel, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(tb), c)
 	if err != nil {
 		return err
 	}

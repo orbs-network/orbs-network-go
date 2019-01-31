@@ -47,7 +47,7 @@ func TestValidateBlockProposal_HappyPath(t *testing.T) {
 		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.GetLogger(),
+		logger:                    log.DefaultTestingLogger(t),
 	}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
 }
 
@@ -58,7 +58,7 @@ func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
 		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
 		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.GetLogger(),
+		logger:                    log.DefaultTestingLogger(t),
 	}), "should return false when ValidateTransactionsBlock() returns an error")
 }
 
@@ -69,7 +69,7 @@ func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
 		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 		validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
 		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.GetLogger(),
+		logger:                    log.DefaultTestingLogger(t),
 	}), "should return false when ValidateResultsBlock() returns an error")
 }
 
@@ -80,6 +80,6 @@ func TestValidateBlockProposal_FailsOnErrorInValidateBlockHash(t *testing.T) {
 		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 		validateBlockHash:         aMockValidateBlockHashThatReturnsError,
-		logger:                    log.GetLogger(),
+		logger:                    log.DefaultTestingLogger(t),
 	}), "should return false when ValidateBlockHash() returns an error")
 }

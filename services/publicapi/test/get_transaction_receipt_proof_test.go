@@ -14,7 +14,7 @@ import (
 
 func TestGetTransactionReceiptProof_GetCommitStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.transactionHasProof()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
@@ -36,7 +36,7 @@ func TestGetTransactionReceiptProof_GetCommitStatusFromTxPool(t *testing.T) {
 
 func TestGetTransactionReceiptProof_GetPendingStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.transactionPendingNoProofCalled()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
@@ -58,7 +58,7 @@ func TestGetTransactionReceiptProof_GetPendingStatusFromTxPool(t *testing.T) {
 
 func TestGetTransactionReceiptProof_NoRecordsFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.getTransactionStatusFailed()
 		result, err := harness.papi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{

@@ -14,7 +14,7 @@ import (
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -39,7 +39,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 
 func TestReturnTransactionReceipt(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).

@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +18,7 @@ import (
 
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		logger := log.DefaultTestingLogger(t)
 		config := &ethereumConnectorConfigForTests{"all your base", ""}
 		conn := adapter.NewEthereumRpcConnection(config, logger)
 		connector := ethereum.NewEthereumCrosschainConnector(conn, logger)
@@ -33,7 +32,7 @@ func TestContractCallBadNodeConfig(t *testing.T) {
 
 func TestCallContractWithoutArgs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newSimulatedEthereumConnectorHarness()
+		h := newSimulatedEthereumConnectorHarness(t)
 		initText := "are belong to us"
 		methodToCall := "getValues"
 		h.deploySimulatorStorageContract(ctx, initText)
