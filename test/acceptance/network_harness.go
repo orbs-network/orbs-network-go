@@ -39,7 +39,7 @@ type networkHarness struct {
 	inmemory.Network
 
 	tamperingTransport                 testGossipAdapter.Tamperer
-	ethereumConnection                 *ethereumAdapter.EthereumSimulato
+	ethereumConnection                 *ethereumAdapter.EthereumSimulator
 	fakeCompiler                       fake.FakeCompiler
 	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
