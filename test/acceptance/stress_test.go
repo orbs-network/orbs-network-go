@@ -42,7 +42,7 @@ func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
@@ -54,7 +54,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(AnyNthMessage(7)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -63,9 +63,8 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
 			}, AnyNthMessage(7))
