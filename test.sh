@@ -1,15 +1,12 @@
-#!/bin/bash -x
+#!/bin/bash -xe
 
 ulimit -S -n 20000
 
-. ./test.common.sh
+OUT_DIR=_out/standard
 
-go test -timeout 7m ./... -failfast -v &> _out/test.out
-go-junit-report -set-exit-code < _out/test.out > _out/results.xml
-EXIT_CODE=$?
-if [ $EXIT_CODE != 0 ]; then
-    exit $EXIT_CODE
-fi
+mkdir -p $OUT_DIR
+go test -timeout 7m ./... -failfast -v &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
+go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
 
 # this test must run separately since zero parallel package tests are allowed concurrently
 . ./test.goroutine-leaks.sh

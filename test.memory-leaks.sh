@@ -1,8 +1,12 @@
-#!/bin/sh
+#!/bin/bash -x
 
-NO_LOG_STDOUT=true go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 > test.out
+OUT_DIR=_out/memory_leaks
 
-export EXIT_CODE=$?
+mkdir -p $OUT_DIR
+go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 -v &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
+go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
+
+EXIT_CODE=$?
 
 if [ $EXIT_CODE != 0 ]; then
   echo "Test failed! Found leaking memory"
