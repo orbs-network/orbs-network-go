@@ -31,6 +31,7 @@ import (
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
 var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 var LOG_DIR = "_logs/acceptance"
 
 type networkHarnessBuilder struct {
@@ -59,7 +60,7 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 
 	harness := n.
 		WithTestId(getCallerFuncName()).
-		WithNumNodes(4).
+		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
 
