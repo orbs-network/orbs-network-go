@@ -1,11 +1,8 @@
 #!/bin/bash -x
 
-OUT_DIR=_out/goroutine_leaks
+. ./test.common.sh
 
-mkdir -p $OUT_DIR
-go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 -v &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
-go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
-
+go_test_junit_report goroutine_leaks "./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1"
 EXIT_CODE=$?
 
 if [ $EXIT_CODE != 0 ]; then
