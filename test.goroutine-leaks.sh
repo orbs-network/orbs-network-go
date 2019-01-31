@@ -2,7 +2,7 @@
 
 . ./test.common.sh
 
-go_test_junit_report goroutine_leaks "./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1"
+go_test_junit_report goroutine_leaks ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE != 0 ]; then

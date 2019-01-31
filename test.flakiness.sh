@@ -2,16 +2,12 @@
 
 . ./test.common.sh
 
-go_test_junit_report "flakiness/acceptance" "-tags \"cpunoise norecover\" ./test/acceptance -count 100 -timeout 20m -failfast"
+go_test_junit_report flakiness/acceptance ./test/acceptance -count 100 -timeout 20m -failfast -tags "cpunoise norecover"
 
-NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/blockstorage/test -count 100 -timeout 7m -failfast > _out/test.out
-check_exit_code_and_report
+go_test_junit_report flakiness/block_storage ./services/blockstorage/test -count 100 -timeout 7m -failfast -tags "cpunoise norecover"
 
-NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/blockstorage/internodesync -count 100 -timeout 7m -failfast > _out/test.out
-check_exit_code_and_report
+go_test_junit_report flakiness/internodesync ./services/blockstorage/internodesync -count 100 -timeout 7m -failfast -tags "cpunoise norecover"
 
-NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/blockstorage/servicesync -count 100 -timeout 7m -failfast > _out/test.out
-check_exit_code_and_report
+go_test_junit_report flakiness/servicesync ./services/blockstorage/servicesync -count 100 -timeout 7m -failfast -tags -tags "cpunoise norecover"
 
-NO_LOG_STDOUT=true go test -tags "cpunoise norecover" ./services/transactionpool/test -count 100 -timeout 7m -failfast > _out/test.out
-check_exit_code_and_report
+go_test_junit_report flakiness/transaction_pool ./services/transactionpool/test -count 100 -timeout 7m -failfast -tags -tags "cpunoise norecover"

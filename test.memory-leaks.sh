@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 . ./test.common.sh
-go_test_junit_report memory_leaks "./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1"
+go_test_junit_report memory_leaks ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1
 
 EXIT_CODE=$?
 
