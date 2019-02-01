@@ -29,9 +29,6 @@ jobs:
           no_output_timeout: 25m
       - store_artifacts:
           path: _out
-      - run:
-          command: find -type f -path './_out' -name 'test.out' -delete
-          when: always
       - store_test_results:
           path: _reports
 
