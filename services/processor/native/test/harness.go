@@ -16,7 +16,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 )
 
@@ -25,8 +24,8 @@ type harness struct {
 	service        services.Processor
 }
 
-func newHarness() *harness {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newHarness(tb testing.TB) *harness {
+	log := log.DefaultTestingLogger(tb)
 
 	compiler := fake.NewCompiler()
 	compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -20,7 +21,7 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	conf := newTempFileConfig()
 	defer conf.cleanDir()
 
-	adapter1, close1, err := NewFilesystemAdapterDriver(conf)
+	adapter1, close1, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.NoError(t, err)
 
 	for _, block := range blocks { // write some blocks
@@ -31,7 +32,7 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	requireCanReadAllBlocksInRandomOrder(t, adapter1, blocks, ctrlRand)
 	close1()
 
-	adapter2, close2, err := NewFilesystemAdapterDriver(conf)
+	adapter2, close2, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.NoError(t, err)
 
 	requireCanReadAllBlocksInRandomOrder(t, adapter2, blocks, ctrlRand)

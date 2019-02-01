@@ -13,7 +13,7 @@ jobs:
       - store_artifacts:
           path: _out
       - store_test_results:
-          path: _out
+          path: _reports
 
   flakiness:
     docker:
@@ -27,8 +27,10 @@ jobs:
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
+      - store_artifacts:
+          path: _out
       - store_test_results:
-          path: /go/src/github.com/orbs-network/orbs-network-go/_out
+          path: _reports
 
   e2e:
     machine: true

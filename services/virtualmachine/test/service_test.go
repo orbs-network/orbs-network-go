@@ -12,13 +12,13 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	h := newHarness()
+	h := newHarness(t)
 	h.verifyHandlerRegistrations(t)
 }
 
 func TestSdkUnknownOperation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)

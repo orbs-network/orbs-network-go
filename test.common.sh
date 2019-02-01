@@ -27,3 +27,13 @@ check_exit_code_and_report () {
     fi
 }
 
+go_test_junit_report () {
+    OUT_DIR="_out/$1"
+    REPORTS_DIR="_reports/$1"
+    shift
+
+    mkdir -p $OUT_DIR
+    mkdir -p $REPORTS_DIR
+    go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
+    go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${REPORTS_DIR}/results.xml
+}

@@ -14,7 +14,7 @@ import (
 
 func TestGetTransactionStatus_GetCommittedStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.transactionIsCommittedInPool()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
@@ -35,7 +35,7 @@ func TestGetTransactionStatus_GetCommittedStatusFromTxPool(t *testing.T) {
 
 func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.transactionIsPendingInPool()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{
@@ -56,7 +56,7 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 
 func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		harness.transactionIsNotInPoolIsInBlockStorage()
 		result, err := harness.papi.GetTransactionStatus(ctx, &services.GetTransactionStatusInput{

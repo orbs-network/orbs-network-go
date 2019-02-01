@@ -21,7 +21,7 @@ import (
 
 func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger()
+		logger := log.DefaultTestingLogger(t)
 		simulator := adapter.NewEthereumSimulatorConnection(logger)
 		auth := simulator.GetAuth()
 		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)

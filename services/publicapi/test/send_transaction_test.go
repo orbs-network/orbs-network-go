@@ -17,7 +17,7 @@ import (
 
 func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Millisecond, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Millisecond, time.Minute)
 		harness.addTransactionReturnsAlreadyCommitted()
 
 		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
@@ -35,7 +35,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 
 func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {
@@ -59,7 +59,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 
 func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, time.Second, time.Minute)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
@@ -88,7 +88,7 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 func TestSendTransaction_TimesOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		txTimeout := 10 * time.Millisecond
-		harness := newPublicApiHarness(ctx, txTimeout, time.Minute)
+		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {})
@@ -114,7 +114,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 func TestSendTransaction_ReturnImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		txTimeout := 100 * time.Second // won't actually wait please don't change
-		harness := newPublicApiHarness(ctx, txTimeout, time.Minute)
+		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {})

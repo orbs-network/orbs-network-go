@@ -15,7 +15,7 @@ import (
 
 func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContract_ButSafeFromDoubleDeploy(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		// first transaction should deploy to transient state
 		h.expectPreBuiltContractNotToBeDeployed()

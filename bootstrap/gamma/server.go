@@ -19,7 +19,7 @@ type GammaServer struct {
 func StartGammaServer(serverAddress string, profiling bool, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	testLogger := log.GetLogger().
+	rootLogger := log.GetLogger().
 		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
 		WithFilters(
 			//TODO(https://github.com/orbs-network/orbs-network-go/issues/585) what do we really want to output to the gamma server log? maybe some meaningful data for our users?
@@ -29,17 +29,17 @@ func StartGammaServer(serverAddress string, profiling bool, blocking bool) *Gamm
 			log.IgnoreMessagesMatching("no responses received"),
 		)
 
-	network := NewDevelopmentNetwork(ctx, testLogger)
-	testLogger.Info("finished creating development network")
+	network := NewDevelopmentNetwork(ctx, rootLogger)
+	rootLogger.Info("finished creating development network")
 
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(serverAddress, profiling),
-		testLogger, network.PublicApi(0), network.MetricRegistry(0))
+		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
 
 	s := &GammaServer{
 		ctxCancel:    cancel,
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		httpServer:   httpServer,
-		Logger:       testLogger,
+		Logger:       rootLogger,
 	}
 
 	if blocking {

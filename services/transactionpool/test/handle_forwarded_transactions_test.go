@@ -14,7 +14,7 @@ import (
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		ctrlRand := test.NewControlledRand(t)
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		invalidSig := make([]byte, 32)
 		ctrlRand.Read(invalidSig)
@@ -38,7 +38,7 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
@@ -51,7 +51,7 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(ctx, 1)
+		h := newHarnessWithSizeLimit(ctx, t, 1)
 
 		tx1 := builders.TransferTransaction().Build()
 

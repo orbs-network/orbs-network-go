@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -109,6 +108,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
+//TODO(v1) move this with its tests to transport testkit package
 func WithPercentChance(ctrlRand *test.ControlledRand, pct int) MessagePredicate {
 	var hit bool
 	if pct >= 100 {
@@ -143,7 +143,7 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 			hits++
 		}
 	}
-	fmt.Printf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
+	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
 func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {

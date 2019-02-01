@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 )
@@ -32,10 +31,10 @@ func TestContract_SendToAllButList(t *testing.T) {
 	t.Skipf("implement") // TODO(v1)
 }
 
-func broadcastTest(makeContext func(ctx context.Context) *transportContractContext) func(*testing.T) {
+func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
 		test.WithContext(func(ctx context.Context) {
-			c := makeContext(ctx)
+			c := makeContext(ctx, t)
 
 			data := &adapter.TransportData{
 				SenderNodeAddress: c.nodeAddresses[3],
@@ -60,7 +59,7 @@ type transportContractContext struct {
 	listeners     []*testkit.MockTransportListener
 }
 
-func aChannelTransport(ctx context.Context) *transportContractContext {
+func aChannelTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
@@ -69,7 +68,7 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 		federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(primitives.NodeAddress(address))
 	}
 
-	logger := log.GetLogger(log.String("adapter", "transport"))
+	logger := log.DefaultTestingLogger(tb).WithTags(log.String("adapter", "transport"))
 
 	transport := memory.NewTransport(ctx, logger, federationNodes)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
@@ -83,7 +82,7 @@ func aChannelTransport(ctx context.Context) *transportContractContext {
 	return res
 }
 
-func aDirectTransport(ctx context.Context) *transportContractContext {
+func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
 	firstRandomPort := test.RandomPort()
@@ -101,7 +100,7 @@ func aDirectTransport(ctx context.Context) *transportContractContext {
 		config.ForGossipAdapterTests(res.nodeAddresses[3], firstRandomPort+3, gossipPeers),
 	}
 
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	logger := log.DefaultTestingLogger(tb)
 	registry := metric.NewRegistry()
 
 	res.transports = []adapter.Transport{
