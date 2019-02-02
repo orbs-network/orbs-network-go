@@ -77,11 +77,6 @@ func (d *harness) withSyncBroadcast(times int) *harness {
 	return d
 }
 
-func (d *harness) withSyncBroadcastAtLeast(times int) *harness {
-	d.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(times)
-	return d
-}
-
 func (d *harness) withCommitStateDiff(times int) *harness {
 	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
 		return &services.CommitStateDiffOutput{

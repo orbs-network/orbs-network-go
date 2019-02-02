@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -77,54 +78,80 @@ func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 }
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithContextWithTimeout(1*time.Second, func(ctx context.Context) {
+		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
+
+		// important to keep the key identical in all three
+		blockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
+		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
+		blockSyncResponse := buildBlockSyncResponseInput(senderKeyPair)
+
 		harness := newBlockStorageHarness().
+			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
-			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withSyncBroadcastAtLeast(1).
-			withValidateConsensusAlgos(4).
-			start(ctx)
+			withSyncCollectChunksTimeout(50 * time.Millisecond)
+
+		harness.consensus.Reset().
+			When("HandleBlockConsensus", mock.Any, mock.Any).
+			Return(&handlers.HandleBlockConsensusOutput{}, nil).
+			AtLeast(6)
+
+		doneBroadcastBlockAvailabilityRequest := make(chan struct{})
+		harness.gossip.
+			When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).
+			Call(latchingMockHandler(doneBroadcastBlockAvailabilityRequest)).
+			AtLeast(1)
+
+		doneSendBlockSyncRequest := make(chan struct{})
+		harness.gossip.
+			When("SendBlockSyncRequest", mock.Any, mock.Any).
+			Call(latchingMockHandler(doneSendBlockSyncRequest)).
+			AtLeast(1)
+
+		harness.start(ctx)
 
 		// wait until we sent the broadcast (meaning the state machine is now at CAR state
-		require.NoError(t, test.EventuallyVerify(500*time.Millisecond, harness.gossip), "availability response stage failed")
-
-		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
-		blockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(4)).
-			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
-
-		// the source key here is the same for both to make our lives easier in BlockSyncResponse
-		anotherBlockAvailabilityResponse := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(4)).
-			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
+		<-doneBroadcastBlockAvailabilityRequest
 
 		// fake the CAR reply
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
 		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
-		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
+		// wait until we pick a source and request blocks from it
+		<-doneSendBlockSyncRequest
 
-		// latch until we pick a source and request blocks from it
-		require.NoError(t, test.EventuallyVerify(500*time.Millisecond, harness.gossip), "availability response stage failed")
-
-		// senderKeyPair must be the same as the chosen BlockAvailabilityResponse
-		blockSyncResponse := builders.BlockSyncResponseInput().
-			WithSenderNodeAddress(senderKeyPair.NodeAddress()).
-			WithFirstBlockHeight(primitives.BlockHeight(1)).
-			WithLastBlockHeight(primitives.BlockHeight(4)).
-			WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
-			WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
-
-		// fake the response
+		// fake blocks
 		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)
 
-		// verify that we committed the blocks
-		harness.verifyMocks(t, 10)
+		// verify blocks validated (HandleBlockConsensus x 6)
+		harness.verifyMocks(t, 1)
 	})
+}
+
+func latchingMockHandler(doneChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
+	return func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
+		select {
+		case doneChan <- struct{}{}:
+		case <-ctx.Done():
+		}
+		return nil, nil
+	}
+}
+func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair) *gossiptopics.BlockSyncResponseInput {
+	return builders.BlockSyncResponseInput().
+		WithSenderNodeAddress(senderKeyPair.NodeAddress()).
+		WithFirstBlockHeight(primitives.BlockHeight(1)).
+		WithLastBlockHeight(primitives.BlockHeight(4)).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
+}
+
+func buildBlockAvailabilityResponse(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair) *gossiptopics.BlockAvailabilityResponseInput {
+	return builders.BlockAvailabilityResponseInput().
+		WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+		WithFirstBlockHeight(primitives.BlockHeight(1)).
+		WithLastBlockHeight(primitives.BlockHeight(4)).
+		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 }
 
 func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
