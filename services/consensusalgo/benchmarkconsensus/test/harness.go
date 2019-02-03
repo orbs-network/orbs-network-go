@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"os"
 	"testing"
 	"time"
 )
@@ -42,9 +41,7 @@ func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
 	return testKeys.EcdsaSecp256K1KeyPairForTests(2)
 }
 
-func newHarness(
-	isLeader bool,
-) *harness {
+func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	federationNodes := make(map[string]config.FederationNode)
 	for i := 0; i < NETWORK_SIZE; i++ {
@@ -69,7 +66,7 @@ func newHarness(
 	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
 	cfg.SetUint32(config.BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	log := log.DefaultTestingLogger(tb)
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)

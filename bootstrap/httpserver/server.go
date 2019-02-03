@@ -111,11 +111,11 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
-	router.Handle("/api/v1/send-transaction", http.HandlerFunc(s.sendTransactionHandler))
-	router.Handle("/api/v1/run-query", http.HandlerFunc(s.runQueryHandler))
-	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(s.getTransactionStatusHandler))
-	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(s.getTransactionReceiptProofHandler))
-	router.Handle("/metrics", http.HandlerFunc(s.dumpMetrics))
+	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
+	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
+	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
+	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
+	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetrics)))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 
 	if s.config.Profiling() {
@@ -261,6 +261,8 @@ func translateRequestStatusToHttpCode(responseCode protocol.RequestStatus) int {
 		return http.StatusServiceUnavailable
 	case protocol.REQUEST_STATUS_SYSTEM_ERROR:
 		return http.StatusInternalServerError
+	case protocol.REQUEST_STATUS_OUT_OF_SYNC:
+		return http.StatusServiceUnavailable
 	case protocol.REQUEST_STATUS_RESERVED:
 		return http.StatusInternalServerError
 	}
@@ -273,7 +275,7 @@ func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.
 	w.Header().Set("X-ORBS-REQUEST-RESULT", requestResult.RequestStatus().String())
 	w.Header().Set("X-ORBS-BLOCK-HEIGHT", fmt.Sprintf("%d", requestResult.BlockHeight()))
 	w.Header().Set("X-ORBS-BLOCK-TIMESTAMP", sprintfTimestamp(requestResult.BlockTimestamp()))
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	if errorForVerbosity != nil {
 		w.Header().Set("X-ORBS-ERROR-DETAILS", errorForVerbosity.Error())
 	}
@@ -307,4 +309,19 @@ func registerPprof(router *http.ServeMux) {
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
+}
+
+// Allows handler to be called via XHR requests from any host
+func wrapHandlerWithCORS(f func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			f(w, r)
+		}
+	}
 }

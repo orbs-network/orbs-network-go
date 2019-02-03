@@ -11,7 +11,7 @@ import (
 
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 		h.expectBroadcastOfBlockAvailabilityRequestToFail()
@@ -27,7 +27,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
-		h := newBlockSyncHarness().withBatchSize(0)
+		h := newBlockSyncHarness(t).withBatchSize(0)
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(0) // new server
 
@@ -42,7 +42,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithCollectResponsesTimer(func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithCollectResponsesTimer(t, func() *synchronization.Timer {
 			return manualCollectResponsesTimer
 		})
 
@@ -53,7 +53,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
 			h.verifyBroadcastOfBlockAvailabilityRequest(t)
-			state.gotAvailabilityResponse(ctx, message)
+			h.factory.conduit <- message
 			manualCollectResponsesTimer.ManualTick()
 		})
 
@@ -70,7 +70,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
@@ -81,27 +81,4 @@ func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	require.Nil(t, nextState, "context terminated, next state should be nil")
 
 	h.verifyMocks(t)
-}
-
-func TestStateCollectingAvailabilityResponses_ReceiveResponseWhenNotReadyDoesNotBlock(t *testing.T) {
-	h := newBlockSyncHarness()
-	test.WithContextWithTimeout(h.config.collectResponses/2, func(ctx context.Context) {
-
-		state := h.factory.CreateCollectingAvailabilityResponseState()
-		// not calling the process state will not activate the reader part
-		message := builders.BlockAvailabilityResponseInput().Build().Message
-		state.gotAvailabilityResponse(ctx, message) // this will block if the test fails
-	})
-}
-
-func TestStateCollectingAvailabilityResponses_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-		state := h.factory.CreateCollectingAvailabilityResponseState()
-		// these calls should do nothing, this is just a sanity that they do not panic and return nothing
-		blockmessage := builders.BlockSyncResponseInput().Build().Message
-		state.gotBlocks(ctx, blockmessage)
-		state.blockCommitted(ctx)
-	})
-
 }

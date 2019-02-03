@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 )
 
@@ -21,8 +20,8 @@ type harness struct {
 	service        services.Processor
 }
 
-func newHarness() *harness {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newHarness(tb testing.TB) *harness {
+	log := log.DefaultTestingLogger(tb)
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 

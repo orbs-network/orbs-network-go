@@ -11,7 +11,7 @@ import (
 
 func TestStateFinishedCollectingAvailabilityResponses_ReturnsToIdleWhenNoResponsesReceived(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		state := h.factory.CreateFinishedCARState(nil)
 		nextState := state.processState(ctx)
@@ -22,7 +22,7 @@ func TestStateFinishedCollectingAvailabilityResponses_ReturnsToIdleWhenNoRespons
 
 func TestStateFinishedCollectingAvailabilityResponses_MovesToWaitingForChunks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		response := builders.BlockAvailabilityResponseInput().Build().Message
 		state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
@@ -34,7 +34,7 @@ func TestStateFinishedCollectingAvailabilityResponses_MovesToWaitingForChunks(t 
 
 func TestStateFinishedCollectingAvailabilityResponses_ContextTerminationFlow(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	response := builders.BlockAvailabilityResponseInput().Build().Message
 	state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{response})
@@ -43,17 +43,4 @@ func TestStateFinishedCollectingAvailabilityResponses_ContextTerminationFlow(t *
 	shouldBeNil := state.processState(ctx)
 
 	require.Nil(t, shouldBeNil, "context terminated, state should be nil")
-}
-
-func TestStateFinishedCollectingAvailabilityResponses_NOP(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
-
-		state := h.factory.CreateFinishedCARState([]*gossipmessages.BlockAvailabilityResponseMessage{})
-
-		// sanity test, these should do nothing
-		state.gotBlocks(ctx, nil)
-		state.blockCommitted(ctx)
-		state.gotAvailabilityResponse(ctx, nil)
-	})
 }

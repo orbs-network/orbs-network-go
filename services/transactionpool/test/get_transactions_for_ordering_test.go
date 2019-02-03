@@ -12,7 +12,7 @@ import (
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 			CurrentBlockHeight:      3,
@@ -26,7 +26,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		h.assumeBlockStorageAtHeight(1)
 		h.ignoringTransactionResults()
@@ -48,7 +48,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		ch := make(chan int)
 

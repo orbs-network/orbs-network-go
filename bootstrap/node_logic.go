@@ -50,6 +50,8 @@ func NewNodeLogic(
 	ethereumConnection ethereumAdapter.EthereumConnection,
 ) NodeLogic {
 
+	config.Validate(nodeConfig) // this will panic if config does not pass validation
+
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, logger, metricRegistry)
 
@@ -68,7 +70,6 @@ func NewNodeLogic(
 	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
 	leanHelixAlgo := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
 
-	// TODO: Restore this when lean-helix-go submodule is integrated
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)

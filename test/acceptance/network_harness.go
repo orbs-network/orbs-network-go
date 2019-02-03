@@ -5,6 +5,7 @@ import (
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -12,17 +13,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type NetworkHarness interface {
 	callcontract.CallContractAPI
 	PublicApi(nodeIndex int) services.PublicApi
 	Size() int
-	BenchmarkTokenContract() callcontract.BenchmarkTokenClient
+	DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient
 	TransportTamperer() testGossipAdapter.Tamperer
 	EthereumSimulator() *ethereumAdapter.EthereumSimulator
 	BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence
@@ -49,7 +51,7 @@ func (n *networkHarness) WaitForTransactionInNodeState(ctx context.Context, txHa
 	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
 	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
 	if err != nil {
-		test.DebugPrintGoroutineStacks() // since test timed out, help find deadlocked goroutines
+		instrumentation.DebugPrintGoroutineStacks(n.Logger) // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
 	}
 }
@@ -70,8 +72,22 @@ func (n *networkHarness) EthereumSimulator() *ethereumAdapter.EthereumSimulator 
 	return n.ethereumConnection
 }
 
-func (n *networkHarness) BenchmarkTokenContract() callcontract.BenchmarkTokenClient {
-	return callcontract.NewContractClient(n)
+func (n *networkHarness) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {
+	bt := callcontract.NewContractClient(n)
+
+	benchmarkDeploymentTimeout := 1 * time.Second
+	timeoutCtx, cancel := context.WithTimeout(ctx, benchmarkDeploymentTimeout)
+	defer cancel()
+
+	res, txHash := bt.Transfer(timeoutCtx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
+
+	switch res.TransactionStatus() {
+	case protocol.TRANSACTION_STATUS_COMMITTED, protocol.TRANSACTION_STATUS_PENDING, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING:
+		n.WaitForTransactionInState(ctx, txHash)
+	default:
+		panic(fmt.Sprintf("error sending transaction response: %s", res.String()))
+	}
+	return bt
 }
 
 func (n *networkHarness) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {

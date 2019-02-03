@@ -8,7 +8,7 @@ import (
 )
 
 func newNonLeaderHarness(t *testing.T, ctx context.Context) *harness {
-	h := newHarness(false)
+	h := newHarness(t, false)
 	h.createService(ctx)
 	return h
 }
@@ -23,7 +23,7 @@ func TestNonLeaderInit(t *testing.T) {
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(false)
+		h := newHarness(t, false)
 		h.expectNewBlockProposalNotRequested()
 
 		h.createService(ctx)

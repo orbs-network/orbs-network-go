@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
+	"time"
 )
 
 var LogTag = log.Service("transaction-pool")
@@ -26,10 +27,10 @@ type service struct {
 	logger                     log.BasicLogger
 	config                     config.TransactionPoolConfig
 
-	mu struct {
+	lastCommitted struct {
 		sync.RWMutex
-		lastCommittedBlockHeight    primitives.BlockHeight
-		lastCommittedBlockTimestamp primitives.TimestampNano
+		blockHeight primitives.BlockHeight
+		timestamp   primitives.TimestampNano
 	}
 
 	pendingPool          *pendingTxPool
@@ -41,20 +42,24 @@ type service struct {
 	metrics struct {
 		blockHeight *metric.Gauge
 	}
+
+	addCommitLock sync.RWMutex
 }
 
 func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.mu.lastCommittedBlockHeight, s.mu.lastCommittedBlockTimestamp
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
+	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
 func (s *service) createValidationContext() *validationContext {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
 	return &validationContext{
+		nodeTime:                    time.Now(),
+		lastCommittedBlockTimestamp: s.lastCommitted.timestamp,
 		expiryWindow:                s.config.TransactionExpirationWindow(),
-		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
+		nodeSyncRejectInterval:      s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:              s.config.VirtualChainId(),
 	}

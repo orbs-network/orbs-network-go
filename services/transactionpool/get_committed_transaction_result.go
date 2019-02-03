@@ -9,10 +9,6 @@ import (
 
 func (s *service) GetCommittedTransactionReceipt(ctx context.Context, input *services.GetCommittedTransactionReceiptInput) (*services.GetCommittedTransactionReceiptOutput, error) {
 
-	if input.TransactionTimestamp > s.currentNodeTimeWithGrace() {
-		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME), nil
-	}
-
 	if tx := s.pendingPool.get(input.Txhash); tx != nil {
 		return s.getTxResult(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 	}
@@ -30,18 +26,18 @@ func (s *service) GetCommittedTransactionReceipt(ctx context.Context, input *ser
 }
 
 func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.GetCommittedTransactionReceiptOutput {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
 	return &services.GetCommittedTransactionReceiptOutput{
 		TransactionStatus:  status,
 		TransactionReceipt: receipt,
-		BlockHeight:        s.mu.lastCommittedBlockHeight,
-		BlockTimestamp:     s.mu.lastCommittedBlockTimestamp,
+		BlockHeight:        s.lastCommitted.blockHeight,
+		BlockTimestamp:     s.lastCommitted.timestamp,
 	}
 }
 
 func (s *service) currentNodeTimeWithGrace() primitives.TimestampNano {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.mu.lastCommittedBlockTimestamp + primitives.TimestampNano(s.config.TransactionPoolFutureTimestampGraceTimeout().Nanoseconds())
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
+	return s.lastCommitted.timestamp + primitives.TimestampNano(s.config.TransactionPoolFutureTimestampGraceTimeout().Nanoseconds())
 }

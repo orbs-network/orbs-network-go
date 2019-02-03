@@ -11,7 +11,7 @@ import (
 
 func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 1, 1)
 
 		err := tracker.WaitForBlock(ctx, 3)
 		require.EqualError(t, err, "requested future block outside of grace range", "did not fail immediately")
@@ -21,7 +21,7 @@ func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 	test.WithContext(func(parentCtx context.Context) {
 		ctx, cancel := context.WithCancel(parentCtx)
-		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 1, 1)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
 		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
@@ -31,7 +31,7 @@ func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 	test.WithContext(func(parentCtx context.Context) {
 		ctx, cancel := context.WithCancel(parentCtx)
-		tracker := NewBlockTracker(log.GetLogger(), 0, 5)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 0, 5)
 		cancel()
 		err := tracker.WaitForBlock(ctx, 2)
 		require.EqualError(t, err, "aborted while waiting for block at height 2: context canceled", "did not fail as expected")
@@ -40,7 +40,7 @@ func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 
 func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(log.GetLogger(), 1, 2)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 1, 2)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
@@ -68,7 +68,7 @@ func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 1, 1)
 
 		var waitCount int32
 		internalWaitChan := make(chan int32)
@@ -99,7 +99,7 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 
 func TestBlockTracker_ReachedHeight_RejectsWrongHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tracker := NewBlockTracker(log.GetLogger(), 1, 1)
+		tracker := NewBlockTracker(log.DefaultTestingLogger(t), 1, 1)
 
 		require.Panics(t, func() {
 			tracker.IncrementTo(3)

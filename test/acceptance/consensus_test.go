@@ -26,7 +26,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//	WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 	//	Start(func(ctx context.Context, network NetworkHarness) {
 	//
-	//		contract := network.BenchmarkTokenContract()
+	//		contract := network.DeployBenchmarkTokenContract()
 	//
 	//		amount := uint64(17)
 	//		fromAddress := 5
@@ -48,7 +48,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//		require.EqualValues(t, 0, contract.GetBalance(ctx, leaderIndex, toAddress), "initial getBalance result on leader")
 	//		require.EqualValues(t, 0, contract.GetBalance(ctx, validatorIndex, toAddress), "initial getBalance result on non leader")
 	//
-	//		prePrepareTamper.Release(ctx)
+	//		prePrepareTamper.StopTampering(ctx)
 	//		prePrepareLatch.Remove()
 	//
 	//		if err := network.blockPersistence(leaderIndex).GetBlockTracker().WaitForBlock(ctx, 1); err != nil {
@@ -74,8 +74,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
-			contract := network.BenchmarkTokenContract()
-			contract.DeployBenchmarkToken(ctx, 5)
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			committedTamper := network.TransportTamperer().Fail(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 			blockSyncTamper := network.TransportTamperer().Fail(testkit.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
@@ -89,11 +88,8 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			committedLatch.Wait()
 
-			require.EqualValues(t, 0, contract.GetBalance(ctx, 0, 6), "initial getBalance result on leader")
-			require.EqualValues(t, 0, contract.GetBalance(ctx, 1, 6), "initial getBalance result on non leader")
-
 			committedLatch.Remove()
-			committedTamper.Release(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
+			committedTamper.StopTampering(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "eventual getBalance result on leader")
@@ -101,6 +97,6 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			network.WaitForTransactionInNodeState(ctx, txHash, 1)
 			require.EqualValues(t, 17, contract.GetBalance(ctx, 1, 6), "eventual getBalance result on non leader")
 
-			blockSyncTamper.Release(ctx)
+			blockSyncTamper.StopTampering(ctx)
 		})
 }

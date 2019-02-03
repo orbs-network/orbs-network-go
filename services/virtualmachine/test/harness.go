@@ -11,7 +11,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"os"
+	"testing"
 )
 
 type harness struct {
@@ -23,8 +23,8 @@ type harness struct {
 	service              services.VirtualMachine
 }
 
-func newHarness() *harness {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newHarness(tb testing.TB) *harness {
+	log := log.DefaultTestingLogger(tb)
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}

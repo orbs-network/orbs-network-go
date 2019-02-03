@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -77,8 +76,8 @@ func (h *harness) deployContractsToGanache(t *testing.T, count int, delayBetween
 	return nil
 }
 
-func newRpcEthereumConnectorHarness(cfg *ethereumConnectorConfigForTests) *harness {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigForTests) *harness {
+	logger := log.DefaultTestingLogger(tb)
 	a := adapter.NewEthereumRpcConnection(cfg, logger)
 
 	return &harness{
@@ -98,8 +97,8 @@ func (h *harness) authFromConfig() (*bind.TransactOpts, error) {
 	return bind.NewKeyedTransactor(key), nil
 }
 
-func newSimulatedEthereumConnectorHarness() *harness {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
+	logger := log.DefaultTestingLogger(tb)
 	conn := adapter.NewEthereumSimulatorConnection(logger)
 
 	return &harness{

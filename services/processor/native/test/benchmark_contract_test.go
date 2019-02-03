@@ -11,7 +11,7 @@ import (
 
 func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		t.Log("Runs BenchmarkContract.add to add two numbers")
 
@@ -26,7 +26,7 @@ func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 
 func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		const value = uint64(41)
 
 		t.Log("Runs BenchmarkContract.set to save a value in state")
@@ -55,7 +55,7 @@ func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 
 func TestBenchmarkContract_EmitEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		t.Log("Runs BenchmarkContract.giveBirth to emit an event")
 

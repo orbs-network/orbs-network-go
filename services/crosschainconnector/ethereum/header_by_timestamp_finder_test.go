@@ -6,13 +6,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 )
 
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		logger := log.DefaultTestingLogger(t)
 		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 		// something before 2015/07/31
@@ -23,7 +22,7 @@ func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 
 func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		logger := log.DefaultTestingLogger(t)
 		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 
@@ -35,7 +34,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 
 func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		logger := log.DefaultTestingLogger(t)
 		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 

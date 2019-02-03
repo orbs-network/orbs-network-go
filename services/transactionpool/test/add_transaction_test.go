@@ -15,7 +15,7 @@ import (
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		tx := builders.TransferTransaction().Build()
 
@@ -32,7 +32,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		tx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 		h.expectNoTransactionsToBeForwarded()
@@ -46,7 +46,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -76,7 +76,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -94,7 +94,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -116,7 +116,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(ctx, 1)
+		h := newHarnessWithSizeLimit(ctx, t, 1)
 
 		h.expectNoTransactionsToBeForwarded()
 

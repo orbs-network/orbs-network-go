@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
@@ -41,6 +40,39 @@ func TestHttpServerIsValid_BadMembuff(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, e.code, "bad input in body should cause bad request error")
 }
 
+func TestHttpServerMethodOptions(t *testing.T) {
+	f := func(w http.ResponseWriter, r *http.Request) {
+		t.Log("should not be called")
+		t.Fail()
+	}
+
+	req, _ := http.NewRequest(http.MethodOptions, "1", errReader(0))
+	res := httptest.NewRecorder()
+	wrapHandlerWithCORS(f)(res, req)
+
+	require.Equal(t, http.StatusOK, res.Code, "always respond OK for options request")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Origin"), "set CORS header for origin")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Headers"), "set CORS header for headers")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Methods"), "set CORS header for methods")
+	require.Empty(t, res.Body, "empty response")
+}
+
+func TestHttpServerCORS(t *testing.T) {
+	f := func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello"))
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, "1", errReader(0))
+	res := httptest.NewRecorder()
+	wrapHandlerWithCORS(f)(res, req)
+
+	require.Equal(t, http.StatusOK, res.Code, "always respond OK for options request")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Origin"), "set CORS header for origin")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Headers"), "set CORS header for headers")
+	require.Equal(t, "*", res.Header().Get("Access-Control-Allow-Methods"), "set CORS header for methods")
+	require.Equal(t, "hello", res.Body.String(), "expected response from a wrapped function")
+}
+
 func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -53,6 +85,7 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 		{"REQUEST_STATUS_BAD_REQUEST", http.StatusBadRequest, protocol.REQUEST_STATUS_BAD_REQUEST},
 		{"REQUEST_STATUS_CONGESTION", http.StatusServiceUnavailable, protocol.REQUEST_STATUS_CONGESTION},
 		{"REQUEST_STATUS_SYSTEM_ERROR", http.StatusInternalServerError, protocol.REQUEST_STATUS_SYSTEM_ERROR},
+		{"REQUEST_STATUS_OUT_OF_SYNC", http.StatusServiceUnavailable, protocol.REQUEST_STATUS_OUT_OF_SYNC},
 	}
 	for i := range tests {
 		cTest := tests[i] // this is so that we can run tests in parallel, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721
@@ -63,8 +96,8 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	}
 }
 
-func mockServer() *server {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func mockServer(tb testing.TB) *server {
+	logger := log.DefaultTestingLogger(tb)
 	return &server{
 		logger: logger.WithTags(LogTag),
 	}
@@ -81,7 +114,7 @@ func TestHttpServerWriteMembuffResponse(t *testing.T) {
 		TransactionReceipt: nil,
 	}).Build()
 
-	s := mockServer()
+	s := mockServer(t)
 	rec := httptest.NewRecorder()
 	s.writeMembuffResponse(rec, expectedResponse, expectedResponse.RequestResult(), errors.New("example error"))
 
@@ -89,7 +122,6 @@ func TestHttpServerWriteMembuffResponse(t *testing.T) {
 	require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
 	require.Equal(t, "REQUEST_STATUS_COMPLETED", rec.Header().Get("X-ORBS-REQUEST-RESULT"), "should have correct X-ORBS-REQUEST-RESULT")
 	require.Equal(t, "1234", rec.Header().Get("X-ORBS-BLOCK-HEIGHT"), "should have correct X-ORBS-BLOCK-HEIGHT")
-	require.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"), "should always add Access-Control-Allow-Origin header")
 	require.Equal(t, "2019-01-07T10:52:35.859Z", rec.Header().Get("X-ORBS-BLOCK-TIMESTAMP"), "should have correct X-ORBS-BLOCK-TIMESTAMP")
 	require.Equal(t, "example error", rec.Header().Get("X-ORBS-ERROR-DETAILS"), "should have correct X-ORBS-ERROR-DETAILS")
 	responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())
@@ -102,7 +134,7 @@ func TestHttpServerWriteTextResponse(t *testing.T) {
 		logField: nil,
 		message:  "hello test",
 	}
-	s := mockServer()
+	s := mockServer(t)
 	rec := httptest.NewRecorder()
 	s.writeErrorResponseAndLog(rec, e)
 	require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")

@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 )
@@ -24,9 +23,9 @@ type harness struct {
 	vmMock  *services.MockVirtualMachine
 }
 
-func newPublicApiHarness(ctx context.Context, txTimeout time.Duration) *harness {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
-	cfg := config.ForPublicApiTests(uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), txTimeout)
+func newPublicApiHarness(ctx context.Context, tb testing.TB, txTimeout time.Duration, outOfSyncWarningTime time.Duration) *harness {
+	logger := log.DefaultTestingLogger(tb)
+	cfg := config.ForPublicApiTests(uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), txTimeout, outOfSyncWarningTime)
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
 	bksMock := &services.MockBlockStorage{}

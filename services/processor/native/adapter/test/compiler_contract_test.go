@@ -66,7 +66,7 @@ type compilerContractHarness struct {
 func aNativeCompiler(t *testing.T) *compilerContractHarness {
 	tmpDir := test.CreateTempDirForTest(t)
 	cfg := &hardcodedConfig{artifactPath: tmpDir}
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	log := log.DefaultTestingLogger(t)
 	compiler := adapter.NewNativeCompiler(cfg, log)
 	return &compilerContractHarness{
 		compiler: compiler,

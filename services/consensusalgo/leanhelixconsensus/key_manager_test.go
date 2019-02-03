@@ -12,7 +12,7 @@ import (
 func TestSignAndVerifyConsensusMessage(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	contentSig := mgr.SignConsensusMessage(1, content)
@@ -20,14 +20,14 @@ func TestSignAndVerifyConsensusMessage(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
 	}
-	verified := mgr.VerifyConsensusMessage(1, content, senderSignature.Build())
-	require.True(t, verified, "Verification of original consensus message should succeed")
+	err := mgr.VerifyConsensusMessage(1, content, senderSignature.Build())
+	require.NoError(t, err, "Verification of original consensus message should succeed")
 }
 
 func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyConsensusMessage()")
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	contentSig := mgr.SignConsensusMessage(1, content)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
@@ -35,14 +35,14 @@ func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 		Signature: contentSig,
 	}
 
-	verified := mgr.VerifyConsensusMessage(2, content, senderSignature.Build())
-	require.False(t, verified, "Verification of consensus message that was signed for another block height should fail")
+	err := mgr.VerifyConsensusMessage(2, content, senderSignature.Build())
+	require.Error(t, err, "Verification of consensus message that was signed for another block height should fail")
 }
 
 func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedMessage := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -51,14 +51,14 @@ func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
 	}
-	verified := mgr.VerifyConsensusMessage(1, tamperedMessage, senderSignature.Build())
-	require.False(t, verified, "Verification of a tampered consensus message should fail")
+	err := mgr.VerifyConsensusMessage(1, tamperedMessage, senderSignature.Build())
+	require.Error(t, err, "Verification of a tampered consensus message should fail")
 }
 
 func TestSignAndVerifyRandomSeed(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)
@@ -73,7 +73,7 @@ func TestSignAndVerifyRandomSeed(t *testing.T) {
 func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedRandomSeed := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -89,7 +89,7 @@ func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyRandomSeed()")
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.GetLogger(), keyPair.PrivateKey())
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), keyPair.PrivateKey())
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)

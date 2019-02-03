@@ -14,7 +14,7 @@ import (
 
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
 
-// LOCAL_NETWORK_SIZE must remain identical to number of configured nodes in docker/test/e2e-config
+// LOCAL_NETWORK_SIZE must remain identical to number of configured nodes in docker/test/benchmark-config
 // Also Lean Helix consensus algo requires it to be >= 4 or it will panic
 const LOCAL_NETWORK_SIZE = 4
 

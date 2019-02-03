@@ -168,7 +168,7 @@ Please run `git config --local core.hooksPath .githooks` after cloning the repos
 
 Occasionally, local tests with `go test` will pass but the same tests on Docker will fail. This usually happens when tests are flaky and sensitive to timing (we do our best to avoid this). 
 
-* Run `./docker/build/build.debug.sh` and `./docker/test/test.debug.sh` to have a shorter development cycle by skipping tests and avoiding building development tools when the image is built. The purpose of these files is to let developers run E2E on Docker as fast as possible.
+* Run `./docker/build/build.sh` and `./docker/test/test.sh`.
 
 * If the E2E test gets stuck or `docker-compose` stops working properly, try to **remove all containers** with this handy command: `docker rm -f $(docker ps -aq)`. But remember that **ALL YOUR LOCAL CONTAINERS WILL BE GONE** (even from other projects).
 

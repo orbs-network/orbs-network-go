@@ -17,7 +17,7 @@ import (
 
 func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Millisecond)
+		harness := newPublicApiHarness(ctx, t, time.Millisecond, time.Minute)
 		harness.addTransactionReturnsAlreadyCommitted()
 
 		result, err := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
@@ -35,7 +35,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 
 func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {
@@ -59,7 +59,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 
 func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second)
+		harness := newPublicApiHarness(ctx, t, time.Second, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
@@ -87,8 +87,8 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 
 func TestSendTransaction_TimesOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		timeout := 10 * time.Millisecond
-		harness := newPublicApiHarness(ctx, timeout)
+		txTimeout := 10 * time.Millisecond
+		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {})
@@ -106,15 +106,15 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		require.Contains(t, err.Error(), fmt.Sprintf("waiting aborted due to context termination for key %s", txHash.String()))
-		require.WithinDuration(t, time.Now(), start, 2*timeout, "timeout duration exceeded")
+		require.WithinDuration(t, time.Now(), start, 2*txTimeout, "timeout duration exceeded")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
 
 func TestSendTransaction_ReturnImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		timeout := 100 * time.Second // won't actually wait please don't change
-		harness := newPublicApiHarness(ctx, timeout)
+		txTimeout := 100 * time.Second // won't actually wait please don't change
+		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
 		harness.onAddNewTransaction(func() {})
