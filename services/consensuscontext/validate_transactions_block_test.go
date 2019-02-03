@@ -132,11 +132,11 @@ func TestIsValidBlockTimestamp(t *testing.T) {
 			now := time.Now()
 			currentBlockTimestamp := primitives.TimestampNano(now.Add(tt.currentBlockTimestampOffset).UnixNano())
 			prevBlockTimestamp := primitives.TimestampNano(now.Add(tt.prevBlockTimestampOffset).UnixNano())
-			res := isValidBlockTimestamp(currentBlockTimestamp, prevBlockTimestamp, now, jitter)
+			err := isValidBlockTimestamp(currentBlockTimestamp, prevBlockTimestamp, now, jitter)
 			if tt.expectedToPass {
-				require.True(t, res, tt.name)
+				require.NoError(t, err, tt.name)
 			} else {
-				require.False(t, res, tt.name)
+				require.Error(t, err, tt.name)
 			}
 		})
 	}

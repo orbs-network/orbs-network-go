@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 )
 
 type validateBlockProposalContext struct {
@@ -20,7 +21,7 @@ type validateBlockProposalContext struct {
 }
 
 // Block height is unused - the spec of ValidateBlockProposal() prepares for a height-based config but it is not part of v1
-func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) bool {
+func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) error {
 	return validateBlockProposalInternal(ctx, block, blockHash, prevBlock, &validateBlockProposalContext{
 		validateTransactionsBlock: p.consensusContext.ValidateTransactionsBlock,
 		validateResultsBlock:      p.consensusContext.ValidateResultsBlock,
@@ -29,12 +30,11 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	})
 }
 
-func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) bool {
+func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) error {
 	blockPair := FromLeanHelixBlock(block)
 
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
-		vctx.logger.Info("Error in ValidateBlockProposal(): block or its tx/rx are nil")
-		return false
+		return errors.New("block or its tx/rx are nil")
 	}
 
 	newBlockHeight := primitives.BlockHeight(1)
@@ -59,8 +59,7 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal failed ValidateTransactionsBlock", log.Error(err), log.BlockHeight(newBlockHeight))
-		return false
+		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateTransactionsBlock, newBlockHeight=%d", newBlockHeight)
 	}
 
 	_, err = vctx.validateResultsBlock(ctx, &services.ValidateResultsBlockInput{
@@ -71,17 +70,15 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal failed ValidateResultsBlock", log.BlockHeight(newBlockHeight), log.Error(err))
-		return false
+		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateResultsBlock, newBlockHeight=%d", newBlockHeight)
 	}
 
 	err = vctx.validateBlockHash(primitives.Sha256(blockHash), blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	if err != nil {
-		vctx.logger.Error("ValidateBlockProposal blockHash mismatch", log.Error(err), log.Stringable("expected-block-hash", blockHash))
-		return false
+		return errors.Wrapf(err, "ValidateBlockProposal blockHash mismatch, expectedBlockHash=%s", blockHash)
 	}
 	vctx.logger.Info("ValidateBlockProposal passed", log.BlockHeight(newBlockHeight))
-	return true
+	return nil
 }
 
 func validateBlockHash_Proposal(blockHash primitives.Sha256, tx *protocol.TransactionsBlockContainer, rx *protocol.ResultsBlockContainer) error {
