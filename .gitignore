@@ -87,6 +87,7 @@ fabric.properties
 *.log
 _logs/
 _out/
+_reports/
 
 # binaries
 _bin

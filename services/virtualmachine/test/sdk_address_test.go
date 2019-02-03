@@ -18,7 +18,7 @@ var EXAMPLE_CONTEXT_ID = []byte{0x22, 0x23}
 
 func TestSdkAddress_GetSignerAddressWithoutContextFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 		require.Error(t, err, "handleSdkCall should fail")
@@ -27,7 +27,7 @@ func TestSdkAddress_GetSignerAddressWithoutContextFails(t *testing.T) {
 
 func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
@@ -49,7 +49,7 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 
 func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		var signerAddressRes []byte
@@ -87,7 +87,7 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 
 func TestSdkAddress_GetCallerAddressWithoutContextFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 		require.Error(t, err, "handleSdkCall should fail")
@@ -96,7 +96,7 @@ func TestSdkAddress_GetCallerAddressWithoutContextFails(t *testing.T) {
 
 func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)
@@ -118,7 +118,7 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 
 func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		var initialCallerAddress []byte
@@ -185,7 +185,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 
 func TestSdkAddress_GetOwnAddressWithoutContextFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
 		require.Error(t, err, "handleSdkCall should fail")
@@ -194,7 +194,7 @@ func TestSdkAddress_GetOwnAddressWithoutContextFails(t *testing.T) {
 
 func TestSdkAddress_GetOwnAddress(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		expectedAddress1, _ := digest.CalcClientAddressOfContract("Contract1")

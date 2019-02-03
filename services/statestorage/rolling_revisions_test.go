@@ -14,7 +14,7 @@ import (
 
 func TestWriteAtHeight(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
-	d := newDriver(persistenceMock, 5, nil)
+	d := newDriver(t, persistenceMock, 5, nil)
 	persistenceMock.
 		When("Read", primitives.ContractName("c"), "k1").
 		Return((*protocol.StateRecord)(nil), false, nil).
@@ -46,7 +46,7 @@ func TestNoLayers(t *testing.T) {
 		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
 		Return(nil).
 		Times(2)
-	d := newDriver(persistenceMock, 0, nil)
+	d := newDriver(t, persistenceMock, 0, nil)
 	d.writeFull(1, 1, "c", "k", "v1")
 	d.writeFull(2, 2, "c", "k", "v2")
 
@@ -59,7 +59,7 @@ func TestNoLayers(t *testing.T) {
 }
 
 func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
-	d := newDriver(statePersistenceMockWithWriteAnyNoErrors(0), 5, nil)
+	d := newDriver(t, statePersistenceMockWithWriteAnyNoErrors(0), 5, nil)
 	d.write(1, "", "k1", "v1")
 	d.write(2, "", "k1", "")
 
@@ -90,7 +90,7 @@ func TestMergeToPersistence(t *testing.T) {
 			return nil
 		}).
 		Times(2)
-	d := newDriver(persistenceMock, 2, nil)
+	d := newDriver(t, persistenceMock, 2, nil)
 	d.writeFull(1, 1, "c", "k", "v1")
 	d.writeFull(2, 2, "c", "k", "v2")
 	d.writeFull(3, 3, "c", "k", "v3")
@@ -102,7 +102,7 @@ func TestMergeToPersistence(t *testing.T) {
 
 func TestReadOutOfRange(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
-	d := newDriver(persistenceMock, 2, nil)
+	d := newDriver(t, persistenceMock, 2, nil)
 	d.writeFull(1, 1, "c", "k", "v1")
 	d.writeFull(2, 2, "c", "k", "v2")
 	d.writeFull(3, 3, "c", "k", "v3")
@@ -120,7 +120,7 @@ func TestReadOutOfRange(t *testing.T) {
 
 func TestReadHash(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
-	d := newDriver(persistenceMock, 1, nil)
+	d := newDriver(t, persistenceMock, 1, nil)
 	d.writeFull(1, 1, "c", "k", "v1")
 	d.writeFull(2, 2, "c", "k", "v2")
 
@@ -142,7 +142,7 @@ func TestReadHash(t *testing.T) {
 func TestRevisionEviction(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
 	var evictedMerkleRoots []primitives.Sha256
-	d := newDriver(persistenceMock, 1, func(sha256 primitives.Sha256) {
+	d := newDriver(t, persistenceMock, 1, func(sha256 primitives.Sha256) {
 		evictedMerkleRoots = append(evictedMerkleRoots, sha256)
 	})
 
@@ -158,7 +158,7 @@ type driver struct {
 	inner *rollingRevisions
 }
 
-func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
+func newDriver(tb testing.TB, persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
 	m := newMerkleMock()
 	if merkleForgetCallback != nil {
 		m.When("Forget", mock.Any).Call(merkleForgetCallback).Return(nil).Times(1)
@@ -166,7 +166,7 @@ func newDriver(persistence adapter.StatePersistence, layers int, merkleForgetCal
 		m.When("Forget", mock.Any).Return(nil).Times(1)
 	}
 	d := &driver{
-		inner: newRollingRevisions(log.GetLogger(), persistence, layers, m),
+		inner: newRollingRevisions(log.DefaultTestingLogger(tb), persistence, layers, m),
 	}
 	return d
 }

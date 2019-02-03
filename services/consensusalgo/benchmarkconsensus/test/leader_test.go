@@ -7,7 +7,7 @@ import (
 )
 
 func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Context) *harness {
-	h := newHarness(true)
+	h := newHarness(t, true)
 	h.expectNewBlockProposalNotRequested()
 	h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 	h.createService(ctx)

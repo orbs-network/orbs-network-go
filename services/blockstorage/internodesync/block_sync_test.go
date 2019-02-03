@@ -10,7 +10,7 @@ import (
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 		return synchronization.NewTimerWithManualTick()
 	})
 
@@ -30,7 +30,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	manualNoCommitTimers := []*synchronization.Timer{}
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 		timer := synchronization.NewTimerWithManualTick()
 		manualNoCommitTimers = append(manualNoCommitTimers, timer)
 		return timer

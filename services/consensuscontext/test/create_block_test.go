@@ -9,7 +9,7 @@ import (
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		txCount := uint32(2)
 
 		h.expectTxPoolToReturnXTransactions(txCount)
@@ -30,7 +30,7 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 // Presently if the latter fails, this test will fail too
 func TestCreateBlock_HappyFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		txCount := 2
 
 		h.expectTxPoolToReturnXTransactions(uint32(txCount))

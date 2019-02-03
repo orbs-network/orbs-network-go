@@ -27,3 +27,18 @@ check_exit_code_and_report () {
     fi
 }
 
+go_test_junit_report () {
+    OUT_DIR="_out/$1"
+    REPORTS_DIR="_reports/$1"
+    shift
+
+    mkdir -p $OUT_DIR
+    mkdir -p $REPORTS_DIR
+    go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
+    go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
+    EXIT_CODE=$?
+    cp ${OUT_DIR}/results.xml ${REPORTS_DIR}/results.xml # so that we have it in _out for uploading as artifact, and separately in _reports since CircleCI doesn't like test summary dir to contain huge files
+    if [ $EXIT_CODE != 0 ]; then
+        exit $EXIT_CODE
+    fi
+}

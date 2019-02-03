@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 )
@@ -56,7 +55,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 }
 
 func TestValidateTransactionsBlockOnValidBlock(t *testing.T) {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	log := log.DefaultTestingLogger(t)
 	metricFactory := metric.NewRegistry()
 	cfg := config.ForConsensusContextTests(nil)
 	txPool := &services.MockTransactionPool{}
@@ -123,7 +122,7 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 }
 
 func TestValidateResultsBlockOnValidBlock(t *testing.T) {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+	log := log.DefaultTestingLogger(t)
 	metricFactory := metric.NewRegistry()
 	cfg := config.ForConsensusContextTests(nil)
 	txPool := &services.MockTransactionPool{}

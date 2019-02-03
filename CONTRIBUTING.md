@@ -81,16 +81,5 @@ TBD
 ### Testing Strategy
 Contributions without full test coverage will _not_ be accepted. We use Test-Driven Development to help shape and evolve our design, and would prefer any contributed code to have been developed using TDD.
 
-### CI
-#### Downloading CircleCI log files
-In case CircleCI does not display enough data on the build page (too much data, or CircleCI timed out before the test finished), you can still manually download its logs.
-* Go to the specific build that you want to download logs for (see [example](https://circleci.com/gh/orbs-network/orbs-network-go/3328)), either from a PR's page, or [here](https://circleci.com/gh/orbs-network/orbs-network-go/tree/master)
-* Click the 3rd tab from the left, "Artifacts"
-* Expand the folder tree to uncover the list of log files
-* If logs are archived in a tarball (bz2) file, download and expand it on your local machine
-* If it's a long list of log files, you can use the Chrome Extension [Chrono Download Manager](https://chrome.google.com/webstore/detail/chrono-download-manager/mciiogijehkdemklbdcbfkefimifhecn?hl=en) to automatically download all logs
-  * Install the extension, browse to the specific build's page (see [example](https://circleci.com/gh/orbs-network/orbs-network-go/3328))click its icon to the right of the URL pane, then click the magnifying glass icon.
-  * Choose the files to download and click Download all.
-
 
 

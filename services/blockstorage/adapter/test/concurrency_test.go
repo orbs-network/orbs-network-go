@@ -1,6 +1,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -19,7 +20,7 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 	conf := newTempFileConfig()
 	defer conf.cleanDir()
 
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(conf)
+	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.NoError(t, err)
 	defer closeAdapter()
 
