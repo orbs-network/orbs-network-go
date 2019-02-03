@@ -27,18 +27,18 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 0})
 
-		require.NoError(t, err, "this is a happy flow test (ask 0)")
-		require.Nil(t, output.BlockPair, "block data should nil")
+		require.Error(t, err, "ask 0 is not valid")
+		require.Nil(t, output, "block data should nil")
 	})
 }
 
 func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness, _ := generateAndCommitOneBlock(ctx, t)
-		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 10})
+		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1000})
 
-		require.NoError(t, err, "this is a happy flow test (ask in future)")
-		require.Nil(t, output.BlockPair, "block data should be nil")
+		require.Error(t, err, "far future is not valid")
+		require.Nil(t, output, "block data should be nil")
 	})
 }
 

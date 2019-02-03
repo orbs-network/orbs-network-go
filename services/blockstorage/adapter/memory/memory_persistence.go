@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -158,6 +159,10 @@ func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, page
 
 	allBlocks := bp.blockChain.blocks
 	allBlocksLength := primitives.BlockHeight(len(allBlocks))
+
+	if allBlocksLength < from || from == 0 {
+		return fmt.Errorf("requested unknown block height %d. current height is %d", from, allBlocksLength)
+	}
 
 	wantsMore := true
 	for from <= allBlocksLength && wantsMore {

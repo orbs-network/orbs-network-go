@@ -131,6 +131,17 @@ func (s *service) GetBlockPair(ctx context.Context, input *services.GetBlockPair
 		return nil, err
 	}
 
+	topHeight, err := s.persistence.GetLastBlockHeight()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to determine current height")
+	}
+
+	if topHeight < input.BlockHeight {
+		return &services.GetBlockPairOutput{
+			BlockPair: nil,
+		}, nil
+	}
+
 	var bpc *protocol.BlockPairContainer
 	err = s.persistence.ScanBlocks(input.BlockHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
 		bpc = page[0]

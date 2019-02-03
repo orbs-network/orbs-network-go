@@ -123,7 +123,7 @@ func TestGetBlock_RequestBlockZero(t *testing.T) {
 
 		now := time.Now()
 		lastCommitedPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
-		harness.prepareGetBlock(nil, lastCommitedPair)
+		harness.prepareGetLastBlock(lastCommitedPair)
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 			ClientRequest: (&client.GetBlockRequestBuilder{
 				BlockHeight:     0,
