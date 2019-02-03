@@ -32,12 +32,12 @@ func newHttpHarness(handler http.Handler) *httpOutputHarness {
 func (h *httpOutputHarness) start(t *testing.T) {
 	go func() {
 		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err, "failed to use http port")
+
 		h.port = listener.Addr().(*net.TCPAddr).Port
 		t.Log("Serving http requests on", "127.0.0.1:%d", h.port)
 
 		h.listener = listener
-
-		require.NoError(t, err, "failed to use http port")
 
 		server := &http.Server{
 			Handler: h.router,

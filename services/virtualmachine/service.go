@@ -49,7 +49,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if input.BlockHeight != 0 {
-		panic("Run local method with specific block height is not yet supported")
+		s.logger.Panic("Run local method with specific block height is not yet supported")
 	}
 
 	committedBlockHeight, committedBlockTimestamp, err := s.getRecentCommittedBlockHeight(ctx)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 	"sync"
@@ -35,7 +36,7 @@ func groupErrors(errors []error) map[string]int {
 
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	config := getConfig().stressTest
 

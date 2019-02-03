@@ -123,7 +123,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		)
 		go func(nx *Node) { // nodes should not block each other from executing wait
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
-				panic(fmt.Sprintf("node %v did not reach block 1", node.name))
+				n.Logger.Panic("node %v did not reach block 1", log.Node(node.name))
 			}
 			wg.Done()
 		}(node)
@@ -163,7 +163,7 @@ func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedT
 
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in send transaction: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		n.Logger.Panic("error in send transaction", log.Error(out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse, txHash
 }
@@ -178,7 +178,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, builder *prot
 			ReturnImmediately: 1,
 		})
 		if output == nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+			n.Logger.Panic("error in send transaction", log.Error(err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 		}
 	}()
 }
@@ -208,7 +208,7 @@ func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sh
 	}()
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in get tx status: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		n.Logger.Panic("error in get tx status", log.Error(out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse
 }
@@ -237,14 +237,14 @@ func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBui
 	}()
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in run query: %v", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		n.Logger.Panic("error in run query", log.Error(out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse
 }
 
 func (n *Network) assertStarted(nodeIndex int) {
 	if !n.Nodes[nodeIndex].Started() {
-		panic(fmt.Errorf("accessing a stopped node %d", nodeIndex))
+		n.Logger.Panic("accessing a stopped node", log.Int("node-index", nodeIndex))
 	}
 }
 
