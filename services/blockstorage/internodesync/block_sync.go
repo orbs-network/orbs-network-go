@@ -141,6 +141,7 @@ func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
+		bs.logger.Info("terminated on handle block committed", log.Error(ctx.Err()))
 	}
 }
 

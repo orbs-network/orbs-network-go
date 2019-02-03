@@ -37,8 +37,8 @@ func (s *finishedCARState) processState(ctx context.Context) syncState {
 		return s.factory.CreateIdleState()
 	}
 	s.metrics.timesWithResponses.Inc()
-	logger.Info("selecting from received sources", log.Int("sources-count", c))
 	syncSource := s.responses[0] //TODO V1 how do we pick the source?
+	logger.Info("selecting from received sources", log.Int("sources-count", c), log.Stringable("selected-source", syncSource.Sender.SenderNodeAddress()))
 	syncSourceNodeAddress := syncSource.Sender.SenderNodeAddress()
 
 	if !s.factory.conduit.drainAndCheckForShutdown(ctx) {

@@ -87,6 +87,8 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
+	c.logger.Info("sending block sync request", log.Stringable("recipient-address", senderNodeAddress), log.Stringable("first-block", firstBlockHeight), log.Stringable("last-block", lastBlockHeight), log.Stringable("last-committed-block", lastCommittedBlockHeight))
+
 	request := &gossiptopics.BlockSyncRequestInput{
 		RecipientNodeAddress: senderNodeAddress,
 		Message: &gossipmessages.BlockSyncRequestMessage{
