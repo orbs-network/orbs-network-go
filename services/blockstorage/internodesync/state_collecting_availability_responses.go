@@ -11,7 +11,7 @@ import (
 
 type collectingAvailabilityResponsesState struct {
 	factory      *stateFactory
-	gossipClient *blockSyncGossipClient
+	gossipClient *blockSyncClient
 	createTimer  func() *synchronization.Timer
 	logger       log.BasicLogger
 	conduit      blockSyncConduit
@@ -33,7 +33,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
-	s.gossipClient.petitionerUpdateConsensusAlgos(ctx)
+	s.gossipClient.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx)
 	err := s.gossipClient.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		logger.Info("failed to broadcast block availability request", log.Error(err))

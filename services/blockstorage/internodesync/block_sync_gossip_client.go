@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type blockSyncGossipClient struct {
+type blockSyncClient struct {
 	gossip      gossiptopics.BlockSync
 	storage     BlockSyncStorage
 	logger      log.BasicLogger
@@ -24,9 +24,9 @@ func newBlockSyncGossipClient(
 	s BlockSyncStorage,
 	l log.BasicLogger,
 	batchSize func() uint32,
-	na func() primitives.NodeAddress) *blockSyncGossipClient {
+	na func() primitives.NodeAddress) *blockSyncClient {
 
-	return &blockSyncGossipClient{
+	return &blockSyncClient{
 		gossip:      g,
 		storage:     s,
 		logger:      l,
@@ -35,11 +35,11 @@ func newBlockSyncGossipClient(
 	}
 }
 
-func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Context) {
-	c.storage.UpdateConsensusAlgosAboutLatestCommittedBlock(ctx)
+func (c *blockSyncClient) petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
+	c.storage.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx)
 }
 
-func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
+func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
@@ -77,7 +77,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 	return err
 }
 
-func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderNodeAddress primitives.NodeAddress) error {
+func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, recipientNodeAddress primitives.NodeAddress) error {
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
@@ -87,10 +87,10 @@ func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Conte
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
-	c.logger.Info("sending block sync request", log.Stringable("recipient-address", senderNodeAddress), log.Stringable("first-block", firstBlockHeight), log.Stringable("last-block", lastBlockHeight), log.Stringable("last-committed-block", lastCommittedBlockHeight))
+	c.logger.Info("sending block sync request", log.Stringable("recipient-address", recipientNodeAddress), log.Stringable("first-block", firstBlockHeight), log.Stringable("last-block", lastBlockHeight), log.Stringable("last-committed-block", lastCommittedBlockHeight))
 
 	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientNodeAddress: senderNodeAddress,
+		RecipientNodeAddress: recipientNodeAddress,
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: c.nodeAddress(),
