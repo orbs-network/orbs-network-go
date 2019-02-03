@@ -14,11 +14,11 @@ import (
 
 func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
+		harness := newPublicApiHarness(ctx, t, 1*time.Second, 1*time.Minute)
 
 		now := time.Now()
 		blockPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
-		harness.getBlock(blockPair, nil)
+		harness.prepareGetBlock(blockPair, nil)
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 			ClientRequest: (&client.GetBlockRequestBuilder{
 				BlockHeight:     8,
@@ -42,7 +42,7 @@ func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
+		harness := newPublicApiHarness(ctx, t, 1*time.Second, 1*time.Minute)
 
 		harness.getBlockFails()
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
@@ -67,11 +67,11 @@ func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
+		harness := newPublicApiHarness(ctx, t, 1*time.Second, 1*time.Minute)
 
 		now := time.Now()
 		lastCommitedPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
-		harness.getBlock(nil, lastCommitedPair)
+		harness.prepareGetBlock(nil, lastCommitedPair)
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 			ClientRequest: (&client.GetBlockRequestBuilder{
 				BlockHeight:     1000,
@@ -94,9 +94,9 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 
 func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newPublicApiHarness(ctx, 1*time.Second, 1*time.Minute)
+		harness := newPublicApiHarness(ctx, t, 1*time.Second, 1*time.Minute)
 
-		harness.getBlock(nil, nil)
+		harness.prepareGetBlock(nil, nil)
 		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 			ClientRequest: (&client.GetBlockRequestBuilder{
 				BlockHeight:     1000,
@@ -113,6 +113,33 @@ func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 		require.Equal(t, protocol.REQUEST_STATUS_SYSTEM_ERROR, result.ClientResponse.RequestResult().RequestStatus(), "got wrong status")
 		require.EqualValues(t, 0, result.ClientResponse.RequestResult().BlockHeight(), "got wrong block height")
 		require.EqualValues(t, 0, result.ClientResponse.RequestResult().BlockTimestamp(), "got wrong status")
+		require.Equal(t, 0, len(result.ClientResponse.TransactionsBlockHeader().Raw()), "TransactionsBlockHeader should be empty")
+	})
+}
+
+func TestGetBlock_RequestBlockZero(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newPublicApiHarness(ctx, t, 1*time.Second, 1*time.Minute)
+
+		now := time.Now()
+		lastCommitedPair := builders.BlockPair().WithBlockCreated(now).WithHeight(8).Build()
+		harness.prepareGetBlock(nil, lastCommitedPair)
+		result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
+			ClientRequest: (&client.GetBlockRequestBuilder{
+				BlockHeight:     0,
+				ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+				VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+			}).Build(),
+		})
+
+		harness.verifyMocks(t) // contract test
+
+		// value test
+		require.NoError(t, err, "error happened when it should not")
+		require.NotNil(t, result, "get block returned nil instead of object")
+		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, result.ClientResponse.RequestResult().RequestStatus(), "got wrong status")
+		require.Equal(t, lastCommitedPair.TransactionsBlock.Header.BlockHeight(), result.ClientResponse.RequestResult().BlockHeight(), "got wrong block height")
+		require.Equal(t, lastCommitedPair.TransactionsBlock.Header.Timestamp(), result.ClientResponse.RequestResult().BlockTimestamp(), "got wrong timestamp")
 		require.Equal(t, 0, len(result.ClientResponse.TransactionsBlockHeader().Raw()), "TransactionsBlockHeader should be empty")
 	})
 }

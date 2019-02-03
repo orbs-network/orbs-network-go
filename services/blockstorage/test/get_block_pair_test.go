@@ -12,7 +12,7 @@ import (
 
 func TestReturnBlockPair(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness, block := generateAndCommitOneBlock(ctx)
+		harness, block := generateAndCommitOneBlock(ctx, t)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1})
 
@@ -23,7 +23,7 @@ func TestReturnBlockPair(t *testing.T) {
 
 func TestReturnNilWhenBlockHeight0(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness, _ := generateAndCommitOneBlock(ctx)
+		harness, _ := generateAndCommitOneBlock(ctx, t)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 0})
 
@@ -34,7 +34,7 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 
 func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness, _ := generateAndCommitOneBlock(ctx)
+		harness, _ := generateAndCommitOneBlock(ctx, t)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 10})
 
 		require.NoError(t, err, "this is a happy flow test (ask in future)")
@@ -42,8 +42,8 @@ func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 	})
 }
 
-func generateAndCommitOneBlock(ctx context.Context) (*harness, *protocol.BlockPairContainer) {
-	harness := newBlockStorageHarness().
+func generateAndCommitOneBlock(ctx context.Context, t *testing.T) (*harness, *protocol.BlockPairContainer) {
+	harness := newBlockStorageHarness(t).
 		withSyncBroadcast(1).
 		withCommitStateDiff(1).
 		withValidateConsensusAlgos(1).

@@ -27,6 +27,11 @@ func (s *service) GetBlock(parentCtx context.Context, input *services.GetBlockIn
 		return toGetBlockErrOutput(protocol.REQUEST_STATUS_BAD_REQUEST, 0, 0), err
 	}
 
+	if input.ClientRequest.BlockHeight() == 0 {
+		logger.Info("requested block height 0 is not valid")
+		return s.toGetBlockErrOutputAddHeight(ctx, logger, protocol.REQUEST_STATUS_BAD_REQUEST)
+	}
+
 	logger.Info("get block request received")
 
 	bpc, err := s.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{
@@ -38,12 +43,7 @@ func (s *service) GetBlock(parentCtx context.Context, input *services.GetBlockIn
 	}
 	if bpc.BlockPair == nil {
 		logger.Info("get block failed to get requested block height", log.BlockHeight(input.ClientRequest.BlockHeight()))
-		bk, err2 := s.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
-		if err2 != nil {
-			logger.Info("block storage failed while getting last block", log.Error(err2))
-			return toGetBlockErrOutput(protocol.REQUEST_STATUS_SYSTEM_ERROR, 0, 0), err2
-		}
-		return toGetBlockErrOutput(protocol.REQUEST_STATUS_BAD_REQUEST, bk.LastCommittedBlockHeight, bk.LastCommittedBlockTimestamp), nil
+		return s.toGetBlockErrOutputAddHeight(ctx, logger, protocol.REQUEST_STATUS_BAD_REQUEST)
 	}
 
 	return toGetBlockOutput(bpc.BlockPair), nil
@@ -80,6 +80,16 @@ func toGetBlockOutput(bpc *protocol.BlockPairContainer) *services.GetBlockOutput
 	}
 
 	return &services.GetBlockOutput{ClientResponse: response.Build()}
+}
+
+func (s *service) toGetBlockErrOutputAddHeight(ctx context.Context, logger log.BasicLogger, status protocol.RequestStatus) (*services.GetBlockOutput, error) {
+	bk, err := s.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
+	if err != nil {
+		logger.Info("block storage failed while getting last block", log.Error(err))
+		return toGetBlockErrOutput(protocol.REQUEST_STATUS_SYSTEM_ERROR, 0, 0), err
+	}
+	return toGetBlockErrOutput(protocol.REQUEST_STATUS_BAD_REQUEST, bk.LastCommittedBlockHeight, bk.LastCommittedBlockTimestamp), nil
+
 }
 
 func toGetBlockErrOutput(status protocol.RequestStatus, height primitives.BlockHeight, nano primitives.TimestampNano) *services.GetBlockOutput {

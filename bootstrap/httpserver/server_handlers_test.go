@@ -240,7 +240,7 @@ func TestHttpServerGetBlock_Basic(t *testing.T) {
 
 	papiMock.When("GetBlock", mock.Any, mock.Any).Times(1).Return(&services.GetBlockOutput{ClientResponse: response.Build()})
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetBlockRequestBuilder{BlockHeight: 1}).Build()
 
@@ -257,7 +257,7 @@ func TestHttpServerGetBlock_Error(t *testing.T) {
 
 	papiMock.When("GetBlock", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetBlockRequestBuilder{}).Build()
 
