@@ -103,23 +103,31 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 
 		harness.start(ctx)
 
-		<-broadcastBlockAvailabilityRequestLatch // wait until sync is CAR
+		requireLatchReleasef(t, ctx, broadcastBlockAvailabilityRequestLatch, "expected sync to collect availability response")
 
 		// fake CAR responses
-		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
-		blockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
-		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
+		syncSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(7)
+		blockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
+		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
 
 		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
 		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
-		<-sendBlockSyncRequestLatch // wait until sync is waiting for chunks
+		requireLatchReleasef(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
 
-		blockSyncResponse := buildBlockSyncResponseInput(senderKeyPair)             // key from CAR responses
+		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress)
 		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake blocks
 
 		harness.verifyMocks(t, 1) // verify blocks validated (HandleBlockConsensus x 6)
 	})
+}
+
+func requireLatchReleasef(t *testing.T, ctx context.Context, latch chan struct{}, format string, args ...interface{}) {
+	select {
+	case <-latch: // wait on latch
+	case <-ctx.Done():
+		t.Fatalf(format+"(%v)", append(args, ctx.Err())...)
+	}
 }
 
 // a helper function which returns a mock call handler which will return nil after notifying calling test of the invocation

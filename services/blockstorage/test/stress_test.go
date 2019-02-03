@@ -36,7 +36,7 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 			return nil, nil
 		}).AtLeast(0)
 
-		require.Truef(t, test.Eventually(10*time.Second, func() bool {
+		require.Truef(t, test.Eventually(15*time.Second, func() bool { // TODO V1 reduce timeout period once cpunoiser is killed
 			return topReportedHeight == targetBlockHeight
 		}), "expected blocks to be produced without deadlock, but only %d were closed", topReportedHeight)
 	})
