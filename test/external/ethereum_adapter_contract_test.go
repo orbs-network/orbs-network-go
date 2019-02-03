@@ -18,13 +18,15 @@ import (
 	"testing"
 )
 
+//TODO (v1) move this file back to ethereum/adapter package
+
 func TestEthereumNodeAdapter_CallContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		adapter, auth, commit := createSimulator()
+		adapter, auth, commit := createSimulator(t)
 		t.Run("Simulator Adapter", testCallContract(ctx, adapter, auth, commit))
 
 		if runningWithDocker() {
-			adapter, auth, commit = createRpcClient()
+			adapter, auth, commit = createRpcClient(t)
 			t.Run("RPC Adapter", testCallContract(ctx, adapter, auth, commit))
 		} else {
 			t.Skip("skipping, external tests disabled")
@@ -34,11 +36,11 @@ func TestEthereumNodeAdapter_CallContract(t *testing.T) {
 
 func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		adapter, auth, commit := createSimulator()
+		adapter, auth, commit := createSimulator(t)
 		t.Run("Simulator Adapter", testGetLogs(ctx, adapter, auth, commit))
 
 		if runningWithDocker() {
-			adapter, auth, commit = createRpcClient()
+			adapter, auth, commit = createRpcClient(t)
 			t.Run("RPC Adapter", testGetLogs(ctx, adapter, auth, commit))
 		} else {
 			t.Skip("skipping, external tests disabled")
@@ -113,11 +115,10 @@ func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConn
 	}
 }
 
-func createRpcClient() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	logger := log.GetLogger()
+func createRpcClient(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
 	cfg := getConfig()
 
-	a := adapter.NewEthereumRpcConnection(cfg, logger)
+	a := adapter.NewEthereumRpcConnection(cfg, log.DefaultTestingLogger(tb))
 	auth, err := authFromConfig(cfg)
 	if err != nil {
 		panic(err)
@@ -126,8 +127,8 @@ func createRpcClient() (adapter.DeployingEthereumConnection, *bind.TransactOpts,
 	return a, auth, func() {}
 }
 
-func createSimulator() (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	a := adapter.NewEthereumSimulatorConnection(log.GetLogger())
+func createSimulator(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
+	a := adapter.NewEthereumSimulatorConnection(log.DefaultTestingLogger(tb))
 	opts := a.GetAuth()
 	commit := a.Commit
 

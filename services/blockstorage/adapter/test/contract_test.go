@@ -23,8 +23,8 @@ func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.B
 		t.Skip("Skipping contract tests in short mode")
 	}
 	adapters := []*adapterUnderTest{
-		newInMemoryAdapter(),
-		newFilesystemAdapter(),
+		newInMemoryAdapter(t),
+		newFilesystemAdapter(t),
 	}
 	for _, a := range adapters {
 		t.Run(a.name, func(t *testing.T) {
@@ -189,15 +189,15 @@ type adapterUnderTest struct {
 	cleanup func()
 }
 
-func newInMemoryAdapter() *adapterUnderTest {
+func newInMemoryAdapter(tb testing.TB) *adapterUnderTest {
 	return &adapterUnderTest{
 		name:    "In Memory Adapter",
-		adapter: memory.NewBlockPersistence(log.GetLogger(), metric.NewRegistry()),
+		adapter: memory.NewBlockPersistence(log.DefaultTestingLogger(tb), metric.NewRegistry()),
 		cleanup: func() {},
 	}
 }
 
-func newFilesystemAdapter() *adapterUnderTest {
+func newFilesystemAdapter(tb testing.TB) *adapterUnderTest {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	conf := newTempFileConfig()
@@ -206,7 +206,7 @@ func newFilesystemAdapter() *adapterUnderTest {
 		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
-	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.GetLogger(), metric.NewRegistry())
+	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.DefaultTestingLogger(tb), metric.NewRegistry())
 	if err != nil {
 		panic(err)
 	}

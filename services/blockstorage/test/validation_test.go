@@ -11,7 +11,7 @@ import (
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withValidateConsensusAlgos(1).
 			start(ctx)
@@ -24,7 +24,7 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -49,7 +49,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -66,7 +66,7 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().
+		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).

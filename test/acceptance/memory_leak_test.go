@@ -1,4 +1,4 @@
-//+build memoryleak
+// +build memoryleak
 
 package acceptance
 
@@ -16,8 +16,6 @@ import (
 // therefore, this file is marked on top with a build flag ("memoryleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
-	t.Skip("skip temporarily")
-
 	before, _ := os.Create("/tmp/mem-shutdown-before.prof")
 	defer before.Close()
 	after, _ := os.Create("/tmp/mem-shutdown-after.prof")
@@ -54,9 +52,13 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	memUsageAfterBytes := getMemUsageBytes()
 	pprof.WriteHeapProfile(after)
 
+	if memUsageAfterBytes < memUsageBeforeBytes {
+		return // its okay if the after is less in memory, no leak (and the rest of the math will overflow)
+	}
+
 	deltaMemBytes := memUsageAfterBytes - memUsageBeforeBytes
 	allowedMemIncreaseCalculatedFromMemBefore := uint64(0.1 * float64(memUsageBeforeBytes))
-	allowedMemIncreaseInAbsoluteBytes := uint64(512 * 1024)
+	allowedMemIncreaseInAbsoluteBytes := uint64(1 * 1024 * 1024) // 1MB
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes

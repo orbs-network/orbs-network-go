@@ -192,7 +192,8 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
-		WithOutput(b.makeFormattingOutput(testId), errorRecorder).
+		WithOutput(b.makeFormattingOutput(), errorRecorder).
+		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
@@ -279,19 +280,8 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
 }
 
-func (b *networkHarnessBuilder) makeFormattingOutput(testId string) log.Output {
-	var output log.Output
-	if os.Getenv("NO_LOG_STDOUT") == "true" {
-		logFile, err := os.OpenFile(config.GetProjectSourceRootPath()+"/_logs/acceptance/"+testId+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-
-		output = log.NewFormattingOutput(logFile, log.NewJsonFormatter())
-	} else {
-		output = log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
-	}
-	return output
+func (b *networkHarnessBuilder) makeFormattingOutput() log.Output {
+	return log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {

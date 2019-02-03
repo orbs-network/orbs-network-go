@@ -12,7 +12,7 @@ import (
 
 func TestContextId_Simple(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		var CONTEXT_ID = []byte{0x17, 0x18}
 
@@ -28,7 +28,7 @@ func TestContextId_Simple(t *testing.T) {
 func TestContextId_MultipleGoroutines(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		var wg sync.WaitGroup
-		h := newHarness()
+		h := newHarness(t)
 
 		for i := 0; i < 20; i++ {
 			wg.Add(1)

@@ -56,7 +56,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		cfg := &forwarderConfig{3, testKeys.EcdsaSecp256K1KeyPairForTests(0)}
 
-		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), cfg, gossip)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -79,7 +79,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		cfg := &forwarderConfig{2, testKeys.EcdsaSecp256K1KeyPairForTests(0)}
 
-		txForwarder := NewTransactionForwarder(ctx, log.GetLogger(), cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), cfg, gossip)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()

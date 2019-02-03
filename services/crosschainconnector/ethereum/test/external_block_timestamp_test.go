@@ -24,7 +24,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		h := newRpcEthereumConnectorHarness(getConfig())
+		h := newRpcEthereumConnectorHarness(t, getConfig())
 		h.deployContractsToGanache(t, 2, time.Second)
 
 		expectedTextFromEthereum := "test3"

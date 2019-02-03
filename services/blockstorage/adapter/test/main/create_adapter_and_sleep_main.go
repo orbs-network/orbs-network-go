@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"os"
@@ -9,7 +10,7 @@ import (
 
 func main() {
 	config := &localConfig{dir: os.Args[1], virtualChainId: 42}
-	_, release, err := test.NewFilesystemAdapterDriver(config)
+	_, release, err := test.NewFilesystemAdapterDriver(log.GetLogger(), config)
 	if err != nil {
 		os.Exit(1)
 	}

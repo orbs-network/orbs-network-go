@@ -14,7 +14,7 @@ import (
 
 func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
@@ -55,7 +55,7 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 
 func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		h.expectStateStorageBlockHeightRequested(12)

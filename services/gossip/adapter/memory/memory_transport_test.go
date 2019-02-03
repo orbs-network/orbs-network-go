@@ -20,7 +20,7 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 	test.WithContext(func(parentContext context.Context) {
 		address := primitives.NodeAddress{0x01}
 
-		transport := NewTransport(parentContext, log.GetLogger(), makeFederation(address))
+		transport := NewTransport(parentContext, log.DefaultTestingLogger(t), makeFederation(address))
 		listener := testkit.ListenTo(transport, address)
 
 		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted

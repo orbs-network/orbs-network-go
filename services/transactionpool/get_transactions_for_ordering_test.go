@@ -19,7 +19,7 @@ func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 		tx3 := builders.TransferTransaction().Build()
 
 		b := &transactionBatch{
-			logger:               log.GetLogger(),
+			logger:               log.DefaultTestingLogger(t),
 			maxNumOfTransactions: 2,
 		}
 
@@ -40,7 +40,7 @@ func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
 		tx3 := builders.TransferTransaction().Build()
 
 		b := &transactionBatch{
-			logger:               log.GetLogger(),
+			logger:               log.DefaultTestingLogger(t),
 			sizeLimit:            sizeOf(tx1, tx2) + 1,
 			maxNumOfTransactions: 100,
 		}
@@ -60,7 +60,7 @@ func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
 
-		b := newTransactionBatch(log.GetLogger(), Transactions{tx1, tx2})
+		b := newTransactionBatch(log.DefaultTestingLogger(t), Transactions{tx1, tx2})
 		b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{})
 
 		require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
@@ -78,7 +78,7 @@ func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
 
-		b := newTransactionBatch(log.GetLogger(), Transactions{tx1, tx2})
+		b := newTransactionBatch(log.DefaultTestingLogger(t), Transactions{tx1, tx2})
 		b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}})
 
 		require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
@@ -96,7 +96,7 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.GetLogger()}
+		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.DefaultTestingLogger(t)}
 		err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER}}, 0, 0)
 
 		require.NoError(t, err, "this should really never happen")
@@ -115,7 +115,7 @@ func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *te
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.GetLogger()}
+		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.DefaultTestingLogger(t)}
 		require.Panics(t, func() {
 			b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0)
 		}, "pre order validation returning statuses with length that differs from number of txs sent did not panic")
@@ -179,7 +179,7 @@ type fakeRemover struct {
 	removed map[string]protocol.TransactionStatus
 }
 
-func (r *fakeRemover) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *pendingTransaction {
+func (r *fakeRemover) remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *primitives.NodeAddress {
 	r.removed[txHash.KeyForMap()] = removalReason
 	return nil
 }

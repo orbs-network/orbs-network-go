@@ -17,6 +17,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"testing"
 	"time"
 )
 
@@ -219,11 +220,11 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 	})
 }
 
-func newHarness(ctx context.Context) *harness {
-	return newHarnessWithSizeLimit(ctx, 20*1024*1024)
+func newHarness(ctx context.Context, tb testing.TB) *harness {
+	return newHarnessWithSizeLimit(ctx, tb, 20*1024*1024)
 }
 
-func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
+func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint32) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
@@ -232,7 +233,7 @@ func newHarnessWithSizeLimit(ctx context.Context, sizeLimit uint32) *harness {
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
 	metricFactory := metric.NewRegistry()
 
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, log.GetLogger(), metricFactory)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, log.DefaultTestingLogger(tb), metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
 	testUtils "github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -23,7 +24,7 @@ func main() {
 	start := time.Now()
 	fmt.Printf("\nusing:\noutput directory: %s\nvirtual chain id: %d\n\nloading adapter and building index...\n", conf.BlockStorageFileSystemDataDir(), conf.VirtualChainId())
 
-	adapter, release, err := test.NewFilesystemAdapterDriver(conf)
+	adapter, release, err := test.NewFilesystemAdapterDriver(log.GetLogger(), conf)
 	if err != nil {
 		panic(err)
 	}

@@ -13,7 +13,7 @@ import (
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 		h.ignoringForwardMessages()
 
 		tx1 := builders.Transaction().Build()
@@ -54,7 +54,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx)
+		h := newHarness(ctx, t)
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
 			Txhash: digest.CalcTxHash(builders.Transaction().Build().Transaction()),

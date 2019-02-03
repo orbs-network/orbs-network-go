@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/bash -x
 
-NO_LOG_STDOUT=true go test ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1 > test.out
+. ./test.common.sh
+go_test_junit_report memory_leaks ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1
 
-export EXIT_CODE=$?
+EXIT_CODE=$?
 
 if [ $EXIT_CODE != 0 ]; then
   echo "Test failed! Found leaking memory"

@@ -15,7 +15,7 @@ import (
 
 func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		input := processCallInput().WithUnknownContract().Build()
 		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
 
@@ -28,7 +28,7 @@ func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 
 func TestProcessCall_WithDeployableContractSucceeds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
 		codeOutput := builders.ArgumentsArray([]byte(contracts.JavaScriptSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
 		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), codeOutput, nil)

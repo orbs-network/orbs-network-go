@@ -14,19 +14,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 )
 
-func makeServer(papiMock *services.MockPublicApi) HttpServer {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func makeServer(tb testing.TB, papiMock *services.MockPublicApi) HttpServer {
+	logger := log.DefaultTestingLogger(tb)
 
 	return NewHttpServer(NewServerConfig(":0", false), logger, papiMock, metric.NewRegistry())
 }
 
 func TestHttpServer_Robots(t *testing.T) {
-	s := makeServer(nil)
+	s := makeServer(t, nil)
 
 	req, _ := http.NewRequest("Get", "/robots.txt", nil)
 	rec := httptest.NewRecorder()
@@ -53,7 +52,7 @@ func TestHttpServerSendTransaction_Basic(t *testing.T) {
 
 	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().Builder(),
@@ -71,7 +70,7 @@ func TestHttpServerSendTransaction_Error(t *testing.T) {
 
 	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.SendTransactionRequestBuilder{
 		SignedTransaction: builders.TransferTransaction().Builder(),
@@ -101,7 +100,7 @@ func TestHttpServerRunQuery_Basic(t *testing.T) {
 
 	papiMock.When("RunQuery", mock.Any, mock.Any).Times(1).Return(&services.RunQueryOutput{ClientResponse: response.Build()})
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.RunQueryRequestBuilder{
 		SignedQuery: &protocol.SignedQueryBuilder{},
@@ -120,7 +119,7 @@ func TestHttpServerRunQuery_Error(t *testing.T) {
 
 	papiMock.When("RunQuery", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.RunQueryRequestBuilder{
 		SignedQuery: &protocol.SignedQueryBuilder{},
@@ -148,7 +147,7 @@ func TestHttpServerGetTransactionStatus_Basic(t *testing.T) {
 
 	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(&services.GetTransactionStatusOutput{ClientResponse: response.Build()})
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
 
@@ -165,7 +164,7 @@ func TestHttpServerGetTransactionStatus_Error(t *testing.T) {
 
 	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetTransactionStatusRequestBuilder{}).Build()
 
@@ -192,7 +191,7 @@ func TestHttpServerGetTransactionReceiptProof_Basic(t *testing.T) {
 
 	papiMock.When("GetTransactionReceiptProof", mock.Any, mock.Any).Times(1).Return(&services.GetTransactionReceiptProofOutput{ClientResponse: response.Build()})
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetTransactionReceiptProofRequestBuilder{}).Build()
 
@@ -209,7 +208,7 @@ func TestHttpServerGetTransactionReceiptProof_Error(t *testing.T) {
 
 	papiMock.When("GetTransactionReceiptProof", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
 
-	s := makeServer(papiMock)
+	s := makeServer(t, papiMock)
 
 	request := (&client.GetTransactionReceiptProofRequestBuilder{}).Build()
 

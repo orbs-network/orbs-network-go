@@ -14,7 +14,7 @@ import (
 
 func TestSdkEnv_GetBlockDetails_InTransaction(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		const currentBlockHeight = primitives.BlockHeight(12)
@@ -45,7 +45,7 @@ func TestSdkEnv_GetBlockDetails_InTransaction(t *testing.T) {
 
 func TestSdkEnv_GetBlockDetails_InCallMethod(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
 		const lastCommittedBlockHeight = primitives.BlockHeight(12)

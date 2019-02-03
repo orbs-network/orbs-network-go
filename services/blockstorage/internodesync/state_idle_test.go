@@ -11,7 +11,7 @@ import (
 func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualNoCommitTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 			return manualNoCommitTimer
 		})
 
@@ -28,7 +28,7 @@ func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 
 func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		state := h.factory.CreateIdleState()
 		nextState := state.processState(ctx)
@@ -39,7 +39,7 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 
 func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	cancel()
 	state := h.factory.CreateIdleState()

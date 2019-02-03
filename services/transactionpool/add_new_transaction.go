@@ -36,7 +36,8 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 		return s.addTransactionOutputFor(nil, status), err
 	}
 
-	if _, err := s.pendingPool.add(input.SignedTransaction, s.config.NodeAddress()); err != nil {
+	address := s.config.NodeAddress()
+	if _, err := s.pendingPool.add(input.SignedTransaction, address); err != nil {
 		logger.Error("error adding transaction to pending pool", log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 

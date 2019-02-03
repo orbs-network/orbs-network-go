@@ -2,7 +2,6 @@ package transactionpool
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -82,7 +81,6 @@ func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, timest
 	for _, tx := range p.transactions {
 		if tx.submitted < timestamp {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
-			fmt.Println("removed tx from pool", tx.receipt.Txhash().String())
 
 			p.metrics.transactionCount.Dec()
 			p.metrics.poolSizeInBytes.SubUint32(sizeOfCommittedTransaction(tx))

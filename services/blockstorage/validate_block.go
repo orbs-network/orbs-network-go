@@ -53,7 +53,7 @@ func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *
 		// we can't check for fork because we don't have the tx header of the old block easily accessible
 		errorMessage := "block already in storage, skipping"
 		logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
-		return false, errors.New(errorMessage)
+		return false, nil
 	} else if attemptedBlockHeight == currentBlockHeight {
 		// we can check for fork because we do have the tx header of the old block easily accessible
 		if txBlockHeader.Timestamp() != getBlockTimestamp(lastCommittedBlock) {
