@@ -79,55 +79,50 @@ func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 	test.WithContextWithTimeout(1*time.Second, func(ctx context.Context) {
-		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
-
-		// important to keep the key identical in all three
-		blockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
-		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
-		blockSyncResponse := buildBlockSyncResponseInput(senderKeyPair)
 
 		harness := newBlockStorageHarness().
 			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
-			withSyncCollectResponsesTimeout(50 * time.Millisecond).
-			withSyncCollectChunksTimeout(50 * time.Millisecond)
+			withSyncCollectResponsesTimeout(15 * time.Millisecond)
 
 		harness.consensus.Reset().
 			When("HandleBlockConsensus", mock.Any, mock.Any).
 			Return(&handlers.HandleBlockConsensusOutput{}, nil).
-			AtLeast(6)
+			AtLeast(6) // init, CAR, 4 x block validations
 
-		doneBroadcastBlockAvailabilityRequest := make(chan struct{})
+		broadcastBlockAvailabilityRequestLatch := make(chan struct{})
 		harness.gossip.
 			When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(doneBroadcastBlockAvailabilityRequest)).
+			Call(latchingMockHandler(broadcastBlockAvailabilityRequestLatch)).
 			AtLeast(1)
 
-		doneSendBlockSyncRequest := make(chan struct{})
+		sendBlockSyncRequestLatch := make(chan struct{})
 		harness.gossip.
 			When("SendBlockSyncRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(doneSendBlockSyncRequest)).
+			Call(latchingMockHandler(sendBlockSyncRequestLatch)).
 			AtLeast(1)
 
 		harness.start(ctx)
 
-		// wait until we sent the broadcast (meaning the state machine is now at CAR state
-		<-doneBroadcastBlockAvailabilityRequest
+		<-broadcastBlockAvailabilityRequestLatch // wait until sync is CAR
 
-		// fake the CAR reply
-		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
-		harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
+		// fake CAR responses
+		senderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(7)
+		blockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
+		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(senderKeyPair)
 
-		// wait until we pick a source and request blocks from it
-		<-doneSendBlockSyncRequest
+		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
+		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
-		// fake blocks
-		harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse)
+		<-sendBlockSyncRequestLatch // wait until sync is waiting for chunks
 
-		// verify blocks validated (HandleBlockConsensus x 6)
-		harness.verifyMocks(t, 1)
+		blockSyncResponse := buildBlockSyncResponseInput(senderKeyPair)             // key from CAR responses
+		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake blocks
+
+		harness.verifyMocks(t, 1) // verify blocks validated (HandleBlockConsensus x 6)
 	})
 }
 
+// a helper function which returns a mock call handler which will return nil after notifying calling test of the invocation
 func latchingMockHandler(doneChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
 	return func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
 		select {
