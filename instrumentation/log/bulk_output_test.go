@@ -3,7 +3,6 @@ package log
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net"
@@ -22,23 +21,20 @@ type httpOutputHarness struct {
 }
 
 func newHttpHarness(handler http.Handler) *httpOutputHarness {
-	port := test.RandomPort()
-
 	router := http.NewServeMux()
 	router.Handle("/submit-logs", handler)
 
 	return &httpOutputHarness{
-		port:   port,
 		router: router,
 	}
 }
 
 func (h *httpOutputHarness) start(t *testing.T) {
 	go func() {
-		address := fmt.Sprintf("127.0.0.1:%d", h.port)
-		t.Log("Serving http requests on", address)
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		h.port = listener.Addr().(*net.TCPAddr).Port
+		t.Log("Serving http requests on", "127.0.0.1:%d", h.port)
 
-		listener, err := net.Listen("tcp", address)
 		h.listener = listener
 
 		require.NoError(t, err, "failed to use http port")
@@ -48,6 +44,7 @@ func (h *httpOutputHarness) start(t *testing.T) {
 		}
 		err = server.Serve(h.listener)
 		require.NoError(t, err, "failed to serve http requests")
+
 	}()
 	time.Sleep(1 * time.Millisecond)
 }
