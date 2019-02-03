@@ -11,13 +11,13 @@ import (
 func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualNoCommitTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 			return manualNoCommitTimer
 		})
 
 		state := h.factory.CreateIdleState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			h.factory.conduit.idleReset <- struct{}{}
+			h.factory.conduit <- idleResetMessage{}
 			manualNoCommitTimer.ManualTick() // not required, added for completion (like in state_availability_requests_test)
 		})
 
@@ -28,7 +28,7 @@ func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 
 func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		state := h.factory.CreateIdleState()
 		nextState := state.processState(ctx)
@@ -39,7 +39,7 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 
 func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	cancel()
 	state := h.factory.CreateIdleState()

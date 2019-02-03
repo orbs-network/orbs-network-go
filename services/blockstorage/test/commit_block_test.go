@@ -12,7 +12,7 @@ import (
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -35,7 +35,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -60,7 +60,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -70,7 +70,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 		blockPair := builders.BlockPair().Build()
 
 		harness.commitBlock(ctx, blockPair)
@@ -85,7 +85,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -101,7 +101,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -119,7 +119,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -137,7 +137,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T
 
 func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness().withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())
 

@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash -x
 
-mkdir -p _out
-NO_LOG_STDOUT=true go test ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1 > _out/test.out
+. ./test.common.sh
 
-export EXIT_CODE=$?
+go_test_junit_report goroutine_leaks ./test/acceptance -tags goroutineleak -run TestGoroutineLeaks -count 1
+EXIT_CODE=$?
 
 if [ $EXIT_CODE != 0 ]; then
   echo "Test failed! Found leaking goroutines"
@@ -20,7 +20,7 @@ if [ $EXIT_CODE != 0 ]; then
   echo ""
   cat /tmp/gorou-shutdown-after.out
 
-  cat _out/test.out
+  cat ${OUT_DIR}/test.out
 
   exit $EXIT_CODE
 fi

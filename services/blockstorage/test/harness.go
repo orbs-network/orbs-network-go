@@ -17,7 +17,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 )
@@ -206,8 +205,8 @@ func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig 
 	return cfg
 }
 
-func newBlockStorageHarness() *harness {
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func newBlockStorageHarness(tb testing.TB) *harness {
+	logger := log.DefaultTestingLogger(tb)
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	cfg := createConfig(keyPair.NodeAddress())
 

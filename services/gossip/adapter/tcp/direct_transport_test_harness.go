@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"net"
-	"os"
 	"testing"
 )
 
@@ -34,7 +33,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	// order matters here
 	gossipPeers, peersListeners := makePeers(t)        // step 1: create the peer server listeners to reserve random TCP ports
 	cfg := config.ForDirectTransportTests(gossipPeers) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, cfg)               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
+	transport := makeTransport(ctx, t, cfg)            // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
 	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
@@ -52,8 +51,8 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	return h
 }
 
-func makeTransport(ctx context.Context, cfg config.GossipTransportConfig) *directTransport {
-	log := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *directTransport {
+	log := log.DefaultTestingLogger(tb)
 	registry := metric.NewRegistry()
 	transport := NewDirectTransport(ctx, cfg, log, registry)
 	// to synchronize tests, wait until server is ready

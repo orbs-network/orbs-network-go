@@ -27,10 +27,10 @@ type service struct {
 	logger                     log.BasicLogger
 	config                     config.TransactionPoolConfig
 
-	mu struct {
+	lastCommitted struct {
 		sync.RWMutex
-		lastCommittedBlockHeight    primitives.BlockHeight
-		lastCommittedBlockTimestamp primitives.TimestampNano
+		blockHeight primitives.BlockHeight
+		timestamp   primitives.TimestampNano
 	}
 
 	pendingPool          *pendingTxPool
@@ -42,20 +42,22 @@ type service struct {
 	metrics struct {
 		blockHeight *metric.Gauge
 	}
+
+	addCommitLock sync.RWMutex
 }
 
 func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.mu.lastCommittedBlockHeight, s.mu.lastCommittedBlockTimestamp
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
+	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
 func (s *service) createValidationContext() *validationContext {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.lastCommitted.RLock()
+	defer s.lastCommitted.RUnlock()
 	return &validationContext{
 		nodeTime:                    time.Now(),
-		lastCommittedBlockTimestamp: s.mu.lastCommittedBlockTimestamp,
+		lastCommittedBlockTimestamp: s.lastCommitted.timestamp,
 		expiryWindow:                s.config.TransactionExpirationWindow(),
 		nodeSyncRejectInterval:      s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),

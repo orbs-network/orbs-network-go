@@ -3,6 +3,7 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
+	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
 	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -24,21 +25,27 @@ import (
 var LogTag = log.Service("consensus-algo-lean-helix")
 
 type service struct {
-	blockStorage  services.BlockStorage
-	membership    *membership
-	com           *communication
-	blockProvider *blockProvider
-	logger        log.BasicLogger
-	config        Config
-	metrics       *metrics
-	leanHelix     *leanhelix.LeanHelix
+	blockStorage     services.BlockStorage
+	membership       *membership
+	com              *communication
+	blockProvider    *blockProvider
+	logger           log.BasicLogger
+	config           Config
+	metrics          *metrics
+	leanHelix        *leanhelix.LeanHelix
+	lastCommitTime   time.Time
+	lastElectionTime time.Time
 }
 
 type metrics struct {
-	consensusRoundTickTime     *metric.Histogram
-	failedConsensusTicksRate   *metric.Rate
-	timedOutConsensusTicksRate *metric.Rate
-	votingTime                 *metric.Histogram
+	timeSinceLastCommitMillis   *metric.Histogram
+	timeSinceLastElectionMillis *metric.Histogram
+	currentLeaderMemberId       *metric.Text
+	currentElectionCount        *metric.Gauge
+	consensusRoundTickTime      *metric.Histogram
+	failedConsensusTicksRate    *metric.Rate
+	timedOutConsensusTicksRate  *metric.Rate
+	votingTime                  *metric.Histogram
 }
 
 type Config interface {
@@ -54,9 +61,13 @@ type Config interface {
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 	return &metrics{
-		consensusRoundTickTime:     m.NewLatency("ConsensusAlgo.LeanHelix.RoundTickTime", consensusTimeout),
-		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.LeanHelix.FailedTicksPerSecond"),
-		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicksPerSecond"),
+		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommitMillis", 30*time.Minute),
+		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElectionMillis", 30*time.Minute),
+		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElectionCount"),
+		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId"),
+		consensusRoundTickTime:      m.NewLatency("ConsensusAlgo.LeanHelix.RoundTickTime", consensusTimeout),
+		failedConsensusTicksRate:    m.NewRate("ConsensusAlgo.LeanHelix.FailedTicksPerSecond"),
+		timedOutConsensusTicksRate:  m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicksPerSecond"),
 	}
 }
 
@@ -70,8 +81,8 @@ func NewLeanHelixConsensusAlgo(
 	metricFactory metric.Factory,
 
 ) services.ConsensusAlgoLeanHelix {
-
 	ctx := trace.NewContext(parentContext, "LeanHelix.Run")
+
 	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
 
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
@@ -82,9 +93,6 @@ func NewLeanHelixConsensusAlgo(
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
-	// Configure to be ~5 times the minimum wait for transactions (consensus context)
-	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval())
-	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
@@ -96,6 +104,9 @@ func NewLeanHelixConsensusAlgo(
 		metrics:       newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
 		leanHelix:     nil,
 	}
+
+	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
+	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	leanHelixConfig := &lh.Config{
 		InstanceId:      instanceId,
@@ -199,7 +210,19 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 	if err != nil {
 		logger.Info("onCommit - saving block to storage error: ", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	}
+	now := time.Now()
+	s.metrics.timeSinceLastCommitMillis.RecordSince(s.lastCommitTime)
+	s.lastCommitTime = now
+}
 
+func (s *service) onElection(m lhmetrics.ElectionMetrics) {
+	memberIdStr := m.CurrentLeaderMemberId().String()[:6]
+	s.metrics.currentLeaderMemberId.Update(string(memberIdStr))
+	s.metrics.currentElectionCount.Update(int64(m.CurrentView()))
+	now := time.Now()
+	s.metrics.timeSinceLastElectionMillis.RecordSince(s.lastElectionTime)
+	s.lastElectionTime = now
+	s.logger.Info("onElection()", log.String("lh-leader-member-id", memberIdStr), log.Int64("lh-view", int64(m.CurrentView())))
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {

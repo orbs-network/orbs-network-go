@@ -11,7 +11,7 @@ import (
 
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness()
+		h := newBlockSyncHarness(t)
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 		h.expectBroadcastOfBlockAvailabilityRequestToFail()
@@ -27,7 +27,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
-		h := newBlockSyncHarness().withBatchSize(0)
+		h := newBlockSyncHarness(t).withBatchSize(0)
 
 		h.expectPreSynchronizationUpdateOfConsensusAlgos(0) // new server
 
@@ -42,7 +42,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithCollectResponsesTimer(func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithCollectResponsesTimer(t, func() *synchronization.Timer {
 			return manualCollectResponsesTimer
 		})
 
@@ -53,7 +53,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 		state := h.factory.CreateCollectingAvailabilityResponseState()
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
 			h.verifyBroadcastOfBlockAvailabilityRequest(t)
-			h.factory.conduit.responses <- message
+			h.factory.conduit <- message
 			manualCollectResponsesTimer.ManualTick()
 		})
 
@@ -70,7 +70,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	h := newBlockSyncHarness()
+	h := newBlockSyncHarness(t)
 
 	h.expectPreSynchronizationUpdateOfConsensusAlgos(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()

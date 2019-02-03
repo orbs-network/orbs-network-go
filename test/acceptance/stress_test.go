@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -42,7 +41,7 @@ func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
@@ -54,7 +53,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(AnyNthMessage(7)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -63,9 +62,8 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	rnd := test.NewControlledRand(t)
-	newHarness(t).
+	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
 			}, AnyNthMessage(7))
@@ -109,6 +107,7 @@ func AnyNthMessage(n int) MessagePredicate {
 	}
 }
 
+//TODO(v1) move this with its tests to transport testkit package
 func WithPercentChance(ctrlRand *test.ControlledRand, pct int) MessagePredicate {
 	var hit bool
 	if pct >= 100 {
@@ -143,13 +142,13 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 			hits++
 		}
 	}
-	fmt.Printf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
+	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
 func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
-	contract := network.BenchmarkTokenContract()
+	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)
 
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256

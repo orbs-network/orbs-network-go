@@ -15,7 +15,7 @@ import (
 
 func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 
@@ -36,7 +36,7 @@ func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 
 func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", errors.New("not found"))
@@ -61,7 +61,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContra
 
 func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
@@ -87,7 +87,7 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContrac
 
 func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", nil)
@@ -115,7 +115,7 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 
 func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness()
+		h := newHarness(t)
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 		h.expectNativeContractInfoRequested("Contract1", nil)

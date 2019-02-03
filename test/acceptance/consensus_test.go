@@ -5,8 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -28,7 +26,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//	WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 	//	Start(func(ctx context.Context, network NetworkHarness) {
 	//
-	//		contract := network.BenchmarkTokenContract()
+	//		contract := network.DeployBenchmarkTokenContract()
 	//
 	//		amount := uint64(17)
 	//		fromAddress := 5
@@ -76,8 +74,7 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
-			contract := network.BenchmarkTokenContract()
-			contract.DeployBenchmarkToken(ctx, 5)
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			committedTamper := network.TransportTamperer().Fail(testkit.BenchmarkConsensusMessage(consensus.BENCHMARK_CONSENSUS_COMMITTED))
 			blockSyncTamper := network.TransportTamperer().Fail(testkit.BlockSyncMessage(gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST)) // block sync discovery message so it does not add the blocks in a 'back door'
@@ -91,8 +88,6 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			committedLatch.Wait()
 
-			requireInitialStateEventually(ctx, t, contract)
-
 			committedLatch.Remove()
 			committedTamper.StopTampering(ctx) // this will allow COMMITTED messages to reach leader so that it can progress
 
@@ -104,14 +99,4 @@ func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
 
 			blockSyncTamper.StopTampering(ctx)
 		})
-}
-
-func requireInitialStateEventually(ctx context.Context, t *testing.T, contract callcontract.BenchmarkTokenClient) {
-	require.True(t, test.Eventually(3*time.Second, func() bool {
-		return contract.GetBalance(ctx, 0, 6) == 0
-	}), "initial getBalance result on leader")
-
-	require.True(t, test.Eventually(3*time.Second, func() bool {
-		return contract.GetBalance(ctx, 1, 6) == 0
-	}), "initial getBalance result on non leader")
 }

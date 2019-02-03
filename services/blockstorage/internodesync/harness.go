@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
@@ -76,6 +75,7 @@ type blockSyncHarness struct {
 }
 
 func newBlockSyncHarnessWithTimers(
+	tb testing.TB,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
@@ -84,13 +84,9 @@ func newBlockSyncHarnessWithTimers(
 	cfg := newDefaultBlockSyncConfigForTests()
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
-	logger := log.GetLogger()
-	conduit := &blockSyncConduit{
-		done:      make(chan struct{}),
-		idleReset: make(chan struct{}),
-		responses: make(chan *gossipmessages.BlockAvailabilityResponseMessage),
-		blocks:    make(chan *gossipmessages.BlockSyncResponseMessage),
-	}
+	logger := log.DefaultTestingLogger(tb)
+	conduit := make(blockSyncConduit)
+
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
@@ -103,20 +99,20 @@ func newBlockSyncHarnessWithTimers(
 	}
 }
 
-func newBlockSyncHarness() *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(nil, nil, nil)
+func newBlockSyncHarness(tb testing.TB) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(tb, nil, nil, nil)
 }
 
-func newBlockSyncHarnessWithCollectResponsesTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(createTimer, nil, nil)
+func newBlockSyncHarnessWithCollectResponsesTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(tb, createTimer, nil, nil)
 }
 
-func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(nil, createTimer, nil)
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(tb, nil, createTimer, nil)
 }
 
-func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(nil, nil, createTimer)
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(tb, nil, nil, createTimer)
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
