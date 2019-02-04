@@ -17,7 +17,7 @@ type membership struct {
 
 func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext, committeeSize uint32) *membership {
 	if consensusContext == nil {
-		panic("consensusContext cannot be nil")
+		logger.Panic("consensusContext cannot be nil")
 	}
 	logger.Info("NewMembership()", log.Stringable("ID", memberId))
 	return &membership{

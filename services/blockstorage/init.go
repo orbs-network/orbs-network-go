@@ -98,7 +98,7 @@ func getBlockTimestamp(block *protocol.BlockPairContainer) primitives.TimestampN
 func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.appendHandlerUnderLock(handler)
 	// update the consensus algo about the latest block we have (for its initialization)
-	s.UpdateConsensusAlgosAboutLatestCommittedBlock(context.TODO())
+	s.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(context.TODO())
 }
 
 func (s *service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler) {

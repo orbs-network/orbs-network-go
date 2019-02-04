@@ -34,7 +34,7 @@ type BlockSyncStorage interface {
 	GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error)
 	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
-	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
+	UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context)
 }
 
 // state machine passes outside events into this channel type for consumption by the currently active state instance.
@@ -138,6 +138,8 @@ func (bs *BlockSync) IsTerminated() bool {
 }
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
+	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():

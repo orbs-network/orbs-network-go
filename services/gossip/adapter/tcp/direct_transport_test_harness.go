@@ -85,7 +85,7 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
-		randomPort := test.RandomPort()
+		randomPort := test.RandomPort_UnsafeDoNotUseMe_I_Am_Going_Away()
 
 		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
 		require.NoError(t, err, "test peer server could not listen")

@@ -112,7 +112,7 @@ func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.
 func (d *harness) numOfWrittenBlocks() int {
 	numBlocks, err := d.storageAdapter.GetLastBlockHeight()
 	if err != nil {
-		panic(err)
+		d.logger.Panic("failed getting last block height", log.Error(err))
 	}
 	return int(numBlocks)
 }
@@ -127,12 +127,12 @@ func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *service
 func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	txBlock, err := d.storageAdapter.GetTransactionsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		panic(err)
+		d.logger.Panic("failed getting tx block", log.Error(err))
 	}
 
 	rxBlock, err := d.storageAdapter.GetResultsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		panic(err)
+		d.logger.Panic("failed getting results block", log.Error(err))
 	}
 
 	return &protocol.BlockPairContainer{

@@ -29,6 +29,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
+	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", log.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	if err := s.notifyConsensusAlgos(
 		ctx,
 		lastCommittedBlock,
