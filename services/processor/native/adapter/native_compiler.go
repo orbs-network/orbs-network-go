@@ -55,12 +55,12 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 	sourceCodeFilePath, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
 	defer os.Remove(sourceCodeFilePath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not write source code to disk")
 	}
 
 	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePath, artifactsPath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not build a shared object")
 	}
 
 	return loadSharedObject(soFilePath)
@@ -125,14 +125,14 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 	loadedPlugin, err := plugin.Open(soFilePath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not open plugin")
 	}
 
 	publicMethods := []interface{}{}
 	var publicMethodsPtr *[]interface{}
 	publicMethodsSymbol, err := loadedPlugin.Lookup("PUBLIC")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not look up a symbol inside a plugin")
 	}
 	publicMethodsPtr, ok := publicMethodsSymbol.(*[]interface{})
 	if !ok {

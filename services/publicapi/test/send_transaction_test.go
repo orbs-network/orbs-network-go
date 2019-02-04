@@ -113,7 +113,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 
 func TestSendTransaction_ReturnImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		txTimeout := 100 * time.Second // won't actually wait please don't change
+		txTimeout := 100 * time.Hour // infinity - won't actually wait please don't change
 		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
@@ -130,7 +130,7 @@ func TestSendTransaction_ReturnImmediately(t *testing.T) {
 		harness.verifyMocks(t) // contract test
 
 		// value test
-		require.WithinDuration(t, time.Now(), start, 1*time.Millisecond, "timeout duration exceeded")
+		require.WithinDuration(t, time.Now(), start, 10*time.Second, "timeout duration exceeded")
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "should be pending")
 	})
 }

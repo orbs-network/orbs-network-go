@@ -242,15 +242,21 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 }
 
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
+	currentTop := f.bhIndex.topBlockHeight
+	if currentTop < from {
+		return fmt.Errorf("requested unknown block height %d. current height is %d", from, currentTop)
+	}
+
 	file, err := os.Open(f.blockFileName())
 	if err != nil {
 		return errors.Wrap(err, "failed to open blocks file for reading")
 	}
 	defer closeSilently(file, f.logger)
 
-	newOffset, err := file.Seek(f.bhIndex.fetchBlockOffset(from), io.SeekStart)
-	if newOffset != f.bhIndex.fetchBlockOffset(from) || err != nil {
-		return errors.Wrapf(err, "failed to seek in blocks file to position %v", f.bhIndex.fetchBlockOffset(from))
+	initialOffset := f.bhIndex.fetchBlockOffset(from)
+	newOffset, err := file.Seek(initialOffset, io.SeekStart)
+	if newOffset != initialOffset || err != nil {
+		return errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
 	}
 
 	wantNext := true
