@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 func (s *service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -49,7 +51,11 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
 	if notifyNodeSync {
-		s.nodeSync.HandleBlockCommitted(ctx)
+		supervised.GoOnce(logger, func() {
+			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+			defer cancel()
+			s.nodeSync.HandleBlockCommitted(shortCtx)
+		})
 	}
 
 	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))

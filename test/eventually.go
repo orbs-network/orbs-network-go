@@ -44,28 +44,24 @@ func testButDontPanic(f func() bool) bool {
 }
 
 func EventuallyVerify(timeout time.Duration, mocks ...mock.HasVerify) error {
-	verified := make([]bool, len(mocks))
-	numVerified := 0
 	var errExample error
 	Eventually(timeout, func() bool {
-		for i, mock := range mocks {
-			if !verified[i] {
-				ok, err := mock.Verify()
-				if ok {
-					verified[i] = true
-					numVerified++
-				} else {
-					errExample = err
-				}
+		numVerified := 0
+		errExample = nil
+		for _, mock := range mocks {
+			v, err := mock.Verify()
+			if v {
+				numVerified++
+			} else {
+				errExample = err
 			}
 		}
 		return numVerified == len(mocks)
 	})
-	if numVerified == len(mocks) {
-		return nil
-	} else {
+	if errExample != nil {
 		return errExample
 	}
+	return nil
 }
 
 func ConsistentlyVerify(timeout time.Duration, mocks ...mock.HasVerify) error {
