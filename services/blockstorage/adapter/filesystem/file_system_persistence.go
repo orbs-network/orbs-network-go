@@ -192,7 +192,7 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 }
 
 func buildIndex(r io.Reader, firstBlockOffset int64, logger log.BasicLogger, c blockCodec) (*blockHeightIndex, error) {
-	bhIndex := newBlockHeightIndex(firstBlockOffset)
+	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
 	offset := int64(firstBlockOffset)
 	for {
 		aBlock, blockSize, err := c.decode(r)

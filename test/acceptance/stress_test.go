@@ -11,7 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -20,7 +20,7 @@ import (
 
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
-	rnd := test.NewControlledRand(t)
+	rnd := rand.NewControlledRand(t)
 	newHarness(t).
 		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
 			log.ExcludeField(internodesync.LogTag),
@@ -40,7 +40,7 @@ func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
-	rnd := test.NewControlledRand(t)
+	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
@@ -52,7 +52,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
-	rnd := test.NewControlledRand(t)
+	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(AnyNthMessage(7)))
@@ -61,7 +61,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
-	rnd := test.NewControlledRand(t)
+	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
@@ -75,7 +75,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *te
 // TODO (v1) This should work - fix and remove Skip
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
-	rnd := test.NewControlledRand(t)
+	rnd := rand.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), rnd)
@@ -108,7 +108,7 @@ func AnyNthMessage(n int) MessagePredicate {
 }
 
 //TODO(v1) move this with its tests to transport testkit package
-func WithPercentChance(ctrlRand *test.ControlledRand, pct int) MessagePredicate {
+func WithPercentChance(ctrlRand *rand.ControlledRand, pct int) MessagePredicate {
 	var hit bool
 	if pct >= 100 {
 		hit = true
@@ -123,17 +123,17 @@ func WithPercentChance(ctrlRand *test.ControlledRand, pct int) MessagePredicate 
 }
 
 func TestWithNPctChance_AlwaysTrue(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	require.True(t, WithPercentChance(ctrlRand, 100)(nil), "100% chance should always return true")
 }
 
 func TestWithNPctChance_AlwaysFalse(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	require.False(t, WithPercentChance(ctrlRand, 0)(nil), "0% chance should always return false")
 }
 
 func TestWithNPctChance_ManualCheck(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	tries := 1000
 	pct := ctrlRand.Intn(100)
 	hits := 0
@@ -145,7 +145,7 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *test.ControlledRand) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t *testing.T, numTransactions int, ctrlRand *rand.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)

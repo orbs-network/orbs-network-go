@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	blocks := builders.RandomizedBlockChain(50, ctrlRand)
 
 	conf := newTempFileConfig()
@@ -39,7 +40,7 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	close2()
 }
 
-func requireCanReadAllBlocksInRandomOrder(t *testing.T, adapter adapter.BlockPersistence, blocks []*protocol.BlockPairContainer, ctrlRand *test.ControlledRand) {
+func requireCanReadAllBlocksInRandomOrder(t *testing.T, adapter adapter.BlockPersistence, blocks []*protocol.BlockPairContainer, ctrlRand *rand.ControlledRand) {
 	for _, i := range ctrlRand.Perm(len(blocks)) { // read each block out of order
 		h := primitives.BlockHeight(i + 1)
 		block, err := readOneBlock(adapter, h)

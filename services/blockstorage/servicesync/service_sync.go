@@ -2,7 +2,6 @@ package servicesync
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -54,8 +53,7 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	// notify the receiving service of a new block
 	requestedHeight, err := committer.commitBlockPair(ctx, block)
 	if err != nil {
-		logger.Error("failed committing block", log.Error(err), log.BlockHeight(h))
-		panic(fmt.Sprintf("failed committing block at height %d", h))
+		logger.Panic("failed committing block", log.Error(err), log.BlockHeight(h))
 	}
 	// if receiving service keep requesting the current height we are stuck
 	if h == requestedHeight {
