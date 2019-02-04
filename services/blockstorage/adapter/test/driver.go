@@ -7,8 +7,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -110,7 +110,7 @@ func flipBitInFile(t *testing.T, conf *localConfig, offset int64, bitMask byte) 
 	require.NoError(t, err)
 }
 
-func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, ctrlRand *test.ControlledRand) []*protocol.BlockPairContainer {
+func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, ctrlRand *rand.ControlledRand) []*protocol.BlockPairContainer {
 	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.NoError(t, err)
 	defer closeAdapter()

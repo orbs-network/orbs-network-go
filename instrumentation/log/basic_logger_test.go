@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -58,6 +58,17 @@ func TestSimpleLogger(t *testing.T) {
 	require.Equal(t, "Service initialized", jsonMap["message"])
 	require.Regexp(t, "^instrumentation/log/basic_logger_test.go", jsonMap["source"])
 	require.NotNil(t, jsonMap["timestamp"])
+}
+
+func TestLoggerPanic(t *testing.T) {
+	b := new(bytes.Buffer)
+	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
+
+	require.Panics(t, func() {
+		logger.Panic("foo")
+	}, "logger.Panic() did not panic")
+
+	require.Contains(t, b.String(), "foo", "logger.Panic() did not log message")
 }
 
 func TestSimpleLogger_AggregateField(t *testing.T) {
@@ -253,7 +264,7 @@ func TestJsonFormatterWithCustomTimestampColumn(t *testing.T) {
 }
 
 func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
-	ctrlRand := test.NewControlledRand(b)
+	ctrlRand := rand.NewControlledRand(b)
 
 	receipts := []*protocol.TransactionReceipt{
 		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),
@@ -278,7 +289,7 @@ func BenchmarkBasicLoggerInfoFormatters(b *testing.B) {
 }
 
 func BenchmarkBasicLoggerInfoWithDevNull(b *testing.B) {
-	ctrlRand := test.NewControlledRand(b)
+	ctrlRand := rand.NewControlledRand(b)
 
 	receipts := []*protocol.TransactionReceipt{
 		builders.TransactionReceipt().WithRandomHash(ctrlRand).Build(),

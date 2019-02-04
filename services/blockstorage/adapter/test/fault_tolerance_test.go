@@ -2,7 +2,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -11,7 +11,7 @@ func TestFileSystemBlockPersistence_RecoverFromPartiallyWrittenBlockRecord(t *te
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	conf := newTempFileConfig()
 	defer conf.cleanDir()
@@ -40,7 +40,7 @@ func TestFileSystemBlockPersistence_DataCorruption(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	conf := newTempFileConfig()
 	defer conf.cleanDir()

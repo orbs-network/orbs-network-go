@@ -2,7 +2,6 @@ package testkit
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -47,7 +46,7 @@ func (t *txTracker) getBlockHeight(txHash primitives.Sha256) (primitives.BlockHe
 
 func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*protocol.SignedTransaction) {
 	if height == 0 {
-		panic("illegal block height 0")
+		t.logger.Panic("illegal block height 0")
 	}
 
 	t.Lock()
@@ -65,11 +64,9 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 
 		if existed {
 			if prevHeight != height {
-				t.logger.Error("FORK/DOUBLE-SPEND!! same transaction reported in different heights. may be committed twice", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("previously-reported-height", uint64(prevHeight)))
-				panic(fmt.Sprintf("FORK/DOUBLE-SPEND!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, height))
+				t.logger.Panic("FORK/DOUBLE-SPEND!! same transaction reported in different heights. may be committed twice", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("previously-reported-height", uint64(prevHeight)))
 			} else {
-				t.logger.Error("BUG!! txTracker.txToHeight contains a block height ahead of topHeight", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("tracker-top-height", uint64(t.topHeight)))
-				panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
+				t.logger.Panic("BUG!! txTracker.txToHeight contains a block height ahead of topHeight", log.Transaction(txHash), log.BlockHeight(height), log.Uint64("tracker-top-height", uint64(t.topHeight)))
 			}
 		}
 
@@ -92,11 +89,11 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 			return txHeight
 		}
 
-		logger.Info("transaction not found as of block", log.Transaction(txHash), log.BlockHeight(topHeight))
+		logger.Info("transaction not found in current block, will wait for next block to look for it again", log.Transaction(txHash), log.BlockHeight(topHeight))
 		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
 			instrumentation.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
-			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
+			logger.Panic("timed out waiting for transaction", log.Transaction(txHash))
 		}
 	}
 }

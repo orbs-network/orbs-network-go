@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -44,7 +45,7 @@ func newFake() *fakeAdderRemover {
 func TestCommitTransactionReceipts_EnqueuesOnlyNodesTransactionsForNotification(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
-		rnd := test.NewControlledRand(t)
+		rnd := rand.NewControlledRand(t)
 		n1 := []byte{0x1}
 		n2 := []byte{0x2}
 
@@ -99,7 +100,7 @@ func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(
 func TestCommitTransactionReceipts_NotifiesResultHandlers(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
-		rnd := test.NewControlledRand(t)
+		rnd := rand.NewControlledRand(t)
 		tx1 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
 		tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
 

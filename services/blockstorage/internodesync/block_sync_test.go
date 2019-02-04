@@ -53,7 +53,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 		})
 		require.True(t, ok, "no commit timer of the first idle state should be created")
 
-		h.consistentlyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
+		h.consistentlyVerifyMocks(t, 4) // just need to verify we used gossip/storage for sync
 	})
 
 	shutdown := h.waitForShutdown(bs)

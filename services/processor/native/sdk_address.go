@@ -4,6 +4,7 @@ import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -21,10 +22,10 @@ func (s *service) SdkAddressGetSignerAddress(executionContextId sdkContext.Conte
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		panic(err.Error())
+		s.logger.Panic("failed handling sdk call", log.Error(err))
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		panic("getSignerAddress Sdk.Address returned corrupt output value")
+		s.logger.Panic("getSignerAddress Sdk.Address returned corrupt output value", log.StringableSlice("output-arguments", output.OutputArguments))
 	}
 	return output.OutputArguments[0].BytesValue()
 }
@@ -38,10 +39,10 @@ func (s *service) SdkAddressGetCallerAddress(executionContextId sdkContext.Conte
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		panic(err.Error())
+		s.logger.Panic("failed handling sdk call", log.Error(err))
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		panic("getCallerAddress Sdk.Address returned corrupt output value")
+		s.logger.Panic("getCallerAddress Sdk.Address returned corrupt output value", log.StringableSlice("output-arguments", output.OutputArguments))
 	}
 	return output.OutputArguments[0].BytesValue()
 }
@@ -55,10 +56,10 @@ func (s *service) SdkAddressGetOwnAddress(executionContextId sdkContext.ContextI
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		panic(err.Error())
+		s.logger.Panic("failed handling sdk call", log.Error(err))
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		panic("getOwnAddress Sdk.Address returned corrupt output value")
+		s.logger.Panic("getOwnAddress Sdk.Address returned corrupt output value", log.StringableSlice("output-arguments", output.OutputArguments))
 	}
 	return output.OutputArguments[0].BytesValue()
 }

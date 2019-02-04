@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		ctrlRand := test.NewControlledRand(t)
+		ctrlRand := rand.NewControlledRand(t)
 		h := newHarness(ctx, t)
 
 		invalidSig := make([]byte, 32)

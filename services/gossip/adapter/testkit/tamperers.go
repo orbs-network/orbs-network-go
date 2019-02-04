@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"runtime"
 	"sync"
 	"time"
@@ -71,7 +71,7 @@ func (o *delayingTamperer) StopTampering(ctx context.Context) {
 type corruptingTamperer struct {
 	predicate MessagePredicate
 	transport *TamperingTransport
-	ctrlRand  *test.ControlledRand
+	ctrlRand  *rand.ControlledRand
 }
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {

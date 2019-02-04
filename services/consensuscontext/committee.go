@@ -50,7 +50,7 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 func calculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize uint32, federationSize uint32) uint32 {
 
 	if federationSize < minimumCommitteeSize {
-		panic(fmt.Sprintf("config error: federation size %d cannot be less than minimum committee size %d", federationSize, minimumCommitteeSize))
+		panic(fmt.Sprintf("config error: federation size %d cannot be less than minimum committee size %d", federationSize, minimumCommitteeSize)) //TODO(v1): move to config guard
 	}
 
 	if requestedCommitteeSize < minimumCommitteeSize {

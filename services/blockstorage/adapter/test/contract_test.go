@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *
 }
 
 func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	for i := 1; i <= 10; i++ {
 
 		blocks := builders.RandomizedBlockChain(ctrlRand.Int31n(100)+10, ctrlRand)
@@ -206,9 +207,10 @@ func newFilesystemAdapter(tb testing.TB) *adapterUnderTest {
 		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
-	persistence, err := filesystem.NewBlockPersistence(ctx, conf, log.DefaultTestingLogger(tb), metric.NewRegistry())
+	logger := log.DefaultTestingLogger(tb)
+	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
 	if err != nil {
-		panic(err)
+		logger.Panic("failed creating block persistence", log.Error(err))
 	}
 
 	return &adapterUnderTest{

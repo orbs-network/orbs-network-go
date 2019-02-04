@@ -1,4 +1,4 @@
-package test
+package rand
 
 import (
 	"github.com/stretchr/testify/require"
