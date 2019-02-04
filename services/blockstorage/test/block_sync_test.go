@@ -119,7 +119,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress)
 		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake blocks
 
-		harness.verifyMocks(t, 1) // verify blocks validated (HandleBlockConsensus x 6)
+		harness.verifyMocks(t, 4) // verify blocks validated (HandleBlockConsensus x 6)
 	})
 }
 
