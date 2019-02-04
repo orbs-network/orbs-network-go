@@ -114,8 +114,39 @@ func (h *harness) transactionPendingNoProofCalled() {
 
 func (h *harness) getTransactionStatusFailed() {
 	h.transactionIsNotInPool()
-	h.bksMock.When("GetTransactionReceipt", mock.Any, mock.Any).Return(nil, errors.Errorf("stam")).Times(1)
+	h.bksMock.When("GetTransactionReceipt", mock.Any, mock.Any).Return(nil, errors.Errorf("someErr")).Times(1)
 	h.bksMock.Never("GenerateReceiptProof", mock.Any)
+}
+
+func (h *harness) prepareGetBlock(blockPair *protocol.BlockPairContainer, lastCommitedBlockPair *protocol.BlockPairContainer) {
+	if blockPair != nil {
+		h.bksMock.When("GetBlockPair", mock.Any, mock.Any).Return(
+			&services.GetBlockPairOutput{
+				BlockPair: blockPair,
+			}).Times(1)
+	} else {
+		h.bksMock.When("GetBlockPair", mock.Any, mock.Any).Return(
+			&services.GetBlockPairOutput{
+				BlockPair: nil,
+			}).Times(1)
+		h.prepareGetLastBlock(lastCommitedBlockPair)
+	}
+}
+
+func (h *harness) prepareGetLastBlock(lastCommitedBlockPair *protocol.BlockPairContainer) {
+	if lastCommitedBlockPair != nil {
+		h.bksMock.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(
+			&services.GetLastCommittedBlockHeightOutput{
+				LastCommittedBlockTimestamp: lastCommitedBlockPair.TransactionsBlock.Header.Timestamp(),
+				LastCommittedBlockHeight:    lastCommitedBlockPair.TransactionsBlock.Header.BlockHeight(),
+			}).Times(1)
+	} else {
+		h.bksMock.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(nil, errors.Errorf("someErr")).Times(1)
+	}
+}
+
+func (h *harness) getBlockFails() {
+	h.bksMock.When("GetBlockPair", mock.Any, mock.Any).Return(nil, errors.Errorf("someErr")).Times(1)
 }
 
 func (h *harness) verifyMocks(t *testing.T) {

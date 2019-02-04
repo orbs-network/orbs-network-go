@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -85,26 +84,15 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
 			withSyncCollectResponsesTimeout(15 * time.Millisecond)
 
-		harness.consensus.Reset().
-			When("HandleBlockConsensus", mock.Any, mock.Any).
-			Return(&handlers.HandleBlockConsensusOutput{}, nil).
-			AtLeast(6) // init, CAR, 4 x block validations
+		handleBlockConsensusLatch := latchMockFunction(harness.consensus.Reset(), "HandleBlockConsensus")
+		broadcastBlockAvailabilityRequestLatch := latchMockFunction(&harness.gossip.Mock, "BroadcastBlockAvailabilityRequest")
+		sendBlockSyncRequestLatch := latchMockFunction(&harness.gossip.Mock, "SendBlockSyncRequest")
 
-		broadcastBlockAvailabilityRequestLatch := make(chan struct{})
-		harness.gossip.
-			When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(broadcastBlockAvailabilityRequestLatch)).
-			AtLeast(1)
+		go harness.start(ctx) // go because start() will block until next line is reached
+		requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected service to notify sync with consensus algo on init")
 
-		sendBlockSyncRequestLatch := make(chan struct{})
-		harness.gossip.
-			When("SendBlockSyncRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(sendBlockSyncRequestLatch)).
-			AtLeast(1)
-
-		harness.start(ctx)
-
-		requireLatchReleasef(t, ctx, broadcastBlockAvailabilityRequestLatch, "expected sync to collect availability response")
+		requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected sync to notify consensus algo of current height")
+		requireMockFunctionLatchTriggerf(t, ctx, broadcastBlockAvailabilityRequestLatch, "expected sync to collect availability response")
 
 		// fake CAR responses
 		syncSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(7)
@@ -114,16 +102,39 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
 		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
-		requireLatchReleasef(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
+		requireMockFunctionLatchTriggerf(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
 
-		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress)
-		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake blocks
+		numOfBlocks := 4
+		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress, numOfBlocks)
+		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
 
-		harness.verifyMocks(t, 4) // verify blocks validated (HandleBlockConsensus x 6)
+		for i := 1; i <= numOfBlocks; i++ {
+			requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected block %d to be validated on commit", i)
+		}
 	})
 }
 
-func requireLatchReleasef(t *testing.T, ctx context.Context, latch chan struct{}, format string, args ...interface{}) {
+// a helper function which returns a channel used for syncing test code on mock function calls.
+// this implementation is compatible only with mock functions receiving a context and one additional argument,
+// and returning two arguments. after calling this method, each invocation of this mock function will block until
+// the test code reads from the latch channel, or the context terminates.
+func latchMockFunction(m *mock.Mock, name string) <-chan struct{} {
+	latch := make(chan struct{})
+	m.When(name, mock.Any, mock.Any).
+		Call(func(ctx context.Context, _ interface{}) (interface{}, interface{}) {
+			select {
+			case latch <- struct{}{}:
+			case <-ctx.Done():
+			}
+			return nil, nil
+		})
+	return latch
+}
+
+// a helper function which works with latch channels returned from latchMockFunction.
+// test code should use this helper to sync with mock function invocations.
+// this function blocks until a single invocation of the mock function tied to the latch channel occurs.
+func requireMockFunctionLatchTriggerf(t *testing.T, ctx context.Context, latch <-chan struct{}, format string, args ...interface{}) {
 	select {
 	case <-latch: // wait on latch
 	case <-ctx.Done():
@@ -131,23 +142,12 @@ func requireLatchReleasef(t *testing.T, ctx context.Context, latch chan struct{}
 	}
 }
 
-// a helper function which returns a mock call handler.The handler notifies the invocationTriggerChan and returns nil afterwards
-// this will cause the call to mock function to block until the test code reads from the channel, allowing test to synchronize with Mock invocation
-func latchingMockHandler(invocationChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
-	return func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
-		select {
-		case invocationChan <- struct{}{}:
-		case <-ctx.Done():
-		}
-		return nil, nil
-	}
-}
-func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair) *gossiptopics.BlockSyncResponseInput {
+func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair, numOfBlocks int) *gossiptopics.BlockSyncResponseInput {
 	return builders.BlockSyncResponseInput().
 		WithSenderNodeAddress(senderKeyPair.NodeAddress()).
 		WithFirstBlockHeight(primitives.BlockHeight(1)).
-		WithLastBlockHeight(primitives.BlockHeight(4)).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+		WithLastBlockHeight(primitives.BlockHeight(numOfBlocks)).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(numOfBlocks)).
 		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 }
 
