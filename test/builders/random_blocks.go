@@ -24,7 +24,7 @@ func RandomizedBlock(h primitives.BlockHeight, ctrlRand *rand.ControlledRand, pr
 		WithTransactions(ctrlRand.Uint32() % 200).
 		WithStateDiffs(ctrlRand.Uint32() % 200).
 		WithReceiptsForTransactions().
-		WithLeanHelixBlockProof()
+		WithEmptyLeanHelixBlockProof()
 	if prev != nil {
 		builder.WithPrevBlock(prev)
 	}
