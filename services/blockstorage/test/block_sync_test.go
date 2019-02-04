@@ -120,7 +120,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
 
 		for i := 1; i <= numOfBlocks; i++ {
-			requireLatchReleasef(t, ctx, handleBlockConsensusLatch, "expected block at height %d to be validated by consensus algo upon commit by sync", i)
+			requireLatchReleasef(t, ctx, handleBlockConsensusLatch, "expected block %d to be validated on commit", i)
 		}
 	})
 }
