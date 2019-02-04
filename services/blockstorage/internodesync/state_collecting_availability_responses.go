@@ -35,7 +35,8 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
 	supervised.GoOnce(logger, func() {
-		shortCtx, _ := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+		shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+		defer cancel()
 		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
 	})
 

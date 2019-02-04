@@ -130,11 +130,12 @@ func requireLatchReleasef(t *testing.T, ctx context.Context, latch chan struct{}
 	}
 }
 
-// a helper function which returns a mock call handler which will return nil after notifying calling test of the invocation
-func latchingMockHandler(doneChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
+// a helper function which returns a mock call handler.The handler notifies the invocationTriggerChan and returns nil afterwards
+// this will cause the call to mock function to block until the test code reads from the channel, allowing test to synchronize with Mock invocation
+func latchingMockHandler(invocationChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
 	return func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
 		select {
-		case doneChan <- struct{}{}:
+		case invocationChan <- struct{}{}:
 		case <-ctx.Done():
 		}
 		return nil, nil

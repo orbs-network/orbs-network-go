@@ -52,7 +52,8 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 
 	if notifyNodeSync {
 		supervised.GoOnce(logger, func() {
-			shortCtx, _ := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+			defer cancel()
 			s.nodeSync.HandleBlockCommitted(shortCtx)
 		})
 	}
