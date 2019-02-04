@@ -9,11 +9,11 @@ import (
 )
 
 // TODO(v1): this function should return an error
-func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
+func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
 	// the source of truth for the last committed block is persistence
 	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
-		s.logger.Error("UpdateConsensusAlgosAboutLatestCommittedBlock(): GetLastBlock() failed", log.Error(err))
+		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): GetLastBlock() failed", log.Error(err))
 		return
 	}
 
@@ -29,7 +29,7 @@ func (s *service) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Cont
 		lastCommittedBlock, // if lastCommittedBlock is nil, it means this is the Genesis Block
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 	if err != nil {
-		s.logger.Error("UpdateConsensusAlgosAboutLatestCommittedBlock(): notifyConsensusAlgos() failed", log.Error(err))
+		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
 		return
 	}
 }

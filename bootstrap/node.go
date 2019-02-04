@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
-	"github.com/pkg/errors"
 	"sync"
 	"time"
 )
@@ -46,9 +45,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
 
 	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
-		logger.Error("failed initializing blocks database", log.Error(err))
-		err = errors.Wrap(err, "failed initializing blocks database")
-		panic(err)
+		logger.Panic("failed initializing blocks database", log.Error(err))
 	}
 
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)

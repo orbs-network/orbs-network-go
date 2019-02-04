@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type blockSyncGossipClient struct {
+type blockSyncClient struct {
 	gossip      gossiptopics.BlockSync
 	storage     BlockSyncStorage
 	logger      log.BasicLogger
@@ -24,9 +24,9 @@ func newBlockSyncGossipClient(
 	s BlockSyncStorage,
 	l log.BasicLogger,
 	batchSize func() uint32,
-	na func() primitives.NodeAddress) *blockSyncGossipClient {
+	na func() primitives.NodeAddress) *blockSyncClient {
 
-	return &blockSyncGossipClient{
+	return &blockSyncClient{
 		gossip:      g,
 		storage:     s,
 		logger:      l,
@@ -35,11 +35,11 @@ func newBlockSyncGossipClient(
 	}
 }
 
-func (c *blockSyncGossipClient) petitionerUpdateConsensusAlgos(ctx context.Context) {
-	c.storage.UpdateConsensusAlgosAboutLatestCommittedBlock(ctx)
+func (c *blockSyncClient) petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
+	c.storage.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx)
 }
 
-func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
+func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
@@ -77,7 +77,7 @@ func (c *blockSyncGossipClient) petitionerBroadcastBlockAvailabilityRequest(ctx 
 	return err
 }
 
-func (c *blockSyncGossipClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, recipientNodeAddress primitives.NodeAddress) error {
+func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, recipientNodeAddress primitives.NodeAddress) error {
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
