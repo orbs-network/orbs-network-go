@@ -44,7 +44,7 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, func() { atomic.AddUint32(&x, 1) }, nil)
 	time.Sleep(time.Millisecond * 30)
 	expected := getExpected(start, time.Now(), tickTime)
-	require.True(t, expected/2 < atomic.LoadUint32(&x), "expected more than %d ticks, but got %d", expected/2, atomic.LoadUint32(&x))
+	require.True(t, expected/2 <= atomic.LoadUint32(&x), "expected more than %d ticks, but got %d", expected/2, atomic.LoadUint32(&x))
 	p.Stop()
 }
 
@@ -56,8 +56,8 @@ func TestTriggerInternalMetrics(t *testing.T) {
 	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, func() { atomic.AddUint32(&x, 1) }, nil)
 	time.Sleep(time.Millisecond * 30)
 	expected := getExpected(start, time.Now(), tickTime)
-	require.True(t, expected/2 < atomic.LoadUint32(&x), "expected more than %d ticks, but got %d", expected/2, atomic.LoadUint32(&x))
-	require.True(t, uint64(expected/2) < p.TimesTriggered(), "expected more than %d ticks, but got %d (metric)", expected/2, p.TimesTriggered())
+	require.True(t, expected/2 <= atomic.LoadUint32(&x), "expected more than %d ticks, but got %d", expected/2, atomic.LoadUint32(&x))
+	require.True(t, uint64(expected/2) <= p.TimesTriggered(), "expected more than %d ticks, but got %d (metric)", expected/2, p.TimesTriggered())
 	p.Stop()
 }
 
