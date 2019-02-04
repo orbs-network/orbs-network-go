@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -85,25 +84,25 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
 			withSyncCollectResponsesTimeout(15 * time.Millisecond)
 
+		handleBlockConsensusLatch := make(chan struct{})
 		harness.consensus.Reset().
 			When("HandleBlockConsensus", mock.Any, mock.Any).
-			Return(&handlers.HandleBlockConsensusOutput{}, nil).
-			AtLeast(6) // init, CAR, 4 x block validations
+			Call(latchingMockHandler(handleBlockConsensusLatch))
 
 		broadcastBlockAvailabilityRequestLatch := make(chan struct{})
 		harness.gossip.
 			When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(broadcastBlockAvailabilityRequestLatch)).
-			AtLeast(1)
+			Call(latchingMockHandler(broadcastBlockAvailabilityRequestLatch))
 
 		sendBlockSyncRequestLatch := make(chan struct{})
 		harness.gossip.
 			When("SendBlockSyncRequest", mock.Any, mock.Any).
-			Call(latchingMockHandler(sendBlockSyncRequestLatch)).
-			AtLeast(1)
+			Call(latchingMockHandler(sendBlockSyncRequestLatch))
 
-		harness.start(ctx)
+		go harness.start(ctx) // next line must be executed before harness.start() will return
+		requireLatchReleasef(t, ctx, handleBlockConsensusLatch, "expected service to notify sync with consensus algo on init")
 
+		requireLatchReleasef(t, ctx, handleBlockConsensusLatch, "expected sync to notify consensus algo of current height")
 		requireLatchReleasef(t, ctx, broadcastBlockAvailabilityRequestLatch, "expected sync to collect availability response")
 
 		// fake CAR responses
@@ -116,10 +115,13 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 
 		requireLatchReleasef(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
 
-		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress)
-		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake blocks
+		numOfBlocks := 4
+		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress, numOfBlocks)
+		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
 
-		harness.verifyMocks(t, 1) // verify blocks validated (HandleBlockConsensus x 6)
+		for i := 1; i <= numOfBlocks; i++ {
+			requireLatchReleasef(t, ctx, handleBlockConsensusLatch, "expected block at height %d to be validated by consensus algo upon commit by sync", i)
+		}
 	})
 }
 
@@ -133,8 +135,8 @@ func requireLatchReleasef(t *testing.T, ctx context.Context, latch chan struct{}
 
 // a helper function which returns a mock call handler.The handler notifies the invocationTriggerChan and returns nil afterwards
 // this will cause the call to mock function to block until the test code reads from the channel, allowing test to synchronize with Mock invocation
-func latchingMockHandler(invocationChan chan struct{}) func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
-	return func(ctx context.Context, _ interface{}) (*gossiptopics.EmptyOutput, error) {
+func latchingMockHandler(invocationChan chan struct{}) func(ctx context.Context, _ interface{}) (interface{}, error) {
+	return func(ctx context.Context, _ interface{}) (interface{}, error) {
 		select {
 		case invocationChan <- struct{}{}:
 		case <-ctx.Done():
@@ -142,12 +144,12 @@ func latchingMockHandler(invocationChan chan struct{}) func(ctx context.Context,
 		return nil, nil
 	}
 }
-func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair) *gossiptopics.BlockSyncResponseInput {
+func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair, numOfBlocks int) *gossiptopics.BlockSyncResponseInput {
 	return builders.BlockSyncResponseInput().
 		WithSenderNodeAddress(senderKeyPair.NodeAddress()).
 		WithFirstBlockHeight(primitives.BlockHeight(1)).
-		WithLastBlockHeight(primitives.BlockHeight(4)).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+		WithLastBlockHeight(primitives.BlockHeight(numOfBlocks)).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(numOfBlocks)).
 		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
 }
 
