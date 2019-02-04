@@ -46,39 +46,41 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			network.TransportTamperer().Duplicate(AnyNthMessage(7))
+			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 15))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
+// TODO (v1) Must drop message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(AnyNthMessage(7)))
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 15)))
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
+// See BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT - cannot delay messages consistently more than that, or block sync will never work - it throws "timed out when waiting for chunks"
 func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(1000)) + 1000) * time.Microsecond // delay each message between 1-2 millis
-			}, AnyNthMessage(7))
+				return (time.Duration(rnd.Intn(100))) * time.Millisecond
+			}, WithPercentChance(rnd, 50))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
-// TODO (v1) This should work - fix and remove Skip
+// TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := rand.NewControlledRand(t)
 	newHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
-			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(AnyNthMessage(7)), rnd)
+			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 15)), rnd)
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
 			tamper.StopTampering(ctx)
 
@@ -88,37 +90,15 @@ func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *
 		})
 }
 
-func AnyNthMessage(n int) MessagePredicate {
-	if n < 1 {
-		panic("illegal argument")
-	}
-
-	if n == 1 {
-		return func(data *adapter.TransportData) bool {
-			return true
-		}
-	}
-
-	count := 0
-	return func(data *adapter.TransportData) bool {
-		count++
-		m := count % n
-		return m == 0
-	}
-}
-
-//TODO(v1) move this with its tests to transport testkit package
 func WithPercentChance(ctrlRand *rand.ControlledRand, pct int) MessagePredicate {
-	var hit bool
-	if pct >= 100 {
-		hit = true
-	} else if pct <= 0 {
-		hit = false
-	} else {
-		hit = ctrlRand.Intn(101) <= pct
-	}
 	return func(data *adapter.TransportData) bool {
-		return hit
+		if pct >= 100 {
+			return true
+		} else if pct <= 0 {
+			return false
+		} else {
+			return ctrlRand.Intn(101) <= pct
+		}
 	}
 }
 
