@@ -30,6 +30,9 @@ func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPair
 
 	// try to commit the top block
 	requestedHeight := syncOneBlock(ctx, topBlock, committer, logger)
+	if topBlock.TransactionsBlock.Header.BlockHeight() < requestedHeight {
+		return requestedHeight - 1, nil
+	}
 
 	// scan all available blocks starting the requested height
 	committedHeight := requestedHeight - 1

@@ -74,6 +74,16 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 	}
 }
 
+func TestBlockPersistenceContract_ReadUnknownBlocksReturnsError(t *testing.T) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+		err := adapter.ScanBlocks(1, 1, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+			t.Fatal("expected cursorFunc never to be invoked if requested block height is not in storage")
+			return false
+		})
+		require.Error(t, err)
+	})
+}
+
 func TestBlockPersistenceContract_FailToWriteOutOfOrder(t *testing.T) {
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(2).Build())
