@@ -113,6 +113,7 @@ func TestLatchingTamperer_WaitBlocksUntilSend(t *testing.T) {
 		c.listener.WhenOnTransportMessageReceived(mock.Any)
 
 		requireOperationBlocking(t, ctx, func() { latch.Wait() }, func() { c.send(ctx, nil) }, "latch.Wait()", "tamperingHarness.send()")
+		requireOperationBlocking(t, ctx, func() { latch.Wait() }, func() { c.send(ctx, nil) }, "latch.Wait()", "tamperingHarness.send()")
 	})
 }
 
@@ -125,6 +126,7 @@ func TestLatchingTamperer_SendBlocksUntilWait(t *testing.T) {
 		latch := c.transport.LatchOn(anyMessage())
 		c.listener.WhenOnTransportMessageReceived(mock.Any)
 
+		requireOperationBlocking(t, ctx, func() { c.send(ctx, nil) }, func() { latch.Wait() }, "tamperingHarness.send()", "latch.Wait()")
 		requireOperationBlocking(t, ctx, func() { c.send(ctx, nil) }, func() { latch.Wait() }, "tamperingHarness.send()", "latch.Wait()")
 	})
 }
