@@ -159,7 +159,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
 
 	if len(preOrderResults) != len(r.transactionsForPreOrder) {
-		r.logger.Panic("BUG: sent mismatch num of sent transaction and returned statuses", log.Int("num-txs", len(r.transactionsForPreOrder)), log.Int("num-statuses", len(preOrderResults)))
+		r.logger.Panic("BUG: sent mismatched num of sent transaction and returned statuses", log.Int("num-txs", len(r.transactionsForPreOrder)), log.Int("num-statuses", len(preOrderResults)))
 	}
 
 	for i, tx := range r.transactionsForPreOrder {
