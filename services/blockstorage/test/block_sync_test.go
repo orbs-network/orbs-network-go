@@ -69,9 +69,10 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(3 * time.Millisecond).start(ctx)
-
+		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(3 * time.Millisecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
+
+		harness.start(ctx)
 
 		harness.verifyMocks(t, 2)
 	})

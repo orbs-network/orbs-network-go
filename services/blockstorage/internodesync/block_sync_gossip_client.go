@@ -77,18 +77,19 @@ func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx contex
 	return err
 }
 
-func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, senderNodeAddress primitives.NodeAddress) error {
+func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, blockType gossipmessages.BlockType, recipientNodeAddress primitives.NodeAddress) error {
 	out, err := c.storage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
-
 	firstBlockHeight := lastCommittedBlockHeight + 1
 	lastBlockHeight := lastCommittedBlockHeight + primitives.BlockHeight(c.batchSize())
 
+	c.logger.Info("sending block sync request", log.Stringable("recipient-address", recipientNodeAddress), log.Stringable("first-block", firstBlockHeight), log.Stringable("last-block", lastBlockHeight), log.Stringable("last-committed-block", lastCommittedBlockHeight))
+
 	request := &gossiptopics.BlockSyncRequestInput{
-		RecipientNodeAddress: senderNodeAddress,
+		RecipientNodeAddress: recipientNodeAddress,
 		Message: &gossipmessages.BlockSyncRequestMessage{
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: c.nodeAddress(),
