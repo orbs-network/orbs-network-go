@@ -98,8 +98,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
-		s.logger.Error("leader failed to sign genesis block", log.Error(err))
-		panic("leader failed to sign genesis block, abort")
+		s.logger.Panic("leader failed to sign genesis block", log.Error(err))
 		return nil
 	}
 	return blockPair

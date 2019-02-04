@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
@@ -19,12 +18,12 @@ type harness struct {
 	stateStorage         *services.MockStateStorage
 	processors           map[protocol.ProcessorType]*services.MockProcessor
 	crosschainConnectors map[protocol.CrosschainConnectorType]*services.MockCrosschainConnector
-	reporting            log.BasicLogger
+	logger               log.BasicLogger
 	service              services.VirtualMachine
 }
 
 func newHarness(tb testing.TB) *harness {
-	log := log.DefaultTestingLogger(tb)
+	logger := log.DefaultTestingLogger(tb)
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}
@@ -50,7 +49,7 @@ func newHarness(tb testing.TB) *harness {
 		stateStorage,
 		processorsForService,
 		crosschainConnectorsForService,
-		log,
+		logger,
 	)
 
 	return &harness{
@@ -58,7 +57,7 @@ func newHarness(tb testing.TB) *harness {
 		stateStorage:         stateStorage,
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
-		reporting:            log,
+		logger:               logger,
 		service:              service,
 	}
 }
@@ -153,7 +152,7 @@ func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context,
 	for _, contractStateDiffs := range output.ContractStateDiffs {
 		contractName := contractStateDiffs.ContractName()
 		if _, found := resultKeyValuePairsPerContract[contractName]; !found {
-			panic(fmt.Sprintf("unexpected contract %s", contractStateDiffs.ContractName()))
+			h.logger.Panic("unexpected contract", log.Stringable("contract-name", contractStateDiffs.ContractName()))
 		}
 		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
 			sd := i.NextStateDiffs()
