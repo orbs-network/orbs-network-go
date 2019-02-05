@@ -21,7 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"math"
 	"math/rand"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -72,8 +71,8 @@ func (b *networkHarnessBuilder) WithLogFilters(filters ...log.Filter) *networkHa
 }
 
 func (b *networkHarnessBuilder) WithTestId(testId string) *networkHarnessBuilder {
-	randNum := rand.Intn(1000000)
-	b.testId = "acceptance-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
+	randNum := rand.Intn(1000)
+	b.testId = "acc-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
@@ -119,7 +118,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 		restartableTest := func() {
 			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
-				testId := b.testId + "-" + consensusAlgo.String()
+				testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 				logger, errorRecorder := b.makeLogger(testId)
 				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
@@ -172,6 +171,14 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 	}
 }
 
+func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
+	str := algoType.String()
+	if len(str) < 20 {
+		return str
+	}
+	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
+}
+
 func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence) []*protocol.BlockPairContainer {
 	lastBlock, err := blocks.GetLastBlock()
 	if err != nil {
@@ -193,8 +200,8 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT")),
+		//log.String("_branch", os.Getenv("GIT_BRANCH")),
+		//log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
 		WithOutput(b.makeFormattingOutput(), errorRecorder).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
