@@ -30,6 +30,8 @@ import (
 )
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
+var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 
 type networkHarnessBuilder struct {
 	tb                       testing.TB
@@ -55,11 +57,13 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	}
 
-	return n.
+	harness := n.
 		WithTestId(getCallerFuncName()).
-		WithNumNodes(4).
+		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+
+	return harness
 }
 
 func (b *networkHarnessBuilder) WithLogFilters(filters ...log.Filter) *networkHarnessBuilder {
@@ -112,8 +116,8 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 
 	for _, consensusAlgo := range b.consensusAlgos {
 
-		restartableTest := func(ctx context.Context) {
-			test.WithContextWithTimeout(15*time.Second, func(ctx context.Context) { //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+		restartableTest := func() {
+			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
 				testId := b.testId + "-" + consensusAlgo.String()
 				logger, errorRecorder := b.makeLogger(testId)
@@ -134,7 +138,7 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				restart := func() NetworkHarness {
 					cancelNetwork()
 					network.Destroy()
-					time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+					time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 
 					// signal the old network to stop
 					networkCtx, cancelNetwork = context.WithCancel(ctx) // allocate new cancel func for new network
@@ -149,18 +153,18 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 
 				logger.Info("acceptance network running test")
 				f(ctx, network, restart)
-				time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+				time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 			})
 		}
 
 		switch runner := b.tb.(type) {
 		case *testing.T:
 			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
+				restartableTest()
 			})
 		case *testing.B:
 			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				test.WithContextWithTimeout(15*time.Second, restartableTest)
+				restartableTest()
 			})
 		default:
 			panic("unexpected TB implementation")
