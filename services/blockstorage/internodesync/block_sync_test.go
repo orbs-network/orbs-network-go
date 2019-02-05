@@ -41,7 +41,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
 
 		firstIdleStateTimeoutTimer := <-manualIdleStateTimeoutTimers // reach first idle state
-		h.eventuallyVerifyMocks(t, 1)                                // short eventually                                            // confirm init sync attempt occurred (expected mock calls)
+		h.eventuallyVerifyMocks(t, 2)                                // short eventually                                            // confirm init sync attempt occurred (expected mock calls)
 
 		bs.HandleBlockCommitted(ctx) // trigger transition (from idle state) to a new idle state
 
