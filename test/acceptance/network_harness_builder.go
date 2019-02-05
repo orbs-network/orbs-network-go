@@ -45,7 +45,6 @@ type networkHarnessBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
-// TODO Make the "primary consensus algo" configurable https://tree.taiga.io/project/orbs-network/us/632
 func newHarness(tb testing.TB) *networkHarnessBuilder {
 	n := &networkHarnessBuilder{tb: tb, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 

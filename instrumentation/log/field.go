@@ -165,7 +165,11 @@ func (f *Field) Value() interface{} {
 	}
 	switch f.Type {
 	case NodeType:
-		return f.StringVal[:6]
+		if len(f.StringVal) > 6 {
+			return f.StringVal[:6]
+		} else {
+			return f.StringVal
+		}
 	case ServiceType:
 		return f.StringVal
 	case FunctionType:
