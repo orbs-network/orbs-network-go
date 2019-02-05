@@ -39,7 +39,10 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 
 func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness(t)
+	manualNoCommitTimer := synchronization.NewTimerWithManualTick()
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
+		return manualNoCommitTimer
+	})
 
 	cancel()
 	state := h.factory.CreateIdleState()
