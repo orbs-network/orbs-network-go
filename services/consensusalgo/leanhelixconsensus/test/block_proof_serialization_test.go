@@ -22,5 +22,5 @@ func TestBlockProofSerialization_IncorrectExtraction(t *testing.T) {
 	block := builders.BlockPair().Build()
 	block.TransactionsBlock.BlockProof = leanhelixconsensus.CreateTransactionBlockProof(block, expectedBlockProof)
 	incorrectBlockProof := block.TransactionsBlock.BlockProof.Raw()
-	require.False(t, bytes.Equal(expectedBlockProof, incorrectBlockProof), "block proofs should be the different")
+	require.False(t, bytes.Equal(expectedBlockProof, incorrectBlockProof), "block proofs should be different")
 }
