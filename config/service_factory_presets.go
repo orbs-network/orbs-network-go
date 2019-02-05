@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportConfig {
+func ForDirectTransportTests(gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress())
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
+	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, keepAliveInterval)
 	return cfg
 }
 
