@@ -19,7 +19,7 @@ jobs:
       - store_test_results:
           path: _reports
 
-  flakiness:
+  flakiness_acceptance:
     docker:
       - image: circleci/golang:1.11.4
     resource_class: xlarge
@@ -29,7 +29,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: go get -u github.com/jstemmer/go-junit-report
       - run:
-          command: ./test.flakiness.sh
+          command: ./test.flakiness.acceptance.sh
           no_output_timeout: 25m
       - store_artifacts:
           path: _out
@@ -39,6 +39,27 @@ jobs:
           destination: test-results
       - store_test_results:
           path: _reports
+
+  flakiness_other:
+    docker:
+    - image: circleci/golang:1.11.4
+    resource_class: xlarge
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+    - checkout
+    - run: ./git-submodule-checkout.sh
+    - run: go get -u github.com/jstemmer/go-junit-report
+    - run:
+        command: ./test.flakiness.other.sh
+        no_output_timeout: 25m
+    - store_artifacts:
+        path: _out
+        destination: test-output
+    - store_artifacts:
+        path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+        destination: test-results
+    - store_test_results:
+        path: _reports
 
   e2e:
     machine: true
@@ -125,13 +146,17 @@ workflows:
     jobs:
       - tests
       - e2e
-      - flakiness
+      - flakiness_acceptance
+      - flakiness_acceptance
+      - flakiness_acceptance
+      - flakiness_other
       - notify_github_about_dashboard
       - autonomous_swap
       - success:
           requires:
             - tests
-            - flakiness
+            - flakiness_acceptance
+            - flakiness_other
             - autonomous_swap
       - deploy_testnet:
           requires:
