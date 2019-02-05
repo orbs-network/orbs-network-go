@@ -3,6 +3,8 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -78,7 +80,7 @@ func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 }
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
-	test.WithContextWithTimeout(1*time.Second, func(ctx context.Context) {
+	test.WithContextWithTimeout(1*time.Minute, func(ctx context.Context) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
@@ -138,7 +140,8 @@ func requireMockFunctionLatchTriggerf(t *testing.T, ctx context.Context, latch <
 	select {
 	case <-latch: // wait on latch
 	case <-ctx.Done():
-		t.Fatalf(format+"(%v)", append(args, ctx.Err())...)
+		instrumentation.DebugPrintGoroutineStacks(log.DefaultTestingLogger(t))
+		require.FailNowf(t, "requireMockFunctionLatchTrigger stopped waiting due to context termination", format+"(%v)", append(args, ctx.Err())...)
 	}
 }
 
