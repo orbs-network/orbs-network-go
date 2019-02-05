@@ -48,7 +48,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx, t)
+		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(ctx, t)
 
 		ch := make(chan int)
 

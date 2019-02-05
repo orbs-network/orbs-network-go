@@ -61,7 +61,7 @@ func ForStateStorageTest(numOfStateRevisionsToRetain uint32, graceBlockDiff uint
 	return cfg
 }
 
-func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair) TransactionPoolConfig {
+func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair, timeBetweenEmptyBlocks time.Duration) TransactionPoolConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
@@ -77,6 +77,6 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 3*time.Second)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 100*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, timeBetweenEmptyBlocks)
 	return cfg
 }
