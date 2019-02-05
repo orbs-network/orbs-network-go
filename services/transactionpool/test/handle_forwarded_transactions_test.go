@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
@@ -51,7 +52,7 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 }
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithContextWithTimeout(100*time.Millisecond, func(ctx context.Context) {
 		h := newHarnessWithSizeLimit(ctx, t, 1)
 
 		tx1 := builders.TransferTransaction().Build()

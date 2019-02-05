@@ -24,13 +24,14 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 	})
 }
 
-func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
+func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesWhenBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(ctx, t)
 
 		h.assumeBlockStorageAtHeight(1)
 		h.ignoringTransactionResults()
 		h.reportTransactionsAsCommitted(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
 		doneWait := make(chan error)
 		go func() {
