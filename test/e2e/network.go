@@ -39,7 +39,7 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 }
 
 func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
-	firstRandomPort := test.RandomPort_UnsafeDoNotUseMe_I_Am_Going_Away()
+	firstRandomPort := test.RandomPort()
 
 	federationNodes := make(map[string]config.FederationNode)
 	gossipPeers := make(map[string]config.GossipPeer)

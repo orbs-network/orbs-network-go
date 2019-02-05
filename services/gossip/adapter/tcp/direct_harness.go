@@ -85,7 +85,7 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
-		randomPort := test.RandomPort_UnsafeDoNotUseMe_I_Am_Going_Away()
+		randomPort := test.RandomPort()
 
 		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
 		require.NoError(t, err, "test peer server could not listen")
@@ -153,4 +153,49 @@ func (h *directHarness) expectTransportListenerNotCalled() {
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
 	err := test.ConsistentlyVerify(test.CONSISTENTLY_ADAPTER_TIMEOUT, h.listenerMock)
 	require.NoError(t, err, "transport listener mock should be called as expected")
+}
+
+func concatSlices(slices ...[]byte) []byte {
+	var tmp []byte
+	for _, s := range slices {
+		tmp = append(tmp, s...)
+	}
+	return tmp
+}
+
+// encoded examples of the gossip wire protocol spec:
+// https://github.com/orbs-network/orbs-spec/blob/master/encoding/gossip/membuffers-over-tcp.md
+
+func exampleWireProtocolEncoding_Payloads_0x11_0x2233() []byte {
+	// encoding payloads: [][]byte{{0x11}, {0x22, 0x33}}
+	field_NumPayloads := []byte{0x02, 0x00, 0x00, 0x00}      // little endian
+	field_FirstPayloadSize := []byte{0x01, 0x00, 0x00, 0x00} // little endian
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00}     // round payload data to 4 bytes
+	field_SecondPayloadSize := []byte{0x02, 0x00, 0x00, 0x00} // little endian
+	field_SecondPayloadData := []byte{0x22, 0x33}
+	field_SecondPayloadPadding := []byte{0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding, field_SecondPayloadSize, field_SecondPayloadData, field_SecondPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_CorruptNumPayloads() []byte {
+	field_NumPayloads := []byte{0x99, 0x99, 0x99, 0x99}      // corrupt value (too big)
+	field_FirstPayloadSize := []byte{0x01, 0x00, 0x00, 0x00} // little endian
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_CorruptPayloadSize() []byte {
+	field_NumPayloads := []byte{0x01, 0x00, 0x00, 0x00}      // little endian
+	field_FirstPayloadSize := []byte{0x99, 0x99, 0x99, 0x99} // corrupt value (too big)
+	field_FirstPayloadData := []byte{0x11}
+	field_FirstPayloadPadding := []byte{0x00, 0x00, 0x00} // round payload data to 4 bytes
+	return concatSlices(field_NumPayloads, field_FirstPayloadSize, field_FirstPayloadData, field_FirstPayloadPadding)
+}
+
+func exampleWireProtocolEncoding_KeepAlive() []byte {
+	// encoding payloads: [][]byte{} (this is how a keep alive looks like = zero payloads)
+	field_NumPayloads := []byte{0x00, 0x00, 0x00, 0x00} // little endian
+	return concatSlices(field_NumPayloads)
 }

@@ -85,7 +85,7 @@ func aChannelTransport(ctx context.Context, tb testing.TB) *transportContractCon
 func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
-	firstRandomPort := test.RandomPort_UnsafeDoNotUseMe_I_Am_Going_Away()
+	firstRandomPort := test.RandomPort()
 	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < 4; i++ {
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
