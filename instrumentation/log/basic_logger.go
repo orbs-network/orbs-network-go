@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
@@ -126,7 +127,8 @@ func (b *basicLogger) Error(message string, params ...*Field) {
 }
 
 func (b *basicLogger) Panic(message string, params ...*Field) {
-	b.Error(message, params...)
+	paramsWithStack := append(params, String("stack", string(debug.Stack())))
+	b.Error(message, paramsWithStack...)
 	for _, param := range params {
 		message += fmt.Sprintf(", %s=%+v", param.Key, param.Value())
 	}
