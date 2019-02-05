@@ -27,10 +27,10 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	manualIdleTimeoutTimerChan := make(chan *synchronization.Timer)
+	manualIdleStateTimeoutTimers := make(chan *synchronization.Timer)
 	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 		currentTimer := synchronization.NewTimerWithManualTick()
-		manualIdleTimeoutTimerChan <- currentTimer
+		manualIdleStateTimeoutTimers <- currentTimer
 		return currentTimer
 	})
 
@@ -40,15 +40,22 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
 
-		firstIdleStateTimeoutTimer := <-manualIdleTimeoutTimerChan // reach first idle state
-		h.verifyMocks(t)                                           // confirm init sync attempt occurred (expected mock calls)
+		firstIdleStateTimeoutTimer := <-manualIdleStateTimeoutTimers // reach first idle state
+		h.eventuallyVerifyMocks(t, 1)                                // short eventually                                            // confirm init sync attempt occurred (expected mock calls)
 
 		bs.HandleBlockCommitted(ctx) // trigger transition (from idle state) to a new idle state
 
-		<-manualIdleTimeoutTimerChan // reach second idle state
+		<-manualIdleStateTimeoutTimers // reach second idle state
 
 		firstIdleStateTimeoutTimer.ManualTick() // simulate no-commit-timeout for the first idle state object
 		h.consistentlyVerifyMocks(t, 4, "expected no new sync attempts to occur after a timeout expires on a stale idle state")
+
+		select {
+		case <-manualIdleStateTimeoutTimers:
+			t.Fatal("expected state machine to NOT renew idle timer without commits or no-commit-timeouts triggered")
+		default:
+		}
+
 	})
 
 	shutdown := h.waitForShutdown(bs)
