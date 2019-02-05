@@ -104,8 +104,8 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHa
 		blocks = page
 		return false
 	})
-	require.NoError(t, err, "ScanBlocks should return blocks")
-	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks", height)
+	require.NoError(t, err, "ScanBlocks should return blocks, instead got error %v", err)
+	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks, instead got %d", height, len(blocks))
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {
