@@ -131,9 +131,9 @@ func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
 	require.NoError(t, err)
 }
 
-func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int) {
+func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int, message string) {
 	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
-	require.NoError(t, err)
+	require.NoError(t, err, message)
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {

@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
@@ -28,11 +27,11 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	var manualNoCommitTimers []*synchronization.Timer
+	manualIdleTimeoutTimerChan := make(chan *synchronization.Timer)
 	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
-		timer := synchronization.NewTimerWithManualTick()
-		manualNoCommitTimers = append(manualNoCommitTimers, timer)
-		return timer
+		currentTimer := synchronization.NewTimerWithManualTick()
+		manualIdleTimeoutTimerChan <- currentTimer
+		return currentTimer
 	})
 
 	var bs *BlockSync
@@ -41,18 +40,15 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
 
-		ok := test.Eventually(50*time.Millisecond, func() bool {
-			if len(manualNoCommitTimers) > 0 {
-				bs.HandleBlockCommitted(ctx)         // exit the first idle state by committing a block
-				manualNoCommitTimers[0].ManualTick() // manual tick of no commit timer should do nothing for the first idle state now
-				return true
-			}
-			return false
-		})
-		require.True(t, ok, "no commit timer of the first idle state should be created")
+		firstIdleStateTimeoutTimer := <-manualIdleTimeoutTimerChan // reach first idle state
+		h.verifyMocks(t)                                           // confirm init sync attempt occurred (expected mock calls)
 
-		h.eventuallyVerifyMocks(t, 4)   // reach the desired state
-		h.consistentlyVerifyMocks(t, 4) // no new calls allowed
+		bs.HandleBlockCommitted(ctx) // trigger transition (from idle state) to a new idle state
+
+		<-manualIdleTimeoutTimerChan // reach second idle state
+
+		firstIdleStateTimeoutTimer.ManualTick() // simulate no-commit-timeout for the first idle state object
+		h.consistentlyVerifyMocks(t, 4, "expected no new sync attempts to occur after a timeout expires on a stale idle state")
 	})
 
 	shutdown := h.waitForShutdown(bs)
