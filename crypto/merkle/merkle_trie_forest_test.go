@@ -287,6 +287,17 @@ func TestProof_ValidationForKeyNotInTreeTwoLevelsBranchingTrie(t *testing.T) {
 	verifyProof(t, f, root1, proof2, "0112", "", true)
 }
 
+func TestProof_ValidationForMissingKeyDivergentInMiddle(t *testing.T) {
+	f, root := NewForest()
+	root1 := updateEntries(f, root, "00000000", "baz1", "00100000", "baz2", "00000111", "baz3")
+
+	key := "00001111" // under the second branch
+	proof := getProofRequireHeight(t, f, root1, key, 2)
+	verifyProof(t, f, root1, proof, key, "", true)
+	verifyProof(t, f, root1, proof, key, "non-zero", false)
+
+}
+
 func TestProof_ValidationForMissingKeyTwoLevelsBranchingTrie(t *testing.T) {
 	f, root := NewForest()
 	root1 := updateEntries(f, root, "0000", "baz1", "0100", "baz2", "0110", "baz3")

@@ -71,9 +71,12 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, 
 	}
 
 	proof := newTrieProof()
-	path = toBin(path, toBinSize(path))
+	totalPathLen := toBinSize(path)
+	currentPathLen := 0
+	path = toBin(path, totalPathLen)
 	for p := path; bytes.HasPrefix(p, current.path) && len(p) > len(current.path); {
 		p = p[len(current.path):]
+		currentPathLen += len(current.path)
 
 		parent := current
 		sibling := current
@@ -88,14 +91,18 @@ func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, 
 		if current != nil {
 			proof.appendToProof(parent, sibling)
 			p = p[1:]
+			currentPathLen++
 		} else {
 			break
 		}
 	}
 	if current != nil { // last node, unless wrong key size should be value(leaf) node "closest" to requested path
-		proof.appendToProof(current, current)                  // use safe proof node but data is self hash and self prefix
-		proof.valueHash = current.value                        // for exclusion : the value used for proof
-		copy(path[len(path)-len(current.path):], current.path) // for exclusion : the path used for proof
+		proof.appendToProof(current, current) // use same proof node but data is self hash and self prefix
+		if !current.isLeaf() {
+			proof.nodes[len(proof.nodes)-1].prefixSize = totalPathLen - currentPathLen
+		}
+		proof.valueHash = current.value                                           // for exclusion : the value used for proof
+		copy(path[currentPathLen:currentPathLen+len(current.path)], current.path) // for exclusion : the path used for proof
 	}
 	proof.path = path
 	return proof, nil
@@ -147,13 +154,13 @@ func verifyProofExclusion(proof *TrieProof, pathFromVerify []byte) (bool, error)
 		return false, errors.Errorf("proof length is not consistent with given key length")
 	}
 	valueNodePrefixIndex := pathLen - proof.nodes[proofValueNodeIndex].prefixSize
-	isHashEqual := bytes.Equal(proof.nodes[proofValueNodeIndex].otherChildHash, hashImpl(proof.valueHash, proof.path[valueNodePrefixIndex:]))
+	//isHashEqual := bytes.Equal(proof.nodes[proofValueNodeIndex].otherChildHash, hashImpl(proof.valueHash, proof.path[valueNodePrefixIndex:]))
 	isBeginOfKeyEqual := bytes.Equal(proof.path[:valueNodePrefixIndex], pathFromVerify[:valueNodePrefixIndex])
 	isEndOfKeyEqual := false
 	if pathLen-proof.nodes[proofValueNodeIndex].prefixSize != 0 {
 		isEndOfKeyEqual = bytes.Equal(proof.path[valueNodePrefixIndex:], pathFromVerify[valueNodePrefixIndex:])
 	}
-	return isHashEqual && isBeginOfKeyEqual && !isEndOfKeyEqual, nil
+	return /*isHashEqual &&*/ isBeginOfKeyEqual && !isEndOfKeyEqual, nil
 
 }
 
