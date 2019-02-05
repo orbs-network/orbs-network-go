@@ -2,8 +2,8 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -14,7 +14,7 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	blocks := builders.RandomizedBlockChain(2, ctrlRand)
 
 	conf := newTempFileConfig()

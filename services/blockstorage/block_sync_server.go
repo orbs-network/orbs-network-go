@@ -90,8 +90,8 @@ func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		log.Stringable("last-requested-block-height", lastRequestedBlockHeight),
 		log.Stringable("last-committed-block-height", lastCommittedBlockHeight))
 
-	if lastCommittedBlockHeight <= firstRequestedBlockHeight {
-		return errors.New("firstBlockHeight is greater or equal to lastCommittedBlockHeight")
+	if firstRequestedBlockHeight > lastCommittedBlockHeight {
+		return errors.New("firstBlockHeight is greater than lastCommittedBlockHeight")
 	}
 
 	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1) {

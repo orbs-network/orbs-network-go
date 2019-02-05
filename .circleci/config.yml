@@ -12,6 +12,10 @@ jobs:
       - run: ./test.sh
       - store_artifacts:
           path: _out
+          destination: test-output
+      - store_artifacts:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          destination: test-results
       - store_test_results:
           path: _reports
 
@@ -29,6 +33,10 @@ jobs:
           no_output_timeout: 25m
       - store_artifacts:
           path: _out
+          destination: test-output
+      - store_artifacts:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          destination: test-results
       - store_test_results:
           path: _reports
 

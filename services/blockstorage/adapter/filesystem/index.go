@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
@@ -13,10 +14,12 @@ type blockHeightIndex struct {
 	firstBlockInTsBucket map[uint32]primitives.BlockHeight
 	topBlock             *protocol.BlockPairContainer
 	topBlockHeight       primitives.BlockHeight
+	logger               log.BasicLogger
 }
 
-func newBlockHeightIndex(firstBlockOffset int64) *blockHeightIndex {
+func newBlockHeightIndex(logger log.BasicLogger, firstBlockOffset int64) *blockHeightIndex {
 	return &blockHeightIndex{
+		logger:               logger,
 		heightOffset:         map[primitives.BlockHeight]int64{1: firstBlockOffset},
 		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
 		topBlock:             nil,
@@ -30,7 +33,7 @@ func (i *blockHeightIndex) fetchTopOffset() int64 {
 
 	offset, ok := i.heightOffset[i.topBlockHeight+1]
 	if !ok {
-		panic(fmt.Sprintf("index missing offset for block height %d", i.topBlockHeight))
+		i.logger.Panic("index missing offset for block height", log.BlockHeight(i.topBlockHeight))
 	}
 	return offset
 }
@@ -41,7 +44,7 @@ func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) int64
 
 	offset, ok := i.heightOffset[height]
 	if !ok {
-		panic(fmt.Sprintf("index missing offset for block height %d", height))
+		i.logger.Panic("index missing offset for block height", log.BlockHeight(i.topBlockHeight))
 	}
 	return offset
 }

@@ -3,7 +3,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"golang.org/x/time/rate"
 	"sync"
 	"testing"
@@ -13,7 +13,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 	var wg sync.WaitGroup
 
 	limiter := rate.NewLimiter(1000, 100)
-	ctrlRand := test.NewControlledRand(b)
+	ctrlRand := rand.NewControlledRand(b)
 
 	newHarness(b).
 		WithLogFilters(log.DiscardAll()).

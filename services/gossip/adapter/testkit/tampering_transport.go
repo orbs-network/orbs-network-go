@@ -5,7 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"sync"
 	"time"
@@ -34,7 +34,7 @@ type Tamperer interface {
 	Duplicate(predicate MessagePredicate) OngoingTamper
 
 	// Creates an ongoing tamper which corrupts messages matching the given predicate
-	Corrupt(predicate MessagePredicate, rand *test.ControlledRand) OngoingTamper
+	Corrupt(predicate MessagePredicate, rand *rand.ControlledRand) OngoingTamper
 
 	// Creates an ongoing tamper which delays (reshuffles) messages matching the given predicate for the specified duration
 	Delay(duration func() time.Duration, predicate MessagePredicate) OngoingTamper
@@ -115,7 +115,7 @@ func (t *TamperingTransport) Duplicate(predicate MessagePredicate) OngoingTamper
 	return t.addTamperer(&duplicatingTamperer{predicate: predicate, transport: t})
 }
 
-func (t *TamperingTransport) Corrupt(predicate MessagePredicate, ctrlRand *test.ControlledRand) OngoingTamper {
+func (t *TamperingTransport) Corrupt(predicate MessagePredicate, ctrlRand *rand.ControlledRand) OngoingTamper {
 	return t.addTamperer(&corruptingTamperer{
 		predicate: predicate,
 		transport: t,
@@ -152,7 +152,7 @@ func (t *TamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 			return
 		}
 	}
-	panic("Tamperer not found in ongoing tamperer list")
+	t.logger.Panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
@@ -170,7 +170,7 @@ func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 			return
 		}
 	}
-	panic("Tamperer not found in ongoing tamperer list")
+	t.logger.Panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {

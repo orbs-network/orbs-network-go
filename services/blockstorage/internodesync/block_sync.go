@@ -34,7 +34,7 @@ type BlockSyncStorage interface {
 	GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error)
 	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
-	UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context)
+	UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context)
 }
 
 // state machine passes outside events into this channel type for consumption by the currently active state instance.
@@ -59,7 +59,6 @@ type BlockSync struct {
 	factory *stateFactory
 	gossip  gossiptopics.BlockSync
 	storage BlockSyncStorage
-	config  blockSyncConfig
 
 	conduit blockSyncConduit
 
@@ -77,7 +76,7 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
 	metrics := newStateMachineMetrics(metricFactory)
 
 	bs := &BlockSync{
@@ -85,16 +84,15 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, config 
 		factory: factory,
 		gossip:  gossip,
 		storage: storage,
-		config:  config,
 		conduit: factory.conduit,
 		metrics: metrics,
 	}
 
 	logger.Info("block sync init",
-		log.Stringable("no-commit-timeout", bs.config.BlockSyncNoCommitInterval()),
-		log.Stringable("collect-responses-timeout", bs.config.BlockSyncCollectResponseTimeout()),
-		log.Stringable("collect-chunks-timeout", bs.config.BlockSyncCollectChunksTimeout()),
-		log.Uint32("batch-size", bs.config.BlockSyncNumBlocksInBatch()))
+		log.Stringable("no-commit-timeout", bs.factory.config.BlockSyncNoCommitInterval()),
+		log.Stringable("collect-responses-timeout", bs.factory.config.BlockSyncCollectResponseTimeout()),
+		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
+		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
 	bs.done = supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
@@ -110,7 +108,6 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	return newBlockSyncWithFactory(
 		ctx,
 		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
-		config,
 		gossip,
 		storage,
 		logger,
@@ -138,9 +135,13 @@ func (bs *BlockSync) IsTerminated() bool {
 }
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
+	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
+		logger.Info("terminated on writing new block committed",
+			log.String("context-message", ctx.Err().Error()))
 	}
 }
 

@@ -63,7 +63,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
-		panic("CommitStateDiff received corrupt args")
+		logger.Panic("CommitStateDiff received corrupt args", log.Stringable("input", input))
 	}
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()

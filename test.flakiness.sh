@@ -1,10 +1,10 @@
-#!/bin/bash -xe
+#!/bin/bash -x
 
 . ./test.common.sh
 
 go_test_junit_report acceptance ./test/acceptance -count 100 -timeout 20m -failfast -tags "cpunoise norecover"
 
-go_test_junit_report blockstorage ./services/blockstorage/test -count 100 -timeout 7m -failfast -tags "cpunoise norecover"
+go_test_junit_report blockstorage ./services/blockstorage/test -count 100 -timeout 10m -failfast -tags "cpunoise norecover"
 
 go_test_junit_report internodesync ./services/blockstorage/internodesync -count 100 -timeout 7m -failfast -tags "cpunoise norecover"
 

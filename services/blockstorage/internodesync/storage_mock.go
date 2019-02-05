@@ -37,6 +37,6 @@ func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input
 	}
 }
 
-func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLatestCommittedBlock(ctx context.Context) {
+func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
 	s.Called(ctx)
 }

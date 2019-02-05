@@ -1,12 +1,12 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-func RandomizedBlockChain(numBlocks int32, ctrlRand *test.ControlledRand) []*protocol.BlockPairContainer {
+func RandomizedBlockChain(numBlocks int32, ctrlRand *rand.ControlledRand) []*protocol.BlockPairContainer {
 	blocks := make([]*protocol.BlockPairContainer, 0, numBlocks)
 
 	var prev *protocol.BlockPairContainer
@@ -18,7 +18,7 @@ func RandomizedBlockChain(numBlocks int32, ctrlRand *test.ControlledRand) []*pro
 	return blocks
 }
 
-func RandomizedBlock(h primitives.BlockHeight, ctrlRand *test.ControlledRand, prev *protocol.BlockPairContainer) *protocol.BlockPairContainer {
+func RandomizedBlock(h primitives.BlockHeight, ctrlRand *rand.ControlledRand, prev *protocol.BlockPairContainer) *protocol.BlockPairContainer {
 	builder := BlockPair().
 		WithHeight(h).
 		WithTransactions(ctrlRand.Uint32() % 200).

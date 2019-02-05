@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/stretchr/testify/require"
 	"hash/crc32"
 	"testing"
@@ -19,7 +20,7 @@ func TestCodec_EnforcesBlockSizeLimit(t *testing.T) {
 }
 
 func TestCodec_EncodesAndDecodes(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 	rw := new(bytes.Buffer)
 	c := newCodec(1024 * 1024)
@@ -37,7 +38,7 @@ func TestCodec_EncodesAndDecodes(t *testing.T) {
 }
 
 func TestCodec_DetectsDataCorruption(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	block := builders.RandomizedBlock(1, ctrlRand, nil)
 
@@ -72,7 +73,7 @@ func TestCodec_DetectsDataCorruption(t *testing.T) {
 
 func TestBlockHeaderCodec_EncodeAndDecode(t *testing.T) {
 	rw := new(bytes.Buffer)
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	header := newBlockHeader()
 	header.FixedSize = ctrlRand.Uint32()
 	header.ReceiptsSize = ctrlRand.Uint32()
@@ -138,7 +139,7 @@ func TestFileHeaderCodec_Magic(t *testing.T) {
 }
 
 func TestFileHeaderCodec_EncodesAndDecodesHeader(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	header := newBlocksFileHeader(ctrlRand.Uint32(), ctrlRand.Uint32())
 
 	rw := new(bytes.Buffer)
@@ -187,7 +188,7 @@ func TestFileHeaderCodec_RejectDecodingBadChecksum(t *testing.T) {
 	err := header.write(rw)
 	require.NoError(t, err, "expected to encode header successfully")
 
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 	rw.Bytes()[ctrlRand.Intn(rw.Len())]++ // increment a random byte
 
 	decodedHeader := &blocksFileHeader{}
@@ -196,7 +197,7 @@ func TestFileHeaderCodec_RejectDecodingBadChecksum(t *testing.T) {
 }
 
 func TestDynamicSectionChecksum(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	rw := new(bytes.Buffer)
 	codec := newCodec(10000000)
@@ -219,7 +220,7 @@ func TestDynamicSectionChecksum(t *testing.T) {
 }
 
 func TestFixedSectionChecksum(t *testing.T) {
-	ctrlRand := test.NewControlledRand(t)
+	ctrlRand := rand.NewControlledRand(t)
 
 	rw := new(bytes.Buffer)
 	codec := newCodec(10000)

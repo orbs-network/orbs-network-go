@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -16,7 +17,7 @@ func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		p := NewCommittedPool(metric.NewRegistry())
-		ctrlRand := test.NewControlledRand(t)
+		ctrlRand := rand.NewControlledRand(t)
 
 		r1 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 		r2 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()

@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -30,6 +29,7 @@ type harness struct {
 	lastBlockTimestamp      primitives.TimestampNano
 	config                  config.TransactionPoolConfig
 	ignoreBlockHeightChecks bool
+	logger                  log.BasicLogger
 }
 
 var (
@@ -160,7 +160,7 @@ func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHe
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if !h.ignoreBlockHeightChecks && input.CurrentBlockHeight != h.lastBlockHeight+1 {
-			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
+			h.logger.Panic("invalid block height, current is not next of last committed", log.BlockHeight(input.CurrentBlockHeight), log.Uint64("last-committed", uint64(h.lastBlockHeight)))
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
@@ -233,7 +233,8 @@ func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint3
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
 	metricFactory := metric.NewRegistry()
 
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, log.DefaultTestingLogger(tb), metricFactory)
+	logger := log.DefaultTestingLogger(tb)
+	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, logger, metricFactory)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 	service.RegisterTransactionResultsHandler(transactionResultHandler)
@@ -245,6 +246,7 @@ func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint3
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		config:             cfg,
+		logger:             logger,
 	}
 
 	h.fastForwardTo(ctx, 1)
