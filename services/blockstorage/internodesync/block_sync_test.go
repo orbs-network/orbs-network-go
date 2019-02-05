@@ -18,8 +18,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h.expectSyncOnStart()
 
-		cfg := newBlockSyncConfigForTestsWithInfiniteTimeouts() // don't want timeouts since manual timer
-		bs = newBlockSyncWithFactory(ctx, h.factory, cfg, h.gossip, h.storage, h.logger, h.metricFactory)
+		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
 
 		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	})
@@ -29,7 +28,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	manualNoCommitTimers := []*synchronization.Timer{}
+	var manualNoCommitTimers []*synchronization.Timer
 	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
 		timer := synchronization.NewTimerWithManualTick()
 		manualNoCommitTimers = append(manualNoCommitTimers, timer)
@@ -40,8 +39,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h.expectSyncOnStart()
 
-		cfg := newBlockSyncConfigForTestsWithInfiniteTimeouts() // don't want timeouts since manual timer
-		bs = newBlockSyncWithFactory(ctx, h.factory, cfg, h.gossip, h.storage, h.logger, h.metricFactory)
+		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
 
 		ok := test.Eventually(50*time.Millisecond, func() bool {
 			if len(manualNoCommitTimers) > 0 {
@@ -53,7 +51,8 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 		})
 		require.True(t, ok, "no commit timer of the first idle state should be created")
 
-		h.consistentlyVerifyMocks(t, 4) // just need to verify we used gossip/storage for sync
+		h.eventuallyVerifyMocks(t, 4)   // reach the desired state
+		h.consistentlyVerifyMocks(t, 4) // no new calls allowed
 	})
 
 	shutdown := h.waitForShutdown(bs)

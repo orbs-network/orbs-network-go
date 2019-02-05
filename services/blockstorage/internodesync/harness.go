@@ -55,16 +55,6 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	}
 }
 
-func newBlockSyncConfigForTestsWithInfiniteTimeouts() *blockSyncConfigForTests {
-	return &blockSyncConfigForTests{
-		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:        10,
-		noCommit:         3 * time.Hour,
-		collectResponses: 3 * time.Hour,
-		collectChunks:    3 * time.Hour,
-	}
-}
-
 type blockSyncHarness struct {
 	factory       *stateFactory
 	config        *blockSyncConfigForTests
