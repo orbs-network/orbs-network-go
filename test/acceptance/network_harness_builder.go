@@ -301,7 +301,7 @@ func dumpStateOnFailure(tb testing.TB, network NetworkHarness) {
 }
 
 func getCallerFuncName() string {
-	pc, _, _, _ := runtime.Caller(2)
+	pc, _, _, _ := runtime.Caller(3)
 	packageAndFuncName := runtime.FuncForPC(pc).Name()
 	parts := strings.Split(packageAndFuncName, ".")
 	return parts[len(parts)-1]
