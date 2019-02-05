@@ -67,8 +67,8 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(100))) * time.Millisecond
-			}, WithPercentChance(rnd, 50))
+				return (time.Duration(rnd.Intn(50))) * time.Millisecond
+			}, WithPercentChance(rnd, 30))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
