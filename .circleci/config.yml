@@ -131,7 +131,7 @@ workflows:
       - success:
           requires:
             - tests
-            - flakiness
+            - e2e
             - autonomous_swap
       - deploy_testnet:
           requires:
