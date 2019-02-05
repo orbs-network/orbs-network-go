@@ -22,6 +22,7 @@ jobs:
   flakiness:
     docker:
       - image: circleci/golang:1.11.4
+    parallelism: 6
     resource_class: xlarge
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
@@ -123,32 +124,32 @@ workflows:
   version: 2
   build:
     jobs:
-      - tests
-      - e2e
+#      - tests
+#      - e2e
       - flakiness
-      - notify_github_about_dashboard
-      - autonomous_swap
-      - success:
-          requires:
-            - tests
-            - e2e
-            - autonomous_swap
-      - deploy_testnet:
-          requires:
-            - e2e
-          filters:
-            branches:
-              only:
-                - master
-      - e2e_testnet_benchmark:
-          requires:
-            - deploy_testnet
-      - e2e_testnet_leanhelix:
-          requires:
-            - deploy_testnet
-      - release_gamma:
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+#      - notify_github_about_dashboard
+#      - autonomous_swap
+#      - success:
+#          requires:
+#            - tests
+#            - e2e
+#            - autonomous_swap
+#      - deploy_testnet:
+#          requires:
+#            - e2e
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - e2e_testnet_benchmark:
+#          requires:
+#            - deploy_testnet
+#      - e2e_testnet_leanhelix:
+#          requires:
+#            - deploy_testnet
+#      - release_gamma:
+#          filters:
+#            tags:
+#              only: /^v.*/
+#            branches:
+#              ignore: /.*/
