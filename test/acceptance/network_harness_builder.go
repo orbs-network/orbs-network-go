@@ -199,8 +199,6 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
-		//log.String("_branch", os.Getenv("GIT_BRANCH")),
-		//log.String("_commit", os.Getenv("GIT_COMMIT")),
 		log.String("_test-id", testId)).
 		WithOutput(b.makeFormattingOutput(), errorRecorder).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
