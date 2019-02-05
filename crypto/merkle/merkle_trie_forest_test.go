@@ -160,6 +160,7 @@ func TestProof_ValidationForSimpleBranchingTrie(t *testing.T) {
 	// verify with correct key
 	verifyProof(t, f, root1, proof, "abc1", "baz1", true)
 	verifyProof(t, f, root1, proof, "abc1", "baz2", false)
+	verifyProof(t, f, root1, proof, "abc1", "", false) // since it actually exists then its NOT excluded
 	// verify with wrong key that is diff only in leaf - exclusion possible
 	verifyProof(t, f, root1, proof, "abc6", "baz1", false)
 	verifyProof(t, f, root1, proof, "abc6", "baz2", false)
@@ -235,6 +236,7 @@ func TestProof_ValidationForTwoLevelsBranchingTrie(t *testing.T) {
 	require.EqualValues(t, 7, proof1.nodes[0].prefixSize, "proof1 node 0, wring prefix size")
 	require.EqualValues(t, 8, proof1.nodes[1].prefixSize, "proof1 node 1, wring prefix size")
 	verifyProof(t, f, root1, proof1, "0000", "baz1", true)
+	verifyProof(t, f, root1, proof1, "0000", "", false) // since it actually exists then its NOT excluded
 	// verify with wrong key that is diff in core node - proof is inconsistent
 	verifInconsistentProof(t, f, root1, proof1, "0100", "baz1")
 	verifInconsistentProof(t, f, root1, proof1, "0100", "")
@@ -249,6 +251,7 @@ func TestProof_ValidationForTwoLevelsBranchingTrie(t *testing.T) {
 	require.EqualValues(t, 3, proof2.nodes[1].prefixSize, "proof2 node 1, wring prefix size")
 	require.EqualValues(t, 4, proof2.nodes[2].prefixSize, "proof2 node 2, wring prefix size")
 	verifyProof(t, f, root1, proof2, "0110", "baz3", true)
+	verifyProof(t, f, root1, proof2, "0110", "", false) // since it actually exists then its NOT excluded
 	// verify with wrong key that is diff in core node - proof is inconsistent
 	verifInconsistentProof(t, f, root1, proof2, "0100", "baz3") // wrong key above split
 	verifInconsistentProof(t, f, root1, proof2, "0120", "baz3") // wrong key above split
@@ -287,17 +290,6 @@ func TestProof_ValidationForKeyNotInTreeTwoLevelsBranchingTrie(t *testing.T) {
 	verifyProof(t, f, root1, proof2, "0112", "", true)
 }
 
-func TestProof_ValidationForMissingKeyDivergentInMiddle(t *testing.T) {
-	f, root := NewForest()
-	root1 := updateEntries(f, root, "00000000", "baz1", "00100000", "baz2", "00000111", "baz3")
-
-	key := "00001111" // under the second branch
-	proof := getProofRequireHeight(t, f, root1, key, 2)
-	verifyProof(t, f, root1, proof, key, "", true)
-	verifyProof(t, f, root1, proof, key, "non-zero", false)
-
-}
-
 func TestProof_ValidationForMissingKeyTwoLevelsBranchingTrie(t *testing.T) {
 	f, root := NewForest()
 	root1 := updateEntries(f, root, "0000", "baz1", "0100", "baz2", "0110", "baz3")
@@ -311,6 +303,34 @@ func TestProof_ValidationForMissingKeyTwoLevelsBranchingTrie(t *testing.T) {
 	proof2 := getProofRequireHeight(t, f, root1, key2, 2)
 	verifyProof(t, f, root1, proof2, key2, "", true)
 	verifyProof(t, f, root1, proof2, key2, "non-zero", false)
+}
+
+func TestProof_ValidationForMissingKeyDivergentInMiddle(t *testing.T) {
+	f, root := NewForest()
+	root1 := updateEntries(f, root, "00000000", "baz1", "00100000", "baz2", "00000111", "baz3")
+
+	key := "00001111" // mismatch in the second branch == middle
+	proof := getProofRequireHeight(t, f, root1, key, 2)
+	verifyProof(t, f, root1, proof, key, "", true)
+	verifyProof(t, f, root1, proof, key, "non-zero", false)
+	// verify with wrong key that is diff in core node - proof is inconsistent
+	verifInconsistentProof(t, f, root1, proof, "02000000", "")
+	// verify with wrong key that is diff in leaf node - exclusion possible
+	verifyProof(t, f, root1, proof, "00000011", "baz3", false)
+	verifyProof(t, f, root1, proof, "00000011", "", true)
+}
+
+func TestProof_ValidationKeyWithLeavesWithNoPrefix(t *testing.T) {
+	f, root := NewForest()
+	root1 := updateEntries(f, root, "0000", "baz1", "0001", "baz2", "0100", "baz3", "0101", "baz4")
+
+	key := "0001"
+	proof := getProofRequireHeight(t, f, root1, key, 3)
+	verifyProof(t, f, root1, proof, key, "baz2", true)
+	verifyProof(t, f, root1, proof, key, "baz3", false)
+	verifyProof(t, f, root1, proof, key, "", false)
+	// verify with wrong key that is diff in core node - proof is inconsistent
+	verifInconsistentProof(t, f, root1, proof, "1000", "")
 }
 
 func TestProof_OrderOfAdditionsDoesNotMatter(t *testing.T) {
