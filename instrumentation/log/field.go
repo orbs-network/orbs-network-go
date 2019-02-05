@@ -165,7 +165,7 @@ func (f *Field) Value() interface{} {
 	}
 	switch f.Type {
 	case NodeType:
-		return f.StringVal
+		return f.StringVal[:6]
 	case ServiceType:
 		return f.StringVal
 	case FunctionType:
