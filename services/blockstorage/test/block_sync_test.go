@@ -99,14 +99,14 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		blockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
 		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
 
-		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
-		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
+		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
+		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
 
 		requireMockFunctionLatchTriggerf(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
 
 		numOfBlocks := 4
 		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress, numOfBlocks)
-		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
+		go harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
 
 		for i := 1; i <= numOfBlocks; i++ {
 			requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected block %d to be validated on commit", i)
