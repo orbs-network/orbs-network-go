@@ -55,16 +55,6 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	}
 }
 
-func newBlockSyncConfigForTestsWithInfiniteTimeouts() *blockSyncConfigForTests {
-	return &blockSyncConfigForTests{
-		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:        10,
-		noCommit:         3 * time.Hour,
-		collectResponses: 3 * time.Hour,
-		collectChunks:    3 * time.Hour,
-	}
-}
-
 type blockSyncHarness struct {
 	factory       *stateFactory
 	config        *blockSyncConfigForTests
@@ -141,9 +131,9 @@ func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
 	require.NoError(t, err)
 }
 
-func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int) {
+func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int, message string) {
 	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
-	require.NoError(t, err)
+	require.NoError(t, err, message)
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {
