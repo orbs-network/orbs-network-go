@@ -97,7 +97,7 @@ func (s *syncFlowResults) logBlockSyncRequest(input *gossiptopics.BlockSyncReque
 	}
 }
 
-func (s *syncFlowResults) logHandleBlockConsensusCalls(input *handlers.HandleBlockConsensusInput, t *testing.T, numBlocks primitives.BlockHeight) {
+func (s *syncFlowResults) logHandleBlockConsensusCalls(input *handlers.HandleBlockConsensusInput, t *testing.T, availableBlocks primitives.BlockHeight) {
 	s.Lock()
 	defer s.Unlock()
 	switch input.Mode {
@@ -107,17 +107,17 @@ func (s *syncFlowResults) logHandleBlockConsensusCalls(input *handlers.HandleBlo
 		}
 	case handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE:
 		require.Condition(t, func() (success bool) {
-			return input.BlockPair.TransactionsBlock.Header.BlockHeight() >= 1 && input.BlockPair.TransactionsBlock.Header.BlockHeight() <= numBlocks
+			return input.BlockPair.TransactionsBlock.Header.BlockHeight() >= 1 && input.BlockPair.TransactionsBlock.Header.BlockHeight() <= availableBlocks
 		}, "validated block must be between 1 and total")
 		s.blocksReceivedByConsensus[input.BlockPair.TransactionsBlock.Header.BlockHeight()] = true
 	}
 }
 
-func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, numBlocks int) {
+func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, availableBlocks int) {
 	response := builders.BlockSyncResponseInput().
 		WithFirstBlockHeight(input.Message.SignedChunkRange.FirstBlockHeight()).
 		WithLastBlockHeight(input.Message.SignedChunkRange.LastBlockHeight()).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(numBlocks)).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
 		WithSenderNodeAddress(input.RecipientNodeAddress).Build()
 	go harness.blockStorage.HandleBlockSyncResponse(ctx, response)
 }
@@ -144,15 +144,13 @@ func respondToBroadcastAvailabilityRequest(t *testing.T, ctx context.Context, ha
 		return
 	}
 
-	for _, senderIndex := range sources {
-
-		// simulate two concurrent responses form two different nodes
-		response1 := builders.BlockAvailabilityResponseInput().
+	for _, sourceAddressIndex := range sources {
+		response := builders.BlockAvailabilityResponseInput().
 			WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
 			WithFirstBlockHeight(firstBlockHeight).
 			WithLastBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(senderIndex).NodeAddress()).Build()
-		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response1)
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).Build()
+		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
 	}
 
 }
