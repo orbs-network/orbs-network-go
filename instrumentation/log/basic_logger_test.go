@@ -60,17 +60,6 @@ func TestSimpleLogger(t *testing.T) {
 	require.NotNil(t, jsonMap["timestamp"])
 }
 
-func TestLoggerPanic(t *testing.T) {
-	b := new(bytes.Buffer)
-	logger := log.GetLogger().WithOutput(log.NewFormattingOutput(b, log.NewHumanReadableFormatter()))
-
-	require.Panics(t, func() {
-		logger.Panic("foo")
-	}, "logger.Panic() did not panic")
-
-	require.Contains(t, b.String(), "foo", "logger.Panic() did not log message")
-}
-
 func TestSimpleLogger_AggregateField(t *testing.T) {
 	ctx := trace.NewContext(context.Background(), "foo")
 	b := new(bytes.Buffer)

@@ -28,7 +28,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 	}
 
 	if input.CurrentBlockHeight == 0 {
-		s.logger.Panic("CurrentBlockHeight, the block being closed, cannot be at height zero")
+		panic("CurrentBlockHeight, the block being closed, cannot be at height zero")
 	}
 
 	preExecutionStateRootHash := &services.GetStateHashOutput{}

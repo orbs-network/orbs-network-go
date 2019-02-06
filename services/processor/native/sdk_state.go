@@ -3,7 +3,6 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -26,10 +25,10 @@ func (s *service) SdkStateReadBytes(executionContextId sdkContext.ContextId, per
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		s.logger.Panic("failed handling SDK call", log.Error(err))
+		panic(err.Error())
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		s.logger.Panic("read Sdk.State returned corrupt output value", log.StringableSlice("output-arguments", output.OutputArguments))
+		panic("read Sdk.State returned corrupt output value")
 	}
 	return output.OutputArguments[0].BytesValue()
 }
@@ -54,6 +53,6 @@ func (s *service) SdkStateWriteBytes(executionContextId sdkContext.ContextId, pe
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		s.logger.Panic("failed handling SDK call", log.Error(err))
+		panic(err.Error())
 	}
 }
