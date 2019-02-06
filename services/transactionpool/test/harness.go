@@ -220,17 +220,28 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 	})
 }
 
+const DEFAULT_CONFIG_SIZE_LIMIT = 20 * 1024 * 1024
+const DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS = 100
+
 func newHarness(ctx context.Context, tb testing.TB) *harness {
-	return newHarnessWithSizeLimit(ctx, tb, 20*1024*1024)
+	return newHarnessWithConfig(ctx, tb, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
 func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint32) *harness {
+	return newHarnessWithConfig(ctx, tb, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+}
+
+func newHarnessWithInfiniteTimeBetweenEmptyBlocks(ctx context.Context, tb testing.TB) *harness {
+	return newHarnessWithConfig(ctx, tb, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
+}
+
+func newHarnessWithConfig(ctx context.Context, tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
+	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair, timeBetweenEmptyBlocks)
 	metricFactory := metric.NewRegistry()
 
 	logger := log.DefaultTestingLogger(tb)
