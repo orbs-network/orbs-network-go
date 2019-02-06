@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
+	"time"
 )
 
 const NETWORK_SIZE = 3
@@ -29,11 +30,21 @@ type directHarness struct {
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
+	keepAliveInterval := 20 * time.Millisecond
+	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval)
+}
+
+func newDirectHarnessWithConnectedPeersWithoutKeepAlives(t *testing.T, ctx context.Context) *directHarness {
+	keepAliveInterval := 20 * time.Hour
+	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval)
+}
+
+func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Context, keepAliveInterval time.Duration) *directHarness {
 
 	// order matters here
-	gossipPeers, peersListeners := makePeers(t)        // step 1: create the peer server listeners to reserve random TCP ports
-	cfg := config.ForDirectTransportTests(gossipPeers) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, t, cfg)            // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
+	gossipPeers, peersListeners := makePeers(t)                           // step 1: create the peer server listeners to reserve random TCP ports
+	cfg := config.ForDirectTransportTests(gossipPeers, keepAliveInterval) // step 2: create the config given the peer pk/port pairs
+	transport := makeTransport(ctx, t, cfg)                               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
 	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )

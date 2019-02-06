@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(gossipPeers map[string]GossipPeer) GossipTransportConfig {
+func ForDirectTransportTests(gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress())
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 20*time.Millisecond)
+	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, keepAliveInterval)
 	return cfg
 }
 
@@ -61,7 +61,7 @@ func ForStateStorageTest(numOfStateRevisionsToRetain uint32, graceBlockDiff uint
 	return cfg
 }
 
-func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair) TransactionPoolConfig {
+func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair, timeBetweenEmptyBlocks time.Duration) TransactionPoolConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
@@ -77,6 +77,6 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetDuration(TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL, 3*time.Second)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 100*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, timeBetweenEmptyBlocks)
 	return cfg
 }
