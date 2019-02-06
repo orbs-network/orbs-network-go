@@ -59,7 +59,7 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 			ch <- len(out.SignedTransactions)
 		}()
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond) // make sure we wait, also deals with https://github.com/orbs-network/orbs-network-go/issues/852
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
 		numOfTxs := <-ch
