@@ -44,7 +44,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			resultsForVerification.logHandleBlockConsensusCalls(input, t, NUM_BLOCKS)
 
-			requireValideHandleBlockConsensusMode(t, input.Mode)
+			requireValidHandleBlockConsensusMode(t, input.Mode)
 
 			return nil, nil
 		})
@@ -58,7 +58,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 	})
 }
 
-func requireValideHandleBlockConsensusMode(t *testing.T, mode handlers.HandleBlockConsensusMode) {
+func requireValidHandleBlockConsensusMode(t *testing.T, mode handlers.HandleBlockConsensusMode) {
 	require.Contains(t, []handlers.HandleBlockConsensusMode{ // require mode is one of two expected
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE,
