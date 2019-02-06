@@ -27,25 +27,19 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 			respondToBroadcastAvailabilityRequest(t, ctx, harness, input, NUM_BLOCKS, 7, 8)
-
 			return nil, nil
 		})
 
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 			resultsForVerification.logBlockSyncRequest(input)
-
 			requireBlockSyncRequestConformsToBlockAvailabilityResponse(t, input, NUM_BLOCKS, 7, 8)
-
 			respondToBlockSyncRequest(ctx, harness, input, NUM_BLOCKS)
-
 			return nil, nil
 		})
 
 		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			resultsForVerification.logHandleBlockConsensusCalls(input, t, NUM_BLOCKS)
-
 			requireValidHandleBlockConsensusMode(t, input.Mode)
-
 			return nil, nil
 		})
 
