@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -45,7 +46,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
 
 	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
-		logger.Panic("failed initializing blocks database", log.Error(err))
+		panic(fmt.Sprintf("failed initializing blocks database, err=%+v", log.Error(err)))
 	}
 
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)

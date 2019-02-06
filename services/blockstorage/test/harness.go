@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -112,7 +113,7 @@ func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.
 func (d *harness) numOfWrittenBlocks() int {
 	numBlocks, err := d.storageAdapter.GetLastBlockHeight()
 	if err != nil {
-		d.logger.Panic("failed getting last block height", log.Error(err))
+		panic(fmt.Sprintf("failed getting last block height, err=%+v", log.Error(err)))
 	}
 	return int(numBlocks)
 }
@@ -127,12 +128,12 @@ func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *service
 func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	txBlock, err := d.storageAdapter.GetTransactionsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		d.logger.Panic("failed getting tx block", log.Error(err))
+		panic(fmt.Sprintf("failed getting tx block, err=%+v", err))
 	}
 
 	rxBlock, err := d.storageAdapter.GetResultsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		d.logger.Panic("failed getting results block", log.Error(err))
+		panic(fmt.Sprintf("failed getting results block, err=%+v", err))
 	}
 
 	return &protocol.BlockPairContainer{

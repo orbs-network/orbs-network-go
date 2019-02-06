@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 )
 
 const SDK_OPERATION_NAME_EVENTS = "Sdk.Events"
@@ -16,14 +16,14 @@ const SDK_OPERATION_NAME_EVENTS = "Sdk.Events"
 func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, eventFunctionSignature interface{}, args ...interface{}) {
 	eventName, err := types.GetContractMethodNameFromFunction(eventFunctionSignature)
 	if err != nil {
-		s.logger.Panic("failed extracting event name", log.Error(err))
+		panic(err.Error())
 	}
 
 	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
 	argsArgumentArray := argsToArgumentArray(args...)
 	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
-		s.logger.Panic("incorrect types given to event emit", log.Error(err))
+		panic(errors.Wrap(err, "incorrect types given to event emit"))
 	}
 
 	_, err = s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
@@ -45,7 +45,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		s.logger.Panic("failed handling SDK call", log.Error(err))
+		panic(err.Error())
 	}
 }
 

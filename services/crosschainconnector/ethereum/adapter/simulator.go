@@ -27,7 +27,7 @@ func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
 	// Generate a new random account and a funded simulator
 	key, err := crypto.GenerateKey()
 	if err != nil {
-		logger.Panic("faiked generation random key", log.Error(err))
+		panic(err)
 	}
 
 	e := &EthereumSimulator{

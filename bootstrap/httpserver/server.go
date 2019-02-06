@@ -72,7 +72,8 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.BasicLogger, publicAp
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
-		logger.Panic("failed to start http server", log.Error(err))
+		logger.Error("failed to start http server", log.Error(err))
+		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
 	} else {
 		server.port = listener.Addr().(*net.TCPAddr).Port
 		server.httpServer = &http.Server{

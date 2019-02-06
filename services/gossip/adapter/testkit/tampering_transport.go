@@ -152,7 +152,7 @@ func (t *TamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 			return
 		}
 	}
-	t.logger.Panic("Tamperer not found in ongoing tamperer list")
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
@@ -170,7 +170,7 @@ func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 			return
 		}
 	}
-	t.logger.Panic("Tamperer not found in ongoing tamperer list")
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {
