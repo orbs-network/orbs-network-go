@@ -2,6 +2,7 @@ package statestorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -63,7 +64,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
-		logger.Panic("CommitStateDiff received corrupt args", log.Stringable("input", input))
+		panic(fmt.Sprintf("CommitStateDiff received corrupt args, input=%+v", input))
 	}
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()

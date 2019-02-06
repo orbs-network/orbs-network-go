@@ -22,7 +22,7 @@ type unexpectedError struct {
 }
 
 func (e *unexpectedError) String() string {
-	return fmt.Sprintf("%s (passed Error object: %v)", e.message, e.err)
+	return fmt.Sprintf("%s (passed Error object: %s)", e.message, e.err)
 }
 
 func NewErrorRecordingOutput(allowedErrors []string) *ErrorRecordingOutput {

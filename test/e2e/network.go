@@ -39,14 +39,15 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 }
 
 func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
-	firstRandomPort := test.RandomPort()
-
+	gossipPortByNodeIndex := []int{}
 	federationNodes := make(map[string]config.FederationNode)
 	gossipPeers := make(map[string]config.GossipPeer)
+
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
+		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
 	}
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
@@ -85,7 +86,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 				ethereumEndpoint).
 			OverrideNodeSpecificValues(
 				fmt.Sprintf(":%d", START_HTTP_PORT+i),
-				firstRandomPort+i,
+				gossipPortByNodeIndex[i],
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
 				blockStorageDataDirPrefix)

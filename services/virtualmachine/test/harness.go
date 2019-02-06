@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
@@ -152,7 +153,7 @@ func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context,
 	for _, contractStateDiffs := range output.ContractStateDiffs {
 		contractName := contractStateDiffs.ContractName()
 		if _, found := resultKeyValuePairsPerContract[contractName]; !found {
-			h.logger.Panic("unexpected contract", log.Stringable("contract-name", contractStateDiffs.ContractName()))
+			panic(fmt.Sprintf("unexpected contract %s", contractStateDiffs.ContractName()))
 		}
 		for i := contractStateDiffs.StateDiffsIterator(); i.HasNext(); {
 			sd := i.NextStateDiffs()
