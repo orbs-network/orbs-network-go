@@ -32,7 +32,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		})
 
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-			resultsForVerification.logBlockSyncRequestForVerification(input)
+			resultsForVerification.logBlockSyncRequest(input)
 
 			requireBlockSyncRequestConformsToBlockAvailabilityResponse(t, input, NUM_BLOCKS, 7, 8)
 
@@ -51,8 +51,18 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 
 		harness.start(ctx)
 
-		passed := test.Eventually(2*time.Second, func() bool {
-			return resultsForVerification.verifySyncCompleted(NUM_BLOCKS)
+		passed := test.Eventually(2*time.Second, func() bool { // wait for sync flow to complete successfully:
+			resultsForVerification.Lock()
+			defer resultsForVerification.Unlock()
+			if !resultsForVerification.didUpdateConsensusAboutHeightZero {
+				return false
+			}
+			for i := primitives.BlockHeight(1); i < NUM_BLOCKS; i++ {
+				if !resultsForVerification.blocksSentBySource[i] || !resultsForVerification.blocksReceivedByConsensus[i] {
+					return false
+				}
+			}
+			return true
 		})
 		require.Truef(t, passed, "timed out waiting for passing conditions: %+v", resultsForVerification)
 	})
@@ -79,7 +89,7 @@ func newSyncFlowSummary() *syncFlowResults {
 	}
 }
 
-func (s *syncFlowResults) logBlockSyncRequestForVerification(input *gossiptopics.BlockSyncRequestInput) {
+func (s *syncFlowResults) logBlockSyncRequest(input *gossiptopics.BlockSyncRequestInput) {
 	s.Lock()
 	defer s.Unlock()
 	for i := input.Message.SignedChunkRange.FirstBlockHeight(); i <= input.Message.SignedChunkRange.LastBlockHeight(); i++ {
@@ -101,20 +111,6 @@ func (s *syncFlowResults) logHandleBlockConsensusCalls(input *handlers.HandleBlo
 		}, "validated block must be between 1 and total")
 		s.blocksReceivedByConsensus[input.BlockPair.TransactionsBlock.Header.BlockHeight()] = true
 	}
-}
-
-func (s *syncFlowResults) verifySyncCompleted(numBlocks primitives.BlockHeight) bool {
-	s.Lock()
-	defer s.Unlock()
-	if !s.didUpdateConsensusAboutHeightZero {
-		return false
-	}
-	for i := primitives.BlockHeight(1); i < numBlocks; i++ {
-		if !s.blocksSentBySource[i] || !s.blocksReceivedByConsensus[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, numBlocks int) {
