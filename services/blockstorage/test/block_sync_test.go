@@ -10,7 +10,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 	"time"
 )
@@ -78,85 +80,115 @@ func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 }
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
-	test.WithContextWithTimeout(1*time.Second, func(ctx context.Context) {
-
+	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
-			withSyncNoCommitTimeout(time.Millisecond). // start sync immediately
-			withSyncCollectResponsesTimeout(15 * time.Millisecond)
+			withSyncCollectResponsesTimeout(50 * time.Millisecond).
+			withSyncCollectChunksTimeout(50 * time.Millisecond)
 
-		handleBlockConsensusLatch := latchMockFunction(harness.consensus.Reset(), "HandleBlockConsensus")
-		broadcastBlockAvailabilityRequestLatch := latchMockFunction(&harness.gossip.Mock, "BroadcastBlockAvailabilityRequest")
-		sendBlockSyncRequestLatch := latchMockFunction(&harness.gossip.Mock, "SendBlockSyncRequest")
+		const NUM_BLOCKS = 4
 
-		go harness.start(ctx) // go because start() will block until next line is reached
-		requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected service to notify sync with consensus algo on init")
-
-		requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected sync to notify consensus algo of current height")
-		requireMockFunctionLatchTriggerf(t, ctx, broadcastBlockAvailabilityRequestLatch, "expected sync to collect availability response")
-
-		// fake CAR responses
-		syncSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(7)
-		blockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
-		anotherBlockAvailabilityResponse := buildBlockAvailabilityResponse(syncSourceAddress)
-
-		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, blockAvailabilityResponse)
-		_, _ = harness.blockStorage.HandleBlockAvailabilityResponse(ctx, anotherBlockAvailabilityResponse)
-
-		requireMockFunctionLatchTriggerf(t, ctx, sendBlockSyncRequestLatch, "expected sync to wait for chunks")
-
-		numOfBlocks := 4
-		blockSyncResponse := buildBlockSyncResponseInput(syncSourceAddress, numOfBlocks)
-		_, _ = harness.blockStorage.HandleBlockSyncResponse(ctx, blockSyncResponse) // fake block sync response
-
-		for i := 1; i <= numOfBlocks; i++ {
-			requireMockFunctionLatchTriggerf(t, ctx, handleBlockConsensusLatch, "expected block %d to be validated on commit", i)
+		var results struct {
+			sync.Mutex
+			blocksSentBySource                map[primitives.BlockHeight]bool
+			blocksReceivedByConsensus         map[primitives.BlockHeight]bool
+			didUpdateConsensusAboutHeightZero bool
 		}
-	})
-}
+		results.blocksSentBySource = make(map[primitives.BlockHeight]bool)
+		results.blocksReceivedByConsensus = make(map[primitives.BlockHeight]bool)
 
-// a helper function which returns a channel used for syncing test code on mock function calls.
-// this implementation is compatible only with mock functions receiving a context and one additional argument,
-// and returning two arguments. after calling this method, each invocation of this mock function will block until
-// the test code reads from the latch channel, or the context terminates.
-func latchMockFunction(m *mock.Mock, name string) <-chan struct{} {
-	latch := make(chan struct{})
-	m.When(name, mock.Any, mock.Any).
-		Call(func(ctx context.Context, _ interface{}) (interface{}, interface{}) {
-			select {
-			case latch <- struct{}{}:
-			case <-ctx.Done():
+		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+			firstBlockHeight := input.Message.SignedBatchRange.FirstBlockHeight()
+			if firstBlockHeight > NUM_BLOCKS {
+				return nil, nil
 			}
+
+			response1 := builders.BlockAvailabilityResponseInput().
+				WithLastCommittedBlockHeight(primitives.BlockHeight(NUM_BLOCKS)).
+				WithFirstBlockHeight(firstBlockHeight).
+				WithLastBlockHeight(primitives.BlockHeight(NUM_BLOCKS)).
+				WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(7).NodeAddress()).Build()
+			go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response1)
+
+			response2 := builders.BlockAvailabilityResponseInput().
+				WithLastCommittedBlockHeight(primitives.BlockHeight(NUM_BLOCKS)).
+				WithFirstBlockHeight(firstBlockHeight).
+				WithLastBlockHeight(primitives.BlockHeight(NUM_BLOCKS)).
+				WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()).Build()
+			go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response2)
+
 			return nil, nil
 		})
-	return latch
-}
 
-// a helper function which works with latch channels returned from latchMockFunction.
-// test code should use this helper to sync with mock function invocations.
-// this function blocks until a single invocation of the mock function tied to the latch channel occurs.
-func requireMockFunctionLatchTriggerf(t *testing.T, ctx context.Context, latch <-chan struct{}, format string, args ...interface{}) {
-	select {
-	case <-latch: // wait on latch
-	case <-ctx.Done():
-		t.Fatalf(format+"(%v)", append(args, ctx.Err())...)
-	}
-}
+		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+			require.Contains(t, []primitives.NodeAddress{
+				keys.EcdsaSecp256K1KeyPairForTests(7).NodeAddress(),
+				keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress(),
+			}, input.RecipientNodeAddress, "the nodes accessed must be 7 or 8")
 
-func buildBlockSyncResponseInput(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair, numOfBlocks int) *gossiptopics.BlockSyncResponseInput {
-	return builders.BlockSyncResponseInput().
-		WithSenderNodeAddress(senderKeyPair.NodeAddress()).
-		WithFirstBlockHeight(primitives.BlockHeight(1)).
-		WithLastBlockHeight(primitives.BlockHeight(numOfBlocks)).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(numOfBlocks)).
-		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
-}
+			require.Condition(t, func() (success bool) {
+				return input.Message.SignedChunkRange.FirstBlockHeight() >= 1 && input.Message.SignedChunkRange.FirstBlockHeight() <= NUM_BLOCKS
+			}, "first requested block must be between 1 and total")
 
-func buildBlockAvailabilityResponse(senderKeyPair *keys.TestEcdsaSecp256K1KeyPair) *gossiptopics.BlockAvailabilityResponseInput {
-	return builders.BlockAvailabilityResponseInput().
-		WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
-		WithFirstBlockHeight(primitives.BlockHeight(1)).
-		WithLastBlockHeight(primitives.BlockHeight(4)).
-		WithSenderNodeAddress(senderKeyPair.NodeAddress()).Build()
+			require.Condition(t, func() (success bool) {
+				return input.Message.SignedChunkRange.LastBlockHeight() >= input.Message.SignedChunkRange.FirstBlockHeight() && input.Message.SignedChunkRange.LastBlockHeight() <= NUM_BLOCKS
+			}, "last requested block must be between first and total")
+
+			results.Lock()
+			defer results.Unlock()
+			for i := input.Message.SignedChunkRange.FirstBlockHeight(); i <= input.Message.SignedChunkRange.LastBlockHeight(); i++ {
+				results.blocksSentBySource[i] = true
+			}
+
+			response := builders.BlockSyncResponseInput().
+				WithFirstBlockHeight(input.Message.SignedChunkRange.FirstBlockHeight()).
+				WithLastBlockHeight(input.Message.SignedChunkRange.LastBlockHeight()).
+				WithLastCommittedBlockHeight(primitives.BlockHeight(NUM_BLOCKS)).
+				WithSenderNodeAddress(input.RecipientNodeAddress).Build()
+			go harness.blockStorage.HandleBlockSyncResponse(ctx, response)
+
+			return nil, nil
+		})
+
+		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+			require.Contains(t, []handlers.HandleBlockConsensusMode{
+				handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+				handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE,
+			}, input.Mode, "consensus updates must be update or update+verify")
+
+			results.Lock()
+			defer results.Unlock()
+			switch input.Mode {
+			case handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY:
+				if input.BlockPair == nil {
+					results.didUpdateConsensusAboutHeightZero = true
+				}
+			case handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE:
+				require.Condition(t, func() (success bool) {
+					return input.BlockPair.TransactionsBlock.Header.BlockHeight() >= 1 && input.BlockPair.TransactionsBlock.Header.BlockHeight() <= NUM_BLOCKS
+				}, "validated block must be between 1 and total")
+				results.blocksReceivedByConsensus[input.BlockPair.TransactionsBlock.Header.BlockHeight()] = true
+			}
+
+			return nil, nil
+		})
+
+		harness.start(ctx)
+
+		passed := test.Eventually(2*time.Second, func() bool {
+			results.Lock()
+			defer results.Unlock()
+			if !results.didUpdateConsensusAboutHeightZero {
+				return false
+			}
+			for i := primitives.BlockHeight(1); i < primitives.BlockHeight(NUM_BLOCKS); i++ {
+				if !results.blocksSentBySource[i] || !results.blocksReceivedByConsensus[i] {
+					return false
+				}
+			}
+			return true
+		})
+		require.Truef(t, passed, "timed out waiting for passing conditions: %+v", results)
+	})
 }
 
 func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {

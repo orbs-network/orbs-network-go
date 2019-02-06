@@ -43,7 +43,7 @@ func TestDirectOutgoing_ConnectionReconnectsOnFailure(t *testing.T) {
 func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
-		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
 		defer h.cleanupConnectedPeers()
 
 		err := h.transport.Send(ctx, &adapter.TransportData{
