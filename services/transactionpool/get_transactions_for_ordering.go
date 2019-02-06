@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 )
 
 type rejectedTransaction struct {
@@ -159,7 +160,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
 
 	if len(preOrderResults) != len(r.transactionsForPreOrder) {
-		r.logger.Panic("BUG: sent mismatched num of sent transaction and returned statuses", log.Int("num-txs", len(r.transactionsForPreOrder)), log.Int("num-statuses", len(preOrderResults)))
+		panic(errors.Errorf("BUG: sent %d transactions for pre-order check and got %d statuses", len(r.transactionsForPreOrder), len(preOrderResults)).Error())
 	}
 
 	for i, tx := range r.transactionsForPreOrder {

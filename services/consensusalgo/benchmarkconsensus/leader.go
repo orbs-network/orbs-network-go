@@ -2,6 +2,7 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -98,7 +99,8 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 	}
 	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
 	if err != nil {
-		s.logger.Panic("leader failed to sign genesis block", log.Error(err))
+		s.logger.Error("leader failed to sign genesis block", log.Error(err))
+		panic(fmt.Sprintf("leader failed to sign genesis block, abort, err=%s", err.Error()))
 		return nil
 	}
 	return blockPair

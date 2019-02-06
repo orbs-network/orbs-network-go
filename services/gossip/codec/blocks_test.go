@@ -141,14 +141,14 @@ func TestMultipleBlockPairs(t *testing.T) {
 	for _, tt := range multipleBlockPairsTable {
 		payloads, err := EncodeBlockPairs(tt.origin)
 		if tt.encodeErr != (err != nil) {
-			t.Fatalf("Expected encode error to be %v but got: %v", tt.encodeErr, err)
+			t.Fatalf("Expected encode error to be %v but got: %s", tt.encodeErr, err)
 		}
 		if err != nil {
 			continue
 		}
 		res, err := DecodeBlockPairs(payloads)
 		if tt.decodeErr != (err != nil) {
-			t.Fatalf("Expected decode error to be %v but got: %v", tt.decodeErr, err)
+			t.Fatalf("Expected decode error to be %v but got: %s", tt.decodeErr, err)
 		}
 		if err != nil {
 			continue
