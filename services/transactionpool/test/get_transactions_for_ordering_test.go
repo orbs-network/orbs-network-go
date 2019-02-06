@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
@@ -58,12 +59,10 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 			ch <- len(out.SignedTransactions)
 		}()
 
+		time.Sleep(50 * time.Millisecond)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
-		select {
-		case numOfTxs := <-ch: // required so that if the require.NoError in the goroutine fails, we don't wait on reading from a channel that will never be written to
-			require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
-		case <-ctx.Done():
-		}
+		numOfTxs := <-ch
+		require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
 	})
 }
