@@ -85,19 +85,21 @@ func aChannelTransport(ctx context.Context, tb testing.TB) *transportContractCon
 func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
-	firstRandomPort := test.RandomPort()
+	gossipPortByNodeIndex := []int{}
 	gossipPeers := make(map[string]config.GossipPeer)
+
 	for i := 0; i < 4; i++ {
+		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(firstRandomPort+i, "127.0.0.1")
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
 		res.nodeAddresses = append(res.nodeAddresses, nodeAddress)
 	}
 
 	configs := []config.GossipTransportConfig{
-		config.ForGossipAdapterTests(res.nodeAddresses[0], firstRandomPort+0, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[1], firstRandomPort+1, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[2], firstRandomPort+2, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[3], firstRandomPort+3, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[0], gossipPortByNodeIndex[0], gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[1], gossipPortByNodeIndex[1], gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[2], gossipPortByNodeIndex[2], gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[3], gossipPortByNodeIndex[3], gossipPeers),
 	}
 
 	logger := log.DefaultTestingLogger(tb)
