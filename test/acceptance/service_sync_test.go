@@ -74,7 +74,6 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			}
 
 			network = restartPreservingBlocks()
-			contract = network.DeployBenchmarkTokenContract(ctx, 0)
 
 			// wait for all tx to reach state storage:
 			for _, txHash := range txHashes {
@@ -82,6 +81,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			}
 
 			// verify state in both nodes
+			contract = network.DeployBenchmarkTokenContract(ctx, 0)
 			balanceNode0 := contract.GetBalance(ctx, 0, 1)
 			balanceNode1 := contract.GetBalance(ctx, 1, 1)
 

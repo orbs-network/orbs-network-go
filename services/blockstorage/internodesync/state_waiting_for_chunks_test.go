@@ -70,7 +70,10 @@ func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *test
 
 func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness(t)
+	manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
+	h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(t, func() *synchronization.Timer {
+		return manualWaitForChunksTimer
+	})
 
 	h.expectLastCommittedBlockHeightQueryFromStorage(10)
 	h.expectSendingOfBlockSyncRequest()
