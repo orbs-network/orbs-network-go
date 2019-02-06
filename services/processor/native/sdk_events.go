@@ -23,7 +23,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	argsArgumentArray := argsToArgumentArray(args...)
 	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
-		panic(errors.Wrap(err, "incorrect types given to event emit"))
+		panic(errors.Wrap(err, "incorrect types given to event emit").Error())
 	}
 
 	_, err = s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{

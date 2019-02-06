@@ -160,7 +160,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
 
 	if len(preOrderResults) != len(r.transactionsForPreOrder) {
-		panic(errors.Errorf("BUG: sent %d transactions for pre-order check and got %d statuses", len(r.transactionsForPreOrder), len(preOrderResults)))
+		panic(errors.Errorf("BUG: sent %d transactions for pre-order check and got %d statuses", len(r.transactionsForPreOrder), len(preOrderResults)).Error())
 	}
 
 	for i, tx := range r.transactionsForPreOrder {

@@ -37,7 +37,7 @@ func (t *BlockTracker) IncrementTo(height primitives.BlockHeight) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if uint64(height) != t.currentHeight+1 {
-		panic(errors.Errorf("Block Tracker expected height %d but got height %d", t.currentHeight+1, height))
+		panic(errors.Errorf("Block Tracker expected height %d but got height %d", t.currentHeight+1, height).Error())
 	}
 
 	t.currentHeight++

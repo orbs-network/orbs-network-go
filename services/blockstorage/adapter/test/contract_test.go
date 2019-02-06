@@ -220,7 +220,7 @@ func newFilesystemAdapter(tb testing.TB) *adapterUnderTest {
 	logger := log.DefaultTestingLogger(tb)
 	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
 	if err != nil {
-		panic(err)
+		panic(err.Error())
 	}
 
 	return &adapterUnderTest{

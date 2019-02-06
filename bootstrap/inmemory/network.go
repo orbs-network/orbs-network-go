@@ -181,7 +181,7 @@ func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedT
 
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in send transaction: %s", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		panic(fmt.Sprintf("error in send transaction: %s", out.err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse, txHash
 }
@@ -226,7 +226,7 @@ func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sh
 	}()
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in get tx status: %s", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		panic(fmt.Sprintf("error in get tx status: %s", out.err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse
 }
@@ -255,7 +255,7 @@ func (n *Network) RunQuery(ctx context.Context, builder *protocol.SignedQueryBui
 	}()
 	out := <-ch
 	if out.res == nil {
-		panic(fmt.Sprintf("error in run query: %s", out.err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+		panic(fmt.Sprintf("error in run query: %s", out.err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 	}
 	return out.res.ClientResponse
 }
