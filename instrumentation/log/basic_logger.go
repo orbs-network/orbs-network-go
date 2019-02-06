@@ -13,6 +13,7 @@ type BasicLogger interface {
 	LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field)
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
+	PanicError(message string, params ...*Field)
 	Panic(message string, params ...*Field)
 	Metric(params ...*Field)
 	WithTags(params ...*Field) BasicLogger
@@ -124,6 +125,19 @@ func (b *basicLogger) Info(message string, params ...*Field) {
 
 func (b *basicLogger) Error(message string, params ...*Field) {
 	b.Log("error", message, params...)
+}
+
+// just like Error but also fails tests (if running inside a test)
+func (b *basicLogger) PanicError(message string, params ...*Field) {
+	b.Error(message, params...)
+
+	// if running a test, fail the test immediately and stop logging new log lines
+	for _, output := range b.outputs {
+		if to, ok := output.(*testOutput); ok {
+			to.StopLogging()
+			to.tb.FailNow()
+		}
+	}
 }
 
 func (b *basicLogger) Panic(message string, params ...*Field) {
