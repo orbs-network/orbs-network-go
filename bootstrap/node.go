@@ -46,7 +46,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
 
 	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
-		panic(fmt.Sprintf("failed initializing blocks database, err=%+v", log.Error(err)))
+		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
 	}
 
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)

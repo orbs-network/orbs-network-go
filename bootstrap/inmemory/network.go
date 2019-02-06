@@ -196,7 +196,7 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, builder *prot
 			ReturnImmediately: 1,
 		})
 		if output == nil {
-			panic(fmt.Sprintf("error sending transaction: %v", err)) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+			panic(fmt.Sprintf("error sending transaction: %s", err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
 		}
 	}()
 }

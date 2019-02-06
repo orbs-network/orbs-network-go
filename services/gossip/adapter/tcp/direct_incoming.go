@@ -46,7 +46,7 @@ func (t *directTransport) isServerListening() bool {
 func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort uint16) {
 	listener, err := t.serverListenForIncomingConnections(parentCtx, listenPort)
 	if err != nil {
-		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %+v", listenPort, err))
+		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", listenPort, err.Error()))
 	}
 
 	t.serverPort = listener.Addr().(*net.TCPAddr).Port

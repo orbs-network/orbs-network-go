@@ -41,7 +41,7 @@ type rollingRevisions struct {
 func newRollingRevisions(logger log.BasicLogger, persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
 	h, ts, r, err := persist.ReadMetadata()
 	if err != nil {
-		panic(fmt.Sprintf("could not load state metadata, err=%+v", err))
+		panic(fmt.Sprintf("could not load state metadata, err=%s", err.Error()))
 	}
 
 	result := &rollingRevisions{

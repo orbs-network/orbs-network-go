@@ -58,7 +58,7 @@ func getConfig(configFiles config.ArrayFlags, httpAddress string) (config.NodeCo
 	if len(configFiles) != 0 {
 		for _, configFile := range configFiles {
 			if _, err := os.Stat(configFile); os.IsNotExist(err) {
-				return nil, errors.Errorf("could not open config file: %v", err)
+				return nil, errors.Errorf("could not open config file: %s", err)
 			}
 
 			contents, err := ioutil.ReadFile(configFile)
