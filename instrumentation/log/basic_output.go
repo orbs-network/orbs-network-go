@@ -33,9 +33,3 @@ type testOutput struct {
 	formatter LogFormatter
 	tb        testing.TB
 }
-
-func (o *testOutput) Append(level string, message string, fields ...*Field) {
-	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
-	o.tb.Log(logLine)
-
-}
