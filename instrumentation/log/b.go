@@ -8,3 +8,4 @@ func (o *testOutput) Append(level string, message string, fields ...*Field) {
 }
 
 // Keep the Log() line in Append() under line 10, this saves a char when printing that EVERY SINGLE LINE
+// This file's name is short for the same reason.
