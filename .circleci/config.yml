@@ -67,11 +67,11 @@ jobs:
           path: _logs
 
 
-  notify_github_about_dashboard:
-    machine: true
-    steps:
-      - checkout
-      - run: python ./.circleci/post-dashboard-link.py
+#  notify_github_about_dashboard:
+#    machine: true
+#    steps:
+#      - checkout
+#      - run: python ./.circleci/post-dashboard-link.py
 
   success:
     machine: true
@@ -124,32 +124,31 @@ workflows:
   version: 2
   build:
     jobs:
-#      - tests
-#      - e2e
+      - tests
+      - e2e
       - flakiness
-#      - notify_github_about_dashboard
-#      - autonomous_swap
-#      - success:
-#          requires:
-#            - tests
-#            - e2e
-#            - autonomous_swap
-#      - deploy_testnet:
-#          requires:
-#            - e2e
-#          filters:
-#            branches:
-#              only:
-#                - master
-#      - e2e_testnet_benchmark:
-#          requires:
-#            - deploy_testnet
-#      - e2e_testnet_leanhelix:
-#          requires:
-#            - deploy_testnet
-#      - release_gamma:
-#          filters:
-#            tags:
-#              only: /^v.*/
-#            branches:
-#              ignore: /.*/
+      - autonomous_swap
+      - success:
+          requires:
+            - tests
+            - e2e
+            - autonomous_swap
+      - deploy_testnet:
+          requires:
+            - e2e
+          filters:
+            branches:
+              only:
+                - master
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
+      - release_gamma:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
