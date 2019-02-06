@@ -81,7 +81,7 @@ We use the official go test runner `go test`. It has minimal UI and result cachi
 
 Please install go-junit-reporter prior to running tests for the first time:
 ```
-go get -u github.com/jstemmer/go-junit-report
+go get -u github.com/orbs-network/go-junit-report
 ```
 
 ### Test

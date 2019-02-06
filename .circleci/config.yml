@@ -8,7 +8,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: go get -u github.com/jstemmer/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./test.sh
       - store_artifacts:
           path: _out
@@ -27,7 +27,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: go get -u github.com/jstemmer/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
