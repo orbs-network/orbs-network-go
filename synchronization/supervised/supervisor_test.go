@@ -1,5 +1,3 @@
-// +build !norecover
-
 package supervised
 
 import (
@@ -19,7 +17,7 @@ type collector struct {
 	errors chan report
 }
 
-func (c *collector) Error(message string, fields ...*log.Field) {
+func (c *collector) PanicError(message string, fields ...*log.Field) {
 	c.errors <- report{message, fields}
 }
 

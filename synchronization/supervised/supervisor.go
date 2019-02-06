@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/pkg/errors"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
-type Errorer interface {
-	Error(message string, fields ...*log.Field)
+type PanicErrorer interface {
+	PanicError(message string, fields ...*log.Field)
 }
 
 type ContextEndedChan chan struct{}
 
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
-func GoOnce(errorer Errorer, f func()) {
+func GoOnce(errorer PanicErrorer, f func()) {
 	go func() {
 		tryOnce(errorer, f)
 	}()
@@ -24,7 +26,7 @@ func GoOnce(errorer Errorer, f func()) {
 // Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
 // If the provided Context isn't closed, re-runs f()
 // Returns a channel that is closed when the goroutine has quit due to context ending
-func GoForever(ctx context.Context, logger Errorer, f func()) ContextEndedChan {
+func GoForever(ctx context.Context, logger PanicErrorer, f func()) ContextEndedChan {
 	c := make(ContextEndedChan)
 	go func() {
 		defer close(c)
@@ -41,10 +43,16 @@ func GoForever(ctx context.Context, logger Errorer, f func()) ContextEndedChan {
 }
 
 // this function is needed so that we don't return out of the goroutine when it panics
-func tryOnce(errorer Errorer, f func()) {
+func tryOnce(errorer PanicErrorer, f func()) {
 	defer recoverPanics(errorer)
 	f()
+}
 
+func recoverPanics(logger PanicErrorer) {
+	if p := recover(); p != nil {
+		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
+		logger.PanicError("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
+	}
 }
 
 func identifyPanic() string {
