@@ -22,6 +22,7 @@ jobs:
   flakiness:
     docker:
       - image: circleci/golang:1.11.4
+    parallelism: 6
     resource_class: xlarge
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
@@ -66,11 +67,11 @@ jobs:
           path: _logs
 
 
-  notify_github_about_dashboard:
-    machine: true
-    steps:
-      - checkout
-      - run: python ./.circleci/post-dashboard-link.py
+#  notify_github_about_dashboard:
+#    machine: true
+#    steps:
+#      - checkout
+#      - run: python ./.circleci/post-dashboard-link.py
 
   success:
     machine: true
@@ -126,12 +127,11 @@ workflows:
       - tests
       - e2e
       - flakiness
-      - notify_github_about_dashboard
       - autonomous_swap
       - success:
           requires:
             - tests
-            - flakiness
+            - e2e
             - autonomous_swap
       - deploy_testnet:
           requires:
