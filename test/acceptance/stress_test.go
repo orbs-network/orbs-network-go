@@ -19,7 +19,7 @@ import (
 )
 
 // Control group - if this fails, there are bugs unrelated to message tampering
-func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
+func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	newHarness(t).
 		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
@@ -39,7 +39,7 @@ func TestCreateGazillionTransactionsHappyFlow(t *testing.T) {
 		})
 }
 
-func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t *testing.T) {
+func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		AllowingErrors(
@@ -52,7 +52,7 @@ func TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages(t 
 }
 
 // TODO (v1) Must drop message from up to "f" fixed nodes (for 4 nodes f=1)
-func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *testing.T) {
+func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
@@ -62,20 +62,20 @@ func TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages(t *te
 }
 
 // See BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT - cannot delay messages consistently more than that, or block sync will never work - it throws "timed out when waiting for chunks"
-func TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages(t *testing.T) {
+func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness(t).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(100))) * time.Millisecond
-			}, WithPercentChance(rnd, 50))
+				return (time.Duration(rnd.Intn(50))) * time.Millisecond
+			}, WithPercentChance(rnd, 30))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
 // TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
-func TestCreateGazillionTransactionsWhileTransportIsCorruptingRandomMessages(t *testing.T) {
+func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := rand.NewControlledRand(t)
 	newHarness(t).

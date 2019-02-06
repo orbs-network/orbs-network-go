@@ -54,7 +54,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 }
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
-func TestSendSameTransactionFastTwiceToLeader(t *testing.T) {
+func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
 	newHarness(t).AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
@@ -97,15 +97,17 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHa
 	err = persistence.GetBlockTracker().WaitForBlock(ctx, height)
 	require.NoError(t, err, "expected to reach target block height before proceeding with test")
 
-	// count receipts for txHash in leader block storage
+	// count receipts for txHash in block storage of node 0
 	receiptCount := 0
 	var blocks []*BlockPairContainer
 	err = network.BlockPersistence(0).ScanBlocks(1, uint8(height), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
 		blocks = page
 		return false
 	})
-	require.NoError(t, err, "ScanBlocks should return blocks")
-	require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks", height)
+	require.NoError(t, err, "ScanBlocks should return blocks, instead got error %v", err)
+
+	// TODO (v1) https://github.com/orbs-network/orbs-network-go/issues/837 do we want to keep this require? it may hide a bug in sync between ScanBlocks and WaitForBlock
+	//require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks, instead got %d", height, len(blocks))
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {
@@ -114,4 +116,25 @@ func requireTxCommittedOnce(ctx context.Context, t *testing.T, network NetworkHa
 		}
 	}
 	require.Equal(t, 1, receiptCount, "blocks should include tx exactly once")
+}
+
+func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
+	newHarness(t).AllowingErrors(
+		"error adding transaction to pending pool",
+		"error adding forwarded transaction to pending pool",
+		"error sending transaction",
+		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
+	).Start(func(ctx context.Context, network NetworkHarness) {
+
+		persistence := network.BlockPersistence(0)
+		targetBlockHeight := 2
+		err1 := persistence.GetBlockTracker().WaitForBlock(ctx, primitives.BlockHeight(targetBlockHeight))
+
+		err2 := network.BlockPersistence(0).ScanBlocks(1, uint8(targetBlockHeight), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
+			require.Len(t, page, targetBlockHeight)
+			return false
+		})
+		require.NoError(t, err1)
+		require.NoError(t, err2)
+	})
 }

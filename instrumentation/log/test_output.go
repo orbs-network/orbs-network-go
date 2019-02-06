@@ -2,7 +2,6 @@ package log
 
 import (
 	"testing"
-	"time"
 )
 
 func NewTestOutput(tb testing.TB, formatter LogFormatter) *testOutput {
@@ -15,16 +14,4 @@ type testOutput struct {
 	stopLogging bool
 }
 
-func (o *testOutput) Append(level string, message string, fields ...*Field) {
-	// we use this mechanism to stop logging new log lines after the test failed from a different goroutine
-	if o.stopLogging {
-		return
-	}
-
-	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
-	o.tb.Log(logLine)
-}
-
-func (o *testOutput) StopLogging() {
-	o.stopLogging = true
-}
+// func (o *testOutput) Append(level string, message string, fields ...*Field) moved to file t.go

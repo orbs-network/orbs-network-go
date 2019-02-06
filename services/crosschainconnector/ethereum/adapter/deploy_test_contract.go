@@ -69,7 +69,7 @@ func (c *connectorCommon) DeployEthereumContractManually(ctx context.Context, au
 
 	nonce, err := client.PendingNonceAt(ctx, auth.From)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
+		return nil, fmt.Errorf("failed to retrieve account nonce: %s", err)
 	}
 
 	rawTx := types.NewContractCreation(nonce, big.NewInt(0), 300000000, big.NewInt(1), data)

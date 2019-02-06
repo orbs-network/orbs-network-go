@@ -21,9 +21,9 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	after, _ := os.Create("/tmp/mem-shutdown-after.prof")
 	defer after.Close()
 
-	t.Run("TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages)
-	t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
-	t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
+	t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
+	t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
+	t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
 
 	time.Sleep(100 * time.Millisecond)
 	runtime.GC()
@@ -35,9 +35,9 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	pprof.WriteHeapProfile(before)
 
 	for i := 0; i < 20; i++ {
-		t.Run("TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDuplicatingRandomMessages)
-		t.Run("TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDroppingRandomMessages)
-		t.Run("TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages", TestCreateGazillionTransactionsWhileTransportIsDelayingRandomMessages)
+		t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
+		t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
+		t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
 	}
 
 	time.Sleep(100 * time.Millisecond)

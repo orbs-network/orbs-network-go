@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"strings"
 )
 
@@ -14,7 +13,6 @@ type BasicLogger interface {
 	Info(message string, params ...*Field)
 	Error(message string, params ...*Field)
 	PanicError(message string, params ...*Field)
-	Panic(message string, params ...*Field)
 	Metric(params ...*Field)
 	WithTags(params ...*Field) BasicLogger
 	Tags() []*Field
@@ -138,15 +136,6 @@ func (b *basicLogger) PanicError(message string, params ...*Field) {
 			to.tb.FailNow()
 		}
 	}
-}
-
-func (b *basicLogger) Panic(message string, params ...*Field) {
-	paramsWithStack := append(params, String("stack", string(debug.Stack())))
-	b.Error(message, paramsWithStack...)
-	for _, param := range params {
-		message += fmt.Sprintf(", %s=%+v", param.Key, param.Value())
-	}
-	panic(message)
 }
 
 func (b *basicLogger) LogFailedExpectation(message string, expected *Field, actual *Field, params ...*Field) {
