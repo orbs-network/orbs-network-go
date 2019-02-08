@@ -16,14 +16,14 @@ type PanicErrorer interface {
 
 type ContextEndedChan chan struct{}
 
-// Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
+// Runs f() in a new goroutine; if it panics, logs the error and stack trace to the specified Errorer
 func GoOnce(errorer PanicErrorer, f func()) {
 	go func() {
 		tryOnce(errorer, f)
 	}()
 }
 
-// Runs f() in a goroutine; if it panics, logs the error and stack trace to the specified Errorer
+// Runs f() in a new goroutine; if it panics, logs the error and stack trace to the specified Errorer
 // If the provided Context isn't closed, re-runs f()
 // Returns a channel that is closed when the goroutine has quit due to context ending
 func GoForever(ctx context.Context, logger PanicErrorer, f func()) ContextEndedChan {
@@ -40,6 +40,12 @@ func GoForever(ctx context.Context, logger PanicErrorer, f func()) ContextEndedC
 		}
 	}()
 	return c
+}
+
+// Runs f() on the original goroutine; if it panics, logs the error and stack trace to the specified Errorer
+// Very similar to GoOnce except doesn't start a new goroutine
+func Recover(errorer PanicErrorer, f func()) {
+	tryOnce(errorer, f)
 }
 
 // this function is needed so that we don't return out of the goroutine when it panics
