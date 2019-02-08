@@ -18,8 +18,9 @@ import (
 // ConsensusAlgo calls BlockStorage.CommitBlock() when a new block is closed.
 func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
+		harness.start(ctx)
 
 		updateConsensusAlgoHeight := make(chan struct{})
 
