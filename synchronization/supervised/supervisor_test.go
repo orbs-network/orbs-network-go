@@ -17,7 +17,7 @@ type collector struct {
 	errors chan report
 }
 
-func (c *collector) PanicError(message string, fields ...*log.Field) {
+func (c *collector) Panic(message string, fields ...*log.Field) {
 	c.errors <- report{message, fields}
 }
 

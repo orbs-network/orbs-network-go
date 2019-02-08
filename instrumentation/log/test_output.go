@@ -45,4 +45,9 @@ func (o *TestOutput) HasErrors() bool {
 	return o.hasErrors
 }
 
+func (o *TestOutput) recordError(line string) {
+	o.tb.Error(line)
+	o.hasErrors = true
+}
+
 // func (o *TestOutput) Append(level string, message string, fields ...*Field) moved to file t.go

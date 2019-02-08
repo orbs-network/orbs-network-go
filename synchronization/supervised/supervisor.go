@@ -11,7 +11,7 @@ import (
 )
 
 type PanicErrorer interface {
-	PanicError(message string, fields ...*log.Field)
+	Panic(message string, fields ...*log.Field)
 }
 
 type ContextEndedChan chan struct{}
@@ -57,7 +57,7 @@ func tryOnce(errorer PanicErrorer, f func()) {
 func recoverPanics(logger PanicErrorer) {
 	if p := recover(); p != nil {
 		e := errors.Errorf("goroutine panicked at [%s]: %v", identifyPanic(), p)
-		logger.PanicError("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
+		logger.Panic("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
 	}
 }
 

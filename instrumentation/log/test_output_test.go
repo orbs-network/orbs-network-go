@@ -41,15 +41,13 @@ func TestTestOutputLogsToTLog(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTestOutputDoesNotLogToTLogAfterStopLoggingWasCalled(t *testing.T) {
+func TestTestOutputDoesNotLogToTLogAfterPanicWasLogged(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
-	m.When("Log", "foo").Times(1)
-
+	m.When("Error", "foo").Times(1)
 	m.Never("Log", "bar")
 
-	o.Append("info", "foo")
-	o.StopLogging()
+	o.Append("panic", "foo")
 	o.Append("info", "bar")
 
 	_, err := m.Verify()

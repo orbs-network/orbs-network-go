@@ -16,13 +16,11 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
 
 	if level == "error" && !o.allowed(message, fields) {
-		o.tb.Error(logLine)
-		o.hasErrors = true
+		o.recordError(logLine)
+	} else if level == "panic" {
+		o.recordError(logLine)
+		o.stopLogging = true
 	} else {
 		o.tb.Log(logLine)
 	}
-}
-
-func (o *TestOutput) StopLogging() {
-	o.stopLogging = true
 }
