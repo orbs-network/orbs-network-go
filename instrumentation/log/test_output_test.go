@@ -65,6 +65,7 @@ func TestOutputLogsErrorToTLogAsError(t *testing.T) {
 
 	_, err := m.Verify()
 	require.NoError(t, err)
+	require.True(t, o.HasErrors())
 }
 
 func TestOutputLogsAllowedErrorToTLogAsInfo(t *testing.T) {
@@ -78,4 +79,6 @@ func TestOutputLogsAllowedErrorToTLogAsInfo(t *testing.T) {
 
 	_, err := m.Verify()
 	require.NoError(t, err)
+	require.False(t, o.HasErrors())
+
 }

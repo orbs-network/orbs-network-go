@@ -17,6 +17,7 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 
 	if level == "error" && !o.allowed(message, fields) {
 		o.tb.Error(logLine)
+		o.hasErrors = true
 	} else {
 		o.tb.Log(logLine)
 	}

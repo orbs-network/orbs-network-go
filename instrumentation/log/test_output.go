@@ -17,6 +17,7 @@ type TestOutput struct {
 	tb            TLog
 	stopLogging   bool
 	allowedErrors []string
+	hasErrors     bool
 }
 
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
@@ -38,6 +39,10 @@ func (o *TestOutput) allowed(message string, fields []*Field) bool {
 
 func (o *TestOutput) AllowErrorsMatching(pattern string) {
 	o.allowedErrors = append(o.allowedErrors, pattern)
+}
+
+func (o *TestOutput) HasErrors() bool {
+	return o.hasErrors
 }
 
 // func (o *TestOutput) Append(level string, message string, fields ...*Field) moved to file t.go
