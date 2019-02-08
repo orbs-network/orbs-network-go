@@ -11,8 +11,12 @@ type fakeTLog struct {
 	mock.Mock
 }
 
+func (t *fakeTLog) Error(args ...interface{}) {
+	t.Called(args...)
+}
+
 func (t *fakeTLog) FailNow() {
-	t.Called("FailNow")
+	t.Called()
 }
 
 func (t *fakeTLog) Log(args ...interface{}) {
@@ -50,5 +54,28 @@ func TestTestOutputDoesNotLogToTLogAfterStopLoggingWasCalled(t *testing.T) {
 
 	_, err := m.Verify()
 	require.NoError(t, err)
+}
 
+func TestOutputLogsErrorToTLogAsError(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+	m.When("Error", "foo").Times(1)
+
+	o.Append("error", "foo")
+
+	_, err := m.Verify()
+	require.NoError(t, err)
+}
+
+func TestOutputLogsAllowedErrorToTLogAsInfo(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+
+	o.AllowErrorsMatching("foo")
+	m.When("Log", "foo").Times(1)
+
+	o.Append("error", "foo")
+
+	_, err := m.Verify()
+	require.NoError(t, err)
 }

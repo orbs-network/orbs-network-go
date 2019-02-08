@@ -131,7 +131,7 @@ func (b *basicLogger) PanicError(message string, params ...*Field) {
 
 	// if running a test, fail the test immediately and stop logging new log lines
 	for _, output := range b.outputs {
-		if to, ok := output.(*testOutput); ok {
+		if to, ok := output.(*TestOutput); ok {
 			to.StopLogging()
 			to.tb.FailNow()
 		}

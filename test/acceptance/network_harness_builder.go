@@ -289,7 +289,11 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 }
 
 func (b *networkHarnessBuilder) makeFormattingOutput() log.Output {
-	return log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
+	testOutput := log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
+	for _, pattern := range b.allowedErrors {
+		testOutput.AllowErrorsMatching(pattern)
+	}
+	return testOutput
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {

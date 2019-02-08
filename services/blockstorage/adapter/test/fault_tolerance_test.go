@@ -21,7 +21,7 @@ func TestFileSystemBlockPersistence_RecoverFromPartiallyWrittenBlockRecord(t *te
 
 	truncateFile(t, conf, originalFileSize-(ctrlRand.Int63n(30)+1)) // cut some bytes from end of file
 
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
+	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLoggerAllowingErrors(t, "built index, found and ignoring invalid block records"), conf)
 	require.NoError(t, err)
 	defer closeAdapter()
 
@@ -50,7 +50,7 @@ func TestFileSystemBlockPersistence_DataCorruption(t *testing.T) {
 	blocksFileSize1 := getFileSize(t, conf)
 	flipBitInFile(t, conf, blocksFileSize1-(ctrlRand.Int63n(100)+1), byte(1)<<uint(ctrlRand.Intn(8))) // flip 1 bit in last block record
 
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
+	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLoggerAllowingErrors(t, "built index, found and ignoring invalid block records"), conf)
 	require.NoError(t, err)
 	defer closeAdapter()
 
