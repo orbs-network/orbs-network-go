@@ -1,16 +1,17 @@
 package log
 
-import (
-	"testing"
-)
+type TLog interface {
+	FailNow()
+	Log(args ...interface{})
+}
 
-func NewTestOutput(tb testing.TB, formatter LogFormatter) *testOutput {
+func NewTestOutput(tb TLog, formatter LogFormatter) *testOutput {
 	return &testOutput{tb: tb, formatter: formatter}
 }
 
 type testOutput struct {
 	formatter   LogFormatter
-	tb          testing.TB
+	tb          TLog
 	stopLogging bool
 }
 
