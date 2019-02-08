@@ -16,6 +16,8 @@ import (
 	"sync"
 )
 
+const SEND_QUEUE_MAX_MESSAGES = 1000
+
 type message struct {
 	payloads     [][]byte
 	traceContext *trace.Context
@@ -24,6 +26,7 @@ type message struct {
 type peer struct {
 	socket   chan message
 	listener chan adapter.TransportListener
+	logger   log.BasicLogger
 }
 
 type memoryTransport struct {
@@ -73,7 +76,11 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 }
 
 func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan message, 1000), listener: make(chan adapter.TransportListener)} // channel is buffered on purpose, otherwise the whole network is synced on transport
+	p := &peer{
+		socket:   make(chan message, SEND_QUEUE_MAX_MESSAGES), // channel is buffered on purpose, otherwise the whole network is synced on transport
+		listener: make(chan adapter.TransportListener),
+		logger:   logger,
+	}
 
 	supervised.GoForever(bgCtx, logger, func() {
 		// wait till we have a listener attached
@@ -96,7 +103,11 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 	tracingContext, _ := trace.FromContext(ctx)
 	select {
 	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
+		return
 	case <-ctx.Done():
+		return
+	default:
+		p.logger.Error("memory transport send buffer is full")
 		return
 	}
 }
