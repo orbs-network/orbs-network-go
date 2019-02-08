@@ -4,7 +4,7 @@ Orbs is a highly distributed system and as such prone to synchronization challen
 
 ## Reporting flakiness
 
-When encoutering a new case of suspected flakiness, please follow this steps:
+When encoutering a new case of suspected flakiness, please follow these steps:
 
 1. Make sure your branch is updated to the latest master.
 
