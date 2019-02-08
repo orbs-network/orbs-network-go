@@ -18,7 +18,7 @@ import (
 func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 	test.WithContext(func(parentContext context.Context) {
 		address := primitives.NodeAddress{0x01}
-		transport := NewTransport(parentContext, log.DefaultTestingLogger(t), makeFederation(address))
+		transport := NewTransport(parentContext, log.DefaultTestingLogger(t), makeNetwork(address))
 		listener := testkit.ListenTo(transport, address)
 
 		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted
@@ -41,7 +41,7 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
-		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeFederation(address))
+		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
 
 		// sending without a listener - nobody is receiving
 		transport.Send(ctx, &adapter.TransportData{
@@ -55,9 +55,9 @@ func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
 func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
-		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeFederation(address))
-		listener := testkit.ListenTo(transport, address)
+		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
 
+		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
 
 		for i := 0; i < 2; i++ {
@@ -73,9 +73,9 @@ func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
-		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeFederation(address))
-		listener := testkit.ListenTo(transport, address)
+		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
 
+		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
 
 		// log error "memory transport send buffer is full" is expected in this test
@@ -89,8 +89,10 @@ func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	})
 }
 
-func makeFederation(address primitives.NodeAddress) map[string]config.FederationNode {
+func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.FederationNode {
 	federationNodes := make(map[string]config.FederationNode)
-	federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(address)
+	for _, address := range addresses {
+		federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(address)
+	}
 	return federationNodes
 }
