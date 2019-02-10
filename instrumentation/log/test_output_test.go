@@ -15,8 +15,8 @@ func (t *fakeTLog) Error(args ...interface{}) {
 	t.Called(args...)
 }
 
-func (t *fakeTLog) FailNow() {
-	t.Called()
+func (t *fakeTLog) Fatal(args ...interface{}) {
+	t.Called(args...)
 }
 
 func (t *fakeTLog) Log(args ...interface{}) {
@@ -45,6 +45,7 @@ func TestOutputLogsUnAllowedErrorToTLogAsErrorAndStopsLogging(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
 	m.When("Error", "foo").Times(1)
+	m.When("Fatal", mock.Any).Times(1)
 	m.Never("Log", "bar")
 
 	o.Append("error", "foo")
