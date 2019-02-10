@@ -41,25 +41,14 @@ func TestTestOutputLogsToTLog(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTestOutputDoesNotLogToTLogAfterPanicWasLogged(t *testing.T) {
+func TestOutputLogsUnAllowedErrorToTLogAsErrorAndStopsLogging(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
 	m.When("Error", "foo").Times(1)
 	m.Never("Log", "bar")
 
-	o.Append("panic", "foo")
-	o.Append("info", "bar")
-
-	_, err := m.Verify()
-	require.NoError(t, err)
-}
-
-func TestOutputLogsErrorToTLogAsError(t *testing.T) {
-	m := &fakeTLog{}
-	o := NewTestOutput(m, nopFormatter{})
-	m.When("Error", "foo").Times(1)
-
 	o.Append("error", "foo")
+	o.Append("info", "bar")
 
 	_, err := m.Verify()
 	require.NoError(t, err)
