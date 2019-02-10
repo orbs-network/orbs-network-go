@@ -1,12 +1,21 @@
 package instrumentation
 
 import (
+	"bytes"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"runtime/debug"
 	"runtime/pprof"
 )
 
+func DebugPrintCurrentStack(logger log.BasicLogger) {
+	bytes := debug.Stack()
+	logWriter{logger}.Write(bytes)
+}
+
 func DebugPrintGoroutineStacks(logger log.BasicLogger) {
-	pprof.Lookup("goroutine").WriteTo(logWriter{logger}, 1)
+	var buffer bytes.Buffer
+	pprof.Lookup("goroutine").WriteTo(&buffer, 1)
+	logWriter{logger}.Write(buffer.Bytes())
 }
 
 type logWriter struct {

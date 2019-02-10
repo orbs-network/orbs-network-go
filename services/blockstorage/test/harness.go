@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
@@ -69,6 +70,7 @@ type harness struct {
 	txPool         *services.MockTransactionPool
 	config         config.BlockStorageConfig
 	logger         log.BasicLogger
+	logOutput      *log.TestOutput
 }
 
 func (d *harness) withSyncBroadcast(times int) *harness {
@@ -112,7 +114,7 @@ func (d *harness) commitBlock(ctx context.Context, blockPairContainer *protocol.
 func (d *harness) numOfWrittenBlocks() int {
 	numBlocks, err := d.storageAdapter.GetLastBlockHeight()
 	if err != nil {
-		d.logger.Panic("failed getting last block height", log.Error(err))
+		panic(fmt.Sprintf("failed getting last block height, err=%s", err.Error()))
 	}
 	return int(numBlocks)
 }
@@ -127,12 +129,12 @@ func (d *harness) getLastBlockHeight(ctx context.Context, t *testing.T) *service
 func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	txBlock, err := d.storageAdapter.GetTransactionsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		d.logger.Panic("failed getting tx block", log.Error(err))
+		panic(fmt.Sprintf("failed getting tx block, err=%s", err.Error()))
 	}
 
 	rxBlock, err := d.storageAdapter.GetResultsBlock(primitives.BlockHeight(height))
 	if err != nil {
-		d.logger.Panic("failed getting results block", log.Error(err))
+		panic(fmt.Sprintf("failed getting results block, err=%s", err.Error()))
 	}
 
 	return &protocol.BlockPairContainer{
@@ -206,12 +208,13 @@ func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig 
 }
 
 func newBlockStorageHarness(tb testing.TB) *harness {
-	logger := log.DefaultTestingLogger(tb)
+	logOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(logOutput)
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	cfg := createConfig(keyPair.NodeAddress())
 
 	registry := metric.NewRegistry()
-	d := &harness{config: cfg, logger: logger}
+	d := &harness{config: cfg, logger: logger, logOutput: logOutput}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = testkit.NewBlockPersistence(logger, nil, registry)
 
@@ -233,6 +236,11 @@ func newBlockStorageHarness(tb testing.TB) *harness {
 		}, nil
 	}).AtLeast(0)
 
+	return d
+}
+
+func (d *harness) allowingErrorsMatching(pattern string) *harness {
+	d.logOutput.AllowErrorsMatching(pattern)
 	return d
 }
 

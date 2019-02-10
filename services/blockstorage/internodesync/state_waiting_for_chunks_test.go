@@ -2,6 +2,7 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -12,7 +13,7 @@ import (
 
 func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness(t)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t))
 
 		h.expectLastCommittedBlockHeightQueryFromStorage(0)
 		h.expectSendingOfBlockSyncRequestToFail()
@@ -27,7 +28,7 @@ func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
 
 func TestStateWaitingForChunks_MovesToIdleOnTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness(t)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t))
 
 		h.expectLastCommittedBlockHeightQueryFromStorage(0)
 		h.expectSendingOfBlockSyncRequest()
@@ -44,7 +45,7 @@ func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *test
 	test.WithContext(func(ctx context.Context) {
 		manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 		blocksMessage := builders.BlockSyncResponseInput().Build().Message
-		h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(t, func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
 			return manualWaitForChunksTimer
 		}).withNodeAddress(blocksMessage.Sender.SenderNodeAddress())
 
@@ -70,7 +71,10 @@ func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *test
 
 func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness(t)
+	manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
+	h := newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
+		return manualWaitForChunksTimer
+	})
 
 	h.expectLastCommittedBlockHeightQueryFromStorage(10)
 	h.expectSendingOfBlockSyncRequest()
@@ -87,7 +91,7 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
 		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
-		h := newBlockSyncHarness(t).withNodeAddress(stateSourceAddress)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).withNodeAddress(stateSourceAddress)
 
 		h.expectLastCommittedBlockHeightQueryFromStorage(10)
 		h.expectSendingOfBlockSyncRequest()

@@ -72,7 +72,7 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.BasicLogger, publicAp
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
-		logger.Panic("failed to start http server", log.Error(err))
+		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
 	} else {
 		server.port = listener.Addr().(*net.TCPAddr).Port
 		server.httpServer = &http.Server{
@@ -114,6 +114,7 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
+	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(s.getBlockHandler)))
 	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetrics)))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 
@@ -222,6 +223,28 @@ func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *htt
 
 	s.logger.Info("http server received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionReceiptProof(r.Context(), &services.GetTransactionReceiptProofInput{ClientRequest: clientRequest})
+	if result != nil && result.ClientResponse != nil {
+		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
+	} else {
+		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
+	}
+}
+
+func (s *server) getBlockHandler(w http.ResponseWriter, r *http.Request) {
+	bytes, e := readInput(r)
+	if e != nil {
+		s.writeErrorResponseAndLog(w, e)
+		return
+	}
+
+	clientRequest := client.GetBlockRequestReader(bytes)
+	if e := validate(clientRequest); e != nil {
+		s.writeErrorResponseAndLog(w, e)
+		return
+	}
+
+	s.logger.Info("http server received get-block", log.Stringable("request", clientRequest))
+	result, err := s.publicApi.GetBlock(r.Context(), &services.GetBlockInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
 	} else {

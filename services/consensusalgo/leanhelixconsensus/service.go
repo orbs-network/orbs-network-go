@@ -105,6 +105,7 @@ func NewLeanHelixConsensusAlgo(
 		leanHelix:     nil,
 	}
 
+	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
 	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
 	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
@@ -168,7 +169,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode))
 		} else { // we should have a lhBlock proof
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			lhBlockProof = blockPair.TransactionsBlock.BlockProof.Raw()
+			lhBlockProof = ExtractBlockProof(blockPair)
 			lhBlock = ToLeanHelixBlock(blockPair)
 
 		}
@@ -177,6 +178,10 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	return nil, nil
+}
+
+func ExtractBlockProof(blockPair *protocol.BlockPairContainer) primitives.LeanHelixBlockProof {
+	return blockPair.TransactionsBlock.BlockProof.LeanHelix()
 }
 
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
@@ -194,17 +199,9 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
 
-	blockPair.TransactionsBlock.BlockProof = (&protocol.TransactionsBlockProofBuilder{
-		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		ResultsBlockHash: digest.CalcResultsBlockHash(blockPair.ResultsBlock),
-		LeanHelix:        blockProof,
-	}).Build()
+	blockPair.TransactionsBlock.BlockProof = CreateTransactionBlockProof(blockPair, blockProof)
 
-	blockPair.ResultsBlock.BlockProof = (&protocol.ResultsBlockProofBuilder{
-		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
-		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
-		LeanHelix:             blockProof,
-	}).Build()
+	blockPair.ResultsBlock.BlockProof = CreateResultsBlockProof(blockPair, blockProof)
 
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
@@ -213,6 +210,22 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 	now := time.Now()
 	s.metrics.timeSinceLastCommitMillis.RecordSince(s.lastCommitTime)
 	s.lastCommitTime = now
+}
+
+func CreateResultsBlockProof(blockPair *protocol.BlockPairContainer, blockProof []byte) *protocol.ResultsBlockProof {
+	return (&protocol.ResultsBlockProofBuilder{
+		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
+		LeanHelix:             blockProof,
+	}).Build()
+}
+
+func CreateTransactionBlockProof(blockPair *protocol.BlockPairContainer, blockProof []byte) *protocol.TransactionsBlockProof {
+	return (&protocol.TransactionsBlockProofBuilder{
+		Type:             protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		ResultsBlockHash: digest.CalcResultsBlockHash(blockPair.ResultsBlock),
+		LeanHelix:        blockProof,
+	}).Build()
 }
 
 func (s *service) onElection(m lhmetrics.ElectionMetrics) {

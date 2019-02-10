@@ -55,16 +55,6 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	}
 }
 
-func newBlockSyncConfigForTestsWithInfiniteTimeouts() *blockSyncConfigForTests {
-	return &blockSyncConfigForTests{
-		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:        10,
-		noCommit:         3 * time.Hour,
-		collectResponses: 3 * time.Hour,
-		collectChunks:    3 * time.Hour,
-	}
-}
-
 type blockSyncHarness struct {
 	factory       *stateFactory
 	config        *blockSyncConfigForTests
@@ -75,7 +65,7 @@ type blockSyncHarness struct {
 }
 
 func newBlockSyncHarnessWithTimers(
-	tb testing.TB,
+	logger log.BasicLogger,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
@@ -84,7 +74,6 @@ func newBlockSyncHarnessWithTimers(
 	cfg := newDefaultBlockSyncConfigForTests()
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
-	logger := log.DefaultTestingLogger(tb)
 	conduit := make(blockSyncConduit)
 
 	metricFactory := metric.NewRegistry()
@@ -99,20 +88,20 @@ func newBlockSyncHarnessWithTimers(
 	}
 }
 
-func newBlockSyncHarness(tb testing.TB) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(tb, nil, nil, nil)
+func newBlockSyncHarness(logger log.BasicLogger) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(logger, nil, nil, nil)
 }
 
-func newBlockSyncHarnessWithCollectResponsesTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(tb, createTimer, nil, nil)
+func newBlockSyncHarnessWithCollectResponsesTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(logger, createTimer, nil, nil)
 }
 
-func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(tb, nil, createTimer, nil)
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(logger, nil, createTimer, nil)
 }
 
-func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(tb testing.TB, createTimer func() *synchronization.Timer) *blockSyncHarness {
-	return newBlockSyncHarnessWithTimers(tb, nil, nil, createTimer)
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+	return newBlockSyncHarnessWithTimers(logger, nil, nil, createTimer)
 }
 
 func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
@@ -141,9 +130,9 @@ func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
 	require.NoError(t, err)
 }
 
-func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int) {
+func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int, message string) {
 	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
-	require.NoError(t, err)
+	require.NoError(t, err, message)
 }
 
 func (h *blockSyncHarness) verifyMocks(t *testing.T) {

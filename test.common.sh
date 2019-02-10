@@ -3,17 +3,15 @@
 mkdir -p _out
 
 check_exit_code_and_report () {
-    export EXIT_CODE=$?
-
     if [ $EXIT_CODE != 0 ]; then
-        grep -B 150 -A 15 -- "FAIL:" ./_out/test.out > ./_out/fail.out
-        cat ./_out/fail.out
+        grep -B 150 -A 15 -- "FAIL:" ./$OUT_DUR/test.out > ./$OUT_DUR/fail.out
+        cat ./$OUT_DUR/fail.out
 
-        grep -B 150 -A 150 -- "test timed out" ./_out/test.out > ./_out/timed.out
-        cat ./_out/timed.out
+        grep -B 150 -A 150 -- "test timed out" ./$OUT_DUR/test.out > ./$OUT_DUR/timed.out
+        cat ./$OUT_DUR/timed.out
 
-        if [ ! -s ./_out/fail.out ] && [ ! -s ./_out/timed.out ]; then
-            cat ./_out/test.out
+        if [ ! -s ./$OUT_DUR/fail.out ] && [ ! -s ./$OUT_DUR/timed.out ]; then
+            cat ./$OUT_DUR/test.out
         fi
 
     fi
@@ -37,8 +35,20 @@ go_test_junit_report () {
     go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
     go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
     EXIT_CODE=$?
+
     cp ${OUT_DIR}/results.xml ${REPORTS_DIR}/results.xml # so that we have it in _out for uploading as artifact, and separately in _reports since CircleCI doesn't like test summary dir to contain huge files
+
     if [ $EXIT_CODE != 0 ]; then
+        awk '/--- FAIL/,/=== RUN/' _out/standard/test.out > ./$OUT_DIR/fail.out
+        cat ./$OUT_DIR/fail.out
+
+        grep -B 150 -A 150 -- "test timed out" ./$OUT_DIR/test.out > ./$OUT_DIR/timed.out
+        cat ./$OUT_DIR/timed.out
+
+        if [ ! -s ./$OUT_DIR/fail.out ] && [ ! -s ./$OUT_DIR/timed.out ]; then
+            cat ./$OUT_DIR/test.out
+        fi
+
         exit $EXIT_CODE
     fi
 }

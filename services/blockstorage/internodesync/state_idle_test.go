@@ -2,6 +2,7 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,7 @@ import (
 func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualNoCommitTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
 			return manualNoCommitTimer
 		})
 
@@ -28,7 +29,7 @@ func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 
 func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness(t)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t))
 
 		state := h.factory.CreateIdleState()
 		nextState := state.processState(ctx)
@@ -39,7 +40,10 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 
 func TestStateIdle_TerminatesOnContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h := newBlockSyncHarness(t)
+	manualNoCommitTimer := synchronization.NewTimerWithManualTick()
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
+		return manualNoCommitTimer
+	})
 
 	cancel()
 	state := h.factory.CreateIdleState()

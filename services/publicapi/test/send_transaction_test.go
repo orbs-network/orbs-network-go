@@ -106,14 +106,14 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 		txHash := digest.CalcTxHash(txb.Build().Transaction())
 
 		require.Contains(t, err.Error(), fmt.Sprintf("waiting aborted due to context termination for key %s", txHash.String()))
-		require.WithinDuration(t, time.Now(), start, 2*txTimeout, "timeout duration exceeded")
+		require.WithinDuration(t, time.Now(), start, txTimeout+100*time.Millisecond, "timeout duration seems much longer than expected")
 		require.NotNil(t, result, "Send transaction returned nil instead of object")
 	})
 }
 
 func TestSendTransaction_ReturnImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		txTimeout := 100 * time.Second // won't actually wait please don't change
+		txTimeout := 100 * time.Hour // infinity - won't actually wait please don't change
 		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
 
 		txb := builders.Transaction().Builder()
@@ -130,7 +130,7 @@ func TestSendTransaction_ReturnImmediately(t *testing.T) {
 		harness.verifyMocks(t) // contract test
 
 		// value test
-		require.WithinDuration(t, time.Now(), start, 1*time.Millisecond, "timeout duration exceeded")
+		require.WithinDuration(t, time.Now(), start, 10*time.Second, "timeout duration exceeded")
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_PENDING, result.ClientResponse.TransactionStatus(), "should be pending")
 	})
 }

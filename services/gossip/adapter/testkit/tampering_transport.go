@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"sync"
@@ -85,9 +84,7 @@ func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportDa
 		return err
 	}
 
-	supervised.GoOnce(t.logger, func() {
-		t.sendToPeers(ctx, data)
-	})
+	t.sendToPeers(ctx, data)
 
 	return nil
 }
@@ -152,7 +149,7 @@ func (t *TamperingTransport) removeOngoingTamperer(tamperer OngoingTamper) {
 			return
 		}
 	}
-	t.logger.Panic("Tamperer not found in ongoing tamperer list")
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) {
@@ -170,7 +167,7 @@ func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 			return
 		}
 	}
-	t.logger.Panic("Tamperer not found in ongoing tamperer list")
+	panic("Tamperer not found in ongoing tamperer list")
 }
 
 func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {

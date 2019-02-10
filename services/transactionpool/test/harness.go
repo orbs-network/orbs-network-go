@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -30,6 +31,7 @@ type harness struct {
 	config                  config.TransactionPoolConfig
 	ignoreBlockHeightChecks bool
 	logger                  log.BasicLogger
+	testOutput              *log.TestOutput
 }
 
 var (
@@ -160,7 +162,7 @@ func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHe
 func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if !h.ignoreBlockHeightChecks && input.CurrentBlockHeight != h.lastBlockHeight+1 {
-			h.logger.Panic("invalid block height, current is not next of last committed", log.BlockHeight(input.CurrentBlockHeight), log.Uint64("last-committed", uint64(h.lastBlockHeight)))
+			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
 		}
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
@@ -220,42 +222,60 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 	})
 }
 
-func newHarness(ctx context.Context, tb testing.TB) *harness {
-	return newHarnessWithSizeLimit(ctx, tb, 20*1024*1024)
+func (h *harness) start(ctx context.Context) *harness {
+	service := transactionpool.NewTransactionPool(ctx, h.gossip, h.vm, nil, h.config, h.logger, metric.NewRegistry())
+	service.RegisterTransactionResultsHandler(h.trh)
+	h.txpool = service
+	h.fastForwardTo(ctx, 1)
+	return h
 }
 
-func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint32) *harness {
+func (h *harness) allowingErrorsMatching(pattern string) *harness {
+	h.testOutput.AllowErrorsMatching(pattern)
+	return h
+}
+
+const DEFAULT_CONFIG_SIZE_LIMIT = 20 * 1024 * 1024
+const DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS = 100
+
+func newHarness(tb testing.TB) *harness {
+	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+}
+
+func newHarnessWithSizeLimit(tb testing.TB, sizeLimit uint32) *harness {
+	return newHarnessWithConfig(tb, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+}
+
+func newHarnessWithInfiniteTimeBetweenEmptyBlocks(tb testing.TB) *harness {
+	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
+}
+
+func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
-	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair)
-	metricFactory := metric.NewRegistry()
-
-	logger := log.DefaultTestingLogger(tb)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, logger, metricFactory)
+	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair, timeBetweenEmptyBlocks)
+	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(testOutput)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
-	service.RegisterTransactionResultsHandler(transactionResultHandler)
 
 	h := &harness{
-		txpool:             service,
 		gossip:             gossip,
 		vm:                 virtualMachine,
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		config:             cfg,
 		logger:             logger,
+		testOutput:         testOutput,
 	}
-
-	h.fastForwardTo(ctx, 1)
 
 	h.passAllPreOrderChecks()
 
 	return h
 }
-
 func asReceipts(transactions transactionpool.Transactions) []*protocol.TransactionReceipt {
 	var receipts []*protocol.TransactionReceipt
 	for _, tx := range transactions {

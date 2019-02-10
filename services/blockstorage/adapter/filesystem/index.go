@@ -33,7 +33,7 @@ func (i *blockHeightIndex) fetchTopOffset() int64 {
 
 	offset, ok := i.heightOffset[i.topBlockHeight+1]
 	if !ok {
-		i.logger.Panic("index missing offset for block height", log.BlockHeight(i.topBlockHeight))
+		panic(fmt.Sprintf("index missing offset for block height %d", i.topBlockHeight))
 	}
 	return offset
 }
@@ -44,7 +44,7 @@ func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) int64
 
 	offset, ok := i.heightOffset[height]
 	if !ok {
-		i.logger.Panic("index missing offset for block height", log.BlockHeight(i.topBlockHeight))
+		panic(fmt.Sprintf("index missing offset for block height %d", height))
 	}
 	return offset
 }
