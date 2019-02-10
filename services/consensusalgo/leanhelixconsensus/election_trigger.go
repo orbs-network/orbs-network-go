@@ -6,8 +6,6 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"math"
 	"time"
 )
@@ -19,11 +17,10 @@ type exponentialBackoffElectionTrigger struct {
 	minTimeout      time.Duration
 	view            primitives.View
 	blockHeight     primitives.BlockHeight
-	firstTime       bool
 	electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))
 	onElectionCB    func(m lhmetrics.ElectionMetrics)
 	logger          log.BasicLogger
-	timer           *synchronization.Timer
+	triggerTimer    *time.Timer
 }
 
 func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout time.Duration, onElectionCB func(m lhmetrics.ElectionMetrics)) lh.ElectionTrigger {
@@ -31,7 +28,6 @@ func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout tim
 	return &exponentialBackoffElectionTrigger{
 		electionChannel: make(chan func(ctx context.Context)),
 		minTimeout:      minTimeout,
-		firstTime:       true,
 		onElectionCB:    onElectionCB,
 		logger:          logger,
 	}
@@ -39,28 +35,34 @@ func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout tim
 
 func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))) {
 	e.logger.Info("ElectionTrigger registration start")
-	e.electionHandler = electionHandler
-	if e.firstTime || e.view != view || e.blockHeight != blockHeight {
+	if e.electionHandler == nil || e.view != view || e.blockHeight != blockHeight {
 		timeout := e.CalcTimeout(view)
-		e.firstTime = false
 		e.view = view
 		e.blockHeight = blockHeight
-		e.restartTimer(ctx, e.logger, e.onTimeout, timeout)
+		e.safeTimerStop()
+		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
 		e.logger.Info("ElectionTrigger restarted timer for height and view",
 			log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
 			log.Uint64("lh-election-view", uint64(e.view)),
 			log.Stringable("lh-election-timeout", timeout))
 
 	}
+	e.electionHandler = electionHandler
 }
 
 func (e *exponentialBackoffElectionTrigger) ElectionChannel() chan func(ctx context.Context) {
 	return e.electionChannel
 }
 
-func (e *exponentialBackoffElectionTrigger) tryStop() {
-	if e.timer != nil {
-		e.timer.Stop()
+func (e *exponentialBackoffElectionTrigger) safeTimerStop() {
+	if e.triggerTimer != nil {
+		active := e.triggerTimer.Stop()
+		if !active {
+			select {
+			case <-e.triggerTimer.C:
+			default:
+			}
+		}
 	}
 }
 
@@ -70,30 +72,9 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 	}
 }
 
-func (e *exponentialBackoffElectionTrigger) onTimeout(ctx context.Context) {
+func (e *exponentialBackoffElectionTrigger) sendTrigger() {
 	e.logger.Info("ElectionTrigger triggered timeout")
-	select {
-	case <-ctx.Done():
-		return
-	case e.electionChannel <- e.trigger:
-	}
-}
-
-func (e *exponentialBackoffElectionTrigger) restartTimer(ctx context.Context, logger log.BasicLogger, cb func(ctx context.Context), timeout time.Duration) {
-	e.tryStop()
-	e.timer = synchronization.NewTimer(timeout)
-
-	supervised.GoOnce(logger, func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-e.timer.C:
-				cb(ctx)
-				return
-			}
-		}
-	})
+	e.electionChannel <- e.trigger
 }
 
 func (e *exponentialBackoffElectionTrigger) CalcTimeout(view primitives.View) time.Duration {
