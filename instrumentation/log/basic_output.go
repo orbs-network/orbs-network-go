@@ -3,7 +3,6 @@ package log
 import (
 	"fmt"
 	"io"
-	"testing"
 	"time"
 )
 
@@ -23,13 +22,4 @@ func (out *basicOutput) Append(level string, message string, fields ...*Field) {
 
 func NewFormattingOutput(writer io.Writer, formatter LogFormatter) Output {
 	return &basicOutput{formatter, writer}
-}
-
-func NewTestOutput(tb testing.TB, formatter LogFormatter) *testOutput {
-	return &testOutput{tb: tb, formatter: formatter}
-}
-
-type testOutput struct {
-	formatter LogFormatter
-	tb        testing.TB
 }

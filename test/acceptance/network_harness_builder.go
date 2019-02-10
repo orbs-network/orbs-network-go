@@ -196,16 +196,21 @@ func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence)
 }
 
 func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
-	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
+
+	testOutput := log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
+	for _, pattern := range b.allowedErrors {
+		testOutput.AllowErrorsMatching(pattern)
+	}
+
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
-		WithOutput(b.makeFormattingOutput(), errorRecorder).
+		WithOutput(testOutput).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
-	return logger, errorRecorder
+	return logger, testOutput
 }
 
 func (b *networkHarnessBuilder) WithNumRunningNodes(numNodes int) *networkHarnessBuilder {
@@ -286,10 +291,6 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	}
 
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
-}
-
-func (b *networkHarnessBuilder) makeFormattingOutput() log.Output {
-	return log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {
