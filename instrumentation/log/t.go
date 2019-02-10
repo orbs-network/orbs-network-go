@@ -17,8 +17,6 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 
 	if level == "error" && !o.allowed(message, fields) {
 		o.recordError(logLine)
-	} else if level == "panic" {
-		o.recordError(logLine)
 		o.stopLogging = true
 	} else {
 		o.tb.Log(logLine)

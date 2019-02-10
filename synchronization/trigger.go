@@ -22,14 +22,14 @@ type periodicalTrigger struct {
 	d       time.Duration
 	f       func()
 	s       func()
-	logger  supervised.PanicErrorer
+	logger  supervised.Errorer
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 	metrics *Telemetry
 	wgSync  sync.WaitGroup
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.PanicErrorer, trigger func(), onStop func()) Trigger {
+func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.Errorer, trigger func(), onStop func()) Trigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &periodicalTrigger{
 		ticker:  nil,
