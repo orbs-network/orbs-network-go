@@ -73,7 +73,7 @@ func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
-		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
+		transport := NewTransport(ctx, log.DefaultTestingLoggerAllowingErrors(t, "memory transport send buffer is full"), makeNetwork(address))
 
 		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
