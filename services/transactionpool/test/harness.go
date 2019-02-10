@@ -31,6 +31,7 @@ type harness struct {
 	config                  config.TransactionPoolConfig
 	ignoreBlockHeightChecks bool
 	logger                  log.BasicLogger
+	testOutput              *log.TestOutput
 }
 
 var (
@@ -221,53 +222,60 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 	})
 }
 
+func (h *harness) start(ctx context.Context) *harness {
+	service := transactionpool.NewTransactionPool(ctx, h.gossip, h.vm, nil, h.config, h.logger, metric.NewRegistry())
+	service.RegisterTransactionResultsHandler(h.trh)
+	h.txpool = service
+	h.fastForwardTo(ctx, 1)
+	return h
+}
+
+func (h *harness) allowingErrorsMatching(pattern string) *harness {
+	h.testOutput.AllowErrorsMatching(pattern)
+	return h
+}
+
 const DEFAULT_CONFIG_SIZE_LIMIT = 20 * 1024 * 1024
 const DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS = 100
 
-func newHarness(ctx context.Context, tb testing.TB) *harness {
-	return newHarnessWithConfig(ctx, tb, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+func newHarness(tb testing.TB) *harness {
+	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithSizeLimit(ctx context.Context, tb testing.TB, sizeLimit uint32) *harness {
-	return newHarnessWithConfig(ctx, tb, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+func newHarnessWithSizeLimit(tb testing.TB, sizeLimit uint32) *harness {
+	return newHarnessWithConfig(tb, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithInfiniteTimeBetweenEmptyBlocks(ctx context.Context, tb testing.TB) *harness {
-	return newHarnessWithConfig(ctx, tb, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
+func newHarnessWithInfiniteTimeBetweenEmptyBlocks(tb testing.TB) *harness {
+	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
 }
 
-func newHarnessWithConfig(ctx context.Context, tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
+func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair, timeBetweenEmptyBlocks)
-	metricFactory := metric.NewRegistry()
-
-	logger := log.DefaultTestingLogger(tb)
-	service := transactionpool.NewTransactionPool(ctx, gossip, virtualMachine, nil, cfg, logger, metricFactory)
+	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(testOutput)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
-	service.RegisterTransactionResultsHandler(transactionResultHandler)
 
 	h := &harness{
-		txpool:             service,
 		gossip:             gossip,
 		vm:                 virtualMachine,
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		config:             cfg,
 		logger:             logger,
+		testOutput:         testOutput,
 	}
-
-	h.fastForwardTo(ctx, 1)
 
 	h.passAllPreOrderChecks()
 
 	return h
 }
-
 func asReceipts(transactions transactionpool.Transactions) []*protocol.TransactionReceipt {
 	var receipts []*protocol.TransactionReceipt
 	for _, tx := range transactions {

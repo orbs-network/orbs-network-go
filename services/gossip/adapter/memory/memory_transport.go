@@ -16,6 +16,8 @@ import (
 	"sync"
 )
 
+const SEND_QUEUE_MAX_MESSAGES = 1000
+
 type message struct {
 	payloads     [][]byte
 	traceContext *trace.Context
@@ -24,6 +26,7 @@ type message struct {
 type peer struct {
 	socket   chan message
 	listener chan adapter.TransportListener
+	logger   log.BasicLogger
 }
 
 type memoryTransport struct {
@@ -38,7 +41,7 @@ func NewTransport(ctx context.Context, logger log.BasicLogger, federation map[st
 	defer transport.Unlock()
 	for _, node := range federation {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.String("peer-listener", nodeAddress)))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.String("peer-listener", nodeAddress)), len(federation))
 	}
 
 	return transport
@@ -72,15 +75,24 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return nil
 }
 
-func newPeer(bgCtx context.Context, logger log.BasicLogger) *peer {
-	p := &peer{socket: make(chan message, 1000), listener: make(chan adapter.TransportListener)} // channel is buffered on purpose, otherwise the whole network is synced on transport
+func newPeer(ctx context.Context, logger log.BasicLogger, totalPeers int) *peer {
+	p := &peer{
+		// channel is buffered on purpose, otherwise the whole network is synced on transport
+		// we also multiply by number of peers because we have one logical "socket" for combined traffic from all peers together
+		// we decided not to separate sockets between every 2 peers (like tcp transport) because:
+		//  1) nodes in production tend to broadcast messages, so traffic is usually combined anyways
+		//  2) the implementation complexity to mimic tcp transport isn't justified
+		socket:   make(chan message, SEND_QUEUE_MAX_MESSAGES*totalPeers),
+		listener: make(chan adapter.TransportListener),
+		logger:   logger,
+	}
 
-	supervised.GoForever(bgCtx, logger, func() {
+	supervised.GoForever(ctx, logger, func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
-			p.acceptUsing(bgCtx, l)
-		case <-bgCtx.Done():
+			p.acceptUsing(ctx, l)
+		case <-ctx.Done():
 			return
 		}
 	})
@@ -96,7 +108,11 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 	tracingContext, _ := trace.FromContext(ctx)
 	select {
 	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
+		return
 	case <-ctx.Done():
+		return
+	default:
+		p.logger.Error("memory transport send buffer is full")
 		return
 	}
 }
