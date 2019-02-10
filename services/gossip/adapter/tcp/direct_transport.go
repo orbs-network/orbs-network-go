@@ -16,6 +16,8 @@ import (
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
 const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+const SEND_QUEUE_MAX_MESSAGES = 1000
+const SEND_QUEUE_MAX_BYTES = 10 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
@@ -24,13 +26,14 @@ type metrics struct {
 	incomingConnectionTransportErrors *metric.Gauge
 	outgoingConnectionFailedSend      *metric.Gauge
 	outgoingConnectionFailedKeepalive *metric.Gauge
+	outgoingConnectionSendQueueFull   *metric.Gauge
 }
 
 type directTransport struct {
 	config config.GossipTransportConfig
 	logger log.BasicLogger
 
-	outgoingPeerQueues map[string]chan *adapter.TransportData // does not require mutex to read
+	outgoingPeerQueues map[string]*transportQueue
 
 	mutex                       *sync.RWMutex
 	transportListenerUnderMutex adapter.TransportListener
@@ -46,6 +49,7 @@ func getMetrics(registry metric.Registry) *metrics {
 		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors"),
 		outgoingConnectionFailedSend:      registry.NewGauge("Gossip.OutgoingConnection.FailedSendErrors"),
 		outgoingConnectionFailedKeepalive: registry.NewGauge("Gossip.OutgoingConnection.FailedKeepaliveErrors"),
+		outgoingConnectionSendQueueFull:   registry.NewGauge("Gossip.OutgoingConnection.QueueFull"),
 	}
 }
 
@@ -54,7 +58,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		config: config,
 		logger: logger.WithTags(LogTag),
 
-		outgoingPeerQueues: make(map[string]chan *adapter.TransportData),
+		outgoingPeerQueues: make(map[string]*transportQueue),
 
 		mutex:   &sync.RWMutex{},
 		metrics: getMetrics(registry),
@@ -63,7 +67,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	// client channels (not under mutex, before all goroutines)
 	for peerNodeAddress := range t.config.GossipPeers(0) {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-			t.outgoingPeerQueues[peerNodeAddress] = make(chan *adapter.TransportData)
+			t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES)
 		}
 	}
 
@@ -98,13 +102,13 @@ func (t *directTransport) Send(ctx context.Context, data *adapter.TransportData)
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.outgoingPeerQueues {
-			peerQueue <- data
+			t.addDataToOutgoingPeerQueue(data, peerQueue)
 		}
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientNodeAddresses {
 			if peerQueue, found := t.outgoingPeerQueues[recipientPublicKey.KeyForMap()]; found {
-				peerQueue <- data
+				t.addDataToOutgoingPeerQueue(data, peerQueue)
 			} else {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
 			}

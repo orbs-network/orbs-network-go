@@ -19,12 +19,13 @@ import (
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
-	t.Run("DirectTransport", broadcastTest(aDirectTransport))
-	t.Run("ChannelTransport", broadcastTest(aChannelTransport))
+	t.Run("TCP_DirectTransport", broadcastTest(aDirectTransport))
+	t.Run("MemoryTransport", broadcastTest(aMemoryTransport))
 }
 
 func TestContract_SendToList(t *testing.T) {
-	t.Skipf("implement") // TODO(v1)
+	t.Run("TCP_DirectTransport", sendToListTest(aDirectTransport))
+	t.Run("MemoryTransport", sendToListTest(aMemoryTransport))
 }
 
 func TestContract_SendToAllButList(t *testing.T) {
@@ -53,13 +54,36 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 	}
 }
 
+func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
+	return func(t *testing.T) {
+		test.WithContext(func(ctx context.Context) {
+			c := makeContext(ctx, t)
+
+			data := &adapter.TransportData{
+				SenderNodeAddress:      c.nodeAddresses[3],
+				RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+				RecipientNodeAddresses: []primitives.NodeAddress{c.nodeAddresses[1], c.nodeAddresses[2]},
+				Payloads:               [][]byte{{0x81, 0x82, 0x83}},
+			}
+
+			c.listeners[0].ExpectNotReceive()
+			c.listeners[1].ExpectReceive(data.Payloads)
+			c.listeners[2].ExpectReceive(data.Payloads)
+			c.listeners[3].ExpectNotReceive()
+
+			require.NoError(t, c.transports[3].Send(ctx, data))
+			c.verify(t)
+		})
+	}
+}
+
 type transportContractContext struct {
 	nodeAddresses []primitives.NodeAddress
 	transports    []adapter.Transport
 	listeners     []*testkit.MockTransportListener
 }
 
-func aChannelTransport(ctx context.Context, tb testing.TB) *transportContractContext {
+func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
