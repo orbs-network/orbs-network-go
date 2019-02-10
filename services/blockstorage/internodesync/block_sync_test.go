@@ -2,6 +2,7 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
 		return synchronization.NewTimerWithManualTick()
 	})
 
@@ -28,7 +29,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 	manualIdleStateTimeoutTimers := make(chan *synchronization.Timer)
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(t, func() *synchronization.Timer {
+	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
 		currentTimer := synchronization.NewTimerWithManualTick()
 		manualIdleStateTimeoutTimers <- currentTimer
 		return currentTimer

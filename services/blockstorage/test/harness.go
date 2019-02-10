@@ -70,6 +70,7 @@ type harness struct {
 	txPool         *services.MockTransactionPool
 	config         config.BlockStorageConfig
 	logger         log.BasicLogger
+	logOutput      *log.TestOutput
 }
 
 func (d *harness) withSyncBroadcast(times int) *harness {
@@ -207,12 +208,13 @@ func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig 
 }
 
 func newBlockStorageHarness(tb testing.TB) *harness {
-	logger := log.DefaultTestingLogger(tb)
+	logOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(logOutput)
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	cfg := createConfig(keyPair.NodeAddress())
 
 	registry := metric.NewRegistry()
-	d := &harness{config: cfg, logger: logger}
+	d := &harness{config: cfg, logger: logger, logOutput: logOutput}
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = testkit.NewBlockPersistence(logger, nil, registry)
 
@@ -234,6 +236,11 @@ func newBlockStorageHarness(tb testing.TB) *harness {
 		}, nil
 	}).AtLeast(0)
 
+	return d
+}
+
+func (d *harness) allowingErrorsMatching(pattern string) *harness {
+	d.logOutput.AllowErrorsMatching(pattern)
 	return d
 }
 

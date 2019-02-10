@@ -8,11 +8,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx, t)
+		h := newHarness(t).start(ctx)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 			CurrentBlockHeight:      3,
@@ -26,7 +27,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx, t)
+		h := newHarness(t).start(ctx)
 
 		h.assumeBlockStorageAtHeight(1)
 		h.ignoringTransactionResults()
@@ -48,7 +49,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(ctx, t)
+		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t).start(ctx)
 
 		ch := make(chan int)
 
@@ -58,12 +59,10 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 			ch <- len(out.SignedTransactions)
 		}()
 
+		time.Sleep(50 * time.Millisecond) // make sure we wait, also deals with https://github.com/orbs-network/orbs-network-go/issues/852
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
-		select {
-		case numOfTxs := <-ch: // required so that if the require.NoError in the goroutine fails, we don't wait on reading from a channel that will never be written to
-			require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
-		case <-ctx.Done():
-		}
+		numOfTxs := <-ch
+		require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
 	})
 }
