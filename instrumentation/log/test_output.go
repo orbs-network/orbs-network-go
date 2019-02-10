@@ -46,9 +46,9 @@ func (o *TestOutput) HasErrors() bool {
 }
 
 func (o *TestOutput) recordError(line string) {
+	o.hasErrors = true
 	o.tb.Error(line)
 	o.tb.Fatal("Test failed due to unexpected errors being logged. If the error above is expected, please add it to the list of allowed errors by invoking TestOutput.AllowErrorsMatching")
-	o.hasErrors = true
 }
 
 // func (o *TestOutput) Append(level string, message string, fields ...*Field) moved to file t.go

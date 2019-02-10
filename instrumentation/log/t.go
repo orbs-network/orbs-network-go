@@ -16,8 +16,8 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 	logLine := o.formatter.FormatRow(time.Now(), level, message, fields...)
 
 	if level == "error" && !o.allowed(message, fields) {
-		o.recordError(logLine)
 		o.stopLogging = true
+		o.recordError(logLine)
 	} else {
 		o.tb.Log(logLine)
 	}
