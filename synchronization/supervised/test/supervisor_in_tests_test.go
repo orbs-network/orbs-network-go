@@ -2,6 +2,8 @@ package test
 
 import (
 	"os/exec"
+	"path"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -21,7 +23,7 @@ func TestGoOnce_FailsTestOnPanicAndPrintsLogs(t *testing.T) {
 		MustNotShow,
 	}
 	out, _ := exec.Command(
-		"go",
+		path.Join(runtime.GOROOT(), "bin", "go"),
 		"test",
 		"github.com/orbs-network/orbs-network-go/synchronization/supervised/_supervised_in_test/",
 		"-run",
@@ -51,7 +53,7 @@ func TestTRun_FailsTestOnPanicAndPrintsLogs(t *testing.T) {
 		AfterCallPanic,
 	}
 	out, _ := exec.Command(
-		"go",
+		path.Join(runtime.GOROOT(), "bin", "go"),
 		"test",
 		"github.com/orbs-network/orbs-network-go/synchronization/supervised/_supervised_in_test/",
 		"-run",
