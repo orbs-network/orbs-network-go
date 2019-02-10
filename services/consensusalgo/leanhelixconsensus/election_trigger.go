@@ -21,8 +21,8 @@ type exponentialBackoffElectionTrigger struct {
 	firstTime       bool
 	electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))
 	onElectionCB    func(m lhmetrics.ElectionMetrics)
-	clearTimer      chan bool
 	logger          log.BasicLogger
+	timer           *time.Timer
 }
 
 func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout time.Duration, onElectionCB func(m lhmetrics.ElectionMetrics)) lh.ElectionTrigger {
@@ -37,13 +37,15 @@ func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout tim
 }
 
 func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))) {
+	e.logger.Info("RegisterOnElection() start")
 	e.electionHandler = electionHandler
 	if e.firstTime || e.view != view || e.blockHeight != blockHeight {
 		e.firstTime = false
 		e.view = view
+		e.view = view
 		e.blockHeight = blockHeight
-		e.stop(ctx)
-		e.clearTimer = setTimeout(ctx, e.logger, e.onTimeout, e.CalcTimeout(view))
+		e.logger.Info("stop() successful, clearTimer is not nil")
+		e.restartTimer(ctx, e.logger, e.onTimeout, e.CalcTimeout(view))
 	}
 }
 
@@ -51,14 +53,9 @@ func (e *exponentialBackoffElectionTrigger) ElectionChannel() chan func(ctx cont
 	return e.electionChannel
 }
 
-func (e *exponentialBackoffElectionTrigger) stop(ctx context.Context) {
-	if e.clearTimer != nil {
-		select {
-		case <-ctx.Done():
-			return
-		case e.clearTimer <- true:
-			e.clearTimer = nil
-		}
+func (e *exponentialBackoffElectionTrigger) tryStop() {
+	if e.timer != nil {
+		e.timer.Stop()
 	}
 }
 
@@ -69,7 +66,8 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 }
 
 func (e *exponentialBackoffElectionTrigger) onTimeout(ctx context.Context) {
-	e.clearTimer = nil
+	//e.clearTimer = nil
+	e.logger.Info("onTimeout() start, clearTimer is nil")
 	select {
 	case <-ctx.Done():
 		return
@@ -77,27 +75,22 @@ func (e *exponentialBackoffElectionTrigger) onTimeout(ctx context.Context) {
 	}
 }
 
-func setTimeout(ctx context.Context, logger log.BasicLogger, cb func(ctx context.Context), timeout time.Duration) chan bool {
-	timer := time.NewTimer(timeout)
-	clear := make(chan bool)
+func (e *exponentialBackoffElectionTrigger) restartTimer(ctx context.Context, logger log.BasicLogger, cb func(ctx context.Context), timeout time.Duration) {
 
-	supervised.GoForever(ctx, logger, func() {
+	e.tryStop()
+	e.timer = time.NewTimer(timeout)
+
+	supervised.GoOnce(logger, func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-timer.C:
+			case <-e.timer.C:
 				cb(ctx)
 				return
-			case <-clear:
-				timer.Stop()
-				return
 			}
-
 		}
 	})
-
-	return clear
 }
 
 func (e *exponentialBackoffElectionTrigger) CalcTimeout(view primitives.View) time.Duration {
