@@ -122,7 +122,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Millisecond)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 1000*time.Millisecond) // keep this high to reduce chance of test failure due to slow test machine
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10000*time.Millisecond) // keep this high to reduce chance of test failure due to slow test machine
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
