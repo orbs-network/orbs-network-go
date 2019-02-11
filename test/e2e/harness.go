@@ -20,6 +20,7 @@ import (
 )
 
 type E2EConfig struct {
+	virtualChainId   uint32
 	bootstrap        bool
 	baseUrl          string
 	stressTest       StressTestConfig
@@ -33,7 +34,6 @@ type StressTestConfig struct {
 	targetTPS             float64
 }
 
-const VITRUAL_CHAIN_ID = 42
 const START_HTTP_PORT = 8090
 
 type harness struct {
@@ -41,8 +41,10 @@ type harness struct {
 }
 
 func newHarness() *harness {
+	config := getConfig()
+
 	return &harness{
-		client: orbsClient.NewClient(getConfig().baseUrl, VITRUAL_CHAIN_ID, codec.NETWORK_TYPE_TEST_NET),
+		client: orbsClient.NewClient(config.baseUrl, config.virtualChainId, codec.NETWORK_TYPE_TEST_NET),
 	}
 }
 
@@ -143,6 +145,12 @@ func printTestTime(t *testing.T, msg string, last *time.Time) {
 }
 
 func getConfig() E2EConfig {
+	virtualChainId := uint32(42)
+
+	if vcId, err := strconv.ParseUint(os.Getenv("VCHAIN"), 10, 0); err == nil {
+		virtualChainId = uint32(vcId)
+	}
+
 	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 
@@ -166,6 +174,7 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
+		virtualChainId,
 		shouldBootstrap,
 		baseUrl,
 		StressTestConfig{
