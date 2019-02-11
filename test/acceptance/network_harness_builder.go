@@ -29,7 +29,7 @@ import (
 )
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+var TEST_TIMEOUT_HARD_LIMIT = 90 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 
 type networkHarnessBuilder struct {
@@ -50,7 +50,8 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
-		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
+		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX}
+		//algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	} else {
 		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	}
@@ -158,18 +159,20 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 			})
 		}
 
-		switch runner := b.tb.(type) {
-		case *testing.T:
-			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				restartableTest()
-			})
-		case *testing.B:
-			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				restartableTest()
-			})
-		default:
-			panic("unexpected TB implementation")
-		}
+		restartableTest()
+
+		//switch runner := b.tb.(type) {
+		//case *testing.T:
+		//	runner.Run(consensusAlgo.String(), func(t *testing.T) {
+		//		restartableTest()
+		//	})
+		//case *testing.B:
+		//	runner.Run(consensusAlgo.String(), func(t *testing.B) {
+		//		restartableTest()
+		//	})
+		//default:
+		//	panic("unexpected TB implementation")
+		//}
 	}
 }
 
