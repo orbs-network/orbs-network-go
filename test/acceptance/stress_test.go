@@ -2,15 +2,9 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	"github.com/orbs-network/orbs-network-go/services/publicapi"
-	"github.com/orbs-network/orbs-network-go/services/statestorage"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
@@ -22,18 +16,6 @@ import (
 func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	newHarness(t).
-		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
-			log.ExcludeField(internodesync.LogTag),
-			log.ExcludeField(virtualmachine.LogTag),
-			log.ExcludeField(native.LogTag),
-			log.ExcludeField(statestorage.LogTag),
-			log.ExcludeField(publicapi.LogTag),
-			log.ExcludeEntryPoint("tx-pool-sync"),
-			log.ExcludeEntryPoint("state-storage-sync"),
-			log.ExcludeEntryPoint("TransactionForwarder"),
-			log.IgnoreMessagesMatching("Metric recorded"),
-			log.IgnoreMessagesMatching("advertising transaction completion"),
-		).
 		Start(func(ctx context.Context, network NetworkHarness) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
