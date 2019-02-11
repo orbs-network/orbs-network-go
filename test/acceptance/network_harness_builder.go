@@ -59,7 +59,10 @@ func newHarness(tb testing.TB) *networkHarnessBuilder {
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		AllowingErrors(
+			"ValidateBlockProposal failed.*",                         // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+			"all consensus [01] algos refused to validate the block", // it is allowed for n-1 nodes to close a block, and the last node may receive this block via block sync before its consensus algos had time to register (super rare scheduling event)
+		)
 
 	return harness
 }
@@ -206,7 +209,6 @@ func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
 		WithOutput(testOutput).
-		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
