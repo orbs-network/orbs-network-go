@@ -84,7 +84,7 @@ The key for which the proof was generated will be called `requested_key`.
 A Path in the tree is a list of inter-connected nodes starting at a root node and extending down towards a leaf node. Each Path in the tree has an associated _path-prefix_ which
 is the concatenation of each node's `prefix` field, together with a branch bit leading to the next node on the Path (`0` for `left` and `1` for `right`) 
 
-######Inclusion Proof
+###### Inclusion Proof
 If `requested_key` is a valid entry in the key/value set represented by the merkle tree indicated by the requested root, there will be (exactly) one Path extending from the root node
 indicated by the proof requester, and ending with a leaf node having a non-empty value. The associated _path-prefix_ will be identical to `requested_key`, and the generated proof
 is called an _inclusion proof_. 
@@ -92,7 +92,7 @@ is called an _inclusion proof_.
 The proof will enclose information allowing the proof validator to compute the merkle root based on a path (list of nodes) with a _prefix-path_
 fully overlapping with `requested_key`, enforcing the use of a single pre-image value used for constructing the leaf node's hash.
 
-######Exclusion Proof
+###### Exclusion Proof
 If `requested_key` is not a valid entry in the key/value set represented by the merkle tree indicated by the requested root, there will be (exactly) one Path extending from the
 root node indicated by the proof requester, where at each non-leaf node the branch followed is the bit indicated by `requested_key`. The path terminates on the first node whose
 `prefix`es contribution to the _path-prefix_ contradicts `requested_key`. This results in the Path having the longest overlapping substring in both `requested_key` and _path-prefix_,
@@ -198,7 +198,7 @@ We validate a proof in the presence of:
 
 * Proof validation:
   * `current_hash := SHA256(purported-value)`
-  * `key_bit = proof length - 1
+  * `key_bit = proof length - 1`
   * For each node hash `N[i]` in the proof starting from the last
       * `current_hash := hash(current_hash, N[i])` the hash function sorts the parameters internally as described above so the order is irrelevant
   * assert `current_hash == merkle-hash`
