@@ -33,7 +33,6 @@ var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity
 var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 
 type networkHarnessBuilder struct {
-	tb                       testing.TB
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
@@ -45,8 +44,8 @@ type networkHarnessBuilder struct {
 	requiredQuorumPercentage uint32
 }
 
-func newHarness(tb testing.TB) *networkHarnessBuilder {
-	n := &networkHarnessBuilder{tb: tb, maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+func newHarness() *networkHarnessBuilder {
+	n := &networkHarnessBuilder{maxTxPerBlock: 30, requiredQuorumPercentage: 100}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -101,30 +100,30 @@ func (b *networkHarnessBuilder) AllowingErrors(allowedErrors ...string) *network
 	return b
 }
 
-func (b *networkHarnessBuilder) Start(f func(ctx context.Context, network NetworkHarness)) {
-	b.StartWithRestart(func(ctx context.Context, network NetworkHarness, _ func() NetworkHarness) {
-		f(ctx, network)
+func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx context.Context, network NetworkHarness)) {
+	b.StartWithRestart(tb, func(tb testing.TB, ctx context.Context, network NetworkHarness, _ func() NetworkHarness) {
+		f(tb, ctx, network)
 	})
 }
 
-func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) {
+func (b *networkHarnessBuilder) StartWithRestart(tb testing.TB, f func(tb testing.TB, ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
 
 	for _, consensusAlgo := range b.consensusAlgos {
 
-		restartableTest := func() {
+		restartableTest := func(tb testing.TB) {
 			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
 				testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-				logger, errorRecorder := b.makeLogger(testId)
+				logger, errorRecorder := b.makeLogger(tb, testId)
 				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
 				logger.Info("acceptance network created")
-				defer printTestIdOnFailure(b.tb, testId)
-				defer dumpStateOnFailure(b.tb, network)
-				defer test.RequireNoUnexpectedErrors(b.tb, errorRecorder)
+				defer printTestIdOnFailure(tb, testId)
+				defer dumpStateOnFailure(tb, network)
+				defer test.RequireNoUnexpectedErrors(tb, errorRecorder)
 
 				if b.setupFunc != nil {
 					b.setupFunc(networkCtx, network)
@@ -150,19 +149,19 @@ func (b *networkHarnessBuilder) StartWithRestart(f func(ctx context.Context, net
 				}
 
 				logger.Info("acceptance network running test")
-				f(ctx, network, restart)
+				f(tb, ctx, network, restart)
 				time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 			})
 		}
 
-		switch runner := b.tb.(type) {
+		switch runner := tb.(type) {
 		case *testing.T:
 			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				restartableTest()
+				restartableTest(t)
 			})
 		case *testing.B:
 			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				restartableTest()
+				restartableTest(t)
 			})
 		default:
 			panic("unexpected TB implementation")
@@ -195,12 +194,12 @@ func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence)
 	return blockPairs
 }
 
-func (b *networkHarnessBuilder) makeLogger(testId string) (log.BasicLogger, test.ErrorTracker) {
+func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, test.ErrorTracker) {
 	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
-		WithOutput(b.makeFormattingOutput(), errorRecorder).
+		WithOutput(log.NewTestOutput(tb, log.NewHumanReadableFormatter()), errorRecorder).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
@@ -286,10 +285,6 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	}
 
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
-}
-
-func (b *networkHarnessBuilder) makeFormattingOutput() log.Output {
-	return log.NewTestOutput(b.tb, log.NewHumanReadableFormatter())
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {
