@@ -52,19 +52,6 @@ func (q *transportQueue) Pop(ctx context.Context) *adapter.TransportData {
 	}
 }
 
-// alternative to Pop() for users needing direct channel access (for selects and such), must call PostPopFromChannel() after read
-func (q *transportQueue) ChannelForPop() <-chan *adapter.TransportData {
-	return q.channel
-}
-
-// must be called after popping directly from channel using ChannelForPop()
-func (q *transportQueue) PostPopFromChannel(poppedData *adapter.TransportData) {
-	if poppedData == nil {
-		return
-	}
-	q.releaseBytes(poppedData)
-}
-
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	dataBytes := totalBytesInData(data)
 

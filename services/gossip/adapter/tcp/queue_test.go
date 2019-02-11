@@ -109,32 +109,6 @@ func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 	})
 }
 
-func TestQueue_DirectPopFromChannel(t *testing.T) {
-	q := NewTransportQueue(1000, 1000)
-	err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
-	require.NoError(t, err)
-
-	d1 := <-q.ChannelForPop()
-	q.PostPopFromChannel(d1)
-	require.EqualValues(t, []byte{0x01}, d1.SenderNodeAddress)
-}
-
-func TestQueue_DirectPopFromChannelReleasesResources(t *testing.T) {
-	q := NewTransportQueue(3, 1000)
-	err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}, Payloads: [][]byte{buf(3)}})
-	require.NoError(t, err)
-
-	err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x02}, Payloads: [][]byte{buf(3)}})
-	require.Error(t, err)
-
-	d1 := <-q.ChannelForPop()
-	q.PostPopFromChannel(d1)
-	require.EqualValues(t, []byte{0x01}, d1.SenderNodeAddress)
-
-	err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x03}, Payloads: [][]byte{buf(3)}})
-	require.NoError(t, err)
-}
-
 func buf(len int) []byte {
 	return make([]byte, len)
 }
