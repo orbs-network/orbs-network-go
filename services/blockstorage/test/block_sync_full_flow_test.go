@@ -18,6 +18,7 @@ import (
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
+			withSyncNoCommitTimeout(200 * time.Millisecond).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
 

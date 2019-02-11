@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -34,12 +33,11 @@ type Fataler interface {
 
 type ErrorTracker interface {
 	HasErrors() bool
-	GetUnexpectedErrors() []string
 }
 
 func RequireNoUnexpectedErrors(f Fataler, errorTracker ErrorTracker) {
 	if errorTracker.HasErrors() {
-		f.Fatal("Encountered unexpected errors:\n\t", strings.Join(errorTracker.GetUnexpectedErrors(), "\n\t"))
+		f.Fatal("Test failed; encountered unexpected errors")
 	}
 }
 

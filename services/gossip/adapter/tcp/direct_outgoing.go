@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, msgs chan *adapter.TransportData) {
+func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, queue *transportQueue) {
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
 		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
@@ -24,19 +24,26 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, address stri
 			continue
 		}
 
-		if !t.clientHandleOutgoingConnection(ctx, conn, msgs) {
+		if !t.clientHandleOutgoingConnection(ctx, conn, queue) {
 			return
 		}
 	}
 }
 
 // returns true if should attempt reconnect on error
-func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, msgs chan *adapter.TransportData) bool {
+func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
 	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
 	for {
-		select {
-		case data := <-msgs:
+
+		ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, t.config.GossipConnectionKeepAliveInterval())
+		data := queue.Pop(ctxWithKeepAliveTimeout)
+		cancelCtxWithKeepAliveTimeout()
+
+		if data != nil {
+
+			// ctxWithKeepAliveTimeout not closed, so no keep alive timeout nor system shutdown
+			// meaning do a regular send (we have data)
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
 				t.metrics.outgoingConnectionFailedSend.Inc()
@@ -44,19 +51,39 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 				conn.Close()
 				return true
 			}
-		case <-time.After(t.config.GossipConnectionKeepAliveInterval()):
-			err := t.sendKeepAlive(ctx, conn)
-			if err != nil {
-				t.metrics.outgoingConnectionFailedKeepalive.Inc()
-				t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+
+		} else {
+			// ctxWithKeepAliveTimeout is closed, so either keep alive timeout or system shutdown
+			if ctx.Err() == nil {
+
+				// parent ctx not closed, so no system shutdown
+				// meaning keep alive timeout
+				err := t.sendKeepAlive(ctx, conn)
+				if err != nil {
+					t.metrics.outgoingConnectionFailedKeepalive.Inc()
+					t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+					conn.Close()
+					return true
+				}
+
+			} else {
+
+				// parent ctx is closed, so system shutdown
+				// meaning cleanup and exit
+				t.logger.Info("client loop stopped since server is shutting down", trace.LogFieldFrom(ctx))
 				conn.Close()
-				return true
+				return false
+
 			}
-		case <-ctx.Done():
-			t.logger.Info("client loop stopped since server is shutting down", trace.LogFieldFrom(ctx))
-			conn.Close()
-			return false
 		}
+	}
+}
+
+func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData, outgoingQueue *transportQueue) {
+	err := outgoingQueue.Push(data)
+	if err != nil {
+		t.metrics.outgoingConnectionSendQueueFull.Inc()
+		t.logger.Info("direct transport send queue full", log.Error(err))
 	}
 }
 

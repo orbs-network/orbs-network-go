@@ -60,7 +60,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).allowingErrorsMatching("protocol version mismatch in transactions block header").start(ctx)
 
 		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -85,7 +85,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -101,7 +101,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -119,7 +119,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").withSyncBroadcast(1).start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())

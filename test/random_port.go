@@ -2,8 +2,8 @@ package test
 
 import (
 	"math/rand"
+	"os"
 	"sync"
-	"time"
 )
 
 var mutex = sync.Mutex{}
@@ -17,7 +17,7 @@ func RandomPort() int {
 	defer mutex.Unlock()
 
 	if lastPort == 0 {
-		src := rand.NewSource(time.Now().UnixNano())
+		src := rand.NewSource(int64(os.Getpid()))
 		lastPort = rand.New(src).Intn(30000) + 25111
 	} else {
 		lastPort++
