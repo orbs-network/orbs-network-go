@@ -14,6 +14,7 @@ func DebugPrintCurrentStack(logger log.BasicLogger) {
 
 func DebugPrintGoroutineStacks(logger log.BasicLogger) {
 	var buffer bytes.Buffer
+	debug.SetTraceback("all")
 	pprof.Lookup("goroutine").WriteTo(&buffer, 1)
 	logWriter{logger}.Write(buffer.Bytes())
 }
