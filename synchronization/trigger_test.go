@@ -131,7 +131,6 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 }
 
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
-	t.Skip("LongLived is broken, try again when its fixed")
 	logger := mockLogger()
 	x := 0
 	p := synchronization.NewPeriodicalTrigger(context.Background(),
@@ -142,7 +141,25 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 			panic("we should not see this other than the logs")
 		},
 		nil)
+
+	// drain errors and count them, this is because of how this mockLogger is built to hold errors (so we can latch them)
+	stopDrain := make(chan struct{})
+	errors := 0
+	go func() {
+		for {
+			select {
+			case <-logger.errors:
+				errors++
+			case <-stopDrain:
+				return
+			}
+		}
+	}()
 	time.Sleep(5 * time.Millisecond)
+
 	p.Stop()
-	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) %d", x)
+	stopDrain <- struct{}{}
+
+	require.True(t, errors > 1, "expected more than one error (panic)")
+	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
 }
