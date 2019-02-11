@@ -204,7 +204,7 @@ func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.Ba
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
-		WithOutput(log.NewTestOutput(tb, log.NewHumanReadableFormatter())).
+		WithOutput(testOutput).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
