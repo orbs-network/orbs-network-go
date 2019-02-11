@@ -32,6 +32,12 @@ func (l *MockTransportListener) ExpectNotReceive() {
 	l.Never("OnTransportMessageReceived", mock.Any, mock.Any)
 }
 
+func (l *MockTransportListener) BlockReceive() {
+	l.When("OnTransportMessageReceived", mock.Any, mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+		<-ctx.Done()
+	})
+}
+
 func (l *MockTransportListener) WhenOnTransportMessageReceived(arg interface{}) *mock.MockFunction {
 	return l.When("OnTransportMessageReceived", mock.Any, arg)
 }

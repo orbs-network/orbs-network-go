@@ -14,7 +14,7 @@ import (
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx, t)
+		h := newHarness(t).start(ctx)
 
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
@@ -43,7 +43,7 @@ func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *t
 		startBarrier.Add(CONCURRENCY_COUNT)
 		doneBarrier.Add(CONCURRENCY_COUNT)
 
-		h := newHarness(ctx, t)
+		h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool").start(ctx)
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
 		h.ignoringBlockHeightChecks()
@@ -77,7 +77,7 @@ func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *t
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(ctx, t)
+		h := newHarness(t).start(ctx)
 		tx := builders.TransferTransaction().Build()
 
 		h.reportTransactionsAsCommitted(ctx, tx)

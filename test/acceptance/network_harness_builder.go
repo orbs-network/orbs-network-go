@@ -29,7 +29,7 @@ import (
 )
 
 var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
-var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+var TEST_TIMEOUT_HARD_LIMIT = 5 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 
 type networkHarnessBuilder struct {
@@ -195,16 +195,21 @@ func extractBlocks(blocks blockStorageAdapter.TamperingInMemoryBlockPersistence)
 }
 
 func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, test.ErrorTracker) {
-	errorRecorder := log.NewErrorRecordingOutput(b.allowedErrors)
+
+	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	for _, pattern := range b.allowedErrors {
+		testOutput.AllowErrorsMatching(pattern)
+	}
+
 	logger := log.GetLogger(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
-		WithOutput(log.NewTestOutput(tb, log.NewHumanReadableFormatter()), errorRecorder).
+		WithOutput(log.NewTestOutput(tb, log.NewHumanReadableFormatter())).
 		WithFilters(log.IgnoreMessagesMatching("transport message received"), log.IgnoreMessagesMatching("Metric recorded")).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
 
-	return logger, errorRecorder
+	return logger, testOutput
 }
 
 func (b *networkHarnessBuilder) WithNumRunningNodes(numNodes int) *networkHarnessBuilder {

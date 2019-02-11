@@ -2,6 +2,7 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -11,7 +12,7 @@ import (
 
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newBlockSyncHarness(t)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t))
 
 		h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 		h.expectBroadcastOfBlockAvailabilityRequestToFail()
@@ -27,7 +28,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		// this can probably happen only if BatchSize config is invalid
-		h := newBlockSyncHarness(t).withBatchSize(0)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).withBatchSize(0)
 
 		h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(0) // new server
 
@@ -42,7 +43,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		manualCollectResponsesTimer := synchronization.NewTimerWithManualTick()
-		h := newBlockSyncHarnessWithCollectResponsesTimer(t, func() *synchronization.Timer {
+		h := newBlockSyncHarnessWithCollectResponsesTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
 			return manualCollectResponsesTimer
 		})
 
@@ -70,7 +71,7 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	h := newBlockSyncHarness(t)
+	h := newBlockSyncHarness(log.DefaultTestingLogger(t))
 
 	h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
