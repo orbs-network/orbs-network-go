@@ -94,48 +94,47 @@ func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx c
 	}
 
 	for _, consensusAlgo := range b.consensusAlgos {
-		testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-		logger, errorRecorder := b.makeLogger(tb, testId)
-
-		restartableTest := func(tb testing.TB) {
-			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-				network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
-
-				logger.Info("acceptance network created")
-				defer printTestIdOnFailure(tb, testId)
-				defer dumpStateOnFailure(tb, network)
-				defer test.RequireNoUnexpectedErrors(tb, errorRecorder)
-
-				if b.setupFunc != nil {
-					b.setupFunc(ctx, network)
-				}
-
-				network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
-				logger.Info("acceptance network started")
-
-				logger.Info("acceptance network running test")
-				f(tb, ctx, network)
-				time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
-			})
-		}
-
 		switch runner := tb.(type) {
 		case *testing.T:
-			supervised.Recover(logger, func() {
-				runner.Run(consensusAlgo.String(), func(t *testing.T) {
-					restartableTest(t)
-				})
+			runner.Run(consensusAlgo.String(), func(t *testing.T) {
+				b.runTest(t, consensusAlgo, f)
 			})
 		case *testing.B:
-			supervised.Recover(logger, func() {
-				runner.Run(consensusAlgo.String(), func(t *testing.B) {
-					restartableTest(t)
-				})
+			runner.Run(consensusAlgo.String(), func(t *testing.B) {
+				b.runTest(t, consensusAlgo, f)
 			})
 		default:
 			panic("unexpected TB implementation")
 		}
 	}
+}
+
+func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *NetworkHarness)) {
+	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
+	logger, errorRecorder := b.makeLogger(tb, testId)
+
+	supervised.Recover(logger, func() {
+
+		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
+
+			logger.Info("acceptance network created")
+			defer printTestIdOnFailure(tb, testId)
+			defer dumpStateOnFailure(tb, network)
+			defer test.RequireNoUnexpectedErrors(tb, errorRecorder)
+
+			if b.setupFunc != nil {
+				b.setupFunc(ctx, network)
+			}
+
+			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
+			logger.Info("acceptance network started")
+
+			logger.Info("acceptance network running test")
+			f(tb, ctx, network)
+			time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+		})
+	})
 }
 
 func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
