@@ -84,8 +84,6 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	ls.currentTs = ts
 	ls.currentMerkleRoot = newRoot
 
-	ls.logger.Info("rollingRevisions received revision", log.BlockHeight(height))
-
 	// TODO(v1) - move this a separate goroutine to prevent addRevision from blocking on IO
 	// TODO(v1) - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
 

@@ -81,9 +81,6 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 }
 
 func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
 	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
@@ -110,8 +107,6 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 
 	if err != nil {
 		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
-	} else {
-		logger.Info("performed pre order checks", log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
 
 	return &services.TransactionSetPreOrderOutput{

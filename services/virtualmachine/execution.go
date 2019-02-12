@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -75,8 +74,6 @@ func (s *service) processTransactionSet(
 	currentBlockTimestamp primitives.TimestampNano,
 	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.TransactionReceipt, []*protocol.ContractStateDiff) {
-
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	lastCommittedBlockHeight := currentBlockHeight - 1
 
 	// create batch transient state
@@ -86,8 +83,6 @@ func (s *service) processTransactionSet(
 	receipts := make([]*protocol.TransactionReceipt, 0, len(signedTransactions))
 
 	for _, signedTransaction := range signedTransactions {
-
-		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), log.BlockHeight(currentBlockHeight))
 		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()

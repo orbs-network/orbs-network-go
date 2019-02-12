@@ -30,8 +30,6 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 		return toSendTxOutput(&txOutput{transactionStatus: txStatus}), err
 	}
 
-	logger.Info("send transaction request received")
-
 	start := time.Now()
 	defer s.metrics.sendTransactionTime.RecordSince(start)
 

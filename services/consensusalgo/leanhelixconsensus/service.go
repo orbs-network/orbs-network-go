@@ -195,6 +195,8 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 
 func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	// TODO remove this
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
@@ -214,7 +216,7 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 
 func CreateResultsBlockProof(blockPair *protocol.BlockPairContainer, blockProof []byte) *protocol.ResultsBlockProof {
 	return (&protocol.ResultsBlockProofBuilder{
-		Type:                  protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
+		Type: protocol.RESULTS_BLOCK_PROOF_TYPE_LEAN_HELIX,
 		TransactionsBlockHash: digest.CalcTransactionsBlockHash(blockPair.TransactionsBlock),
 		LeanHelix:             blockProof,
 	}).Build()

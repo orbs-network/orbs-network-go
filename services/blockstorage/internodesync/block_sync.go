@@ -118,7 +118,6 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 func (bs *BlockSync) syncLoop(parent context.Context) {
 	for currentState := bs.factory.CreateCollectingAvailabilityResponseState(); currentState != nil; {
 		ctx := trace.NewContext(parent, "BlockSync")
-		bs.logger.Info("state transitioning", log.Stringable("current-state", currentState), trace.LogFieldFrom(ctx))
 
 		currentState = currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()

@@ -35,8 +35,6 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	c.notify(ctx, s.transactionResultsHandlers...)
 
-	logger.Info("committed transaction receipts for block height", log.BlockHeight(newBh))
-
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   newBh + 1,
 		LastCommittedBlockHeight: newBh,
@@ -50,8 +48,6 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	s.lastCommitted.blockHeight = header.BlockHeight()
 	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
-
-	s.logger.Info("transaction pool reached block height", log.BlockHeight(header.BlockHeight()))
 
 	return header.BlockHeight(), header.Timestamp()
 }
@@ -76,15 +72,12 @@ type committer struct {
 }
 
 func (c *committer) commit(ctx context.Context, receipts ...*protocol.TransactionReceipt) (myReceipts []*protocol.TransactionReceipt) {
-
 	for _, receipt := range receipts {
 		c.adder.add(receipt, c.blockTime, c.blockHeight, c.blockTime) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
 		removedTxGateway := c.remover.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if c.amITheGatewayOf(removedTxGateway) {
 			c.myReceipts = append(c.myReceipts, receipt)
 		}
-
-		c.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 	}
 
 	return

@@ -51,7 +51,7 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 	if err != nil {
 		return
 	}
-	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
+	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.Int("num-transactions", len(message.SignedTransactions)))
 
 	s.handlers.RLock()
 	defer s.handlers.RUnlock()

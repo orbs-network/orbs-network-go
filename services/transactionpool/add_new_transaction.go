@@ -43,8 +43,6 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 
 	}
 
-	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
-
 	s.transactionForwarder.submit(input.SignedTransaction)
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil

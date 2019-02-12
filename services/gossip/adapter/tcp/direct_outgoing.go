@@ -15,7 +15,6 @@ import (
 func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, queue *transportQueue) {
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
-		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {

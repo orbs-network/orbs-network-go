@@ -155,7 +155,6 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)

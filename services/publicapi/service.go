@@ -65,10 +65,7 @@ func NewPublicApi(
 }
 
 func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.HandleTransactionResultsInput) (*handlers.HandleTransactionResultsOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
-
 	for _, txReceipt := range input.TransactionReceipts {
-		logger.Info("transaction reported as committed", log.Transaction(txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&txOutput{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,

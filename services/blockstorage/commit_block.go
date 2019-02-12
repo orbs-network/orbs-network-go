@@ -23,8 +23,6 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 	rsBlockHeader := input.BlockPair.ResultsBlock.Header
 
-	logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
-
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
 	}

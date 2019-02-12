@@ -95,8 +95,6 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	defer s.metrics.processCallTime.RecordSince(start)
 
 	// execute
-	logger.Info("processor executing contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName))
-
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
 	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {

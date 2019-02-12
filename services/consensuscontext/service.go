@@ -3,11 +3,9 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
@@ -68,17 +66,9 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
 	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
-	s.printTxHash(logger, txBlock)
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
-}
-
-func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.TransactionsBlockContainer) {
-	for _, tx := range txBlock.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
-	}
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {
