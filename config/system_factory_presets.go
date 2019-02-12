@@ -15,11 +15,9 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
-	// like LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL
-	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
-
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 450ms
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 2*time.Second)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
 
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
@@ -109,15 +107,9 @@ func ForE2E(
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
-	// Config basic assumption: avoid leader change and support slowest node
-	// LH round ( 2*slow_network_latency + avg_network_latency + 2*block_execution_time  ) x confidence_factor
-	// slow_network_latency ~ 50ms
-	// block_execution_time ~ 50ms foreach 1000 txs
-	// confidence_factor = 2
-	// LH round ~ (2*100 + 50 + 2*50) *2 = 700ms
+	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
-	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 
 	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 3*time.Second)
