@@ -11,7 +11,7 @@ import (
 )
 
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -24,7 +24,7 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -37,7 +37,7 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -50,7 +50,7 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -63,7 +63,7 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

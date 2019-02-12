@@ -28,7 +28,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 		topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 
@@ -73,7 +73,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 			// wait for all tx to reach state storage:
 			for _, txHash := range txHashes {
@@ -92,7 +92,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 }
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 		// generate some blocks with state
 		contract := network.DeployBenchmarkTokenContract(ctx, 0)
 		for i := 0; i < transfers; i++ {
@@ -105,7 +105,7 @@ func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []
 		}
 
 		var err error
-		blocks, err = network.(*networkHarness).Nodes[0].BlockChain()
+		blocks, err = network.Nodes[0].BlockChain()
 		require.NoError(t, err, "failed generating blocks for test")
 	})
 

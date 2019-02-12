@@ -16,26 +16,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
-type NetworkHarness interface {
-	callcontract.CallContractAPI
-	PublicApi(nodeIndex int) services.PublicApi
-	Size() int
-	DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient
-	TransportTamperer() testGossipAdapter.Tamperer
-	EthereumSimulator() *ethereumAdapter.EthereumSimulator
-	BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence
-	DumpState()
-	WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int)
-	WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256)
-	GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker
-	MockContract(fakeContractInfo *sdkContext.ContractInfo, code string)
-}
-
-type networkHarness struct {
+type NetworkHarness struct {
 	inmemory.Network
 
 	tamperingTransport                 testGossipAdapter.Tamperer
@@ -47,7 +31,7 @@ type networkHarness struct {
 	transactionPoolBlockHeightTrackers []*synchronization.BlockTracker
 }
 
-func (n *networkHarness) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
+func (n *NetworkHarness) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
 	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
 	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
 	if err != nil {
@@ -56,7 +40,7 @@ func (n *networkHarness) WaitForTransactionInNodeState(ctx context.Context, txHa
 	}
 }
 
-func (n *networkHarness) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
+func (n *NetworkHarness) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
 	for i, node := range n.Nodes {
 		if node.Started() {
 			n.WaitForTransactionInNodeState(ctx, txHash, i)
@@ -64,15 +48,15 @@ func (n *networkHarness) WaitForTransactionInState(ctx context.Context, txHash p
 	}
 }
 
-func (n *networkHarness) TransportTamperer() testGossipAdapter.Tamperer {
+func (n *NetworkHarness) TransportTamperer() testGossipAdapter.Tamperer {
 	return n.tamperingTransport
 }
 
-func (n *networkHarness) EthereumSimulator() *ethereumAdapter.EthereumSimulator {
+func (n *NetworkHarness) EthereumSimulator() *ethereumAdapter.EthereumSimulator {
 	return n.ethereumConnection
 }
 
-func (n *networkHarness) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {
+func (n *NetworkHarness) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {
 	bt := callcontract.NewContractClient(n)
 
 	benchmarkDeploymentTimeout := 1 * time.Second
@@ -90,27 +74,27 @@ func (n *networkHarness) DeployBenchmarkTokenContract(ctx context.Context, owner
 	return bt
 }
 
-func (n *networkHarness) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
+func (n *NetworkHarness) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
 	n.fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
 }
 
-func (n *networkHarness) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
+func (n *NetworkHarness) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
 	return n.transactionPoolBlockHeightTrackers[nodeIndex]
 }
 
-func (n *networkHarness) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
+func (n *NetworkHarness) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
 	return n.tamperingBlockPersistences[nodeIndex]
 }
 
-func (n *networkHarness) GetStatePersistence(i int) testStateStorageAdapter.DumpingStatePersistence {
+func (n *NetworkHarness) GetStatePersistence(i int) testStateStorageAdapter.DumpingStatePersistence {
 	return n.dumpingStatePersistences[i]
 }
 
-func (n *networkHarness) Size() int {
+func (n *NetworkHarness) Size() int {
 	return len(n.Nodes)
 }
 
-func (n *networkHarness) DumpState() {
+func (n *NetworkHarness) DumpState() {
 	for i := range n.Nodes {
 		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
 	}
