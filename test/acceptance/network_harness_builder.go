@@ -43,6 +43,7 @@ type networkHarnessBuilder struct {
 	allowedErrors            []string
 	numOfNodesToStart        int
 	requiredQuorumPercentage uint32
+	blockChain               []*protocol.BlockPairContainer
 }
 
 func newHarness() *networkHarnessBuilder {
@@ -119,7 +120,7 @@ func (b *networkHarnessBuilder) StartWithRestart(tb testing.TB, f func(tb testin
 		restartableTest := func(tb testing.TB) {
 			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
-				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
+				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, b.blockChain)
 
 				logger.Info("acceptance network created")
 				defer printTestIdOnFailure(tb, testId)
@@ -295,6 +296,11 @@ func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, te
 	}
 
 	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
+}
+
+func (b *networkHarnessBuilder) WithBlockChain(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
+	b.blockChain = blocks
+	return b
 }
 
 func printTestIdOnFailure(tb testing.TB, testId string) {
