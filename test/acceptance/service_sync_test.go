@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -26,6 +25,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 	newHarness().
 		WithBlockChain(blocks).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
@@ -49,7 +49,8 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) []*protocol.BlockPairContainer {
 	ctx := context.Background()
-	network := gamma.NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t))
+	network := newReasonableBenchmarkConsensusNetwork(ctx, log.DefaultTestingLogger(t))
+	network.CreateAndStartNodes(ctx, 2)
 	for _, builder := range txBuilders {
 		resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
