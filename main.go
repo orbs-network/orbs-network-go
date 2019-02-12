@@ -44,12 +44,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, bulkSize))
 	}
 
-	return log.GetLogger().WithTags(
-		log.VirtualChainId(vchainId),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT")),
-		log.String("_test", os.Getenv("TEST_NAME")),
-	).WithOutput(outputs...)
+	return log.GetLogger().WithTags(log.VirtualChainId(vchainId)).WithOutput(outputs...)
 }
 
 func getConfig(configFiles config.ArrayFlags, httpAddress string) (config.NodeConfig, error) {
