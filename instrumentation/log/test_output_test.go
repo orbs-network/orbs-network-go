@@ -45,7 +45,7 @@ func TestOutputLogsUnAllowedErrorToTLogAsErrorAndStopsLogging(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
 	m.When("Error", "foo").Times(1)
-	m.When("Fatal", mock.Any).Times(1)
+	m.When("Error", TEST_FAILED_ERROR).Times(1)
 	m.Never("Log", "bar")
 
 	o.Append("error", "foo")

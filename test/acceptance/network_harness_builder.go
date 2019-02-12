@@ -13,6 +13,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -112,12 +113,12 @@ func (b *networkHarnessBuilder) StartWithRestart(tb testing.TB, f func(tb testin
 	}
 
 	for _, consensusAlgo := range b.consensusAlgos {
+		testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
+		logger, errorRecorder := b.makeLogger(tb, testId)
 
 		restartableTest := func(tb testing.TB) {
 			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 				networkCtx, cancelNetwork := context.WithCancel(ctx)
-				testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-				logger, errorRecorder := b.makeLogger(tb, testId)
 				network := b.newAcceptanceTestNetwork(networkCtx, logger, consensusAlgo, nil)
 
 				logger.Info("acceptance network created")
@@ -156,12 +157,16 @@ func (b *networkHarnessBuilder) StartWithRestart(tb testing.TB, f func(tb testin
 
 		switch runner := tb.(type) {
 		case *testing.T:
-			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				restartableTest(t)
+			supervised.Recover(logger, func() {
+				runner.Run(consensusAlgo.String(), func(t *testing.T) {
+					restartableTest(t)
+				})
 			})
 		case *testing.B:
-			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				restartableTest(t)
+			supervised.Recover(logger, func() {
+				runner.Run(consensusAlgo.String(), func(t *testing.B) {
+					restartableTest(t)
+				})
 			})
 		default:
 			panic("unexpected TB implementation")
