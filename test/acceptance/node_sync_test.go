@@ -15,7 +15,7 @@ import (
 // Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
 func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 
-	newHarness(t).
+	newHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		AllowingErrors(
@@ -38,7 +38,7 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetLastBlockHeight()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
-		}).Start(func(ctx context.Context, network NetworkHarness) {
+		}).Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}
