@@ -142,24 +142,12 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 		},
 		nil)
 
-	// drain errors and count them, this is because of how this mockLogger is built to hold errors (so we can latch them)
-	stopDrain := make(chan struct{})
-	errors := 0
-	go func() {
-		for {
-			select {
-			case <-logger.errors:
-				errors++
-			case <-stopDrain:
-				return
-			}
-		}
-	}()
-	time.Sleep(5 * time.Millisecond)
+	// more than one error means more than one panic means it recovers correctly
+	for i := 0; i < 2; i++ {
+		<-logger.errors
+	}
 
 	p.Stop()
-	stopDrain <- struct{}{}
 
-	require.True(t, errors > 1, "expected more than one error (panic)")
 	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
 }
