@@ -35,7 +35,7 @@ func (h *httpOutputHarness) start(t *testing.T) {
 		require.NoError(t, err, "failed to use http port")
 
 		h.port = listener.Addr().(*net.TCPAddr).Port
-		t.Log("Serving http requests on", "127.0.0.1:%d", h.port)
+		t.Log("Serving http requests on", fmt.Sprintf("127.0.0.1:%d", h.port))
 
 		h.listener = listener
 
@@ -112,6 +112,8 @@ func TestBulkOutput_Append(t *testing.T) {
 	logger.Info("Ground control to Major Tom")
 	logger.Info("Commencing countdown")
 	logger.Info("Engines on")
+
+	logger.Info("Check ignition and may God's love be with you")
 
 	wg.Wait()
 }
