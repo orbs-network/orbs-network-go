@@ -92,6 +92,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 }
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
+
 	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 		// generate some blocks with state
 		contract := network.DeployBenchmarkTokenContract(ctx, 0)

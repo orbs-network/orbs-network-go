@@ -2,24 +2,11 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
-	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	memoryGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
-	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"math"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -112,7 +99,7 @@ func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx c
 
 		restartableTest := func(tb testing.TB) {
 			test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-				network := b.newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain)
+				network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
 
 				logger.Info("acceptance network created")
 				defer printTestIdOnFailure(tb, testId)
@@ -185,76 +172,6 @@ func (b *networkHarnessBuilder) WithNumRunningNodes(numNodes int) *networkHarnes
 func (b *networkHarnessBuilder) WithRequiredQuorumPercentage(percentage int) *networkHarnessBuilder {
 	b.requiredQuorumPercentage = uint32(percentage)
 	return b
-}
-
-func (b *networkHarnessBuilder) newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer) *NetworkHarness {
-
-	testLogger.Info("===========================================================================")
-	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", b.numNodes))
-
-	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-
-	federationNodes := map[string]config.FederationNode{}
-	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
-	var nodeOrder []primitives.NodeAddress
-	for i := 0; i < int(b.numNodes); i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
-		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
-		nodeOrder = append(nodeOrder, nodeAddress)
-	}
-
-	cfgTemplate := config.ForAcceptanceTestNetwork(
-		federationNodes,
-		leaderKeyPair.NodeAddress(),
-		consensusAlgo,
-		b.maxTxPerBlock,
-		b.requiredQuorumPercentage,
-	)
-
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, federationNodes))
-	sharedCompiler := nativeProcessorAdapter.NewCompiler()
-	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
-
-	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
-	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
-	var transactionPoolTrackers []*synchronization.BlockTracker
-	var stateTrackers []*synchronization.BlockTracker
-
-	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
-		tamperingBlockPersistence := blockStorageAdapter.NewBlockPersistence(logger, preloadedBlocks, metricRegistry)
-		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
-
-		txPoolHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-		stateHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-
-		tamperingBlockPersistences = append(tamperingBlockPersistences, tamperingBlockPersistence)
-		dumpingStatePersistences = append(dumpingStatePersistences, dumpingStateStorage)
-		transactionPoolTrackers = append(transactionPoolTrackers, txPoolHeightTracker)
-		stateTrackers = append(stateTrackers, stateHeightTracker)
-
-		return &inmemory.NodeDependencies{
-			BlockPersistence:                   tamperingBlockPersistence,
-			StatePersistence:                   dumpingStateStorage,
-			EtherConnection:                    sharedEthereumSimulator,
-			Compiler:                           sharedCompiler,
-			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
-			StateBlockHeightReporter:           stateHeightTracker,
-		}
-	}
-
-	harness := &NetworkHarness{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
-		tamperingTransport:                 sharedTamperingTransport,
-		ethereumConnection:                 sharedEthereumSimulator,
-		fakeCompiler:                       sharedCompiler,
-		tamperingBlockPersistences:         tamperingBlockPersistences,
-		dumpingStatePersistences:           dumpingStatePersistences,
-		stateBlockHeightTrackers:           stateTrackers,
-		transactionPoolBlockHeightTrackers: transactionPoolTrackers,
-	}
-
-	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
 }
 
 func (b *networkHarnessBuilder) WithBlockChain(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
