@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -61,8 +60,6 @@ func NewStateStorage(config config.StateStorageConfig, persistence adapter.State
 }
 
 func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
 	if input.ResultsBlockHeader == nil || input.ContractStateDiffs == nil {
 		panic(fmt.Sprintf("CommitStateDiff received corrupt args, input=%+v", input))
 	}
