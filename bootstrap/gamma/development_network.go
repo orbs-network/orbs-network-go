@@ -8,7 +8,6 @@ import (
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 )
 
 func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemory.Network {
@@ -29,7 +28,6 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemor
 	cfgTemplate := config.TemplateForGamma(
 		federationNodes,
 		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 	)
 
 	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, nil)
