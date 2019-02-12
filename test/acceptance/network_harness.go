@@ -40,6 +40,10 @@ type NetworkHarness struct {
 	transactionPoolBlockHeightTrackers []*synchronization.BlockTracker
 }
 
+func newReasonableBenchmarkConsensusNetwork(ctx context.Context, testLogger log.BasicLogger) *NetworkHarness {
+	return newAcceptanceTestNetwork(ctx, testLogger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, 1000, 50)
+}
+
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer, numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32) *NetworkHarness {
 
 	testLogger.Info("===========================================================================")
