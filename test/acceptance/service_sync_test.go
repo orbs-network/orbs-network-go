@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -69,6 +70,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	blocks, txHashes := createTransferBlocks(t, transfers, transferAmount)
 
 	newHarness().
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		WithBlockChain(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
@@ -93,22 +95,24 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-		// generate some blocks with state
-		contract := network.DeployBenchmarkTokenContract(ctx, 0)
-		for i := 0; i < transfers; i++ {
-			_, txHash := contract.Transfer(ctx, 0, amount, 0, 1)
-			txHashes = append(txHashes, txHash)
-		}
+	ctx := context.Background()
+	network := newReasonableBenchmarkConsensusNetwork(ctx, log.DefaultTestingLogger(t))
+	network.CreateAndStartNodes(ctx, 2)
 
-		for _, txHash := range txHashes {
-			network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
-		}
+	// generate some blocks with state
+	contract := network.DeployBenchmarkTokenContract(ctx, 0)
+	for i := 0; i < transfers; i++ {
+		_, txHash := contract.Transfer(ctx, 0, amount, 0, 1)
+		txHashes = append(txHashes, txHash)
+	}
 
-		var err error
-		blocks, err = network.Nodes[0].BlockChain()
-		require.NoError(t, err, "failed generating blocks for test")
-	})
+	for _, txHash := range txHashes {
+		network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
+	}
+
+	var err error
+	blocks, err = network.Nodes[0].BlockChain()
+	require.NoError(t, err, "failed generating blocks for test")
 
 	return
 }
