@@ -46,7 +46,10 @@ func newHarness() *networkHarnessBuilder {
 		WithTestId(getCallerFuncName()).
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		AllowingErrors(
+			"ValidateBlockProposal failed.*",                         // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+			"all consensus \\d+ algos refused to validate the block", //TODO(https://github.com/orbs-network/orbs-network-go/issues/893) remove when issue is resolved
+		)
 
 	return harness
 }
@@ -136,7 +139,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 
 			logger.Info("acceptance network running test")
 			f(tb, ctx, network)
-			time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
+			time.Sleep(10 * time.Millisecond) // give context dependent goroutines time to terminate gracefully
 		})
 	})
 }
