@@ -85,6 +85,10 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	bp.blockChain.Lock()
 	defer bp.blockChain.Unlock()
 
+	if !(blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() || blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix()) {
+		return false, errors.Errorf("block persistence tried to write block with invalid proof type: %s", blockPair.ResultsBlock.BlockProof)
+	}
+
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 < blockPair.TransactionsBlock.Header.BlockHeight() {
 		return false, errors.Errorf("block persistence tried to write next block with height %d when %d exist", blockPair.TransactionsBlock.Header.BlockHeight(), len(bp.blockChain.blocks))
 	}
