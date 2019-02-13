@@ -3,12 +3,13 @@ package leanhelixconsensus
 import (
 	"context"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
-	"runtime"
-
 	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
+	"os"
+	"runtime"
+	"runtime/pprof"
 	"testing"
 	"time"
 )
@@ -203,14 +204,20 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 			callCount++
 		}
 		start := runtime.NumGoroutine()
+		beforeProfile := pprof.Lookup("goroutine")
 
 		for block := 10; block < 1000; block++ {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
 			time.Sleep(2 * time.Millisecond)
 		}
+		time.Sleep(20 * time.Millisecond)
 		end := runtime.NumGoroutine()
-
+		if start != end {
+			beforeProfile.WriteTo(os.Stdout, 1)
+			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		}
 		require.Equal(t, start, end, "goroutine number should be the same")
+
 		require.True(t, callCount > 1, "the callback must be called more than once")
 	})
 }

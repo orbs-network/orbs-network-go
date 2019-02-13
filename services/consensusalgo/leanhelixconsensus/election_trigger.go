@@ -40,7 +40,8 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		e.view = view
 		e.blockHeight = blockHeight
 		e.safeTimerStop()
-		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
+		wrappedTrigger := func() { e.sendTrigger(ctx) }
+		e.triggerTimer = time.AfterFunc(timeout, wrappedTrigger)
 		e.logger.Info("ElectionTrigger restarted timer for height and view",
 			log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
 			log.Uint64("lh-election-view", uint64(e.view)),
@@ -72,9 +73,13 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 	}
 }
 
-func (e *exponentialBackoffElectionTrigger) sendTrigger() {
+func (e *exponentialBackoffElectionTrigger) sendTrigger(ctx context.Context) {
 	e.logger.Info("ElectionTrigger triggered timeout")
-	e.electionChannel <- e.trigger
+	select {
+	case <-ctx.Done():
+		return
+	case e.electionChannel <- e.trigger:
+	}
 }
 
 func (e *exponentialBackoffElectionTrigger) CalcTimeout(view primitives.View) time.Duration {
