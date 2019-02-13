@@ -3,6 +3,7 @@
 package acceptance
 
 import (
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -17,21 +18,21 @@ import (
 // therefore, this file is marked on top with a build flag ("goroutineleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags goroutineleak", this is done in test.sh while making sure it's the only test running
 func TestGoroutineLeaks_OnSystemShutdown_LeanHelix(t *testing.T) {
-	testGoroutineLeaksWithAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
+	testGoroutineLeaksWithAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, rand.NewControlledRand(t))
 }
 
 func TestGoroutineLeaks_OnSystemShutdown_BenchmarkConsensus(t *testing.T) {
-	testGoroutineLeaksWithAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	testGoroutineLeaksWithAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, rand.NewControlledRand(t))
 }
 
-func testGoroutineLeaksWithAlgo(t *testing.T, algo consensus.ConsensusAlgoType) {
+func testGoroutineLeaksWithAlgo(t *testing.T, algo consensus.ConsensusAlgoType, rnd *rand.ControlledRand) {
 	before, _ := os.Create("/tmp/gorou-shutdown-before.out")
 	defer before.Close()
 	after, _ := os.Create("/tmp/gorou-shutdown-after.out")
 	defer after.Close()
 	numGoroutineBefore := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(before, 1)
-	runHappyFlowWithConsensusAlgo(t, algo)
+	runHappyFlowWithConsensusAlgo(t, algo, rnd)
 	time.Sleep(100 * time.Millisecond)
 	// give goroutines time to terminate
 	runtime.GC()
