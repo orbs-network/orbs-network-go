@@ -204,7 +204,7 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 			callCount++
 		}
 		start := runtime.NumGoroutine()
-		beforeProfile := pprof.Lookup("goroutine")
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 
 		for block := 10; block < 1000; block++ {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
@@ -213,7 +213,6 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 		end := runtime.NumGoroutine()
 		if start != end {
-			beforeProfile.WriteTo(os.Stdout, 1)
 			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		}
 		require.Equal(t, start, end, "goroutine number should be the same")
