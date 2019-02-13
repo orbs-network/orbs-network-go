@@ -24,7 +24,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	blocks := createInitialBlocks(t, txBuilders)
 
 	newHarness().
-		WithBlockChain(blocks).
+		WithInitialBlockChain(blocks).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
@@ -72,7 +72,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	newHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
-		WithBlockChain(blocks).
+		WithInitialBlockChain(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).

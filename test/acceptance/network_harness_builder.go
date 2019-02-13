@@ -29,7 +29,7 @@ type networkHarnessBuilder struct {
 	allowedErrors            []string
 	numOfNodesToStart        int
 	requiredQuorumPercentage uint32
-	blockChain               []*protocol.BlockPairContainer
+	initialBlockChain        []*protocol.BlockPairContainer
 }
 
 func newHarness() *networkHarnessBuilder {
@@ -89,24 +89,28 @@ func (b *networkHarnessBuilder) AllowingErrors(allowedErrors ...string) *network
 }
 
 func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx context.Context, network *NetworkHarness)) {
-	if b.numOfNodesToStart == 0 {
-		b.numOfNodesToStart = b.numNodes
-	}
-
-	for _, consensusAlgo := range b.consensusAlgos {
-		switch runner := tb.(type) {
-		case *testing.T:
-			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				b.runTest(t, consensusAlgo, f)
-			})
-		case *testing.B:
-			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				b.runTest(t, consensusAlgo, f)
-			})
-		default:
-			panic("unexpected TB implementation")
+	parentTestLogger := log.DefaultTestingLogger(tb).WithTags(log.String("parent-test", b.testId))
+	supervised.Recover(parentTestLogger, func() {
+		if b.numOfNodesToStart == 0 {
+			b.numOfNodesToStart = b.numNodes
 		}
-	}
+
+		for i := 0; i < len(b.consensusAlgos); i++ {
+			consensusAlgo := b.consensusAlgos[i]
+			switch runner := tb.(type) {
+			case *testing.T:
+				runner.Run(consensusAlgo.String(), func(t *testing.T) {
+					b.runTest(t, consensusAlgo, f)
+				})
+			case *testing.B:
+				runner.Run(consensusAlgo.String(), func(t *testing.B) {
+					b.runTest(t, consensusAlgo, f)
+				})
+			default:
+				panic("unexpected TB implementation")
+			}
+		}
+	})
 }
 
 func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *NetworkHarness)) {
@@ -116,7 +120,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 	supervised.Recover(logger, func() {
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.initialBlockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
 
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
@@ -173,8 +177,8 @@ func (b *networkHarnessBuilder) WithRequiredQuorumPercentage(percentage int) *ne
 	return b
 }
 
-func (b *networkHarnessBuilder) WithBlockChain(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
-	b.blockChain = blocks
+func (b *networkHarnessBuilder) WithInitialBlockChain(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
+	b.initialBlockChain = blocks
 	return b
 }
 
