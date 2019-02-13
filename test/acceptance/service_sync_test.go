@@ -20,11 +20,11 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.ClientAddressForEd25519SignerForTests(6))
 	}
 
-	newHarness(t).
+	newHarness().
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
+		).StartWithRestart(t, func(t testing.TB, ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 		var topBlockHeight primitives.BlockHeight
 		for _, builder := range txBuilders {
@@ -55,11 +55,11 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	const transfers = 10
 	const totalAmount = transfers * transferAmount
 
-	newHarness(t).
+	newHarness().
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
-		StartWithRestart(func(ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
+		StartWithRestart(t, func(t testing.TB, ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
 
 			var txHashes []primitives.Sha256
 			// generate some blocks with state
