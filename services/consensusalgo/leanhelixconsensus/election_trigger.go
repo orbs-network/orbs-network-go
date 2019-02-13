@@ -34,7 +34,6 @@ func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout tim
 }
 
 func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))) {
-	e.logger.Info("ElectionTrigger registration start")
 	if e.electionHandler == nil || e.view != view || e.blockHeight != blockHeight {
 		timeout := e.CalcTimeout(view)
 		e.view = view
@@ -74,7 +73,6 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 }
 
 func (e *exponentialBackoffElectionTrigger) sendTrigger(ctx context.Context) {
-	e.logger.Info("ElectionTrigger triggered timeout")
 	select {
 	case <-ctx.Done():
 		return

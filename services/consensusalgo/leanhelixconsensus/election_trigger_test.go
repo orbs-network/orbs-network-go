@@ -3,8 +3,9 @@ package leanhelixconsensus
 import (
 	"context"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
-	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
+	"github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -14,8 +15,8 @@ import (
 	"time"
 )
 
-func buildElectionTrigger(ctx context.Context, timeout time.Duration) *electiontrigger.TimerBasedElectionTrigger {
-	et := electiontrigger.NewTimerBasedElectionTrigger(timeout, nil)
+func buildElectionTrigger(ctx context.Context, t *testing.T, timeout time.Duration) interfaces.ElectionTrigger {
+	et := NewExponentialBackoffElectionTrigger(log.DefaultTestingLogger(t), timeout, nil)
 	go func() {
 		for {
 			select {
@@ -33,7 +34,7 @@ func buildElectionTrigger(ctx context.Context, timeout time.Duration) *electiont
 // TODO Consider removing this test entirely - sleeps in tests are bad
 func TestCallbackTrigger(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 50*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 50*time.Millisecond)
 
 		wasCalled := false
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -49,7 +50,7 @@ func TestCallbackTrigger(t *testing.T) {
 
 func TestCallbackTriggerOnce(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 10*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 10*time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -65,7 +66,7 @@ func TestCallbackTriggerOnce(t *testing.T) {
 
 func TestCallbackTriggerTwiceInARow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 10*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 10*time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -84,7 +85,7 @@ func TestCallbackTriggerTwiceInARow(t *testing.T) {
 
 func TestIgnoreSameViewOrHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 30*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 30*time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -105,7 +106,7 @@ func TestIgnoreSameViewOrHeight(t *testing.T) {
 
 func TestNotTriggerIfSameViewButDifferentHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 30*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 30*time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -130,7 +131,7 @@ func TestNotTriggerIfSameViewButDifferentHeight(t *testing.T) {
 
 func TestNotTriggerIfSameHeightButDifferentView(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 30*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 30*time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -155,7 +156,7 @@ func TestNotTriggerIfSameHeightButDifferentView(t *testing.T) {
 
 func TestViewChanges(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 50*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 50*time.Millisecond)
 
 		wasCalled := false
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -179,7 +180,7 @@ func TestViewChanges(t *testing.T) {
 
 func TestViewPowTimeout(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, 10*time.Millisecond)
+		et := buildElectionTrigger(ctx, t, 10*time.Millisecond)
 
 		wasCalled := false
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -197,16 +198,15 @@ func TestViewPowTimeout(t *testing.T) {
 func TestElectionTriggerDoesNotLeak(t *testing.T) {
 	// this test checks that after multiple registrations, there are no goroutine leaks
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, time.Millisecond)
+		et := buildElectionTrigger(ctx, t, time.Millisecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
 			callCount++
 		}
 		start := runtime.NumGoroutine()
-		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 
-		for block := 10; block < 1000; block++ {
+		for block := 10; block < 100; block++ {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
 			time.Sleep(2 * time.Millisecond)
 		}
