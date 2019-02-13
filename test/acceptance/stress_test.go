@@ -2,9 +2,15 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/services/publicapi"
+	"github.com/orbs-network/orbs-network-go/services/statestorage"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -16,16 +22,16 @@ import (
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
 
-	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
-	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	rnd := rand.NewControlledRand(t)
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, rnd)
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, rnd)
 }
 
-func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoType) {
+func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoType, rnd *rand.ControlledRand) {
 	if !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS && algo == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		t.Skip("Not testing Lean Helix because ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS=false")
 	}
 
-	rnd := rand.NewControlledRand(t)
 	newHarness().
 		WithConsensusAlgos(algo).
 		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
