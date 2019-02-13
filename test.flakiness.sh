@@ -2,6 +2,8 @@
 
 . ./test.common.sh
 
+export GOTRACEBACK=all
+
 if [ "$CIRCLE_NODE_INDEX" == 0 ] || [ "$CIRCLE_NODE_INDEX" == 1 ] || [ "$CIRCLE_NODE_INDEX" == 2 ] || [ "$CIRCLE_NODE_INDEX" == 3 ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
     go_test_junit_report acceptance ./test/acceptance -count 50 -timeout 20m -failfast
 fi
