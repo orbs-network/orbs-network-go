@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func (o *TestOutput) Append(level string, message string, fields ...*Field) {
 		o.stopLogging = true
 		o.recordError(logLine)
 	} else {
-		o.tb.Log(logLine)
+		//o.tb.Log(logLine)
+		fmt.Println(logLine)
 	}
 }
