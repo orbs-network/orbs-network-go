@@ -50,6 +50,7 @@ func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
+
 	c := newTempFileConfig()
 	defer c.cleanDir()
 
