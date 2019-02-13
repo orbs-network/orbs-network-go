@@ -3,6 +3,7 @@ package leanhelixconsensus
 import (
 	"context"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
+	"runtime"
 
 	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
@@ -189,5 +190,27 @@ func TestViewPowTimeout(t *testing.T) {
 		require.False(t, wasCalled, "Triggered the callback too early")
 		time.Sleep(30 * time.Millisecond)
 		require.True(t, wasCalled, "Did not trigger the callback after the required timeout")
+	})
+}
+
+func TestElectionTriggerDoesNotLeak(t *testing.T) {
+	// this test checks that after multiple registrations, there are no goroutine leaks
+	test.WithContext(func(ctx context.Context) {
+		et := buildElectionTrigger(ctx, time.Millisecond)
+
+		callCount := 0
+		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
+			callCount++
+		}
+		start := runtime.NumGoroutine()
+
+		for block := 10; block < 1000; block++ {
+			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
+			time.Sleep(2 * time.Millisecond)
+		}
+		end := runtime.NumGoroutine()
+
+		require.Equal(t, start, end, "goroutine number should be the same")
+		require.True(t, callCount > 1, "the callback must be called more than once")
 	})
 }
