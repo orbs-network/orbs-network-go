@@ -104,6 +104,7 @@ func TestPausingTamperer(t *testing.T) {
 
 // this test is suspect as having a deadlock, may need to skip it
 func TestLatchingTamperer(t *testing.T) {
+	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it; handled in https://github.com/orbs-network/orbs-network-go/pull/769")
 	test.WithContext(func(ctx context.Context) {
 		c := newTamperingHarness(t, ctx)
 
