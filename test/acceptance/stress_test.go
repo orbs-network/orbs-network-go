@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -20,8 +21,19 @@ import (
 
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
+
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+}
+
+func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoType) {
+	if !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS && algo == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+		t.Skip("Not testing Lean Helix because ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS=false")
+	}
+
 	rnd := rand.NewControlledRand(t)
 	newHarness().
+		WithConsensusAlgos(algo).
 		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
 			log.ExcludeField(internodesync.LogTag),
 			log.ExcludeField(virtualmachine.LogTag),
@@ -76,7 +88,6 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 
 // TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
-	t.Skip("This should work - fix and remove Skip")
 	rnd := rand.NewControlledRand(t)
 	newHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
