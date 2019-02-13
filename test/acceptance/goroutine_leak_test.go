@@ -39,5 +39,5 @@ func testGoroutineLeaksWithAlgo(t *testing.T, algo consensus.ConsensusAlgoType) 
 	// give goroutines time to terminate
 	numGoroutineAfter := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(after, 1)
-	require.Equal(t, numGoroutineBefore, numGoroutineAfter, "number of goroutines should be equal, compare /tmp/gorou-shutdown-before.out and /tmp/gorou-shutdown-after.out to see stack traces of the leaks")
+	require.Equal(t, numGoroutineBefore, numGoroutineAfter, "number of goroutines should be equal, to see stack traces of the leaks, compare the files: /tmp/gorou-shutdown-before.out /tmp/gorou-shutdown-after.out")
 }
