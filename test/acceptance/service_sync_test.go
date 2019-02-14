@@ -2,13 +2,13 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -24,7 +24,8 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	blocks := createInitialBlocks(t, txBuilders)
 
 	newHarness().
-		WithBlockChain(blocks).
+		WithInitialBlocks(blocks).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
@@ -46,18 +47,19 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
-func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) []*protocol.BlockPairContainer {
-	ctx := context.Background()
-	network := gamma.NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t))
-	for _, builder := range txBuilders {
-		resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
-		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
-	}
+func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
+		for _, builder := range txBuilders {
+			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
+			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
+		}
 
-	blockChain, err := network.Nodes[0].BlockChain()
-	require.NoError(t, err, "failed fetching blocks from persistence")
+		var err error
+		blocks, err = network.Nodes[0].ExtractBlocks()
+		require.NoError(t, err, "failed fetching blocks from persistence")
+	})
 
-	return blockChain
+	return
 }
 
 func TestServiceBlockSync_StateStorage(t *testing.T) {
@@ -69,7 +71,8 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 	blocks, txHashes := createTransferBlocks(t, transfers, transferAmount)
 
 	newHarness().
-		WithBlockChain(blocks).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
+		WithInitialBlocks(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
@@ -93,7 +96,8 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
+
 		// generate some blocks with state
 		contract := network.DeployBenchmarkTokenContract(ctx, 0)
 		for i := 0; i < transfers; i++ {
@@ -106,7 +110,7 @@ func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []
 		}
 
 		var err error
-		blocks, err = network.Nodes[0].BlockChain()
+		blocks, err = network.Nodes[0].ExtractBlocks()
 		require.NoError(t, err, "failed generating blocks for test")
 	})
 
