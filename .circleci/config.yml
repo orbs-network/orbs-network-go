@@ -151,4 +151,4 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              ignore: /.*/
+              only: master
