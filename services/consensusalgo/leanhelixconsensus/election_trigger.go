@@ -41,10 +41,10 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		e.safeTimerStop()
 		wrappedTrigger := func() { e.sendTrigger(ctx) }
 		e.triggerTimer = time.AfterFunc(timeout, wrappedTrigger)
-		e.logger.Info("ElectionTrigger restarted timer for height and view",
-			log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
-			log.Uint64("lh-election-view", uint64(e.view)),
-			log.Stringable("lh-election-timeout", timeout))
+		//e.logger.Info("ElectionTrigger restarted timer for height and view",
+		//	log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
+		//	log.Uint64("lh-election-view", uint64(e.view)),
+		//	log.Stringable("lh-election-timeout", timeout))
 
 	}
 	e.electionHandler = electionHandler

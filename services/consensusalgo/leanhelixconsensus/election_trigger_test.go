@@ -212,7 +212,12 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 		end := runtime.NumGoroutine()
-		if start != end {
+
+		if start > end {
+			return
+		}
+
+		if start < end {
 			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		}
 		require.Equal(t, start, end, "goroutine number should be the same")
