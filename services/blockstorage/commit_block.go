@@ -40,7 +40,7 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	if err := s.validateBlockHeight(input.BlockPair, lastCommittedBlock); err != nil {
+	if err := s.validateConsecutiveBlockHeight(input.BlockPair, lastCommittedBlock); err != nil {
 		return nil, err
 	}
 
