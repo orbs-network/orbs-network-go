@@ -36,7 +36,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("rx-block-header", input.BlockPair.ResultsBlock.Header))
+		logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		return nil, err
 	}
 

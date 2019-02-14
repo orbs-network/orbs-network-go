@@ -19,12 +19,14 @@ import (
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"math"
+	"testing"
 	"time"
 )
 
@@ -38,6 +40,17 @@ type NetworkHarness struct {
 	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
 	stateBlockHeightTrackers           []*synchronization.BlockTracker
 	transactionPoolBlockHeightTrackers []*synchronization.BlockTracker
+}
+
+func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, network *NetworkHarness)) {
+	logger := log.DefaultTestingLogger(tb)
+	ctx, cancel := context.WithCancel(context.Background())
+	supervised.Recover(logger, func() {
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, 1000, 50)
+		network.CreateAndStartNodes(ctx, 2)
+		f(ctx, network)
+		cancel()
+	})
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer, numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32) *NetworkHarness {
