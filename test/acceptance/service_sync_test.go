@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -47,19 +48,23 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
-func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) []*protocol.BlockPairContainer {
+func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
+	logger := log.DefaultTestingLogger(t)
 	ctx := context.Background()
-	network := newReasonableBenchmarkConsensusNetwork(ctx, log.DefaultTestingLogger(t))
-	network.CreateAndStartNodes(ctx, 2)
-	for _, builder := range txBuilders {
-		resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
-		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
-	}
+	supervised.Recover(logger, func() {
+		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
+		network.CreateAndStartNodes(ctx, 2)
+		for _, builder := range txBuilders {
+			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
+			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
+		}
 
-	blockChain, err := network.Nodes[0].BlockChain()
-	require.NoError(t, err, "failed fetching blocks from persistence")
+		var err error
+		blocks, err = network.Nodes[0].BlockChain()
+		require.NoError(t, err, "failed fetching blocks from persistence")
+	})
 
-	return blockChain
+	return
 }
 
 func TestServiceBlockSync_StateStorage(t *testing.T) {
@@ -96,24 +101,27 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
-	ctx := context.Background()
-	network := newReasonableBenchmarkConsensusNetwork(ctx, log.DefaultTestingLogger(t))
-	network.CreateAndStartNodes(ctx, 2)
+	logger := log.DefaultTestingLogger(t)
+	supervised.Recover(logger, func() {
+		ctx := context.Background()
+		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
+		network.CreateAndStartNodes(ctx, 2)
 
-	// generate some blocks with state
-	contract := network.DeployBenchmarkTokenContract(ctx, 0)
-	for i := 0; i < transfers; i++ {
-		_, txHash := contract.Transfer(ctx, 0, amount, 0, 1)
-		txHashes = append(txHashes, txHash)
-	}
+		// generate some blocks with state
+		contract := network.DeployBenchmarkTokenContract(ctx, 0)
+		for i := 0; i < transfers; i++ {
+			_, txHash := contract.Transfer(ctx, 0, amount, 0, 1)
+			txHashes = append(txHashes, txHash)
+		}
 
-	for _, txHash := range txHashes {
-		network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
-	}
+		for _, txHash := range txHashes {
+			network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
+		}
 
-	var err error
-	blocks, err = network.Nodes[0].BlockChain()
-	require.NoError(t, err, "failed generating blocks for test")
+		var err error
+		blocks, err = network.Nodes[0].BlockChain()
+		require.NoError(t, err, "failed generating blocks for test")
+	})
 
 	return
 }
