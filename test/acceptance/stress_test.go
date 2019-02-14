@@ -33,7 +33,6 @@ func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoTyp
 	}
 
 	newHarness().
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 		WithConsensusAlgos(algo).
 		WithLogFilters( // as little logs as possible, biased towards printing mostly consensus & gossip messages
 			log.ExcludeField(internodesync.LogTag),
@@ -47,7 +46,7 @@ func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoTyp
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.IgnoreMessagesMatching("advertising transaction completion"),
 		).
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
