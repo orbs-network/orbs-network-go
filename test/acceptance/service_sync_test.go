@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -20,20 +21,16 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		txBuilders[i] = builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, builders.ClientAddressForEd25519SignerForTests(6))
 	}
 
+	blocks := createInitialBlocks(t, txBuilders)
+
 	newHarness().
+		WithBlockChain(blocks).
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).StartWithRestart(t, func(t testing.TB, ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
+		).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
-		var topBlockHeight primitives.BlockHeight
-		for _, builder := range txBuilders {
-			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
-			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
-			topBlockHeight = resp.RequestResult().BlockHeight()
-		}
-
-		network = restartPreservingBlocks()
+		topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 
 		_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
 		_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
@@ -49,31 +46,34 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	})
 }
 
+func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) []*protocol.BlockPairContainer {
+	ctx := context.Background()
+	network := gamma.NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t))
+	for _, builder := range txBuilders {
+		resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
+		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
+	}
+
+	blockChain, err := network.Nodes[0].BlockChain()
+	require.NoError(t, err, "failed fetching blocks from persistence")
+
+	return blockChain
+}
+
 func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	const transferAmount = 10
 	const transfers = 10
 	const totalAmount = transfers * transferAmount
 
+	blocks, txHashes := createTransferBlocks(t, transfers, transferAmount)
+
 	newHarness().
+		WithBlockChain(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
-		StartWithRestart(t, func(t testing.TB, ctx context.Context, network NetworkHarness, restartPreservingBlocks func() NetworkHarness) {
-
-			var txHashes []primitives.Sha256
-			// generate some blocks with state
-			contract := network.DeployBenchmarkTokenContract(ctx, 0)
-			for i := 0; i < transfers; i++ {
-				_, txHash := contract.Transfer(ctx, 0, transferAmount, 0, 1)
-				txHashes = append(txHashes, txHash)
-			}
-
-			for _, txHash := range txHashes {
-				network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
-			}
-
-			network = restartPreservingBlocks()
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 			// wait for all tx to reach state storage:
 			for _, txHash := range txHashes {
@@ -81,7 +81,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			}
 
 			// verify state in both nodes
-			contract = network.DeployBenchmarkTokenContract(ctx, 0)
+			contract := network.DeployBenchmarkTokenContract(ctx, 0)
 			balanceNode0 := contract.GetBalance(ctx, 0, 1)
 			balanceNode1 := contract.GetBalance(ctx, 1, 1)
 
@@ -89,4 +89,26 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 			require.EqualValues(t, totalAmount, balanceNode1, "expected transfers to reflect in non leader state")
 		})
 
+}
+
+func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
+
+	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		// generate some blocks with state
+		contract := network.DeployBenchmarkTokenContract(ctx, 0)
+		for i := 0; i < transfers; i++ {
+			_, txHash := contract.Transfer(ctx, 0, amount, 0, 1)
+			txHashes = append(txHashes, txHash)
+		}
+
+		for _, txHash := range txHashes {
+			network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
+		}
+
+		var err error
+		blocks, err = network.Nodes[0].BlockChain()
+		require.NoError(t, err, "failed generating blocks for test")
+	})
+
+	return
 }
