@@ -16,7 +16,7 @@ import (
 func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	newHarness().
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
@@ -27,7 +27,7 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 15))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -38,7 +38,7 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 15)))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -49,7 +49,7 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(50))) * time.Millisecond
 			}, WithPercentChance(rnd, 30))
@@ -66,7 +66,7 @@ func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 		AllowingErrors(
 			"transport header is corrupt", // because we corrupt messages
 		).
-		Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 15)), rnd)
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
 			tamper.StopTampering(ctx)
@@ -111,7 +111,7 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network NetworkHarness, t testing.TB, numTransactions int, ctrlRand *rand.ControlledRand) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHarness, t testing.TB, numTransactions int, ctrlRand *rand.ControlledRand) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)

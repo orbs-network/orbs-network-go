@@ -21,7 +21,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
-	).Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 		ts := time.Now()
 
 		network.DeployBenchmarkTokenContract(ctx, 1)
@@ -60,7 +60,7 @@ func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
 		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 		ts := time.Now()
 		network.DeployBenchmarkTokenContract(ctx, 1)
@@ -84,7 +84,7 @@ func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
 	})
 }
 
-func requireTxCommittedOnce(ctx context.Context, t testing.TB, network NetworkHarness, nodeIndex int, txHash primitives.Sha256) {
+func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *NetworkHarness, nodeIndex int, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
 	persistence := network.BlockPersistence(nodeIndex)
@@ -124,7 +124,7 @@ func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
 		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 		persistence := network.BlockPersistence(0)
 		targetBlockHeight := 2

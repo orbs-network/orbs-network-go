@@ -10,7 +10,7 @@ import (
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config (remove "NonLeader")
 func TestDeploysNativeContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 		// in BC leader is nodeIndex 0, validator is nodeIndex 1, in LH leadership is randomized
 
