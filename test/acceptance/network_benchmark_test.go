@@ -17,7 +17,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 
 	newHarness().
 		WithLogFilters(log.DiscardAll()).
-		WithNumNodes(4).Start(b, func(t testing.TB, ctx context.Context, network NetworkHarness) {
+		WithNumNodes(4).Start(b, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 		contract := network.DeployBenchmarkTokenContract(ctx, 5)
 

@@ -5,7 +5,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -39,4 +42,22 @@ func (n *Node) Started() bool {
 
 func (n *Node) Destroy() {
 	n.nodeLogic = nil
+}
+
+func (n *Node) BlockChain() ([]*protocol.BlockPairContainer, error) {
+
+	lastBlock, err := n.blockPersistence.GetLastBlock()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed reading block height")
+	}
+	var blockPairs []*protocol.BlockPairContainer
+	pageSize := uint8(lastBlock.ResultsBlock.Header.BlockHeight())
+	err = n.blockPersistence.ScanBlocks(1, pageSize, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		blockPairs = page // TODO should we copy the slice here to make sure both networks are isolated?
+		return false
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed extract blocks")
+	}
+	return blockPairs, nil
 }
