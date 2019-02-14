@@ -17,6 +17,7 @@ type runtimeMetrics struct {
 	heapObjects     *Gauge
 	gcCpuPercentage *Gauge
 	numGc           *Gauge
+	numGoroutine    *Gauge
 }
 
 type runtimeReporter struct {
@@ -34,6 +35,7 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.B
 			heapObjects:     metricFactory.NewGauge("Runtime.HeapObjects"),
 			gcCpuPercentage: metricFactory.NewGauge("Runtime.GCCPUPercentage"),
 			numGc:           metricFactory.NewGauge("Runtime.NumGc"),
+			numGoroutine:    metricFactory.NewGauge("Runtime.NumGoroutine"),
 		},
 	}
 
@@ -60,4 +62,5 @@ func (r *runtimeReporter) reportRuntimeMetrics() {
 	r.metrics.heapObjects.Update(int64(mem.HeapObjects))
 	r.metrics.gcCpuPercentage.Update(int64(mem.GCCPUFraction * 100))
 	r.metrics.numGc.Update(int64(mem.NumGC))
+	r.metrics.numGoroutine.Update(int64(runtime.NumGoroutine()))
 }
