@@ -19,10 +19,10 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
-			withSyncCollectResponsesTimeout(1 * time.Millisecond).
+			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
 
-		const NUM_BLOCKS = 300
+		const NUM_BLOCKS = 50
 		done := false
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
