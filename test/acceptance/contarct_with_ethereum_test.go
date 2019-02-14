@@ -19,9 +19,9 @@ import (
 
 // LH: Can only use after enabling Jonathan's (also Noam) feature for finding a block on Eth based on timestamp (find Taiga)
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
-	newHarness(t).
+	newHarness().
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
-		Start(func(ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 
 			addressOfContractInEthereum := deployEthereumContract(t, network.EthereumSimulator(), "foobar")
 			deployOrbsContractCallingEthereum(ctx, network)
@@ -36,7 +36,7 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 		})
 }
 
-func deployEthereumContract(t *testing.T, simulator *adapter.EthereumSimulator, stringValue string) string {
+func deployEthereumContract(t testing.TB, simulator *adapter.EthereumSimulator, stringValue string) string {
 	addressOfContractInEthereum, err := simulator.DeploySimpleStorageContract(simulator.GetAuth(), stringValue)
 	simulator.Commit()
 	require.NoError(t, err, "deploy of storage contract failed")
@@ -48,7 +48,7 @@ func extractStringValueFrom(readResponse *client.RunQueryResponse) string {
 	return argsArray.ArgumentsIterator().NextArguments().StringValue()
 }
 
-func readStringFromEthereumReaderAt(ctx context.Context, network NetworkHarness, address string) *client.RunQueryResponse {
+func readStringFromEthereumReaderAt(ctx context.Context, network *NetworkHarness, address string) *client.RunQueryResponse {
 	readQuery := builders.Query().
 		WithMethod("EthereumReader", "readString").
 		WithArgs(address).
@@ -57,7 +57,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network NetworkHarness,
 	return readResponse
 }
 
-func deployOrbsContractCallingEthereum(parent context.Context, network NetworkHarness) {
+func deployOrbsContractCallingEthereum(parent context.Context, network *NetworkHarness) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
 	ethereumReaderCode := "foo" // TODO (v1) this junk argument is very confusing

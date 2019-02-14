@@ -12,10 +12,10 @@ import (
 )
 
 func TestCommitTransactionWithLeanHelix(t *testing.T) {
-	newHarness(t).
+	newHarness().
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(func(ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 			// leader is nodeIndex 0, validator is nodeIndex 1
 			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
@@ -30,8 +30,8 @@ func TestCommitTransactionWithLeanHelix(t *testing.T) {
 }
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
-	newHarness(t).
-		Start(func(parent context.Context, network NetworkHarness) {
+	newHarness().
+		Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 			ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 			defer cancel()
 
@@ -61,9 +61,9 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 }
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
-	newHarness(t).
+	newHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
-		Start(func(parent context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 
@@ -90,7 +90,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 }
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
-	newHarness(t).Start(func(parent context.Context, network NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

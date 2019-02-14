@@ -24,7 +24,7 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 	//	newHarness(t).
 	//	WithNumNodes(4).
 	//	WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-	//	Start(func(ctx context.Context, network NetworkHarness) {
+	//	Start(func(ctx context.Context, network *NetworkHarness) {
 	//
 	//		contract := network.DeployBenchmarkTokenContract()
 	//
@@ -65,12 +65,11 @@ func TestLeanHelixLeaderGetsValidationsBeforeCommit(t *testing.T) {
 }
 
 func TestBenchmarkConsensusLeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	t.Skip()
-	newHarness(t).
+	newHarness().
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // override default consensus algo
 		WithMaxTxPerBlock(1).
-		Start(func(parent context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 

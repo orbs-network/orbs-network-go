@@ -46,7 +46,7 @@ type transactionStatuser interface {
 	TransactionReceipt() *protocol.TransactionReceipt
 }
 
-func RequireSuccess(t *testing.T, tx transactionStatuser, msg string, args ...interface{}) {
+func RequireSuccess(t testing.TB, tx transactionStatuser, msg string, args ...interface{}) {
 	message := fmt.Sprintf(msg, args...)
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED.String(), tx.TransactionStatus().String(), msg)
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), tx.TransactionReceipt().ExecutionResult().String(), message)

@@ -9,7 +9,7 @@ import (
 )
 
 func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks_BenchmarkConsensus(t *testing.T) {
-	newHarness(t).
+	newHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithNumNodes(6).
 		WithNumRunningNodes(4).
@@ -18,7 +18,7 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks_BenchmarkConsensus(
 			log.ExcludeEntryPoint("BlockSync"),
 			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeEntryPoint("LeanHelixConsensus")).
-		Start(func(ctx context.Context, network NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			out, _ := contract.Transfer(ctx, 0, uint64(23), 5, 6)
