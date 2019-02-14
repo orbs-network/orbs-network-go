@@ -61,7 +61,7 @@ func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder
 		}
 
 		var err error
-		blocks, err = network.Nodes[0].BlockChain()
+		blocks, err = network.Nodes[0].ExtractBlocks()
 		require.NoError(t, err, "failed fetching blocks from persistence")
 	})
 
@@ -121,7 +121,7 @@ func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []
 		}
 
 		var err error
-		blocks, err = network.Nodes[0].BlockChain()
+		blocks, err = network.Nodes[0].ExtractBlocks()
 		require.NoError(t, err, "failed generating blocks for test")
 	})
 
