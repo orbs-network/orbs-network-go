@@ -46,15 +46,11 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	logger := log.DefaultTestingLogger(tb)
 	ctx, cancel := context.WithCancel(context.Background())
 	supervised.Recover(logger, func() {
-		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, 1000, 50)
 		network.CreateAndStartNodes(ctx, 2)
 		f(ctx, network)
 		cancel()
 	})
-}
-
-func newReasonableBenchmarkConsensusNetwork(ctx context.Context, testLogger log.BasicLogger) *NetworkHarness {
-	return newAcceptanceTestNetwork(ctx, testLogger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, 1000, 50)
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer, numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32) *NetworkHarness {

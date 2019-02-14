@@ -173,7 +173,7 @@ func (b *networkHarnessBuilder) WithRequiredQuorumPercentage(percentage int) *ne
 	return b
 }
 
-func (b *networkHarnessBuilder) WithBlockChain(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
+func (b *networkHarnessBuilder) WithInitialBlocks(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
 	b.blockChain = blocks
 	return b
 }
