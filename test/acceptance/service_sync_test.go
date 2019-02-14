@@ -50,7 +50,8 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
 	logger := log.DefaultTestingLogger(t)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	supervised.Recover(logger, func() {
 		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
 		network.CreateAndStartNodes(ctx, 2)
@@ -102,8 +103,9 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
 	logger := log.DefaultTestingLogger(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	supervised.Recover(logger, func() {
-		ctx := context.Background()
 		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
 		network.CreateAndStartNodes(ctx, 2)
 
