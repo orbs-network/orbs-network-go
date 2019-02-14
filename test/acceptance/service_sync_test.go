@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -49,12 +48,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 }
 
 func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
-	logger := log.DefaultTestingLogger(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	supervised.Recover(logger, func() {
-		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
-		network.CreateAndStartNodes(ctx, 2)
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
 		for _, builder := range txBuilders {
 			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
 			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
@@ -102,12 +96,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
-	logger := log.DefaultTestingLogger(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	supervised.Recover(logger, func() {
-		network := newReasonableBenchmarkConsensusNetwork(ctx, logger)
-		network.CreateAndStartNodes(ctx, 2)
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
 
 		// generate some blocks with state
 		contract := network.DeployBenchmarkTokenContract(ctx, 0)
