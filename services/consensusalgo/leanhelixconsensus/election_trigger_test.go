@@ -210,18 +210,18 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
 			time.Sleep(2 * time.Millisecond)
 		}
-		time.Sleep(20 * time.Millisecond)
+
 		end := runtime.NumGoroutine()
+
+		require.True(t, callCount > 1, "the callback must be called more than once") // sanity
 
 		if start > end {
 			return
 		}
 
-		if start < end {
+		if start != end {
 			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		}
 		require.Equal(t, start, end, "goroutine number should be the same")
-
-		require.True(t, callCount > 1, "the callback must be called more than once")
 	})
 }
