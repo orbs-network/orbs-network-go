@@ -175,7 +175,7 @@ func (n *Network) SendTransaction(ctx context.Context, builder *protocol.SignedT
 		select {
 		case ch <- sendTxResp{res: output, err: err}:
 		case <-ctx.Done():
-			ch <- sendTxResp{err: errors.Wrap(ctx.Err(), "aborted send tx")}
+			ch <- sendTxResp{err: errors.Wrapf(ctx.Err(), "aborted send tx with txHash=%s", txHash)}
 		}
 	}()
 
