@@ -84,6 +84,7 @@ type NodeConfig interface {
 	LoggerHttpEndpoint() string
 	LoggerBulkSize() uint32
 	LoggerFileTruncationInterval() time.Duration
+	LoggerFullLog() bool
 
 	// http server
 	HttpAddress() string

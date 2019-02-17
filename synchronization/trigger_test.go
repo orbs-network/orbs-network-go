@@ -129,7 +129,6 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 }
 
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
-	t.Skip("LongLived is broken, try again when its fixed")
 	logger := mockLogger()
 	x := 0
 	p := synchronization.NewPeriodicalTrigger(context.Background(),
@@ -140,7 +139,13 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 			panic("we should not see this other than the logs")
 		},
 		nil)
-	time.Sleep(5 * time.Millisecond)
+
+	// more than one error means more than one panic means it recovers correctly
+	for i := 0; i < 2; i++ {
+		<-logger.errors
+	}
+
 	p.Stop()
-	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) %d", x)
+
+	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
 }
