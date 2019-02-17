@@ -6,45 +6,27 @@ import "context"
 //Note: not thread-safe; do not reuse the same instance in two goroutines
 type transactionWaiter struct {
 	incremented chan struct{}
-	waiting     bool
 }
 
-func (w *transactionWaiter) waitFor(ctx context.Context, numOfNotificationsToWaitFor int) chan bool {
-	ch := make(chan bool)
-	w.waiting = true
-	notificationsMet := 0
-	go func() {
-		for {
-			select {
-			case <-w.incremented:
-				notificationsMet++
-				if notificationsMet >= numOfNotificationsToWaitFor {
-					ch <- true
-					w.waiting = false
-					return
-				}
-			case <-ctx.Done():
-				ch <- false
-				w.waiting = false
-				return
-			}
+func (w *transactionWaiter) waitForIncomingTransaction(ctx context.Context) bool {
+	for {
+		select {
+		case <-w.incremented:
+			return true
+		case <-ctx.Done():
+			return false
 		}
-	}()
-	return ch
+	}
 }
 
 func (w *transactionWaiter) inc(ctx context.Context) {
-	if !w.waiting {
+	select {
+	case w.incremented <- struct{}{}:
+	default:
 		return
 	}
-	go func() { // so that we don't block anyone incrementing
-		select {
-		case w.incremented <- struct{}{}:
-		case <-ctx.Done():
-		}
-	}()
 }
 
 func newTransactionWaiter() *transactionWaiter {
-	return &transactionWaiter{incremented: make(chan struct{})}
+	return &transactionWaiter{incremented: make(chan struct{}, 1)}
 }

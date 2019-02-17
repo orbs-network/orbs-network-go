@@ -77,6 +77,11 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	//TODO(v1) fail if requested block height is in the past
 	s.logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), log.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
 
+	// close first  block immediately without waiting (important for gamma)
+	if input.CurrentBlockHeight == 1 {
+		return &services.GetTransactionsForOrderingOutput{SignedTransactions: nil}, nil
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
@@ -103,10 +108,9 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 	}
 
-	minNumOfTransactions := 1
 	batch, err := runBatch()
-	if !batch.hasEnoughTransactions(minNumOfTransactions) {
-		if <-s.transactionWaiter.waitFor(timeoutCtx, minNumOfTransactions) {
+	if !batch.hasEnoughTransactions(1) {
+		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
 			batch, err = runBatch()
 		}
 	}
