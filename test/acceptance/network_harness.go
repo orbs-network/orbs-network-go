@@ -151,7 +151,7 @@ func (n *NetworkHarness) EthereumSimulator() *ethereumAdapter.EthereumSimulator 
 func (n *NetworkHarness) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {
 	bt := callcontract.NewContractClient(n)
 
-	benchmarkDeploymentTimeout := 1 * time.Second
+	benchmarkDeploymentTimeout := 5 * time.Second
 	timeoutCtx, cancel := context.WithTimeout(ctx, benchmarkDeploymentTimeout)
 	defer cancel()
 
