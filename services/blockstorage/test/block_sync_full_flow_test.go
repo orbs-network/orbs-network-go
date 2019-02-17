@@ -134,6 +134,10 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 }
 
 func respondToBroadcastAvailabilityRequest(t *testing.T, ctx context.Context, harness *harness, requestInput *gossiptopics.BlockAvailabilityRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
+	if harness.blockStorage == nil {
+		return // protect against edge condition where harness did not finish initializing and sync has started
+	}
+
 	firstBlockHeight := requestInput.Message.SignedBatchRange.FirstBlockHeight()
 	if firstBlockHeight > availableBlocks {
 		return
