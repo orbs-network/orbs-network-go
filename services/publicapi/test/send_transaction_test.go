@@ -111,7 +111,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 	})
 }
 
-func TestSendTransaction_ReturnImmediately(t *testing.T) {
+func TestSendTransactionAsync_ReturnsImmediately(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		txTimeout := 100 * time.Hour // infinity - won't actually wait please don't change
 		harness := newPublicApiHarness(ctx, t, txTimeout, time.Minute)
@@ -120,11 +120,10 @@ func TestSendTransaction_ReturnImmediately(t *testing.T) {
 		harness.onAddNewTransaction(func() {})
 
 		start := time.Now()
-		result, _ := harness.papi.SendTransaction(ctx, &services.SendTransactionInput{
+		result, _ := harness.papi.SendTransactionAsync(ctx, &services.SendTransactionInput{
 			ClientRequest: (&client.SendTransactionRequestBuilder{
 				SignedTransaction: txb,
 			}).Build(),
-			ReturnImmediately: 1,
 		})
 
 		harness.verifyMocks(t) // contract test

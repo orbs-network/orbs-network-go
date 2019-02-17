@@ -14,20 +14,36 @@ import (
 
 func (s *service) SendTransaction(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
+	out, err := s.sendTransaction(ctx, input.ClientRequest, false)
+	if out == nil {
+		return nil, err
+	}
+	return toSendTxOutput(out), err
+}
 
-	if input.ClientRequest == nil {
+func (s *service) SendTransactionAsync(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
+	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransactionAsync")
+	out, err := s.sendTransaction(ctx, input.ClientRequest, true)
+	if out == nil {
+		return nil, err
+	}
+	return toSendTxOutput(out), err
+}
+
+func (s *service) sendTransaction(ctx context.Context, request *client.SendTransactionRequest, asyncMode bool) (*txOutput, error) {
+	if request == nil {
 		err := errors.Errorf("client request is nil")
 		s.logger.Info("send transaction received missing input", log.Error(err))
 		return nil, err
 	}
 
-	tx := input.ClientRequest.SignedTransaction().Transaction()
+	tx := request.SignedTransaction().Transaction()
 	txHash := digest.CalcTxHash(tx)
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("send transaction received input failed", log.Error(err))
-		return toSendTxOutput(&txOutput{transactionStatus: txStatus}), err
+		return &txOutput{transactionStatus: txStatus}, err
 	}
 
 	logger.Info("send transaction request received")
@@ -38,22 +54,22 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
 	addResp, err := s.transactionPool.AddNewTransaction(ctx, &services.AddNewTransactionInput{
-		SignedTransaction: input.ClientRequest.SignedTransaction(),
+		SignedTransaction: request.SignedTransaction(),
 	})
 	if err != nil {
 		s.waiter.deleteByChannel(waitResult)
 		logger.Info("adding transaction to TransactionPool failed", log.Error(err))
-		return toSendTxOutput(addOutputToTxOutput(addResp)), err
+		return addOutputToTxOutput(addResp), err
 	}
 
 	if addResp.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
 		s.waiter.deleteByChannel(waitResult)
-		return toSendTxOutput(addOutputToTxOutput(addResp)), nil
+		return addOutputToTxOutput(addResp), nil
 	}
 
-	if input.ReturnImmediately != 0 {
+	if asyncMode {
 		s.waiter.deleteByChannel(waitResult)
-		return toSendTxOutput(addOutputToTxOutput(addResp)), nil
+		return addOutputToTxOutput(addResp), nil
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, s.config.PublicApiSendTransactionTimeout())
@@ -62,9 +78,9 @@ func (s *service) SendTransaction(parentCtx context.Context, input *services.Sen
 	obj, err := s.waiter.wait(ctx, waitResult)
 	if err != nil {
 		logger.Info("waiting for transaction to be processed failed")
-		return toSendTxOutput(addOutputToTxOutput(addResp)), err
+		return addOutputToTxOutput(addResp), err
 	}
-	return toSendTxOutput(obj.(*txOutput)), nil
+	return obj.(*txOutput), nil
 }
 
 func addOutputToTxOutput(t *services.AddNewTransactionOutput) *txOutput {

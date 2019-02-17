@@ -191,9 +191,8 @@ func (n *Network) SendTransactionInBackground(ctx context.Context, builder *prot
 
 	go func() {
 		publicApi := n.Nodes[nodeIndex].GetPublicApi()
-		output, err := publicApi.SendTransaction(ctx, &services.SendTransactionInput{
-			ClientRequest:     (&client.SendTransactionRequestBuilder{SignedTransaction: builder}).Build(),
-			ReturnImmediately: 1,
+		output, err := publicApi.SendTransactionAsync(ctx, &services.SendTransactionInput{
+			ClientRequest: (&client.SendTransactionRequestBuilder{SignedTransaction: builder}).Build(),
 		})
 		if output == nil {
 			panic(fmt.Sprintf("error sending transaction: %s", err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
