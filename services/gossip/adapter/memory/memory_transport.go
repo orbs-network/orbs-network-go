@@ -41,7 +41,7 @@ func NewTransport(ctx context.Context, logger log.BasicLogger, federation map[st
 	defer transport.Unlock()
 	for _, node := range federation {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.String("peer-listener", nodeAddress)), len(federation))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("peer-listener", node.NodeAddress())), len(federation))
 	}
 
 	return transport
