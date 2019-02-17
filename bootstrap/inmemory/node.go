@@ -44,7 +44,7 @@ func (n *Node) Destroy() {
 	n.nodeLogic = nil
 }
 
-func (n *Node) BlockChain() ([]*protocol.BlockPairContainer, error) {
+func (n *Node) ExtractBlocks() ([]*protocol.BlockPairContainer, error) {
 
 	lastBlock, err := n.blockPersistence.GetLastBlock()
 	if err != nil {

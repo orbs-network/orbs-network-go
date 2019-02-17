@@ -25,7 +25,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, err
 	}
 
-	if blockHeightError := s.validateBlockHeight(input.BlockPair, lastCommittedBlock); blockHeightError != nil {
+	if blockHeightError := s.validateConsecutiveBlockHeight(input.BlockPair, lastCommittedBlock); blockHeightError != nil {
 		return nil, blockHeightError
 	}
 
@@ -36,7 +36,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		input.BlockPair,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 
-		logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("rx-block-header", input.BlockPair.ResultsBlock.Header))
+		logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		return nil, err
 	}
 
@@ -80,7 +80,7 @@ func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *
 	return true, nil
 }
 
-func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
+func (s *service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
 	expectedBlockHeight := getBlockHeight(lastCommittedBlock) + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
@@ -90,7 +90,7 @@ func (s *service) validateBlockHeight(blockPair *protocol.BlockPairContainer, la
 		return fmt.Errorf("block pair height mismatch. transactions height is %d, results height is %d", txBlockHeader.BlockHeight(), rsBlockHeader.BlockHeight())
 	}
 
-	if txBlockHeader.BlockHeight() > expectedBlockHeight {
+	if txBlockHeader.BlockHeight() != expectedBlockHeight {
 		return fmt.Errorf("block height is %d, expected %d", txBlockHeader.BlockHeight(), expectedBlockHeight)
 	}
 
