@@ -116,7 +116,8 @@ func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
 	var blocks []*protocol.BlockPairContainer
 
 	for i := bc.firstBlockHeight; i <= bc.lastBlockHeight; i++ {
-		blocks = append(blocks, BlockPair().WithHeight(i).WithBlockCreated(time.Now()).Build())
+		blockTime := time.Unix(1550394190000000000+int64(i), 0) // deterministic block creation in the past based on block height
+		blocks = append(blocks, BlockPair().WithHeight(i).WithBlockCreated(blockTime).Build())
 	}
 
 	return &gossiptopics.BlockSyncResponseInput{

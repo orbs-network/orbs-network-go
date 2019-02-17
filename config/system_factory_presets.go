@@ -79,6 +79,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
 	cfg.SetDuration(LOGGER_FILE_TRUNCATION_INTERVAL, 24*time.Hour)
+	cfg.SetBool(LOGGER_FULL_LOG, false)
 
 	cfg.SetBool(PROFILING, false)
 	cfg.SetString(HTTP_ADDRESS, ":8080")
