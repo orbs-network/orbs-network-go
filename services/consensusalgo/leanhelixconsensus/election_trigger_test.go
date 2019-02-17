@@ -108,24 +108,25 @@ func TestNotTriggerIfSameViewButDifferentHeight(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, t, 30*time.Millisecond)
 
-		callCount := 0
-		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
-			callCount++
+		beforeSecondRegister := false
+		cb1 := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
+			beforeSecondRegister = true
 		}
 
-		et.RegisterOnElection(ctx, 10, 0, cb)
-		time.Sleep(10 * time.Millisecond)
-		et.RegisterOnElection(ctx, 11, 0, cb)
-		time.Sleep(10 * time.Millisecond)
-		et.RegisterOnElection(ctx, 12, 0, cb)
-		time.Sleep(10 * time.Millisecond)
-		et.RegisterOnElection(ctx, 13, 0, cb)
-		time.Sleep(10 * time.Millisecond)
-		et.RegisterOnElection(ctx, 14, 0, cb)
-		time.Sleep(10 * time.Millisecond)
-		et.RegisterOnElection(ctx, 15, 0, cb)
+		afterSecondRegister := false
+		cb2 := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
+			afterSecondRegister = true
+		}
 
-		require.Exactly(t, 0, callCount, "Trigger callback called")
+		et.RegisterOnElection(ctx, 10, 0, cb1)
+		time.Sleep(3 * time.Millisecond)
+
+		et.RegisterOnElection(ctx, 11, 0, cb2)
+		time.Sleep(50 * time.Millisecond)
+
+		require.False(t, beforeSecondRegister, "should not trigger the first one")
+		require.True(t, afterSecondRegister, "should only trigger the second one")
+
 	})
 }
 
