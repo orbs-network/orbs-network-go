@@ -134,7 +134,6 @@ func (n *NetworkHarness) WaitForTransactionInNodeState(ctx context.Context, txHa
 
 func (n *NetworkHarness) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
 	for i, node := range n.Nodes {
-		fmt.Printf("**** node started i=%d started=%v ****\n", i, node.Started())
 		if node.Started() {
 			n.WaitForTransactionInNodeState(ctx, txHash, i)
 		}
