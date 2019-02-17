@@ -26,7 +26,7 @@ type exponentialBackoffElectionTrigger struct {
 func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout time.Duration, onElectionCB func(m lhmetrics.ElectionMetrics)) lh.ElectionTrigger {
 
 	return &exponentialBackoffElectionTrigger{
-		electionChannel: make(chan func(ctx context.Context)),
+		electionChannel: make(chan func(ctx context.Context), 1), // buffered so trigger goroutine can terminate regardless of channel reader
 		minTimeout:      minTimeout,
 		onElectionCB:    onElectionCB,
 		logger:          logger,
@@ -39,13 +39,7 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		e.view = view
 		e.blockHeight = blockHeight
 		e.safeTimerStop()
-		wrappedTrigger := func() { e.sendTrigger(ctx) }
-		e.triggerTimer = time.AfterFunc(timeout, wrappedTrigger)
-		//e.logger.Info("ElectionTrigger restarted timer for height and view",
-		//	log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
-		//	log.Uint64("lh-election-view", uint64(e.view)),
-		//	log.Stringable("lh-election-timeout", timeout))
-
+		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
 	}
 	e.electionHandler = electionHandler
 }
@@ -72,12 +66,11 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 	}
 }
 
-func (e *exponentialBackoffElectionTrigger) sendTrigger(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-		return
-	case e.electionChannel <- e.trigger:
-	}
+func (e *exponentialBackoffElectionTrigger) sendTrigger() {
+	e.logger.Info("election trigger triggered",
+		log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
+		log.Uint64("lh-election-view", uint64(e.view)))
+	e.electionChannel <- e.trigger
 }
 
 func (e *exponentialBackoffElectionTrigger) CalcTimeout(view primitives.View) time.Duration {
