@@ -51,25 +51,23 @@ func (t *periodicalTrigger) TimesTriggered() uint64 {
 
 func (t *periodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	go func() {
-		supervised.GoForever(ctx, t.logger, func() {
-			t.wgSync.Add(1)
-			defer t.wgSync.Done()
-			for {
-				select {
-				case <-t.ticker.C:
-					t.f()
-					atomic.AddUint64(&t.metrics.timesTriggered, 1)
-				case <-ctx.Done():
-					t.ticker.Stop()
-					if t.s != nil {
-						go t.s()
-					}
-					return
+	supervised.GoForever(ctx, t.logger, func() {
+		t.wgSync.Add(1)
+		defer t.wgSync.Done()
+		for {
+			select {
+			case <-t.ticker.C:
+				t.f()
+				atomic.AddUint64(&t.metrics.timesTriggered, 1)
+			case <-ctx.Done():
+				t.ticker.Stop()
+				if t.s != nil {
+					go t.s()
 				}
+				return
 			}
-		})
-	}()
+		}
+	})
 }
 
 func (t *periodicalTrigger) Stop() {
