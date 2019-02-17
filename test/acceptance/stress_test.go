@@ -22,12 +22,11 @@ import (
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
 
-	rnd := rand.NewControlledRand(t)
-	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, rnd)
-	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, rnd)
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
+	runHappyFlowWithConsensusAlgo(t, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 }
 
-func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoType, rnd *rand.ControlledRand) {
+func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoType) {
 	if !ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS && algo == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		t.Skip("Not testing Lean Helix because ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS=false")
 	}
@@ -47,17 +46,19 @@ func runHappyFlowWithConsensusAlgo(t *testing.T, algo consensus.ConsensusAlgoTyp
 			log.IgnoreMessagesMatching("advertising transaction completion"),
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			rnd := rand.NewControlledRand(t)
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
 }
 
 func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
+
 	getStressTestHarness().
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			rnd := rand.NewControlledRand(t)
 			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 15))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -66,9 +67,9 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 
 // TODO (v1) Must drop message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestGazillionTxWhileDroppingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			rnd := rand.NewControlledRand(t)
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 15)))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
@@ -77,9 +78,10 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 
 // See BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT - cannot delay messages consistently more than that, or block sync will never work - it throws "timed out when waiting for chunks"
 func TestGazillionTxWhileDelayingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
+
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			rnd := rand.NewControlledRand(t)
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(50))) * time.Millisecond
 			}, WithPercentChance(rnd, 30))
@@ -91,12 +93,13 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 // TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
-	rnd := rand.NewControlledRand(t)
+
 	newHarness().
 		AllowingErrors(
 			"transport header is corrupt", // because we corrupt messages
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			rnd := rand.NewControlledRand(t)
 			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 15)), rnd)
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
 			tamper.StopTampering(ctx)
