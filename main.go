@@ -6,16 +6,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
-	"time"
 )
 
-func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize int,
-	vchainId primitives.VirtualChainId, truncationInterval time.Duration) log.BasicLogger {
-
+func getLogger(path string, silent bool, cfg config.NodeConfig) log.BasicLogger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -25,7 +21,7 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		panic(err)
 	}
 
-	fileWriter := log.NewTruncatingFileWriter(logFile, truncationInterval)
+	fileWriter := log.NewTruncatingFileWriter(logFile, cfg.LoggerFileTruncationInterval())
 	outputs := []log.Output{
 		log.NewFormattingOutput(fileWriter, log.NewJsonFormatter()),
 	}
@@ -34,22 +30,25 @@ func getLogger(path string, silent bool, httpLogEndpoint string, httpLogBulkSize
 		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
 	}
 
-	if httpLogEndpoint != "" {
+	if cfg.LoggerHttpEndpoint() != "" {
 		customJSONFormatter := log.NewJsonFormatter().WithTimestampColumn("@timestamp")
-		bulkSize := httpLogBulkSize
+		bulkSize := int(cfg.LoggerBulkSize())
 		if bulkSize == 0 {
 			bulkSize = 100
 		}
 
-		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(httpLogEndpoint), customJSONFormatter, bulkSize))
+		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(cfg.LoggerHttpEndpoint()), customJSONFormatter, bulkSize))
 	}
 
-	return log.GetLogger().WithTags(
-		log.VirtualChainId(vchainId),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT")),
-		log.String("_test", os.Getenv("TEST_NAME")),
+	logger := log.GetLogger().WithTags(
+		log.VirtualChainId(cfg.VirtualChainId()),
 	).WithOutput(outputs...)
+
+	if !cfg.LoggerFullLog() {
+		return logger.WithFilters(log.Or(log.OnlyErrors(), log.OnlyMetrics()))
+	}
+
+	return logger
 }
 
 func getConfig(configFiles config.ArrayFlags, httpAddress string) (config.NodeConfig, error) {
@@ -101,8 +100,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := getLogger(*pathToLog, *silentLog, cfg.LoggerHttpEndpoint(), int(cfg.LoggerBulkSize()),
-		cfg.VirtualChainId(), cfg.LoggerFileTruncationInterval())
+	logger := getLogger(*pathToLog, *silentLog, cfg)
 
 	bootstrap.NewNode(
 		cfg,

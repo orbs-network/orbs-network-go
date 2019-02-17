@@ -60,7 +60,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
-			logger.Error("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock))
+			logger.Info("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
 			break
 		}
 

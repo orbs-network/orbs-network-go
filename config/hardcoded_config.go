@@ -86,6 +86,7 @@ const (
 	LOGGER_HTTP_ENDPOINT            = "LOGGER_HTTP_ENDPOINT"
 	LOGGER_BULK_SIZE                = "LOGGER_BULK_SIZE"
 	LOGGER_FILE_TRUNCATION_INTERVAL = "LOGGER_FILE_TRUNCATION_INTERVAL"
+	LOGGER_FULL_LOG                 = "LOGGER_FULL_LOG"
 
 	BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR                = "BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR"
 	BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES = "BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES"
@@ -353,6 +354,10 @@ func (c *config) LoggerBulkSize() uint32 {
 
 func (c *config) LoggerFileTruncationInterval() time.Duration {
 	return c.kv[LOGGER_FILE_TRUNCATION_INTERVAL].DurationValue
+}
+
+func (c *config) LoggerFullLog() bool {
+	return c.kv[LOGGER_FULL_LOG].BoolValue
 }
 
 func (c *config) BlockStorageFileSystemDataDir() string {
