@@ -169,7 +169,11 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode))
 		} else { // we should have a lhBlock proof
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			lhBlockProof = ExtractBlockProof(blockPair)
+			var err error
+			lhBlockProof, err = ExtractBlockProof(blockPair)
+			if err != nil {
+				return nil, err
+			}
 			lhBlock = ToLeanHelixBlock(blockPair)
 
 		}
@@ -180,8 +184,14 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	return nil, nil
 }
 
-func ExtractBlockProof(blockPair *protocol.BlockPairContainer) primitives.LeanHelixBlockProof {
-	return blockPair.TransactionsBlock.BlockProof.LeanHelix()
+func ExtractBlockProof(blockPair *protocol.BlockPairContainer) (primitives.LeanHelixBlockProof, error) {
+	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.TransactionsBlock.BlockProof == nil {
+		return nil, errors.New("blockPair or TransactionsBlock or BlockProof is nil")
+	}
+	if !blockPair.TransactionsBlock.BlockProof.IsTypeLeanHelix() {
+		return nil, errors.New("BlockProof is not of type LeanHelix")
+	}
+	return blockPair.TransactionsBlock.BlockProof.LeanHelix(), nil
 }
 
 func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
