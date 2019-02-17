@@ -32,7 +32,7 @@ func testGoroutineLeaksWithAlgo(t *testing.T, algo consensus.ConsensusAlgoType, 
 	defer after.Close()
 	numGoroutineBefore := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(before, 1)
-	runHappyFlowWithConsensusAlgo(t, algo, rnd)
+	runHappyFlowWithConsensusAlgo(t, algo)
 	time.Sleep(100 * time.Millisecond)
 	// give goroutines time to terminate
 	runtime.GC()
