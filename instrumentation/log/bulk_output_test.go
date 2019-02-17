@@ -30,6 +30,7 @@ func newHttpHarness(handler http.Handler) *httpOutputHarness {
 }
 
 func (h *httpOutputHarness) start(t *testing.T) {
+	ch := make(chan struct{})
 	go func() {
 		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err, "failed to use http port")
@@ -42,11 +43,12 @@ func (h *httpOutputHarness) start(t *testing.T) {
 		server := &http.Server{
 			Handler: h.router,
 		}
-		err = server.Serve(h.listener)
-		require.NoError(t, err, "failed to serve http requests")
+		ch <- struct{}{}
+		_ = server.Serve(h.listener) // no point in handling this error, it will always be an error when server dies
 
 	}()
-	time.Sleep(1 * time.Millisecond)
+	<-ch
+
 }
 
 func (h *httpOutputHarness) stop(t *testing.T) {
