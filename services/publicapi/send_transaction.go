@@ -14,9 +14,13 @@ import (
 
 func (s *service) SendTransaction(parentCtx context.Context, input *services.SendTransactionInput) (*services.SendTransactionOutput, error) {
 	ctx := trace.NewContext(parentCtx, "PublicApi.SendTransaction")
+	start := time.Now()
 	out, err := s.sendTransaction(ctx, input.ClientRequest, false)
 	if out == nil {
 		return nil, err
+	}
+	if out.transactionStatus == protocol.TRANSACTION_STATUS_COMMITTED {
+		s.metrics.sendTransactionTime.RecordSince(start)
 	}
 	return toSendTxOutput(out), err
 }
@@ -47,11 +51,6 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 	}
 
 	logger.Info("send transaction request received")
-
-	if !asyncMode {
-		start := time.Now()
-		defer s.metrics.sendTransactionTime.RecordSince(start)
-	}
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
