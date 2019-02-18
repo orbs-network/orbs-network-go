@@ -16,6 +16,7 @@ import (
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -139,12 +140,13 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.config,
 			node.ethereumConnection,
 		)
-		go func(nx *Node) { // nodes should not block each other from executing wait
+		nx := node
+		supervised.GoOnce(n.Logger, func() { // nodes should not block each other from executing wait
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
-				panic(fmt.Sprintf("node %v did not reach block 1", node.name))
+				panic(fmt.Sprintf("node %v did not reach block 1 due to error %s", nx.name, err))
 			}
 			wg.Done()
-		}(node)
+		})
 	}
 	wg.Wait()
 }
