@@ -203,6 +203,7 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 20*time.Minute)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT, 10*time.Minute) // should be similar to TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
