@@ -205,7 +205,7 @@ func (h *stressTestHarness) collectCommittedNodeIndices(parent context.Context, 
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 
-	ch := make(chan int)
+	ch := make(chan int, h.network.Size())
 	for i := 0; i < h.network.Size(); i++ {
 		nodeIndex := i
 		supervised.GoOnce(h.network.Logger, func() {
