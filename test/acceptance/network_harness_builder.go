@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = false
+var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
 var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
 var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 
