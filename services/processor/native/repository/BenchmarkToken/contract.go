@@ -13,7 +13,7 @@ const CONTRACT_NAME = "BenchmarkToken"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(transfer, getBalance)
+var PUBLIC = sdk.Export(transfer, getBalance, setBalance)
 var SYSTEM = sdk.Export(_init)
 
 const TOTAL_SUPPLY = 1000000
@@ -41,4 +41,9 @@ func transfer(amount uint64, targetAddress []byte) {
 func getBalance(targetAddress []byte) uint64 {
 	address.ValidateAddress(targetAddress)
 	return state.ReadUint64(targetAddress)
+}
+
+func setBalance(targetAddress []byte, amount uint64) {
+	address.ValidateAddress(targetAddress)
+	state.WriteUint64(targetAddress, amount)
 }
