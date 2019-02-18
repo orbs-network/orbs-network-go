@@ -50,7 +50,7 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			h := newStressTestHarness(t, ctx, network)
 
-			tamperer := network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(h.rnd, 15)))
+			tamperer := network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(h.rnd, 12)))
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
 
 			tamperer.StopTampering(ctx)
