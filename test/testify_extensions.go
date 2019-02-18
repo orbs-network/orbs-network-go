@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func AssertCmpEqual(t *testing.T, expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
+func AssertCmpEqual(t testing.TB, expected interface{}, actual interface{}, msgAndArgs ...interface{}) bool {
 	if !cmp.Equal(expected, actual) {
 		diff := cmp.Diff(expected, actual)
 		return assert.Fail(t, fmt.Sprintf("Not equal: \n"+
@@ -20,7 +20,7 @@ func AssertCmpEqual(t *testing.T, expected interface{}, actual interface{}, msgA
 	return true
 }
 
-func RequireCmpEqual(t *testing.T, expected interface{}, actual interface{}, msgAndArgs ...interface{}) {
+func RequireCmpEqual(t testing.TB, expected interface{}, actual interface{}, msgAndArgs ...interface{}) {
 	if AssertCmpEqual(t, expected, actual, msgAndArgs...) {
 		return
 	}

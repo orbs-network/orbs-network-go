@@ -2,9 +2,11 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/lean-helix-go/services/quorum"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
@@ -14,64 +16,72 @@ import (
 
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
-	newHarness().
+	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+			h := newStressTestHarness(t, ctx, network)
+
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
 		})
 }
 
 func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 15))
+			h := newStressTestHarness(t, ctx, network)
+			_ = network.TransportTamperer().Duplicate(WithPercentChance(h.rnd, 15))
 
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
+
+			//tamperer.StopTampering(ctx)
+			//
+			//h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
+
 		})
 }
 
 // TODO (v1) Must drop message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestGazillionTxWhileDroppingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 15)))
+			h := newStressTestHarness(t, ctx, network)
 
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(h.rnd, 15)))
+
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
 		})
 }
 
 // See BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT - cannot delay messages consistently more than that, or block sync will never work - it throws "timed out when waiting for chunks"
 func TestGazillionTxWhileDelayingMessages(t *testing.T) {
-	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+			h := newStressTestHarness(t, ctx, network)
 			network.TransportTamperer().Delay(func() time.Duration {
-				return (time.Duration(rnd.Intn(50))) * time.Millisecond
-			}, WithPercentChance(rnd, 30))
+				return (time.Duration(h.rnd.Intn(50))) * time.Millisecond
+			}, WithPercentChance(h.rnd, 30))
 
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
 		})
 }
 
 // TODO (v1) Must corrupt message from up to "f" fixed nodes (for 4 nodes f=1)
 func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
-	rnd := rand.NewControlledRand(t)
-	newHarness().
+	getStressTestHarness().
 		AllowingErrors(
 			"transport header is corrupt", // because we corrupt messages
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(rnd, 15)), rnd)
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 90, rnd)
+			h := newStressTestHarness(t, ctx, network)
+			tamper := network.TransportTamperer().Corrupt(Not(HasHeader(ATransactionRelayMessage)).And(WithPercentChance(h.rnd, 15)), h.rnd)
+
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 90)
 			tamper.StopTampering(ctx)
 
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 10, rnd)
+			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 10)
 
 		})
 }
@@ -111,29 +121,80 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHarness, t testing.TB, numTransactions int, ctrlRand *rand.ControlledRand) {
-	fromAddress := 5
-	toAddress := 6
-	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)
+type stressTestHarness struct {
+	fromAddress int
+	toAddress   int
+	network     *NetworkHarness
+	tb          testing.TB
+	contract    callcontract.BenchmarkTokenClient
+	rnd         *rand.ControlledRand
+}
 
-	var expectedSum uint64 = 0
+func newStressTestHarness(tb testing.TB, ctx context.Context, network *NetworkHarness) *stressTestHarness {
+
+	h := &stressTestHarness{
+		fromAddress: 5,
+		toAddress:   6,
+		network:     network,
+		tb:          tb,
+		rnd:         rand.NewControlledRand(tb),
+	}
+
+	h.contract = network.DeployBenchmarkTokenContract(ctx, h.fromAddress)
+
+	return h
+}
+
+func (h *stressTestHarness) sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx context.Context, numTransactions int) {
+	quorumSize := quorum.CalcQuorumSize(h.network.Size()) // these tests do not require all network to sync, but rather, relying on the fact that 2f+1 nodes are the minimum required for the state to be considered "committed"
+
 	var txHashes []primitives.Sha256
 	for i := 0; i < numTransactions; i++ {
-		amount := uint64(ctrlRand.Int63n(100))
-		expectedSum += amount
 
-		txHash := contract.TransferInBackground(ctx, ctrlRand.Intn(network.Size()), amount, fromAddress, toAddress)
+		txHash := h.contract.TransferInBackground(ctx, h.rnd.Intn(h.network.Size()), 17, h.fromAddress, h.toAddress)
 		txHashes = append(txHashes, txHash)
 	}
-	for _, txHash := range txHashes {
-		network.WaitForTransactionInState(ctx, txHash)
+
+	var committedNodeIndices []int
+	for i := 0; i < h.network.Size(); i++ {
+		var err error
+		for _, txHash := range txHashes {
+			blockHeight := h.network.tamperingBlockPersistences[i].WaitForTransaction(ctx, txHash)
+			err = h.network.stateBlockHeightTrackers[i].WaitForBlock(ctx, blockHeight)
+			if err != nil {
+				break
+			}
+		}
+		if err == nil {
+			committedNodeIndices = append(committedNodeIndices, i)
+		}
 	}
 
-	for i := 0; i < network.Size(); i++ {
-		actualSum := contract.GetBalance(ctx, i, toAddress)
-		require.EqualValuesf(t, expectedSum, actualSum, "recipient balance did not equal expected balance in node %d", i)
-
-		actualRemainder := contract.GetBalance(ctx, i, fromAddress)
-		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
+	var lastTxBlockHeights []primitives.BlockHeight
+	for _, nodeIndex := range committedNodeIndices {
+		lastTxBlockHeights = append(lastTxBlockHeights, h.network.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHashes[numTransactions-1]))
 	}
+
+	require.Condition(h.tb, func() (success bool) {
+		return len(committedNodeIndices) >= quorumSize
+	}, "network did not synchronize the minimal required number of nodes")
+
+	for i := 1; i < len(lastTxBlockHeights); i++ {
+		require.Equal(h.tb, lastTxBlockHeights[i], lastTxBlockHeights[i-1], "last transaction was not in the same block in all committed nodes")
+		blocks1, err1 := h.network.Nodes[committedNodeIndices[i-1]].ExtractBlocks()
+		blocks2, err2 := h.network.Nodes[committedNodeIndices[i]].ExtractBlocks()
+		require.NoError(h.tb, err1)
+		require.NoError(h.tb, err2)
+
+		hash1 := blocks1[lastTxBlockHeights[0]-1].TransactionsBlock.Header.PrevBlockHashPtr()
+		hash2 := blocks2[lastTxBlockHeights[0]-1].TransactionsBlock.Header.PrevBlockHashPtr()
+
+		test.RequireCmpEqual(h.tb, hash1, hash2, "last interesting block hash did not equal among all committed nodes")
+	}
+
+}
+
+func (h *stressTestHarness) sendSingleTransactionAndAssertBalanceInFullNetwork(ctx context.Context) {
+	txHash := h.contract.TransferInBackground(ctx, h.rnd.Intn(h.network.Size()), 42, h.fromAddress, h.toAddress)
+	h.network.WaitForTransactionInState(ctx, txHash)
 }
