@@ -48,8 +48,10 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 
 	logger.Info("send transaction request received")
 
-	start := time.Now()
-	defer s.metrics.sendTransactionTime.RecordSince(start)
+	if !asyncMode {
+		start := time.Now()
+		defer s.metrics.sendTransactionTime.RecordSince(start)
+	}
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
