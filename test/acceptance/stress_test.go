@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/lean-helix-go/services/quorum"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/rand"
@@ -21,6 +22,8 @@ func TestGazillionTxHappyFlow(t *testing.T) {
 			h := newStressTestHarness(t, ctx, network)
 
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
+			h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
+
 		})
 }
 
@@ -159,10 +162,7 @@ func (h *stressTestHarness) sendTransfersAndAssertTotalBalanceInMinimalQuorumSiz
 		txHashes = append(txHashes, txHash)
 	}
 
-	committedNodeIndices := h.collectCommittedNodeIndices(ctx, txHashes)
-	require.Condition(h.tb, func() (success bool) {
-		return len(committedNodeIndices) >= quorumSize
-	}, "network did not synchronize the minimal required number of nodes")
+	committedNodeIndices := h.collectCommittedNodeIndices(ctx, txHashes, quorumSize)
 
 	lastTxBlockHeights := h.collectBlockHeightsOfLastTx(ctx, txHashes, committedNodeIndices)
 	h.requireLastTxIsInSameBlockHeightInAllCommittedNodes(lastTxBlockHeights)
@@ -201,25 +201,40 @@ func (h *stressTestHarness) collectBlockHeightsOfLastTx(ctx context.Context, txH
 	return
 }
 
-func (h *stressTestHarness) collectCommittedNodeIndices(ctx context.Context, txHashes []primitives.Sha256) []int {
-	var committedNodeIndices []int
+func (h *stressTestHarness) collectCommittedNodeIndices(parent context.Context, txHashes []primitives.Sha256, requiredQuorumSize int) (committedNodeIndices []int) {
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+
+	ch := make(chan int)
 	for i := 0; i < h.network.Size(); i++ {
-		var err error
-		for _, txHash := range txHashes {
-			blockHeight, err := h.network.tamperingBlockPersistences[i].WaitForTransaction(ctx, txHash)
-			if err != nil {
-				break
+		nodeIndex := i
+		supervised.GoOnce(h.network.Logger, func() {
+			var err error
+			for _, txHash := range txHashes {
+				blockHeight, err := h.network.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
+				if err != nil {
+					break
+				}
+				err = h.network.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
+				if err != nil {
+					break
+				}
 			}
-			err = h.network.stateBlockHeightTrackers[i].WaitForBlock(ctx, blockHeight)
-			if err != nil {
-				break
+			if err == nil {
+				ch <- nodeIndex
 			}
-		}
-		if err == nil {
-			committedNodeIndices = append(committedNodeIndices, i)
+		})
+	}
+
+	for i := 0; i < requiredQuorumSize; i++ {
+		select {
+		case nodeIndex := <-ch:
+			committedNodeIndices = append(committedNodeIndices, nodeIndex)
+		case <-parent.Done():
+			h.tb.Fatalf("Failed to reach quorum size %d during stress test", requiredQuorumSize)
 		}
 	}
-	return committedNodeIndices
+	return
 }
 
 func (h *stressTestHarness) sendSingleTransactionAndAssertBalanceInFullNetwork(ctx context.Context) {
