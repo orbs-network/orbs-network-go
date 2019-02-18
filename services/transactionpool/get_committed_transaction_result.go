@@ -2,7 +2,6 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -34,10 +33,4 @@ func (s *service) getTxResult(receipt *protocol.TransactionReceipt, status proto
 		BlockHeight:        s.lastCommitted.blockHeight,
 		BlockTimestamp:     s.lastCommitted.timestamp,
 	}
-}
-
-func (s *service) currentNodeTimeWithGrace() primitives.TimestampNano {
-	s.lastCommitted.RLock()
-	defer s.lastCommitted.RUnlock()
-	return s.lastCommitted.timestamp + primitives.TimestampNano(s.config.TransactionPoolFutureTimestampGraceTimeout().Nanoseconds())
 }
