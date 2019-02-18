@@ -27,7 +27,7 @@ func NewTransactionPool(ctx context.Context,
 	waiter := newTransactionWaiter()
 	onNewTransaction := func() { waiter.inc(ctx) }
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, onNewTransaction)
-	committedPool := NewCommittedPool(metricFactory)
+	committedPool := NewCommittedPool(config.TransactionPoolFutureTimestampGraceTimeout, metricFactory)
 
 	logger := parent.WithTags(LogTag)
 
