@@ -2,6 +2,8 @@ package acceptance
 
 import (
 	"context"
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -106,7 +108,11 @@ func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []
 		}
 
 		for _, txHash := range txHashes {
-			network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
+			_, err := network.BlockPersistence(0).WaitForTransaction(ctx, txHash)
+			if err != nil {
+				instrumentation.DebugPrintGoroutineStacks(network.Logger) // since test timed out, help find deadlocked goroutines
+				panic(fmt.Sprintf("Failed creating initial blocks: %s", err.Error()))
+			}
 		}
 
 		var err error

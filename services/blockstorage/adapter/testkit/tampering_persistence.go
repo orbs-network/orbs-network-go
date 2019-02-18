@@ -14,7 +14,7 @@ import (
 type TamperingInMemoryBlockPersistence interface {
 	adapter.BlockPersistence
 	FailNextBlocks()
-	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
+	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) (primitives.BlockHeight, error)
 }
 
 type tamperingBlockPersistence struct {
@@ -32,7 +32,7 @@ func NewBlockPersistence(parent log.BasicLogger, preloadedBlocks []*protocol.Blo
 	}
 }
 
-func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
+func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txHash primitives.Sha256) (primitives.BlockHeight, error) {
 	return bp.txTracker.waitForTransaction(ctx, txHash)
 }
 

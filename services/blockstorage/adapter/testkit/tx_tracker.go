@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -81,7 +80,7 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 	t.topHeight = height
 }
 
-func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight {
+func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sha256) (primitives.BlockHeight, error) {
 	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("waiting for transaction", log.Transaction(txHash))
 	for {
@@ -89,14 +88,13 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 
 		if txHeight > 0 { // found requested height
 			logger.Info("transaction found in block", log.Transaction(txHash), log.BlockHeight(txHeight))
-			return txHeight
+			return txHeight, nil
 		}
 
 		logger.Info("transaction not found in current block, will wait for next block to look for it again", log.Transaction(txHash), log.BlockHeight(topHeight))
 		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
 		if err != nil {
-			instrumentation.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
-			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
+			return 0, err
 		}
 	}
 }

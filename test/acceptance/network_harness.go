@@ -124,8 +124,11 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 }
 
 func (n *NetworkHarness) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
-	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
-	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
+	blockHeight, err := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
+	if err == nil {
+		err = n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
+	}
+
 	if err != nil {
 		instrumentation.DebugPrintGoroutineStacks(n.Logger) // since test timed out, help find deadlocked goroutines
 		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))

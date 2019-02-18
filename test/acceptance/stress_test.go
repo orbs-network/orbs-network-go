@@ -31,13 +31,12 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			h := newStressTestHarness(t, ctx, network)
-			_ = network.TransportTamperer().Duplicate(WithPercentChance(h.rnd, 15))
 
+			tamperer := network.TransportTamperer().Duplicate(WithPercentChance(h.rnd, 15))
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
 
-			//tamperer.StopTampering(ctx)
-			//
-			//h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
+			tamperer.StopTampering(ctx)
+			h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
 
 		})
 }
@@ -48,9 +47,11 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			h := newStressTestHarness(t, ctx, network)
 
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(h.rnd, 15)))
-
+			tamperer := network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(h.rnd, 15)))
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
+
+			tamperer.StopTampering(ctx)
+			h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
 		})
 }
 
@@ -59,11 +60,13 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			h := newStressTestHarness(t, ctx, network)
-			network.TransportTamperer().Delay(func() time.Duration {
+			tamperer := network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(h.rnd.Intn(50))) * time.Millisecond
 			}, WithPercentChance(h.rnd, 30))
-
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 100)
+
+			tamperer.StopTampering(ctx)
+			h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
 		})
 }
 
@@ -83,6 +86,7 @@ func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 
 			h.sendTransfersAndAssertTotalBalanceInMinimalQuorumSize(ctx, 10)
 
+			h.sendSingleTransactionAndAssertBalanceInFullNetwork(ctx)
 		})
 }
 
@@ -155,32 +159,26 @@ func (h *stressTestHarness) sendTransfersAndAssertTotalBalanceInMinimalQuorumSiz
 		txHashes = append(txHashes, txHash)
 	}
 
-	var committedNodeIndices []int
-	for i := 0; i < h.network.Size(); i++ {
-		var err error
-		for _, txHash := range txHashes {
-			blockHeight := h.network.tamperingBlockPersistences[i].WaitForTransaction(ctx, txHash)
-			err = h.network.stateBlockHeightTrackers[i].WaitForBlock(ctx, blockHeight)
-			if err != nil {
-				break
-			}
-		}
-		if err == nil {
-			committedNodeIndices = append(committedNodeIndices, i)
-		}
-	}
-
-	var lastTxBlockHeights []primitives.BlockHeight
-	for _, nodeIndex := range committedNodeIndices {
-		lastTxBlockHeights = append(lastTxBlockHeights, h.network.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHashes[numTransactions-1]))
-	}
-
+	committedNodeIndices := h.collectCommittedNodeIndices(ctx, txHashes)
 	require.Condition(h.tb, func() (success bool) {
 		return len(committedNodeIndices) >= quorumSize
 	}, "network did not synchronize the minimal required number of nodes")
 
+	lastTxBlockHeights := h.collectBlockHeightsOfLastTx(ctx, txHashes, committedNodeIndices)
+	h.requireLastTxIsInSameBlockHeightInAllCommittedNodes(lastTxBlockHeights)
+
+	h.requireBlockContainingLastTxHasSameHashInAllCommittedNodes(lastTxBlockHeights, committedNodeIndices)
+
+}
+
+func (h *stressTestHarness) requireLastTxIsInSameBlockHeightInAllCommittedNodes(lastTxBlockHeights []primitives.BlockHeight) {
 	for i := 1; i < len(lastTxBlockHeights); i++ {
 		require.Equal(h.tb, lastTxBlockHeights[i], lastTxBlockHeights[i-1], "last transaction was not in the same block in all committed nodes")
+	}
+}
+
+func (h *stressTestHarness) requireBlockContainingLastTxHasSameHashInAllCommittedNodes(lastTxBlockHeights []primitives.BlockHeight, committedNodeIndices []int) {
+	for i := 1; i < len(lastTxBlockHeights); i++ {
 		blocks1, err1 := h.network.Nodes[committedNodeIndices[i-1]].ExtractBlocks()
 		blocks2, err2 := h.network.Nodes[committedNodeIndices[i]].ExtractBlocks()
 		require.NoError(h.tb, err1)
@@ -191,7 +189,37 @@ func (h *stressTestHarness) sendTransfersAndAssertTotalBalanceInMinimalQuorumSiz
 
 		test.RequireCmpEqual(h.tb, hash1, hash2, "last interesting block hash did not equal among all committed nodes")
 	}
+}
 
+func (h *stressTestHarness) collectBlockHeightsOfLastTx(ctx context.Context, txHashes []primitives.Sha256, committedNodeIndices []int) (lastTxBlockHeights []primitives.BlockHeight) {
+	lastTxHash := txHashes[len(txHashes)-1]
+	for _, nodeIndex := range committedNodeIndices {
+		bh, err := h.network.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, lastTxHash)
+		require.NoError(h.tb, err, "A node that has already committed txhash %s failed to return its block height", lastTxHash)
+		lastTxBlockHeights = append(lastTxBlockHeights, bh)
+	}
+	return
+}
+
+func (h *stressTestHarness) collectCommittedNodeIndices(ctx context.Context, txHashes []primitives.Sha256) []int {
+	var committedNodeIndices []int
+	for i := 0; i < h.network.Size(); i++ {
+		var err error
+		for _, txHash := range txHashes {
+			blockHeight, err := h.network.tamperingBlockPersistences[i].WaitForTransaction(ctx, txHash)
+			if err != nil {
+				break
+			}
+			err = h.network.stateBlockHeightTrackers[i].WaitForBlock(ctx, blockHeight)
+			if err != nil {
+				break
+			}
+		}
+		if err == nil {
+			committedNodeIndices = append(committedNodeIndices, i)
+		}
+	}
+	return committedNodeIndices
 }
 
 func (h *stressTestHarness) sendSingleTransactionAndAssertBalanceInFullNetwork(ctx context.Context) {
