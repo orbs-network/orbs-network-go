@@ -39,7 +39,7 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 15)))
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 12)))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
