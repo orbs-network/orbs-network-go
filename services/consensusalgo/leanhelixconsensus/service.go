@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/lean-helix-go"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
-	"github.com/orbs-network/lean-helix-go/services/electiontrigger"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -106,7 +105,7 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
-	electionTrigger := electiontrigger.NewTimerBasedElectionTrigger(config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
+	electionTrigger := NewExponentialBackoffElectionTrigger(logger, config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
 	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	leanHelixConfig := &lh.Config{
