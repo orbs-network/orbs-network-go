@@ -22,6 +22,9 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 	after, _ := os.Create("/tmp/gorou-shutdown-after.out")
 	defer after.Close()
 
+	runtime.GC()
+	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
+
 	numGoroutineBefore := runtime.NumGoroutine()
 	pprof.Lookup("goroutine").WriteTo(before, 1)
 
