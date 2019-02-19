@@ -16,18 +16,16 @@ func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
 	t.Parallel()
 
 	test.WithContext(func(ctx context.Context) {
-		p := NewCommittedPool(metric.NewRegistry())
+		p := NewCommittedPool(func() time.Duration { return time.Second }, metric.NewRegistry())
 		ctrlRand := rand.NewControlledRand(t)
 
 		r1 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 		r2 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
 		r3 := builders.TransactionReceipt().WithRandomHash(ctrlRand).Build()
-		bh := primitives.BlockHeight(1)
-		bts := primitives.TimestampNano(1)
 
-		p.add(r1, primitives.TimestampNano(time.Now().Add(-5*time.Minute).UnixNano()), bh, bts)
-		p.add(r2, primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()), bh, bts)
-		p.add(r3, primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()), bh, bts)
+		p.add(r1, primitives.BlockHeight(3), primitives.TimestampNano(time.Now().Add(-5*time.Minute).UnixNano()))
+		p.add(r2, primitives.BlockHeight(2), primitives.TimestampNano(time.Now().Add(-29*time.Minute).UnixNano()))
+		p.add(r3, primitives.BlockHeight(1), primitives.TimestampNano(time.Now().Add(-31*time.Minute).UnixNano()))
 
 		p.clearTransactionsOlderThan(ctx, primitives.TimestampNano(time.Now().Add(-30*time.Minute).UnixNano()))
 

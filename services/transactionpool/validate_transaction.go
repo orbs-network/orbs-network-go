@@ -10,47 +10,71 @@ import (
 
 const ProtocolVersion = primitives.ProtocolVersion(1)
 
-type validator func(transaction *protocol.SignedTransaction) *ErrTransactionRejected
-
 type validationContext struct {
-	nodeTime                    time.Time
-	lastCommittedBlockTimestamp primitives.TimestampNano
-	nodeSyncRejectInterval      time.Duration
-	expiryWindow                time.Duration
-	futureTimestampGrace        time.Duration
-	virtualChainId              primitives.VirtualChainId
+	nodeSyncRejectInterval time.Duration
+	expiryWindow           time.Duration
+	futureTimestampGrace   time.Duration
+	virtualChainId         primitives.VirtualChainId
 }
 
-func (c *validationContext) validateTransaction(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	//TODO(v1) can we create the list of validators once on system startup; this will save on performance in the critical path
-	validators := []validator{
-		validateProtocolVersion,
-		validateContractName,
-		validateSignature,
-		validateNodeIsInSync(c),
-		validateTransactionNotExpired(c),
-		validateTransactionNotInFuture(c),
-		validateTransactionVirtualChainId(c),
+func (c *validationContext) ValidateAddedTransaction(transaction *protocol.SignedTransaction, currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	proposedBlockTimestamp := primitives.TimestampNano(currentTime.UnixNano())
+
+	if err := c.validateProtocolVersion(transaction); err != nil {
+		return err
 	}
-
-	for _, validate := range validators {
-		err := validate(transaction)
-		if err != nil {
-			return err
-		}
+	if err := c.validateSignatureType(transaction); err != nil {
+		return err
 	}
-
-	return nil
-}
-
-func validateProtocolVersion(tx *protocol.SignedTransaction) *ErrTransactionRejected {
-	if tx.Transaction().ProtocolVersion() != ProtocolVersion {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("protocol-version", ProtocolVersion), log.Stringable("protocol-version", tx.Transaction().ProtocolVersion())}
+	if err := c.validateTransactionVirtualChainId(transaction); err != nil {
+		return err
+	}
+	if err := c.validateNodeIsInSync(currentTime, lastCommittedBlockTimestamp); err != nil {
+		return err
+	}
+	if err := c.validateTransactionNotExpired(transaction, proposedBlockTimestamp); err != nil {
+		return err
+	}
+	if err := c.validateTransactionNotInFuture(transaction, proposedBlockTimestamp); err != nil {
+		return err
 	}
 	return nil
 }
 
-func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	if err := c.validateProtocolVersion(transaction); err != nil {
+		return err
+	}
+	if err := c.validateSignatureType(transaction); err != nil {
+		return err
+	}
+	if err := c.validateTransactionVirtualChainId(transaction); err != nil {
+		return err
+	}
+	if err := c.validateTransactionNotExpired(transaction, proposedBlockTimestamp); err != nil {
+		return err
+	}
+	if err := c.validateTransactionNotInFuture(transaction, proposedBlockTimestamp); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+	if transaction.Transaction().ProtocolVersion() != ProtocolVersion {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("protocol-version", ProtocolVersion), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+	}
+	return nil
+}
+
+func (c *validationContext) validateTransactionVirtualChainId(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+	if !transaction.Transaction().VirtualChainId().Equal(c.virtualChainId) {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, log.VirtualChainId(c.virtualChainId), log.VirtualChainId(transaction.Transaction().VirtualChainId())}
+	}
+	return nil
+}
+
+func (c *validationContext) validateSignatureType(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	tx := transaction.Transaction()
 	if !tx.Signer().IsSchemeEddsa() {
 		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME, log.String("signer-scheme", "Eddsa"), log.Stringable("signer", tx.Signer())}
@@ -63,55 +87,26 @@ func validateSignature(transaction *protocol.SignedTransaction) *ErrTransactionR
 	return nil
 }
 
-func validateContractName(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	tx := transaction.Transaction()
-	if tx.ContractName() == "" {
-		//TODO(v1) what is the expected status?
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_RESERVED, log.String("contract-name", "non-empty"), log.String("contract-name", "")}
+func (c *validationContext) validateNodeIsInSync(currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	threshold := primitives.TimestampNano(currentTime.Add(c.nodeSyncRejectInterval * -1).UnixNano())
+	if lastCommittedBlockTimestamp < threshold {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("last-committed-block-timestamp", lastCommittedBlockTimestamp)}
 	}
-
 	return nil
 }
 
-func validateNodeIsInSync(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		threshold := primitives.TimestampNano(vctx.nodeTime.Add(vctx.nodeSyncRejectInterval * -1).UnixNano())
-		if vctx.lastCommittedBlockTimestamp < threshold {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("last-committed-block-timestamp", vctx.lastCommittedBlockTimestamp)}
-		}
-
-		return nil
+func (c *validationContext) validateTransactionNotExpired(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	threshold := proposedBlockTimestamp - primitives.TimestampNano(c.expiryWindow.Nanoseconds())
+	if transaction.Transaction().Timestamp() < threshold {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 	}
+	return nil
 }
 
-func validateTransactionNotExpired(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		threshold := primitives.TimestampNano(vctx.nodeTime.Add(vctx.expiryWindow * -1).UnixNano())
-		if transaction.Transaction().Timestamp() < threshold {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
-		}
-
-		return nil
+func (c *validationContext) validateTransactionNotInFuture(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	tsWithGrace := proposedBlockTimestamp + primitives.TimestampNano(c.futureTimestampGrace.Nanoseconds())
+	if transaction.Transaction().Timestamp() > tsWithGrace {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, log.TimestampNano("max-timestamp", tsWithGrace), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 	}
-}
-
-func validateTransactionNotInFuture(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		tsWithGrace := vctx.lastCommittedBlockTimestamp + primitives.TimestampNano(vctx.futureTimestampGrace.Nanoseconds())
-		if transaction.Transaction().Timestamp() > tsWithGrace {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, log.TimestampNano("max-timestamp", tsWithGrace), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
-		}
-
-		return nil
-	}
-}
-
-func validateTransactionVirtualChainId(vctx *validationContext) validator {
-	return func(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-		if !transaction.Transaction().VirtualChainId().Equal(vctx.virtualChainId) {
-			return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, log.VirtualChainId(vctx.virtualChainId), log.VirtualChainId(transaction.Transaction().VirtualChainId())}
-
-		}
-		return nil
-	}
+	return nil
 }
