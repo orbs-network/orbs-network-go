@@ -63,21 +63,21 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	}
 	// correct block type
 	if !blockPair.TransactionsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for transaction block: %v", blockPair.TransactionsBlock.BlockProof.Type())
+		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for transaction block height %d: %v", blockPair.TransactionsBlock.Header.BlockHeight(), blockPair.TransactionsBlock.BlockProof.Type())
 	}
 	if !blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() {
-		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for results block: %v", blockPair.ResultsBlock.BlockProof.Type())
+		return errors.Errorf("BenchmarkConsensus: incorrect block proof type for results block height %d: %v", blockPair.ResultsBlock.Header.BlockHeight(), blockPair.ResultsBlock.BlockProof.Type())
 	}
 
 	// prev block hash ptr (if given)
 	if prevCommittedBlockPair != nil {
 		prevTxHash := digest.CalcTransactionsBlockHash(prevCommittedBlockPair.TransactionsBlock)
 		if !blockPair.TransactionsBlock.Header.PrevBlockHashPtr().Equal(prevTxHash) {
-			return errors.Errorf("BenchmarkConsensus: transactions prev block hash does not match prev block: %s", prevTxHash)
+			return errors.Errorf("BenchmarkConsensus: transactions prev block hash does not match prev block height %d: %s", prevCommittedBlockPair.TransactionsBlock.Header.BlockHeight(), prevTxHash)
 		}
 		prevRxHash := digest.CalcResultsBlockHash(prevCommittedBlockPair.ResultsBlock)
 		if !blockPair.ResultsBlock.Header.PrevBlockHashPtr().Equal(prevRxHash) {
-			return errors.Errorf("BenchmarkConsensus: results prev block hash does not match prev block: %s", prevRxHash)
+			return errors.Errorf("BenchmarkConsensus: results prev block hash does not match prev block height %d: %s", prevCommittedBlockPair.ResultsBlock.Header.BlockHeight(), prevRxHash)
 		}
 	}
 
