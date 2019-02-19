@@ -8,8 +8,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
-	"os"
-	"runtime"
 	"runtime/pprof"
 	"testing"
 	"time"
@@ -196,8 +194,24 @@ func TestViewPowTimeout(t *testing.T) {
 	})
 }
 
+type testWriter struct {
+	t *testing.T
+}
+
+func (w *testWriter) Write(p []byte) (n int, err error) {
+	w.t.Log(string(p))
+	return 0, nil
+}
+
+func NewTestWriter(t *testing.T) *testWriter {
+	return &testWriter{
+		t,
+	}
+}
+
 func TestElectionTriggerDoesNotLeak(t *testing.T) {
 	// this test checks that after multiple registrations, there are no goroutine leaks
+	writer := NewTestWriter(t)
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, t, time.Millisecond)
 
@@ -205,24 +219,27 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
 			callCount++
 		}
-		start := runtime.NumGoroutine()
+		start := pprof.Lookup("goroutine")
 
 		for block := 10; block < 100; block++ {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
 			time.Sleep(2 * time.Millisecond)
 		}
 
-		end := runtime.NumGoroutine()
+		end := pprof.Lookup("goroutine")
 
 		require.True(t, callCount > 1, "the callback must be called more than once") // sanity
 
-		if start > end {
+		if start.Count() > end.Count() {
 			return
 		}
 
-		if start != end {
-			pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		if start.Count() != end.Count() {
+			t.Logf("START goroutines, count=%d", start.Count())
+			start.WriteTo(writer, 2)
+			t.Logf("END goroutines, count=%d", end.Count())
+			end.WriteTo(writer, 2)
 		}
-		require.Equal(t, start, end, "goroutine number should be the same")
+		require.Equal(t, start.Count(), end.Count(), "goroutine number should be the same")
 	})
 }
