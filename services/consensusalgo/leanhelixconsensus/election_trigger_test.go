@@ -194,24 +194,16 @@ func TestViewPowTimeout(t *testing.T) {
 	})
 }
 
-type testWriter struct {
-	t *testing.T
-}
+type testWriter testing.T
 
-func (w *testWriter) Write(p []byte) (n int, err error) {
-	w.t.Log(string(p))
+func (t *testWriter) Write(p []byte) (n int, err error) {
+	t.Log(string(p))
 	return 0, nil
-}
-
-func NewTestWriter(t *testing.T) *testWriter {
-	return &testWriter{
-		t,
-	}
 }
 
 func TestElectionTriggerDoesNotLeak(t *testing.T) {
 	// this test checks that after multiple registrations, there are no goroutine leaks
-	writer := NewTestWriter(t)
+	writer := testWriter(*t)
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, t, time.Millisecond)
 
@@ -236,9 +228,9 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 
 		if start.Count() != end.Count() {
 			t.Logf("START goroutines, count=%d", start.Count())
-			start.WriteTo(writer, 2)
+			start.WriteTo(&writer, 2)
 			t.Logf("END goroutines, count=%d", end.Count())
-			end.WriteTo(writer, 2)
+			end.WriteTo(&writer, 2)
 		}
 		require.Equal(t, start.Count(), end.Count(), "goroutine number should be the same")
 	})
