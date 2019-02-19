@@ -38,7 +38,7 @@ func TestHttpServer_Robots(t *testing.T) {
 	require.Equal(t, expectedResponse, rec.Body.String(), "should have text value")
 }
 
-func TestHttpServerSendTransaction_Basic(t *testing.T) {
+func TestHttpServer_SendTransaction_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.SendTransactionResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
@@ -65,7 +65,7 @@ func TestHttpServerSendTransaction_Basic(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 }
 
-func TestHttpServerSendTransaction_Error(t *testing.T) {
+func TestHttpServer_SendTransaction_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("SendTransaction", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -83,7 +83,34 @@ func TestHttpServerSendTransaction_Error(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 }
 
-func TestHttpServerRunQuery_Basic(t *testing.T) {
+func TestHttpServer_SendTransactionAsync_Basic(t *testing.T) {
+	papiMock := &services.MockPublicApi{}
+	response := &client.SendTransactionResponseBuilder{
+		RequestResult: &client.RequestResultBuilder{
+			RequestStatus:  protocol.REQUEST_STATUS_IN_PROCESS,
+			BlockHeight:    1,
+			BlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		},
+		TransactionStatus:  protocol.TRANSACTION_STATUS_PENDING,
+		TransactionReceipt: nil,
+	}
+
+	papiMock.When("SendTransactionAsync", mock.Any, mock.Any).Times(1).Return(&services.SendTransactionOutput{ClientResponse: response.Build()})
+
+	s := makeServer(t, papiMock)
+
+	request := (&client.SendTransactionRequestBuilder{
+		SignedTransaction: builders.TransferTransaction().Builder(),
+	}).Build()
+
+	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
+	rec := httptest.NewRecorder()
+	s.(*server).sendTransactionAsyncHandler(rec, req)
+
+	require.Equal(t, http.StatusAccepted, rec.Code, "should be accepted (202)")
+}
+
+func TestHttpServer_RunQuery_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.RunQueryResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
@@ -114,7 +141,7 @@ func TestHttpServerRunQuery_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerRunQuery_Error(t *testing.T) {
+func TestHttpServer_RunQuery_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("RunQuery", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -133,7 +160,7 @@ func TestHttpServerRunQuery_Error(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
 
-func TestHttpServerGetTransactionStatus_Basic(t *testing.T) {
+func TestHttpServer_GetTransactionStatus_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionStatusResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
@@ -159,7 +186,7 @@ func TestHttpServerGetTransactionStatus_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerGetTransactionStatus_Error(t *testing.T) {
+func TestHttpServer_GetTransactionStatus_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetTransactionStatus", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -176,7 +203,7 @@ func TestHttpServerGetTransactionStatus_Error(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
 
-func TestHttpServerGetTransactionReceiptProof_Basic(t *testing.T) {
+func TestHttpServer_GetTransactionReceiptProof_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetTransactionReceiptProofResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
@@ -203,7 +230,7 @@ func TestHttpServerGetTransactionReceiptProof_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerGetTransactionReceiptProof_Error(t *testing.T) {
+func TestHttpServer_GetTransactionReceiptProof_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetTransactionReceiptProof", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))
@@ -220,7 +247,7 @@ func TestHttpServerGetTransactionReceiptProof_Error(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
 
-func TestHttpServerGetBlock_Basic(t *testing.T) {
+func TestHttpServer_GetBlock_Basic(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 	response := &client.GetBlockResponseBuilder{
 		RequestResult: &client.RequestResultBuilder{
@@ -252,7 +279,7 @@ func TestHttpServerGetBlock_Basic(t *testing.T) {
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
 }
 
-func TestHttpServerGetBlock_Error(t *testing.T) {
+func TestHttpServer_GetBlock_Error(t *testing.T) {
 	papiMock := &services.MockPublicApi{}
 
 	papiMock.When("GetBlock", mock.Any, mock.Any).Times(1).Return(nil, errors.Errorf("stam"))

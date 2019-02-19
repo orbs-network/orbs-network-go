@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -111,6 +110,7 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
+	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionAsyncHandler)))
 	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
@@ -123,133 +123,6 @@ func (s *server) createRouter() http.Handler {
 	}
 
 	return router
-}
-
-func (s *server) robots(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	_, err := w.Write([]byte("User-agent: *\nDisallow: /\n"))
-	if err != nil {
-		s.logger.Info("error writing robots.txt response", log.Error(err))
-	}
-}
-
-func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
-	_, err := w.Write(bytes)
-	if err != nil {
-		s.logger.Info("error writing response", log.Error(err))
-	}
-}
-
-func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
-	bytes, e := readInput(r)
-	if e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	clientRequest := client.SendTransactionRequestReader(bytes)
-	if e := validate(clientRequest); e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
-	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
-	} else {
-		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
-	}
-}
-
-func (s *server) runQueryHandler(w http.ResponseWriter, r *http.Request) {
-	bytes, e := readInput(r)
-	if e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	clientRequest := client.RunQueryRequestReader(bytes)
-	if e := validate(clientRequest); e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	s.logger.Info("http server received run-query", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.RunQuery(r.Context(), &services.RunQueryInput{ClientRequest: clientRequest})
-	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
-	} else {
-		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
-	}
-}
-
-func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Request) {
-	bytes, e := readInput(r)
-	if e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	clientRequest := client.GetTransactionStatusRequestReader(bytes)
-	if e := validate(clientRequest); e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
-	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
-	} else {
-		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
-	}
-}
-
-func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *http.Request) {
-	bytes, e := readInput(r)
-	if e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	clientRequest := client.GetTransactionReceiptProofRequestReader(bytes)
-	if e := validate(clientRequest); e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	s.logger.Info("http server received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.GetTransactionReceiptProof(r.Context(), &services.GetTransactionReceiptProofInput{ClientRequest: clientRequest})
-	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
-	} else {
-		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
-	}
-}
-
-func (s *server) getBlockHandler(w http.ResponseWriter, r *http.Request) {
-	bytes, e := readInput(r)
-	if e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	clientRequest := client.GetBlockRequestReader(bytes)
-	if e := validate(clientRequest); e != nil {
-		s.writeErrorResponseAndLog(w, e)
-		return
-	}
-
-	s.logger.Info("http server received get-block", log.Stringable("request", clientRequest))
-	result, err := s.publicApi.GetBlock(r.Context(), &services.GetBlockInput{ClientRequest: clientRequest})
-	if result != nil && result.ClientResponse != nil {
-		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
-	} else {
-		s.writeErrorResponseAndLog(w, &httpErr{http.StatusInternalServerError, log.Error(err), err.Error()})
-	}
 }
 
 func readInput(r *http.Request) ([]byte, *httpErr) {
