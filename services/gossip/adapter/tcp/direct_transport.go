@@ -15,9 +15,9 @@ import (
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
-const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+const MAX_PAYLOAD_SIZE_BYTES = 20 * 1024 * 1024
 const SEND_QUEUE_MAX_MESSAGES = 1000
-const SEND_QUEUE_MAX_BYTES = 10 * 1024 * 1024
+const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 

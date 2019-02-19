@@ -38,7 +38,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 1*time.Second)
 
 	// currently number of blocks held in memory
-	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 1000)
+	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 100)
 
 	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 5*time.Second)

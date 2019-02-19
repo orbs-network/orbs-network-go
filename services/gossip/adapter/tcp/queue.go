@@ -59,7 +59,7 @@ func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	defer q.protected.Unlock()
 
 	if dataBytes > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft)
+		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
 	q.protected.bytesLeft -= dataBytes
