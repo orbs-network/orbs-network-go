@@ -40,16 +40,18 @@ func (bp *tamperingBlockPersistence) FailNextBlocks() {
 	bp.failNextBlocks = true
 }
 
-func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
 	if bp.failNextBlocks {
-		return errors.New("could not write a block")
+		return false, errors.New("could not write a block")
 	}
-	err := bp.InMemoryBlockPersistence.WriteNextBlock(blockPair)
+	added, err := bp.InMemoryBlockPersistence.WriteNextBlock(blockPair)
 	if err != nil {
-		return err
+		return added, err
 	}
-	bp.advertiseAllTransactions(blockPair.TransactionsBlock)
-	return nil
+	if added {
+		bp.advertiseAllTransactions(blockPair.TransactionsBlock)
+	}
+	return added, nil
 }
 
 func (bp *tamperingBlockPersistence) advertiseAllTransactions(block *protocol.TransactionsBlockContainer) {

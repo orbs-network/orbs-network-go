@@ -52,7 +52,7 @@ func main() {
 			_ = block.TransactionsBlock.Header.MutateBlockHeight(nextHeight)
 		}
 
-		err := adapter.WriteNextBlock(block)
+		_, err := adapter.WriteNextBlock(block)
 		if err != nil {
 			logger.Log("error writing block to file at height %d. error %s", nextHeight, err)
 			panic(err)

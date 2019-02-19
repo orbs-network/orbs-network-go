@@ -24,7 +24,7 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 	require.NoError(t, err)
 	defer closeAdapter()
 
-	err = fsa.WriteNextBlock(blocks[0]) // write only the first block in the chain
+	_, err = fsa.WriteNextBlock(blocks[0]) // write only the first block in the chain
 	require.NoError(t, err)
 
 	var topHeightRead primitives.BlockHeight
@@ -44,7 +44,7 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 
 	waitFor(midScan)
 
-	err = fsa.WriteNextBlock(blocks[1]) // write the second block while a block scan is ongoing
+	_, err = fsa.WriteNextBlock(blocks[1]) // write the second block while a block scan is ongoing
 	require.NoError(t, err, "should be able to write block while scanning")
 
 	signal(secondBlockWritten)
