@@ -34,6 +34,10 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, address stri
 func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
 	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
+	queue.Clear(ctx)
+	queue.Enable()
+	defer queue.Disable()
+
 	for {
 
 		ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, t.config.GossipConnectionKeepAliveInterval())
