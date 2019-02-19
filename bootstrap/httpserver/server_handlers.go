@@ -16,6 +16,28 @@ func (s *server) robots(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *server) filterOn(w http.ResponseWriter, r *http.Request) {
+	for _, f := range s.logger.Filters() {
+		if c, ok := f.(log.ConditionalFilter); ok {
+			c.On()
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("filter on"))
+}
+
+func (s *server) filterOff(w http.ResponseWriter, r *http.Request) {
+	for _, f := range s.logger.Filters() {
+		if c, ok := f.(log.ConditionalFilter); ok {
+			c.Off()
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("filter off"))
+}
+
 func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
