@@ -18,10 +18,12 @@ type runtimeMetrics struct {
 	gcCpuPercentage *Gauge
 	numGc           *Gauge
 	numGoroutine    *Gauge
+	uptime          *Gauge
 }
 
 type runtimeReporter struct {
 	metrics runtimeMetrics
+	started time.Time
 }
 
 func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
@@ -36,7 +38,9 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.B
 			gcCpuPercentage: metricFactory.NewGauge("Runtime.GCCPUPercentage"),
 			numGc:           metricFactory.NewGauge("Runtime.NumGc"),
 			numGoroutine:    metricFactory.NewGauge("Runtime.NumGoroutine"),
+			uptime:          metricFactory.NewGauge("Runtime.UptimeInSeconds"),
 		},
+		started: time.Now(),
 	}
 
 	r.startReporting(ctx, logger)
@@ -63,4 +67,5 @@ func (r *runtimeReporter) reportRuntimeMetrics() {
 	r.metrics.gcCpuPercentage.Update(int64(mem.GCCPUFraction * 100))
 	r.metrics.numGc.Update(int64(mem.NumGC))
 	r.metrics.numGoroutine.Update(int64(runtime.NumGoroutine()))
+	r.metrics.uptime.Update(int64(time.Since(r.started).Seconds()))
 }

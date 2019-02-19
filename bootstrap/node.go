@@ -28,12 +28,13 @@ type node struct {
 	ctxCancel    context.CancelFunc
 }
 
-func getMetricRegistry() metric.Registry {
+func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	metricRegistry := metric.NewRegistry()
 	version := config.GetVersion()
 
 	metricRegistry.NewText("Version.Semantic", version.Semantic)
 	metricRegistry.NewText("Version.Commit", version.Commit)
+	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String()[:6])
 
 	return metricRegistry
 }
@@ -42,7 +43,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
-	metricRegistry := getMetricRegistry()
+	metricRegistry := getMetricRegistry(nodeConfig)
 
 	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
