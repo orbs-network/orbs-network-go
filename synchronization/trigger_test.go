@@ -5,7 +5,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/stretchr/testify/require"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -28,21 +27,23 @@ func mockLogger() *collector {
 	return c
 }
 
-func getExpected(startTime, endTime time.Time, tickTime time.Duration) uint32 {
-	duration := endTime.Sub(startTime)
-	expected := uint32((duration.Seconds() * 1000) / (tickTime.Seconds() * 1000))
-	return expected
-}
-
 func TestPeriodicalTriggerStartsOk(t *testing.T) {
 	logger := mockLogger()
-	var x uint32
-	start := time.Now()
-	tickTime := 5 * time.Millisecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, func() { atomic.AddUint32(&x, 1) }, nil)
-	time.Sleep(time.Millisecond * 30)
-	expected := getExpected(start, time.Now(), tickTime)
-	require.True(t, expected/2 <= atomic.LoadUint32(&x), "expected more than %d ticks, but got %d", expected/2, atomic.LoadUint32(&x))
+	fromTrigger := make(chan struct{})
+	stop := make(chan struct{})
+	trigger := func() {
+		select {
+		case fromTrigger <- struct{}{}:
+		case <-stop:
+			return
+		}
+	}
+	tickTime := time.Microsecond
+	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, trigger, nil)
+
+	<-fromTrigger // test will block if the trigger did not happen
+
+	close(stop)
 	p.Stop()
 }
 
