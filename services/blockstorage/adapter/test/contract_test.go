@@ -52,8 +52,8 @@ func TestBlockPersistenceContract_WritesBlockAndRetrieves(t *testing.T) {
 		withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 			for _, b := range blocks {
 				added, err := adapter.WriteNextBlock(b)
-				require.NoError(t, err)
-				require.True(t, added)
+				require.NoError(t, err, "write should succeed")
+				require.True(t, added, "block should actually be added (it's not duplicate)")
 			}
 
 			// test ScanBlocks
@@ -88,8 +88,8 @@ func TestBlockPersistenceContract_ReadUnknownBlocksReturnsError(t *testing.T) {
 func TestBlockPersistenceContract_WriteOutOfOrderFuture_Fails(t *testing.T) {
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		added, err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(2).Build())
-		require.Error(t, err)
-		require.False(t, added)
+		require.Error(t, err, "write should fail")
+		require.False(t, added, "block should not be added (due to failure)")
 	})
 }
 
@@ -100,15 +100,15 @@ func TestBlockPersistenceContract_WriteOutOfOrderPast_NotFailsWhenBlockIdentical
 		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
 
 		added, err := adapter.WriteNextBlock(block1)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 		added, err = adapter.WriteNextBlock(block2)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 
 		added, err = adapter.WriteNextBlock(block1)
-		require.NoError(t, err)
-		require.False(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.False(t, added, "block should not be added though (it's duplicate)")
 	})
 }
 
@@ -121,15 +121,15 @@ func TestBlockPersistenceContract_WriteOutOfOrderPast_FailsWhenBlockDifferent(t 
 		otherBlock1 := builders.BlockPair().WithHeight(1).WithBlockCreated(now.Add(1 * time.Second)).Build()
 
 		added, err := adapter.WriteNextBlock(block1)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 		added, err = adapter.WriteNextBlock(block2)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 
 		added, err = adapter.WriteNextBlock(otherBlock1)
-		require.Error(t, err)
-		require.False(t, added)
+		require.Error(t, err, "write of a different old block should fail")
+		require.False(t, added, "block should not be added (due to failure)")
 	})
 }
 
@@ -139,11 +139,11 @@ func TestBlockPersistenceContract_ReturnsTwoBlocks(t *testing.T) {
 		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
 
 		added, err := adapter.WriteNextBlock(block1)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 		added, err = adapter.WriteNextBlock(block2)
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 
 		require.NoError(t, adapter.ScanBlocks(1, 2, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 			test.RequireCmpEqual(t, block1, page[0], "block 1 did not match")
@@ -164,8 +164,8 @@ func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *test
 
 		// write block height 1
 		added, err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(1).Build())
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 
 		// block tracker returns from wait immediately without error
 		shortDeadlineCtx, _ = context.WithTimeout(context.Background(), 5*time.Millisecond)
@@ -182,8 +182,8 @@ func TestBlockPersistenceContract_ReturnsLastBlockHeight(t *testing.T) {
 
 		// write block height 1
 		added, err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(1).Build())
-		require.NoError(t, err)
-		require.True(t, added)
+		require.NoError(t, err, "write should succeed")
+		require.True(t, added, "block should actually be added (it's not duplicate)")
 
 		h, err = adapter.GetLastBlockHeight()
 		require.NoError(t, err)
@@ -229,8 +229,8 @@ func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
 
 		for _, b := range blocks {
 			added, err := adapter.WriteNextBlock(b)
-			require.NoError(t, err)
-			require.True(t, added)
+			require.NoError(t, err, "write should succeed")
+			require.True(t, added, "block should actually be added (it's not duplicate)")
 		}
 
 		tx := blocks[1].TransactionsBlock.SignedTransactions[6].Transaction()
