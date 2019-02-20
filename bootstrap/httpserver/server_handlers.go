@@ -17,6 +17,11 @@ func (s *server) robots(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) filterOn(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	for _, f := range s.logger.Filters() {
 		if c, ok := f.(log.ConditionalFilter); ok {
 			c.On()
@@ -28,6 +33,11 @@ func (s *server) filterOn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) filterOff(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	for _, f := range s.logger.Filters() {
 		if c, ok := f.(log.ConditionalFilter); ok {
 			c.Off()

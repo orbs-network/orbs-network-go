@@ -213,6 +213,22 @@ To enable profiling: put `"profiling": true` in your `config.json`.
 
 It will enable [net/http/pprof](https://golang.org/pkg/net/http/pprof/) package, and you will be able to query `pprof` via http just as described in the docs.
 
+### Debugging with logs
+
+By default, log output is filtered to only errors and metrics. To enable full log, put `"logger-full-log": true` in your node configuration. It will permanently remove the filter.
+
+If you want to enable or disable this filter in production, there is a way to do that via HTTP API:
+
+```
+curl -XPOST http://$NODE_IP/vchains/$VCHAIN/debug/logs/fiter-on
+```
+
+Or
+
+```
+curl -XPOST http://$NODE_IP/vchains/$VCHAIN/debug/logs/fiter-off
+```
+
 ## Development principles
 Refer to the [Contributor's Guide](CONTRIBUTING.md) (work in progress)
 
