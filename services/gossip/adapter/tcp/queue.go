@@ -8,10 +8,11 @@ import (
 )
 
 type transportQueue struct {
-	channel     chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
-	maxBytes    int
-	maxMessages int
-	disabled    bool // not under mutex on purpose
+	channel        chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
+	networkAddress string
+	maxBytes       int
+	maxMessages    int
+	disabled       bool // not under mutex on purpose
 
 	protected struct {
 		sync.Mutex

@@ -17,6 +17,7 @@ type BasicLogger interface {
 	Tags() []*Field
 	WithOutput(writer ...Output) BasicLogger
 	WithFilters(filter ...Filter) BasicLogger
+	Filters() []Filter
 }
 
 type basicLogger struct {
@@ -139,6 +140,10 @@ func (b *basicLogger) WithOutput(writers ...Output) BasicLogger {
 func (b *basicLogger) WithFilters(filter ...Filter) BasicLogger {
 	b.filters = append(b.filters, filter...) // this is not thread safe, I know
 	return b
+}
+
+func (b *basicLogger) Filters() []Filter {
+	return b.filters
 }
 
 func flattenParams(params []*Field) []*Field {
