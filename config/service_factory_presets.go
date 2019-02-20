@@ -4,6 +4,7 @@ import (
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
 
@@ -78,5 +79,22 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, timeBetweenEmptyBlocks)
+	return cfg
+}
+
+func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, federationNodes map[string]FederationNode) LeanHelixConsensusConfig {
+	cfg := emptyConfig()
+	cfg.SetNodeAddress(keyPair.NodeAddress())
+	cfg.SetNodePrivateKey(keyPair.PrivateKey())
+
+	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 1*time.Hour)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
+
+	if federationNodes != nil {
+		cfg.SetFederationNodes(federationNodes)
+	}
 	return cfg
 }
