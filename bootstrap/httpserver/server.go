@@ -117,6 +117,8 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(s.getBlockHandler)))
 	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetrics)))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
+	router.Handle("/debug/logs/filter-on", http.HandlerFunc(s.filterOn))
+	router.Handle("/debug/logs/filter-off", http.HandlerFunc(s.filterOff))
 
 	if s.config.Profiling() {
 		registerPprof(router)

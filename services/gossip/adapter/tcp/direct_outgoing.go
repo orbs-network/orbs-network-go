@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-func (t *directTransport) clientMainLoop(parentCtx context.Context, address string, queue *transportQueue) {
+func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
 	for {
-		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", address))
-		t.logger.Info("attempting outgoing transport connection", log.String("server", address), trace.LogFieldFrom(ctx))
-		conn, err := net.Dial("tcp", address)
+		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", queue.networkAddress))
+		t.logger.Info("attempting outgoing transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
+		conn, err := net.Dial("tcp", queue.networkAddress)
 
 		if err != nil {
-			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", address), trace.LogFieldFrom(ctx))
+			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
 			continue
 		}
@@ -32,7 +32,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, address stri
 
 // returns true if should attempt reconnect on error
 func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
-	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 
 	for {
 
@@ -47,7 +47,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
 				t.metrics.outgoingConnectionFailedSend.Inc()
-				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
 			}
@@ -61,7 +61,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 				err := t.sendKeepAlive(ctx, conn)
 				if err != nil {
 					t.metrics.outgoingConnectionFailedKeepalive.Inc()
-					t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
+					t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 					conn.Close()
 					return true
 				}
@@ -83,7 +83,7 @@ func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData
 	err := outgoingQueue.Push(data)
 	if err != nil {
 		t.metrics.outgoingConnectionSendQueueFull.Inc()
-		t.logger.Info("direct transport send queue full", log.Error(err))
+		t.logger.Info("direct transport send queue full", log.Error(err), log.String("peer", outgoingQueue.networkAddress))
 	}
 }
 
