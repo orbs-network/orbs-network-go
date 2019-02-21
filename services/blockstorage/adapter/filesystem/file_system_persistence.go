@@ -221,7 +221,9 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 
 	currentTop := f.bhIndex.getLastBlockHeight()
 	if bh != currentTop+1 {
-		// TODO(v1): in InMemoryBlockPersistence we don't return error if out of order assuming the same exact block was written
+		if bh <= currentTop {
+			return false, nil
+		}
 		return false, fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
 	}
 

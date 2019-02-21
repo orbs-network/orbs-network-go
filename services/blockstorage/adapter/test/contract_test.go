@@ -94,7 +94,6 @@ func TestBlockPersistenceContract_WriteOutOfOrderFuture_Fails(t *testing.T) {
 }
 
 func TestBlockPersistenceContract_WriteOutOfOrderPast_NotFailsWhenBlockIdentical(t *testing.T) {
-	t.Skip("fails with File_System_Adapter and should be fixed") // TODO(v1): fix
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		block1 := builders.BlockPair().WithHeight(1).Build()
 		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
