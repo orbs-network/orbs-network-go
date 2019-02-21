@@ -17,35 +17,38 @@ func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness().start(t, ctx)
 
-		blockRequested := make(chan bool)
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0
-		h.consensusContextRespondWithVerySlowBlockCreation(blockRequested)
+		isLeanHelixStuckOnCreatingABlock := false
 
+		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (first time called)
+		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (second time called)
+		h.consensusContextRespondWithVerySlowBlockCreation(&isLeanHelixStuckOnCreatingABlock)
+
+		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              nil,
+			BlockPair:              b5,
 			PrevCommittedBlockPair: nil,
 		})
 
-		<-blockRequested
-		h.expectConsensusContextRequestOrderingCommittee(1) // we're index 0
-
-		b := builders.BlockPair().WithHeight(1).WithEmptyLeanHelixBlockProof().Build()
+		b6 := builders.BlockPair().WithHeight(6).WithEmptyLeanHelixBlockProof().Build()
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              b,
+			BlockPair:              b6,
 			PrevCommittedBlockPair: nil,
 		})
 
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
+		require.True(t, test.Consistently(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, func() bool {
+			return !isLeanHelixStuckOnCreatingABlock
+		}), "Lean Helix should not be creating a block and getting stuck doing so")
 	})
 }
 
-func (h *harness) consensusContextRespondWithVerySlowBlockCreation(blockRequested chan bool) {
+func (h *harness) consensusContextRespondWithVerySlowBlockCreation(isCreatingABlock *bool) {
 	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
-		blockRequested <- true
+		*isCreatingABlock = true
 		<-ctx.Done()
 		return nil, errors.New("canceled")
 	})

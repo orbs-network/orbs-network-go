@@ -69,11 +69,11 @@ func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.
 }
 
 func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
-	h.consensusContext.Reset().Never("RequestOrderingCommittee", mock.Any, mock.Any)
+	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
 func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
-	h.consensusContext.Reset().When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
+	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
 	}, nil).Times(1)
 }
