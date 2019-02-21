@@ -26,7 +26,7 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, block := range blocks { // write some blocks
-		err = adapter1.WriteNextBlock(block)
+		_, err = adapter1.WriteNextBlock(block)
 		require.NoError(t, err)
 	}
 
