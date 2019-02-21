@@ -15,9 +15,9 @@ import (
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
-const MAX_PAYLOAD_SIZE_BYTES = 10 * 1024 * 1024
+const MAX_PAYLOAD_SIZE_BYTES = 20 * 1024 * 1024
 const SEND_QUEUE_MAX_MESSAGES = 1000
-const SEND_QUEUE_MAX_BYTES = 10 * 1024 * 1024
+const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
@@ -68,6 +68,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	for peerNodeAddress := range t.config.GossipPeers(0) {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES)
+			t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
 		}
 	}
 
@@ -81,8 +82,10 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 			closureSafePeerNodeKey := peerNodeAddress
+			t.outgoingPeerQueues[closureSafePeerNodeKey].networkAddress = peerAddress
+
 			supervised.GoForever(ctx, t.logger, func() {
-				t.clientMainLoop(ctx, peerAddress, t.outgoingPeerQueues[closureSafePeerNodeKey])
+				t.clientMainLoop(ctx, t.outgoingPeerQueues[closureSafePeerNodeKey])
 			})
 		}
 	}

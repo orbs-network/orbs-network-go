@@ -8,9 +8,11 @@ import (
 )
 
 type transportQueue struct {
-	channel     chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
-	maxBytes    int
-	maxMessages int
+	channel        chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
+	networkAddress string
+	maxBytes       int
+	maxMessages    int
+	disabled       bool // not under mutex on purpose
 
 	protected struct {
 		sync.Mutex
@@ -29,6 +31,10 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int) *transportQueue {
 }
 
 func (q *transportQueue) Push(data *adapter.TransportData) error {
+	if q.disabled {
+		return nil
+	}
+
 	err := q.consumeBytes(data)
 	if err != nil {
 		return err
@@ -52,6 +58,27 @@ func (q *transportQueue) Pop(ctx context.Context) *adapter.TransportData {
 	}
 }
 
+func (q *transportQueue) Clear(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-q.channel:
+			q.releaseBytes(res)
+		default:
+			return
+		}
+	}
+}
+
+func (q *transportQueue) Disable() {
+	q.disabled = true
+}
+
+func (q *transportQueue) Enable() {
+	q.disabled = false
+}
+
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	dataBytes := totalBytesInData(data)
 
@@ -59,7 +86,7 @@ func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	defer q.protected.Unlock()
 
 	if dataBytes > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft)
+		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
 	q.protected.bytesLeft -= dataBytes

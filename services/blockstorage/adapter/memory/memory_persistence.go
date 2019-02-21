@@ -69,16 +69,16 @@ func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) error {
+func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
 
 	added, err := bp.validateAndAddNextBlock(blockPair)
 	if err != nil || !added {
-		return err
+		return added, err
 	}
 
 	bp.metrics.size.Add(sizeOfBlock(blockPair))
 
-	return nil
+	return added, nil
 }
 
 func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
@@ -95,6 +95,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
 		bp.Logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		// TODO(v1): since we're skipping the add, byte-compare the block header to make sure we don't have a fork
 		return false, nil
 	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)

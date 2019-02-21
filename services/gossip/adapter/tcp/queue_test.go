@@ -109,6 +109,58 @@ func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 	})
 }
 
+func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		q := NewTransportQueue(1000, 3)
+
+		q.Clear(ctx)
+
+		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
+		require.NoError(t, err)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x02}})
+		require.NoError(t, err)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x03}})
+		require.NoError(t, err)
+
+		q.Clear(ctx)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
+		require.NoError(t, err)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x02}})
+		require.NoError(t, err)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x03}})
+		require.NoError(t, err)
+	})
+}
+
+func TestQueue_DisableThenEnable(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		q := NewTransportQueue(1000, 2)
+
+		q.Disable()
+
+		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
+		require.NoError(t, err)
+
+		q.Enable()
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x02}})
+		require.NoError(t, err)
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x03}})
+		require.NoError(t, err)
+
+		q.Disable()
+
+		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x04}})
+		require.NoError(t, err)
+	})
+}
+
 func buf(len int) []byte {
 	return make([]byte, len)
 }

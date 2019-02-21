@@ -44,11 +44,13 @@ func getLogger(path string, silent bool, cfg config.NodeConfig) log.BasicLogger 
 		log.VirtualChainId(cfg.VirtualChainId()),
 	).WithOutput(outputs...)
 
+	conditionalFilter := log.NewConditionalFilter(false, nil)
+
 	if !cfg.LoggerFullLog() {
-		return logger.WithFilters(log.Or(log.OnlyErrors(), log.OnlyMetrics()))
+		conditionalFilter = log.NewConditionalFilter(true, log.Or(log.OnlyErrors(), log.OnlyMetrics()))
 	}
 
-	return logger
+	return logger.WithFilters(conditionalFilter)
 }
 
 func getConfig(configFiles config.ArrayFlags, httpAddress string) (config.NodeConfig, error) {

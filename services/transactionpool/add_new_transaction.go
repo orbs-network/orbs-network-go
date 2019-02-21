@@ -19,9 +19,11 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 
 	logger := s.logger.WithTags(log.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
 
-	if err := s.createValidationContext().validateTransaction(input.SignedTransaction); err != nil {
-		height, nano := s.lastCommittedBlockHeightAndTime()
-		logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.BlockHeight(height), log.TimestampNano("last-committed", nano))
+	currentTime := time.Now()
+	lastCommittedBlockHeight, lastCommittedBlockTimestamp := s.lastCommittedBlockHeightAndTime()
+
+	if err := s.validationContext.ValidateAddedTransaction(input.SignedTransaction, currentTime, lastCommittedBlockTimestamp); err != nil {
+		logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.BlockHeight(lastCommittedBlockHeight), log.TimestampNano("last-committed", lastCommittedBlockTimestamp))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
@@ -40,7 +42,6 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	if _, err := s.pendingPool.add(input.SignedTransaction, address); err != nil {
 		logger.Error("error adding transaction to pending pool", log.Error(err))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
-
 	}
 
 	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))

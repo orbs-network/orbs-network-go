@@ -57,7 +57,7 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 }
 
 type adder interface {
-	add(receipt *protocol.TransactionReceipt, submitted primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano)
+	add(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano)
 }
 
 type remover interface {
@@ -78,7 +78,7 @@ type committer struct {
 func (c *committer) commit(ctx context.Context, receipts ...*protocol.TransactionReceipt) (myReceipts []*protocol.TransactionReceipt) {
 
 	for _, receipt := range receipts {
-		c.adder.add(receipt, c.blockTime, c.blockHeight, c.blockTime) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
+		c.adder.add(receipt, c.blockHeight, c.blockTime) // tx MUST be added to committed pool prior to removing it from pending pool, otherwise the same tx can be added again, since we do not remove and add atomically
 		removedTxGateway := c.remover.remove(ctx, receipt.Txhash(), protocol.TRANSACTION_STATUS_COMMITTED)
 		if c.amITheGatewayOf(removedTxGateway) {
 			c.myReceipts = append(c.myReceipts, receipt)

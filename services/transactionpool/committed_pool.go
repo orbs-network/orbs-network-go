@@ -6,11 +6,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sync"
+	"time"
 )
 
 type committedTxPool struct {
 	sync.RWMutex
 	transactions map[string]*committedTransaction
+
+	transactionPoolFutureTimestampGraceTimeout func() time.Duration
 
 	metrics *committedPoolMetrics
 }
@@ -27,8 +30,9 @@ func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
 	}
 }
 
-func NewCommittedPool(metricFactory metric.Factory) *committedTxPool {
+func NewCommittedPool(transactionPoolFutureTimestampGraceTimeout func() time.Duration, metricFactory metric.Factory) *committedTxPool {
 	return &committedTxPool{
+		transactionPoolFutureTimestampGraceTimeout: transactionPoolFutureTimestampGraceTimeout,
 		transactions: make(map[string]*committedTransaction),
 		metrics:      newCommittedPoolMetrics(metricFactory),
 	}
@@ -36,18 +40,16 @@ func NewCommittedPool(metricFactory metric.Factory) *committedTxPool {
 
 type committedTransaction struct {
 	receipt        *protocol.TransactionReceipt
-	submitted      primitives.TimestampNano
 	blockHeight    primitives.BlockHeight
 	blockTimestamp primitives.TimestampNano
 }
 
-func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, submitted primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
+func (p *committedTxPool) add(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
 	p.Lock()
 	defer p.Unlock()
 
 	transaction := &committedTransaction{
 		receipt:        receipt,
-		submitted:      submitted,
 		blockHeight:    blockHeight,
 		blockTimestamp: blockTs,
 	}
@@ -78,8 +80,10 @@ func (p *committedTxPool) clearTransactionsOlderThan(ctx context.Context, timest
 	p.Lock()
 	defer p.Unlock()
 
+	futureTimestampGrace := primitives.TimestampNano(p.transactionPoolFutureTimestampGraceTimeout().Nanoseconds())
+
 	for _, tx := range p.transactions {
-		if tx.submitted < timestamp {
+		if tx.blockTimestamp+futureTimestampGrace < timestamp {
 			delete(p.transactions, tx.receipt.Txhash().KeyForMap())
 
 			p.metrics.transactionCount.Dec()

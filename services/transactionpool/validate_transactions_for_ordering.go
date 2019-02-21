@@ -19,7 +19,7 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 		return nil, err
 	}
 
-	vctx := s.createValidationContext()
+	proposedBlockTimestamp := input.CurrentBlockTimestamp
 
 	for _, tx := range input.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
@@ -27,7 +27,7 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 			return nil, errors.Errorf("transaction with hash %s already committed", txHash)
 		}
 
-		if err := vctx.validateTransaction(tx); err != nil {
+		if err := s.validationContext.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("transaction with hash %s is invalid", txHash))
 		}
 	}

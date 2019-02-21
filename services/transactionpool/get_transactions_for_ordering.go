@@ -32,7 +32,7 @@ type batchFetcher interface {
 }
 
 type batchValidator interface {
-	validateTransaction(tx *protocol.SignedTransaction) *ErrTransactionRejected
+	ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected
 }
 
 type committedTransactionChecker interface {
@@ -91,7 +91,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return nil, err
 	}
 
-	vctx := s.createValidationContext()
+	proposedBlockTimestamp := input.CurrentBlockTimestamp
 	pov := &vmPreOrderValidator{vm: s.virtualMachine}
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolTimeBetweenEmptyBlocks())
@@ -104,7 +104,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 			sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
 		}
 		batch.fetchUsing(s.pendingPool)
-		batch.filterInvalidTransactions(ctx, vctx, s.committedPool)
+		batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, proposedBlockTimestamp)
 		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 	}
 
@@ -122,10 +122,10 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	return out, err
 }
 
-func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker) {
+func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker, proposedBlockTimestamp primitives.TimestampNano) {
 	for _, tx := range r.incomingTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		if err := validator.validateTransaction(tx); err != nil {
+		if err := validator.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
 			r.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
 			r.reject(txHash, err.TransactionStatus)
 		} else if committedTransactions.has(txHash) {
