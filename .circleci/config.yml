@@ -144,7 +144,7 @@ jobs:
 
 workflows:
   version: 2
-  commit:
+  build:
     jobs:
       - tests
       - e2e
