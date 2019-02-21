@@ -27,7 +27,7 @@ func NewTransactionPool(ctx context.Context,
 	waiter := newTransactionWaiter()
 	onNewTransaction := func() { waiter.inc(ctx) }
 	pendingPool := NewPendingPool(config.TransactionPoolPendingPoolSizeInBytes, metricFactory, onNewTransaction)
-	committedPool := NewCommittedPool(metricFactory)
+	committedPool := NewCommittedPool(config.TransactionPoolFutureTimestampGraceTimeout, metricFactory)
 
 	logger := parent.WithTags(LogTag)
 
@@ -47,6 +47,7 @@ func NewTransactionPool(ctx context.Context,
 		transactionWaiter:    waiter,
 	}
 
+	s.validationContext = s.createValidationContext()
 	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
 

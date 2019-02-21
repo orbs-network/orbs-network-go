@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"sync"
-	"time"
 )
 
 var LogTag = log.Service("transaction-pool")
@@ -38,6 +37,7 @@ type service struct {
 	blockTracker         *synchronization.BlockTracker
 	transactionForwarder *transactionForwarder
 	transactionWaiter    *transactionWaiter
+	validationContext    *validationContext
 
 	metrics struct {
 		blockHeight *metric.Gauge
@@ -53,14 +53,10 @@ func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, pri
 }
 
 func (s *service) createValidationContext() *validationContext {
-	s.lastCommitted.RLock()
-	defer s.lastCommitted.RUnlock()
 	return &validationContext{
-		nodeTime:                    time.Now(),
-		lastCommittedBlockTimestamp: s.lastCommitted.timestamp,
-		expiryWindow:                s.config.TransactionExpirationWindow(),
-		nodeSyncRejectInterval:      s.config.TransactionPoolNodeSyncRejectTime(),
-		futureTimestampGrace:        s.config.TransactionPoolFutureTimestampGraceTimeout(),
-		virtualChainId:              s.config.VirtualChainId(),
+		expiryWindow:           s.config.TransactionExpirationWindow(),
+		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),
+		futureTimestampGrace:   s.config.TransactionPoolFutureTimestampGraceTimeout(),
+		virtualChainId:         s.config.VirtualChainId(),
 	}
 }

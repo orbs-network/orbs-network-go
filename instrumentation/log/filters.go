@@ -8,6 +8,12 @@ type Filter interface {
 	Allows(level string, message string, fields []*Field) bool
 }
 
+type ConditionalFilter interface {
+	Filter
+	On()
+	Off()
+}
+
 func ExcludeEntryPoint(name string) Filter {
 	return ExcludeField(String("entry-point", name))
 }
@@ -167,4 +173,29 @@ type onlyMetrics struct {
 
 func (f onlyMetrics) Allows(level string, message string, fields []*Field) bool {
 	return level == "metric"
+}
+
+type conditionalFilter struct {
+	enabled bool
+	filter  Filter
+}
+
+func NewConditionalFilter(enabled bool, filter Filter) ConditionalFilter {
+	return &conditionalFilter{enabled, filter}
+}
+
+func (f *conditionalFilter) On() {
+	f.enabled = true
+}
+
+func (f *conditionalFilter) Off() {
+	f.enabled = false
+}
+
+func (f *conditionalFilter) Allows(level string, message string, fields []*Field) bool {
+	if f.enabled && f.filter != nil {
+		return f.filter.Allows(level, message, fields)
+	}
+
+	return true
 }

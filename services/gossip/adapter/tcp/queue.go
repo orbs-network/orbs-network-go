@@ -8,9 +8,10 @@ import (
 )
 
 type transportQueue struct {
-	channel     chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
-	maxBytes    int
-	maxMessages int
+	channel        chan *adapter.TransportData // replace this buffered channel with github.com/phf/go-queue if we don't want maxSizeMessages (and its pre allocation)
+	networkAddress string
+	maxBytes       int
+	maxMessages    int
 
 	protected struct {
 		sync.Mutex
@@ -59,7 +60,7 @@ func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	defer q.protected.Unlock()
 
 	if dataBytes > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft)
+		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
 	q.protected.bytesLeft -= dataBytes

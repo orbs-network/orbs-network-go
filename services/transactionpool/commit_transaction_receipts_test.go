@@ -16,7 +16,6 @@ import (
 
 type committedRecord struct {
 	receipt     *protocol.TransactionReceipt
-	submitted   primitives.TimestampNano
 	blockHeight primitives.BlockHeight
 	blockTime   primitives.TimestampNano
 }
@@ -30,8 +29,8 @@ func (a *fakeAdderRemover) remove(ctx context.Context, txHash primitives.Sha256,
 	return a.txs[txHash.KeyForMap()]
 }
 
-func (a *fakeAdderRemover) add(receipt *protocol.TransactionReceipt, submitted primitives.TimestampNano, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
-	a.committed = append(a.committed, &committedRecord{receipt: receipt, submitted: submitted, blockHeight: blockHeight, blockTime: blockTs})
+func (a *fakeAdderRemover) add(receipt *protocol.TransactionReceipt, blockHeight primitives.BlockHeight, blockTs primitives.TimestampNano) {
+	a.committed = append(a.committed, &committedRecord{receipt: receipt, blockHeight: blockHeight, blockTime: blockTs})
 }
 
 func (a *fakeAdderRemover) originFor(receipt *protocol.TransactionReceipt, address primitives.NodeAddress) {
@@ -93,7 +92,6 @@ func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(
 		require.Equal(t, tx1, fake.committed[0].receipt, "did not add the tx receipt to committed pool")
 		require.Equal(t, c.blockHeight, fake.committed[0].blockHeight, "committed transaction has wrong block height")
 		require.Equal(t, c.blockTime, fake.committed[0].blockTime, "committed transaction has wrong block timestamp")
-		require.Equal(t, c.blockTime, fake.committed[0].submitted, "committed transaction has wrong expiry")
 	})
 }
 
