@@ -68,6 +68,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	for peerNodeAddress := range t.config.GossipPeers(0) {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES)
+			t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
 		}
 	}
 
