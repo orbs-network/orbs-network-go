@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -22,6 +23,7 @@ type harness struct {
 	gossip           *gossiptopics.MockLeanHelix
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
+	instanceId       lhprimitives.InstanceId
 }
 
 func newLeanHelixServiceHarness() *harness {
@@ -51,6 +53,7 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
 	}
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), federationNodes)
+	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, logger, cfg, registry)
 	return h
