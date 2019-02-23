@@ -40,6 +40,7 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 		for bh := 1000; bh < 1040; bh++ {
 			h.incomingLargeConsensusMessageViaGossip(ctx, primitives.BlockHeight(bh))
 			memUsageAfter := getMemUsageBytes()
+			t.Logf("total extra memory consumption: %d bytes", memUsageAfter-memUsageBefore)
 			require.Truef(t, memUsageAfter < memUsageBefore+MAX_LEAK_BYTES, "memory should not increase dramatically, increased by %d bytes", memUsageAfter-memUsageBefore)
 		}
 	})
