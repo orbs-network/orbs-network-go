@@ -13,7 +13,7 @@ import (
 
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
-func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) {
+func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethContractAddress string, jsonAbi string, ethBlockNumber uint64, methodName string, out interface{}, args ...interface{}) {
 	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
 	if err != nil {
 		panic(err.Error())
@@ -30,14 +30,19 @@ func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
-				// contractAddress
+				// ethContractAddress
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: contractAddress,
+				StringValue: ethContractAddress,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// jsonAbi
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: jsonAbi,
+			}).Build(),
+			(&protocol.ArgumentBuilder{
+				// ethBlockNumber
+				Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+				Uint64Value: ethBlockNumber,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// methodName

@@ -40,29 +40,32 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 	}
 }
 
-// inputArg0: contractAddress (string)
+// inputArg0: ethContractAddress (string)
 // inputArg1: jsonAbi (string)
-// inputArg2: methodName (string)
-// inputArg3: ethereumABIPackedInputArguments ([]byte)
+// inputArg2: ethBlockNumber (uint64)
+// inputArg3: methodName (string)
+// inputArg4: ethereumABIPackedInputArguments ([]byte)
 // outputArg0: ethereumABIPackedOutput ([]byte)
 func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() || !args[3].IsTypeBytesValue() {
+	if len(args) != 5 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeUint64Value() || !args[3].IsTypeStringValue() || !args[4].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK ethereum callMethod args: %v", args)
 	}
-	contractAddress := args[0].StringValue()
+	ethContractAddress := args[0].StringValue()
 	jsonAbi := args[1].StringValue()
-	methodName := args[2].StringValue()
-	ethereumPackedInputArguments := args[3].BytesValue()
+	ethBlockNumber := args[2].Uint64Value()
+	methodName := args[3].StringValue()
+	ethereumPackedInputArguments := args[4].BytesValue()
 
-	// get block timeatamp
+	// get block timestamp
 	blockTimestamp := executionContext.currentBlockTimestamp
 
 	// execute the call
 	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
 	output, err := connector.EthereumCallContract(ctx, &services.EthereumCallContractInput{
 		ReferenceTimestamp:              blockTimestamp,
-		EthereumContractAddress:         contractAddress,
+		EthereumBlockNumber:             ethBlockNumber,
+		EthereumContractAddress:         ethContractAddress,
 		EthereumFunctionName:            methodName,
 		EthereumJsonAbi:                 jsonAbi,
 		EthereumAbiPackedInputArguments: ethereumPackedInputArguments,
@@ -92,7 +95,7 @@ func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, execut
 	ethTxHash := args[2].StringValue()
 	eventName := args[3].StringValue()
 
-	// get block timeatamp
+	// get block timestamp
 	blockTimestamp := executionContext.currentBlockTimestamp
 
 	// execute the call
