@@ -16,7 +16,7 @@ const CONTRACT_NAME = "BenchmarkToken"
 var PUBLIC = sdk.Export(transfer, getBalance)
 var SYSTEM = sdk.Export(_init)
 
-const TOTAL_SUPPLY = 1000000000
+const TOTAL_SUPPLY = uint64(1000000000)
 
 func _init() {
 	ownerAddress := address.GetSignerAddress()
