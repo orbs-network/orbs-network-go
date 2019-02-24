@@ -205,7 +205,7 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 	// this test checks that after multiple registrations, there are no goroutine leaks
 	writer := testWriter(*t)
 	test.WithContext(func(ctx context.Context) {
-		et := buildElectionTrigger(ctx, t, time.Millisecond)
+		et := buildElectionTrigger(ctx, t, time.Microsecond)
 
 		callCount := 0
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
@@ -215,12 +215,12 @@ func TestElectionTriggerDoesNotLeak(t *testing.T) {
 
 		for block := 10; block < 100; block++ {
 			et.RegisterOnElection(ctx, primitives.BlockHeight(block), 0, cb)
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(time.Millisecond)
 		}
 
+		require.True(t, callCount > 1, "the callback must be called more than once")
+		time.Sleep(100 * time.Millisecond) // a yield to let it close all goroutines
 		end := pprof.Lookup("goroutine")
-
-		require.True(t, callCount > 1, "the callback must be called more than once") // sanity
 
 		if start.Count() > end.Count() {
 			return
