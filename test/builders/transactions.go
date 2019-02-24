@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -96,7 +97,7 @@ func (t *TransactionBuilder) WithTimestampInFarFuture() *TransactionBuilder {
 }
 
 func (t *TransactionBuilder) WithInvalidAmount(targetAddress []byte) *TransactionBuilder {
-	return t.WithAmountAndTargetAddress(99999999, targetAddress) // Benchmark Contract fails amount over total supply of 1000
+	return t.WithAmountAndTargetAddress(benchmarktoken.TOTAL_SUPPLY+1000, targetAddress) // Benchmark Contract fails amount over total supply of 1000
 }
 
 func (t *TransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *TransactionBuilder {
