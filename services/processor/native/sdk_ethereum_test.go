@@ -38,6 +38,14 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 	require.Equal(t, exampleTxIndex, ethTxIndex, "did not get expected txIndex from transaction log")
 }
 
+func TestSdkEthereum_GetBlockNumber(t *testing.T) {
+	s := createEthereumSdk()
+
+	ethBlockNumber := s.SdkEthereumGetBlockNumber(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM)
+
+	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from transaction log")
+}
+
 func createEthereumSdk() *service {
 	return &service{sdkHandler: &contractSdkEthereumCallHandlerStub{}}
 }
@@ -56,6 +64,10 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 	case "getTransactionLog":
 		return &handlers.HandleSdkCallOutput{
 			OutputArguments: builders.Arguments(examplePackedOutput, exampleBlockNumber, exampleTxIndex),
+		}, nil
+	case "getBlockNumber":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments(exampleBlockNumber),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

@@ -120,3 +120,21 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 	}
 	return output.OutputArguments[1].Uint64Value(), output.OutputArguments[2].Uint32Value()
 }
+
+func (s *service) SdkEthereumGetBlockNumber(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) (ethBlockNumber uint64) {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ETHEREUM,
+		MethodName:      "getBlockNumber",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint64Value() {
+		panic("getBlockNumber Sdk.Ethereum returned corrupt output value")
+	}
+
+	return output.OutputArguments[0].Uint64Value()
+}

@@ -108,3 +108,20 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 		EthereumTxindex:          logs[0].TxIndex,
 	}, nil
 }
+
+func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.EthereumGetBlockNumberInput) (*services.EthereumGetBlockNumberOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("getting current Ethereum block number")
+
+	ethereumBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	if ethereumBlockNumber == nil {
+		return nil, errors.Errorf("failed getting an actual current block number from Ethereum") // note: the geth simulator does not support this API
+	}
+
+	return &services.EthereumGetBlockNumberOutput{
+		EthereumBlockNumber: ethereumBlockNumber.Uint64(),
+	}, nil
+}
