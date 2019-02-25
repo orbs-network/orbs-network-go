@@ -33,10 +33,10 @@ func floatToMillis(nanoseconds float64) float64 {
 	return nanoseconds / 1e+6
 }
 
-func newHistogram(name string, max int64) *Histogram {
+func newHistogram(name string, max int64, n int) *Histogram {
 	return &Histogram{
 		namedMetric: namedMetric{name: name},
-		histo:       hdrhistogram.NewWindowed(5, 0, max, 1),
+		histo:       hdrhistogram.NewWindowed(n, 0, max, 1),
 	}
 }
 
@@ -71,7 +71,7 @@ func (h *Histogram) String() string {
 }
 
 func (h *Histogram) Export() exportedMetric {
-	histo := h.histo.Current
+	histo := h.histo.Merge()
 
 	return &histogramExport{
 		h.name,

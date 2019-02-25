@@ -328,10 +328,6 @@ func (c *config) GossipNetworkTimeout() time.Duration {
 	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
 }
 
-func (c *config) MetricsReportInterval() time.Duration {
-	return c.kv[METRICS_REPORT_INTERVAL].DurationValue
-}
-
 func (c *config) BenchmarkConsensusRequiredQuorumPercentage() uint32 {
 	return c.kv[BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE].Uint32Value
 }

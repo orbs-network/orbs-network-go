@@ -74,9 +74,6 @@ type NodeConfig interface {
 	// processor
 	ProcessorArtifactPath() string
 
-	// metrics
-	MetricsReportInterval() time.Duration
-
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
 
