@@ -50,7 +50,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 			// meaning do a regular send (we have data)
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
-				t.metrics.outgoingConnectionFailedSend.Inc()
+				t.metrics.outgoingConnectionSendErrors.Inc()
 				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
@@ -64,7 +64,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 				// meaning keep alive timeout
 				err := t.sendKeepAlive(ctx, conn)
 				if err != nil {
-					t.metrics.outgoingConnectionFailedKeepalive.Inc()
+					t.metrics.outgoingConnectionKeepaliveErrors.Inc()
 					t.logger.Info("failed sending keepalive, reconnecting", log.Error(err), log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 					conn.Close()
 					return true
@@ -86,8 +86,8 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData, outgoingQueue *transportQueue) {
 	err := outgoingQueue.Push(data)
 	if err != nil {
-		t.metrics.outgoingConnectionSendQueueFull.Inc()
-		t.logger.Info("direct transport send queue full", log.Error(err), log.String("peer", outgoingQueue.networkAddress))
+		t.metrics.outgoingConnectionSendQueueErrors.Inc()
+		t.logger.Info("direct transport send queue error", log.Error(err), log.String("peer", outgoingQueue.networkAddress))
 	}
 }
 
