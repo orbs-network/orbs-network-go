@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+const REPORT_INTERVAL = 30 * time.Second
+const AGGREGATION_SPAN = 10 * time.Minute
+
 type Factory interface {
 	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
@@ -20,7 +23,7 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger)
+	PeriodicallyReport(ctx context.Context, logger log.BasicLogger)
 }
 
 type exportedMetric interface {
@@ -71,7 +74,7 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 }
 
 func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
-	h := newHistogram(name, maxDuration.Nanoseconds())
+	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/REPORT_INTERVAL))
 	r.register(h)
 	return h
 }
@@ -114,8 +117,8 @@ func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 	}
 }
 
-func (r *inMemoryRegistry) ReportEvery(ctx context.Context, interval time.Duration, logger log.BasicLogger) {
-	synchronization.NewPeriodicalTrigger(ctx, interval, logger, func() {
+func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.BasicLogger) {
+	synchronization.NewPeriodicalTrigger(ctx, REPORT_INTERVAL, logger, func() {
 		r.report(logger)
 
 		// We only rotate histograms because there is the only type of metric that we're currently rotating

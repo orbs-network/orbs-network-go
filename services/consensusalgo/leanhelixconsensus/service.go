@@ -41,9 +41,6 @@ type metrics struct {
 	timeSinceLastElectionMillis *metric.Histogram
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
-	consensusRoundTickTime      *metric.Histogram
-	failedConsensusTicksRate    *metric.Rate
-	timedOutConsensusTicksRate  *metric.Rate
 	votingTime                  *metric.Histogram
 }
 
@@ -58,15 +55,12 @@ type Config interface {
 	NetworkType() protocol.SignerNetworkType
 }
 
-func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
+func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommitMillis", 30*time.Minute),
-		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElectionMillis", 30*time.Minute),
+		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit", 30*time.Minute),
+		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection", 30*time.Minute),
 		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElectionCount"),
 		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId"),
-		consensusRoundTickTime:      m.NewLatency("ConsensusAlgo.LeanHelix.RoundTickTime", consensusTimeout),
-		failedConsensusTicksRate:    m.NewRate("ConsensusAlgo.LeanHelix.FailedTicksPerSecond"),
-		timedOutConsensusTicksRate:  m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicksPerSecond"),
 	}
 }
 
@@ -100,7 +94,7 @@ func NewLeanHelixConsensusAlgo(
 		logger:        logger,
 		config:        config,
 		blockProvider: provider,
-		metrics:       newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
+		metrics:       newMetrics(metricFactory),
 		leanHelix:     nil,
 	}
 

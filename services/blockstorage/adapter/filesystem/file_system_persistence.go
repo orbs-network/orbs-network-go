@@ -26,7 +26,7 @@ const blocksFilename = "blocks"
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		size: m.NewGauge("BlockStorage.FilesystemBlockPersistence.SizeInBytes"),
+		size: m.NewGauge("BlockStorage.Filesystem.SizeInBytes"),
 	}
 }
 
