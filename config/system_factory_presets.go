@@ -70,7 +70,6 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
-	cfg.SetDuration(METRICS_REPORT_INTERVAL, 30*time.Second)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
