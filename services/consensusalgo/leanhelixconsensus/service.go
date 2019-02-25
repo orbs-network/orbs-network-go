@@ -60,13 +60,13 @@ type Config interface {
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
 	return &metrics{
-		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommitMillis", 30*time.Minute),
-		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElectionMillis", 30*time.Minute),
+		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit", 30*time.Minute),
+		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection", 30*time.Minute),
 		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElectionCount"),
 		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId"),
 		consensusRoundTickTime:      m.NewLatency("ConsensusAlgo.LeanHelix.RoundTickTime", consensusTimeout),
-		failedConsensusTicksRate:    m.NewRate("ConsensusAlgo.LeanHelix.FailedTicksPerSecond"),
-		timedOutConsensusTicksRate:  m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicksPerSecond"),
+		failedConsensusTicksRate:    m.NewRate("ConsensusAlgo.LeanHelix.FailedTicks"),
+		timedOutConsensusTicksRate:  m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicks"),
 	}
 }
 

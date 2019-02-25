@@ -24,7 +24,7 @@ func newMetrics(factory metric.Factory) *metrics {
 	return &metrics{
 		createTxBlockTime:      factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime", 10*time.Second),
 		createResultsBlockTime: factory.NewLatency("ConsensusContext.CreateResultsBlockTime", 10*time.Second),
-		transactionsRate:       factory.NewRate("ConsensusContext.TransactionsPerSecond"),
+		transactionsRate:       factory.NewRate("ConsensusContext.Transactions"),
 	}
 }
 

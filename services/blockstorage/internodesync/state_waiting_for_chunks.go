@@ -31,12 +31,13 @@ func (s *waitingForChunksState) String() string {
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	err := s.client.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceNodeAddress)
 	if err != nil {
 		logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceNodeAddress))
+
 		return s.factory.CreateIdleState()
 	}
 

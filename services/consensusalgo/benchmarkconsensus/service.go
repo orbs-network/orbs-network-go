@@ -62,8 +62,8 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTi
 	return &metrics{
 		consensusRoundTickTime:     m.NewLatency("ConsensusAlgo.Benchmark.RoundTickTime", consensusTimeout),
 		votingTime:                 m.NewLatency("ConsensusAlgo.Benchmark.VotingTime", collectVotesTimeout),
-		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicksPerSecond"),
-		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicksPerSecond"),
+		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicks"),
+		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicks"),
 	}
 }
 
