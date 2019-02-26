@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
@@ -17,6 +16,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
@@ -40,11 +40,11 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: hexutil.Encode(contractAddress.Bytes()),
-			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
+			EthereumContractAddress: contractAddress.Hex(),
+			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "TransferredOut",
 			EthereumJsonAbi:         contract.EmitEventAbi,
-			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
+			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
 		})
 		require.NoError(t, err, "failed getting logs")
 
@@ -52,12 +52,14 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		require.NoError(t, err, "failed parsing ABI")
 
 		event := new(contract.EmitEvent)
-		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "TransferredOut", out.EthereumAbiPackedOutput)
+		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "TransferredOut", out.EthereumAbiPackedOutputs[0])
 		require.NoError(t, err, "failed getting amount from tx log")
 		require.EqualValues(t, ethAddress, event.EthAddress, "failed getting ethAddress from unpacked data")
 		require.EqualValues(t, tuid, event.Tuid, "failed getting tuid from unpacked data")
 		require.EqualValues(t, orbsAddress, event.OrbsAddress, "failed getting orbsAddress from unpacked data")
 		require.EqualValues(t, amount, event.Value, "failed getting amount from unpacked data")
+		require.NotZero(t, out.EthereumBlockNumber, "expected returned block number to be non-zero")
+		require.Equal(t, uint32(0), out.EthereumTxindex, "expected returned txIndex to zero")
 	})
 }
 

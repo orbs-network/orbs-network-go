@@ -64,6 +64,11 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Transaction(primitives.Sha256(input.EthereumTxhash)))
 
+	ethereumTxHash, err := hexutil.Decode(input.EthereumTxhash)
+	if err != nil {
+		return nil, err
+	}
+
 	parsedABI, err := abi.JSON(strings.NewReader(input.EthereumJsonAbi))
 	if err != nil {
 		return nil, err
@@ -75,7 +80,7 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	}
 
 	// TODO(v1): use input.ReferenceTimestamp to reduce non-determinism here (ask OdedW how)
-	logs, err := s.connection.GetTransactionLogs(ctx, input.EthereumTxhash, eventABI.Id().Bytes())
+	logs, err := s.connection.GetTransactionLogs(ctx, ethereumTxHash, eventABI.Id().Bytes())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
 	}
@@ -91,6 +96,8 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	}
 
 	return &services.EthereumGetTransactionLogsOutput{
-		EthereumAbiPackedOutput: output,
+		EthereumAbiPackedOutputs: [][]byte{output},
+		EthereumBlockNumber:      logs[0].BlockNumber,
+		EthereumTxindex:          logs[0].TxIndex,
 	}, nil
 }
