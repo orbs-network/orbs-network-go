@@ -97,6 +97,11 @@ func (h *harness) authFromConfig() (*bind.TransactOpts, error) {
 	return bind.NewKeyedTransactor(key), nil
 }
 
+func (h *harness) WithFakeTSF() *harness {
+	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.logger)
+	return h
+}
+
 func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
 	logger := log.DefaultTestingLogger(tb)
 	conn := adapter.NewEthereumSimulatorConnection(logger)

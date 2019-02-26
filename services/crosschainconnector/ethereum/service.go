@@ -32,6 +32,16 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 	return s
 }
 
+func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+	logger := parent.WithTags(LogTag)
+	s := &service{
+		connection:       connection,
+		timestampFetcher: NewTimestampFetcher(NewFakeBlockAndTimestampGetter(logger), logger),
+		logger:           logger,
+	}
+	return s
+}
+
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
