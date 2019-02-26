@@ -46,12 +46,12 @@ go_test_junit_report () {
         # of grouping together logs of failing tests ONLY.
         junit-xml-stats ${OUT_DIR}/results.xml
 
-        grep -B 150 -A 150 -- "test timed out" ./$OUT_DIR/test.out > ./$OUT_DIR/timed.out
-        cat ./$OUT_DIR/timed.out
+        # grep -B 150 -A 150 -- "test timed out" ./$OUT_DIR/test.out > ./$OUT_DIR/timed.out
+        # cat ./$OUT_DIR/timed.out
 
-        if [ ! -s ./$OUT_DIR/fail.out ] && [ ! -s ./$OUT_DIR/timed.out ]; then
-            cat ./$OUT_DIR/test.out
-        fi
+        # if [ ! -s ./$OUT_DIR/fail.out ] && [ ! -s ./$OUT_DIR/timed.out ]; then
+        #     cat ./$OUT_DIR/test.out
+        # fi
 
         exit $EXIT_CODE
     fi
