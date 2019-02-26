@@ -34,23 +34,30 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	var referenceBlockNumber *big.Int //TODO (https://github.com/orbs-network/orbs-network-go/issues/648) re-integrate
-	//referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
-	//if err != nil {
-	//	return nil, err
-	//}
 
-	if referenceBlockNumber != nil {
+	var ethereumBlockNumber *big.Int
+	var err error
+	if input.EthereumBlockNumber != 0 {
+		ethereumBlockNumber = big.NewInt(0).SetUint64(input.EthereumBlockNumber)
+	} else {
+		ethereumBlockNumber, err = s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if ethereumBlockNumber != nil { // simulator returns nil from GetBlockByTimestamp
 		logger.Info("calling contract from ethereum",
 			log.String("address", input.EthereumContractAddress),
-			log.Int64("reference-block", referenceBlockNumber.Int64()))
+			log.Uint64("block-number", ethereumBlockNumber.Uint64()))
 	}
+
 	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
-	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, referenceBlockNumber)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, ethereumBlockNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "ethereum call failed")
 	}

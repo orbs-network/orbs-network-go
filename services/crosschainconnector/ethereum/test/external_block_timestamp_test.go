@@ -16,7 +16,7 @@ import (
 )
 
 func TestFullFlowWithVaryingTimestamps(t *testing.T) {
-	// the idea of this test is to make sure that the entire 'call-from-ethereum' logic works on a spedific timestamp and different states in time (blocks)
+	// the idea of this test is to make sure that the entire 'call-from-ethereum' logic works on a specific timestamp and different states in time (blocks)
 	// it requires ganache or some other simulation to transact
 
 	if !runningWithDocker() {

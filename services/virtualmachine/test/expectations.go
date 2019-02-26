@@ -118,11 +118,12 @@ func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
 	require.True(t, ok, "did not request info for native contract: %v", err)
 }
 
-func (h *harness) expectEthereumConnectorMethodCalled(expectedContractAddress string, expectedMethodName string, returnError error, returnOutput []byte) {
+func (h *harness) expectEthereumConnectorMethodCalled(expectedContractAddress string, expectedBlockNumber uint64, expectedMethodName string, returnError error, returnOutput []byte) {
 	contractMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.EthereumCallContractInput)
 		return ok &&
 			input.EthereumContractAddress == expectedContractAddress &&
+			input.EthereumBlockNumber == expectedBlockNumber &&
 			input.EthereumFunctionName == expectedMethodName
 	}
 
@@ -130,7 +131,7 @@ func (h *harness) expectEthereumConnectorMethodCalled(expectedContractAddress st
 		EthereumAbiPackedOutput: returnOutput,
 	}
 
-	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumCallContract", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s and method equals %s", expectedContractAddress, expectedMethodName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumCallContract", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s, block number equals %d and method equals %s", expectedContractAddress, expectedBlockNumber, expectedMethodName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
 func (h *harness) verifyEthereumConnectorMethodCalled(t *testing.T) {
