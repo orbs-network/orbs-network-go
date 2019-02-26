@@ -30,7 +30,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
       - run: sudo apt-get install -y nodejs
-      - run: npm install junit-xml-stats -g
+      - run: sudo npm install junit-xml-stats -g
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
