@@ -18,7 +18,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		CurrentBlockHeight:    input.CurrentBlockHeight,
 		CurrentBlockTimestamp: input.TransactionsBlock.Header.Timestamp(),
 	})
-	s.metrics.processTransactionsSetForCreateResultsBlock.RecordSince(start)
+	s.metrics.processTransactionsSeInCreateResultsBlock.RecordSince(start)
 	if err != nil {
 		return nil, err
 	}
