@@ -38,7 +38,7 @@ func NewBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory, p
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &InMemoryBlockPersistence{
 		Logger:     logger,
-		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistence.SizeInBytes")},
+		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistenceSize.Bytes")},
 		tracker:    synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
 		blockChain: aChainOfBlocks{blocks: preloadedBlocks},
 	}

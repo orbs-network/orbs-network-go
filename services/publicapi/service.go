@@ -34,9 +34,9 @@ type metrics struct {
 
 func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, getTransactionStatusTimeout time.Duration, runQueryTimeout time.Duration) *metrics {
 	return &metrics{
-		sendTransactionTime:      factory.NewLatency("PublicApi.SendTransactionProcessingTime", sendTransactionTimeout),
-		getTransactionStatusTime: factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime", getTransactionStatusTimeout),
-		runQueryTime:             factory.NewLatency("PublicApi.RunQueryProcessingTime", runQueryTimeout),
+		sendTransactionTime:      factory.NewLatency("PublicApi.SendTransactionProcessingTime.Millis", sendTransactionTimeout),
+		getTransactionStatusTime: factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime.Millis", getTransactionStatusTimeout),
+		runQueryTime:             factory.NewLatency("PublicApi.RunQueryProcessingTime.Millis", runQueryTimeout),
 	}
 }
 

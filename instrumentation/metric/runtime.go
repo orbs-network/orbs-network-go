@@ -29,16 +29,16 @@ type runtimeReporter struct {
 func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
-			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc"),
-			heapSys:         metricFactory.NewGauge("Runtime.HeapSys"),
-			heapIdle:        metricFactory.NewGauge("Runtime.HeapIdle"),
-			heapReleased:    metricFactory.NewGauge("Runtime.HeapReleased"),
-			heapInuse:       metricFactory.NewGauge("Runtime.HeapInuse"),
-			heapObjects:     metricFactory.NewGauge("Runtime.HeapObjects"),
-			gcCpuPercentage: metricFactory.NewGauge("Runtime.GCCPUPercentage"),
-			numGc:           metricFactory.NewGauge("Runtime.NumGc"),
-			numGoroutine:    metricFactory.NewGauge("Runtime.NumGoroutine"),
-			uptime:          metricFactory.NewGauge("Runtime.UptimeInSeconds"),
+			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc.Bytes"),
+			heapSys:         metricFactory.NewGauge("Runtime.HeapSys.Bytes"),
+			heapIdle:        metricFactory.NewGauge("Runtime.HeapIdle.Bytes"),
+			heapReleased:    metricFactory.NewGauge("Runtime.HeapReleased.Bytes"),
+			heapInuse:       metricFactory.NewGauge("Runtime.HeapInuse.Bytes"),
+			heapObjects:     metricFactory.NewGauge("Runtime.HeapObjects.Value"),
+			gcCpuPercentage: metricFactory.NewGauge("Runtime.GCCPUPercentage.Value"),
+			numGc:           metricFactory.NewGauge("Runtime.NumGc.Value"),
+			numGoroutine:    metricFactory.NewGauge("Runtime.NumGoroutine.Value"),
+			uptime:          metricFactory.NewGauge("Runtime.Uptime.Seconds"),
 		},
 		started: time.Now(),
 	}

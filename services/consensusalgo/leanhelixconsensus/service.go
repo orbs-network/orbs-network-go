@@ -57,10 +57,10 @@ type Config interface {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit", 30*time.Minute),
-		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection", 30*time.Minute),
-		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElectionCount"),
-		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId"),
+		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis", 30*time.Minute),
+		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis", 30*time.Minute),
+		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Value"),
+		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Value"),
 	}
 }
 
