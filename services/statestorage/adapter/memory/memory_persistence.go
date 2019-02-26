@@ -20,8 +20,8 @@ type metrics struct {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		numberOfKeys:      m.NewGauge("StateStoragePersistence.TotalNumberOfKeys"),
-		numberOfContracts: m.NewGauge("StateStoragePersistence.TotalNumberOfContracts"),
+		numberOfKeys:      m.NewGauge("StateStoragePersistence.TotalNumberOfKeys.Count"),
+		numberOfContracts: m.NewGauge("StateStoragePersistence.TotalNumberOfContracts.Count"),
 	}
 }
 

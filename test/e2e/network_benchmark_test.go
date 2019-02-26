@@ -21,7 +21,7 @@ func getTransactionCount(t *testing.T, h *harness) float64 {
 		return m != nil
 	}), "could not retrieve metrics")
 
-	return m["TransactionPool.CommittedPool.TransactionCount"]["Value"].(float64)
+	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
 }
 
 func groupErrors(errors []error) map[string]int {

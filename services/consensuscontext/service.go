@@ -22,9 +22,9 @@ type metrics struct {
 
 func newMetrics(factory metric.Factory) *metrics {
 	return &metrics{
-		createTxBlockTime:      factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime", 10*time.Second),
-		createResultsBlockTime: factory.NewLatency("ConsensusContext.CreateResultsBlockTime", 10*time.Second),
-		transactionsRate:       factory.NewRate("ConsensusContext.TransactionsEnteringBlock"),
+		createTxBlockTime:      factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime.Millis", 10*time.Second),
+		createResultsBlockTime: factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
+		transactionsRate:       factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
 	}
 }
 

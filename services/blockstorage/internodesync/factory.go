@@ -192,32 +192,32 @@ type processingStateMetrics struct {
 func newStateMetrics(factory metric.Factory) *stateMetrics {
 	return &stateMetrics{
 		idleStateMetrics: idleStateMetrics{
-			timeSpentInState: factory.NewLatency("BlockSync.IdleState.Duration", 24*30*time.Hour),
-			timesReset:       factory.NewGauge("BlockSync.IdleState.ResetBackToIdleCount"),
-			timesExpired:     factory.NewGauge("BlockSync.IdleState.StartedBlockSyncCount"),
+			timeSpentInState: factory.NewLatency("BlockSync.IdleState.Duration.Millis", 24*30*time.Hour),
+			timesReset:       factory.NewGauge("BlockSync.IdleState.ResetBackToIdle.Count"),
+			timesExpired:     factory.NewGauge("BlockSync.IdleState.StartedBlockSync.Count"),
 		},
 		collectingStateMetrics: collectingStateMetrics{
-			timeSpentInState:                         factory.NewLatency("BlockSync.CollectingAvailabilityResponsesState.Duration", 24*30*time.Hour),
-			timesSucceededSendingAvailabilityRequest: factory.NewGauge("BlockSync.CollectingAvailabilityResponsesState.BroadcastSendSuccessCount"),
-			timesFailedSendingAvailabilityRequest:    factory.NewGauge("BlockSync.CollectingAvailabilityResponsesState.BroadcastSendFailureCount"),
+			timeSpentInState:                         factory.NewLatency("BlockSync.CollectingAvailabilityResponsesState.Duration.Millis", 24*30*time.Hour),
+			timesSucceededSendingAvailabilityRequest: factory.NewGauge("BlockSync.CollectingAvailabilityResponsesState.BroadcastSendSuccess.Count"),
+			timesFailedSendingAvailabilityRequest:    factory.NewGauge("BlockSync.CollectingAvailabilityResponsesState.BroadcastSendFailure.Count"),
 		},
 		finishedCollectingStateMetrics: finishedCollectingStateMetrics{
-			timeSpentInState:               factory.NewLatency("BlockSync.FinishedCollectingAvailabilityResponsesState.Duration", 24*30*time.Hour),
-			finishedWithNoResponsesCount:   factory.NewGauge("BlockSync.FinishedCollectingAvailabilityResponsesState.FinishedWithNoResponsesCount"),
-			finishedWithSomeResponsesCount: factory.NewGauge("BlockSync.FinishedCollectingAvailabilityResponsesState.FinishedWithSomeResponsesCount"),
+			timeSpentInState:               factory.NewLatency("BlockSync.FinishedCollectingAvailabilityResponsesState.Duration.Millis", 24*30*time.Hour),
+			finishedWithNoResponsesCount:   factory.NewGauge("BlockSync.FinishedCollectingAvailabilityResponsesState.FinishedWithNoResponses.Count"),
+			finishedWithSomeResponsesCount: factory.NewGauge("BlockSync.FinishedCollectingAvailabilityResponsesState.FinishedWithSomeResponses.Count"),
 		},
 		waitingStateMetrics: waitingStateMetrics{
-			timeSpentInState: factory.NewLatency("BlockSync.WaitingForBlocksState.Duration", 24*30*time.Hour),
-			timesByzantine:   factory.NewGauge("BlockSync.WaitingForBlocksState.ReceivedBlocksFromByzantineSourceCount"),
-			timesSuccessful:  factory.NewGauge("BlockSync.WaitingForBlocksState.ReceivedBlocksFromExpectedSourceCount"),
-			timesTimeout:     factory.NewGauge("BlockSync.WaitingForBlocksState.TimedOutWithoutReceivingBlocksCount"),
+			timeSpentInState: factory.NewLatency("BlockSync.WaitingForBlocksState.Duration.Millis", 24*30*time.Hour),
+			timesByzantine:   factory.NewGauge("BlockSync.WaitingForBlocksState.ReceivedBlocksFromByzantineSource.Count"),
+			timesSuccessful:  factory.NewGauge("BlockSync.WaitingForBlocksState.ReceivedBlocksFromExpectedSource.Count"),
+			timesTimeout:     factory.NewGauge("BlockSync.WaitingForBlocksState.TimedOutWithoutReceivingBlocks.Count"),
 		},
 		processingStateMetrics: processingStateMetrics{
-			timeSpentInState:       factory.NewLatency("BlockSync.ProcessingBlocksState.Duration", 24*30*time.Hour),
-			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived"),
-			committedBlocks:        factory.NewGauge("BlockSync.ProcessingBlocksState.CommittedBlocks"),
-			failedCommitBlocks:     factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToCommitBlocks"),
-			failedValidationBlocks: factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToValidateBlocks"),
+			timeSpentInState:       factory.NewLatency("BlockSync.ProcessingBlocksState.Duration.Millis", 24*30*time.Hour),
+			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived.PerSecond"),
+			committedBlocks:        factory.NewGauge("BlockSync.ProcessingBlocksState.CommittedBlocks.Count"),
+			failedCommitBlocks:     factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToCommitBlocks.Count"),
+			failedValidationBlocks: factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToValidateBlocks.Count"),
 		},
 	}
 }

@@ -40,9 +40,9 @@ type metrics struct {
 
 func getMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		deployedContracts:       m.NewGauge("Processor.Native.DeployedContractsNumber"),
-		processCallTime:         m.NewLatency("Processor.Native.ProcessCallTime", 10*time.Second),
-		contractCompilationTime: m.NewLatency("Processor.Native.ContractCompilationTime", 10*time.Second),
+		deployedContracts:       m.NewGauge("Processor.Native.DeployedContracts.Count"),
+		processCallTime:         m.NewLatency("Processor.Native.ProcessCallTime.Millis", 10*time.Second),
+		contractCompilationTime: m.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
 	}
 }
 

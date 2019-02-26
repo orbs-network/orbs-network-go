@@ -42,11 +42,11 @@ type pendingPoolMetrics struct {
 
 func newPendingPoolMetrics(factory metric.Factory) *pendingPoolMetrics {
 	return &pendingPoolMetrics{
-		transactionServiceTime:   factory.NewLatency("TransactionPool.ServiceTime", 30*time.Minute),
-		transactionCountGauge:    factory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
-		poolSizeInBytesGauge:     factory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
-		transactionRatePerSecond: factory.NewRate("TransactionPool.TransactionsEnteringPool"),
-		transactionSpentInQueue:  factory.NewLatency("TransactionPool.PendingPool.TimeSpentInQueue", 30*time.Minute),
+		transactionServiceTime:   factory.NewLatency("TransactionPool.ServiceTime.Millis", 30*time.Minute),
+		transactionCountGauge:    factory.NewGauge("TransactionPool.PendingPool.Transactions.Count"),
+		poolSizeInBytesGauge:     factory.NewGauge("TransactionPool.PendingPool.PoolSize.Bytes"),
+		transactionRatePerSecond: factory.NewRate("TransactionPool.TransactionsEnteringPool.PerSecond"),
+		transactionSpentInQueue:  factory.NewLatency("TransactionPool.PendingPool.TimeSpentInQueue.Millis", 30*time.Minute),
 	}
 }
 
