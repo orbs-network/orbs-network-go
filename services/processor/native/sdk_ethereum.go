@@ -3,7 +3,6 @@ package native
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -14,7 +13,7 @@ import (
 
 const SDK_OPERATION_NAME_ETHEREUM = "Sdk.Ethereum"
 
-func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, contractAddress string, jsonAbi string, methodName string, out interface{}, args ...interface{}) {
+func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethContractAddress string, jsonAbi string, ethBlockNumber uint64, methodName string, out interface{}, args ...interface{}) {
 	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
 	if err != nil {
 		panic(err.Error())
@@ -31,14 +30,19 @@ func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
-				// contractAddress
+				// ethContractAddress
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: contractAddress,
+				StringValue: ethContractAddress,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// jsonAbi
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: jsonAbi,
+			}).Build(),
+			(&protocol.ArgumentBuilder{
+				// ethBlockNumber
+				Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+				Uint64Value: ethBlockNumber,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// methodName
@@ -66,13 +70,8 @@ func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId,
 	}
 }
 
-func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, contractAddress string, jsonAbi string, ethTransactionId string, eventName string, out interface{}) {
+func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethContractAddress string, jsonAbi string, ethTxHash string, eventName string, out interface{}) (ethBlockNumber uint64, ethTxIndex uint32) {
 	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
-	if err != nil {
-		panic(err.Error())
-	}
-
-	ethereumTxhash, err := hexutil.Decode(ethTransactionId)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -83,9 +82,9 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 		MethodName:    "getTransactionLog",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
-				// contractAddress
+				// ethContractAddress
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: contractAddress,
+				StringValue: ethContractAddress,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// jsonAbi
@@ -93,9 +92,9 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 				StringValue: jsonAbi,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
-				// ethereumTxhash
-				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: ethereumTxhash,
+				// ethTxHash
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: ethTxHash,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// eventName
@@ -108,7 +107,10 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 	if err != nil {
 		panic(err.Error())
 	}
-	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
+	if len(output.OutputArguments) != 3 ||
+		!output.OutputArguments[0].IsTypeBytesValue() ||
+		!output.OutputArguments[1].IsTypeUint64Value() ||
+		!output.OutputArguments[2].IsTypeUint32Value() {
 		panic("getTransactionLog Sdk.Ethereum returned corrupt output value")
 	}
 
@@ -116,4 +118,23 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 	if err != nil {
 		panic(err.Error())
 	}
+	return output.OutputArguments[1].Uint64Value(), output.OutputArguments[2].Uint32Value()
+}
+
+func (s *service) SdkEthereumGetBlockNumber(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) (ethBlockNumber uint64) {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ETHEREUM,
+		MethodName:      "getBlockNumber",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint64Value() {
+		panic("getBlockNumber Sdk.Ethereum returned corrupt output value")
+	}
+
+	return output.OutputArguments[0].Uint64Value()
 }

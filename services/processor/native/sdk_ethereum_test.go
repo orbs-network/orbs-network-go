@@ -13,13 +13,15 @@ import (
 
 // this example represents respones from "say" function with data "etherworld"
 var examplePackedOutput = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 104, 101, 108, 108, 111, 32, 101, 116, 104, 101, 114, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+var exampleBlockNumber = uint64(1234)
+var exampleTxIndex = uint32(56)
 
 func TestSdkEthereum_CallMethod(t *testing.T) {
 	s := createEthereumSdk()
 
 	var out string
 	sampleABI := `[{"inputs":[],"name":"say","outputs":[{"name":"","type":"string"}],"type":"function"}]`
-	s.SdkEthereumCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "say", &out)
+	s.SdkEthereumCallMethod(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, exampleBlockNumber, "say", &out)
 
 	require.Equal(t, "hello etherworld", out, "did not get the expected return value from ethereum call")
 }
@@ -29,9 +31,19 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 
 	var out string
 	sampleABI := `[{"inputs":[{"name":"sentence","type":"string"}],"name":"said","type":"event"}]`
-	s.SdkEthereumGetTransactionLog(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b", "said", &out)
+	ethBlockNumber, ethTxIndex := s.SdkEthereumGetTransactionLog(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b", "said", &out)
 
 	require.Equal(t, "hello etherworld", out, "did not get the expected return value from transaction log")
+	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from transaction log")
+	require.Equal(t, exampleTxIndex, ethTxIndex, "did not get expected txIndex from transaction log")
+}
+
+func TestSdkEthereum_GetBlockNumber(t *testing.T) {
+	s := createEthereumSdk()
+
+	ethBlockNumber := s.SdkEthereumGetBlockNumber(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM)
+
+	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from transaction log")
 }
 
 func createEthereumSdk() *service {
@@ -51,7 +63,11 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 		}, nil
 	case "getTransactionLog":
 		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(examplePackedOutput),
+			OutputArguments: builders.Arguments(examplePackedOutput, exampleBlockNumber, exampleTxIndex),
+		}, nil
+	case "getBlockNumber":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments(exampleBlockNumber),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

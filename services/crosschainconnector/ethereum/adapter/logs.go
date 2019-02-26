@@ -15,6 +15,7 @@ type TransactionLog struct {
 	Data            []byte   // non-indexed fields
 	RepackedData    []byte
 	BlockNumber     uint64
+	TxIndex         uint32
 }
 
 // TODO(v1): this assumes that in events Data every input is 32 bytes (eg. no tuples), is this always the case? [OdedW]
@@ -51,6 +52,7 @@ func (c *connectorCommon) GetTransactionLogs(ctx context.Context, txHash primiti
 				PackedTopics:    topics,
 				Data:            log.Data,
 				BlockNumber:     log.BlockNumber,
+				TxIndex:         uint32(log.TxIndex),
 				ContractAddress: log.Address.Bytes(),
 			}
 			eventLogs = append(eventLogs, transactionLog)
