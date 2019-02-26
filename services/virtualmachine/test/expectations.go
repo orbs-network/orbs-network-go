@@ -157,6 +157,19 @@ func (h *harness) expectEthereumConnectorGetTransactionLogs(expectedContractAddr
 	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetTransactionLogs", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s, event equals %s and txHash equals %s", expectedContractAddress, expectedEventName, expectedTxHash), contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
+func (h *harness) expectEthereumConnectorGetBlockNumber(returnError error, returnBlockNumber uint64) {
+	contractMatcher := func(i interface{}) bool {
+		_, ok := i.(*services.EthereumGetBlockNumberInput)
+		return ok
+	}
+
+	outputToReturn := &services.EthereumGetBlockNumberOutput{
+		EthereumBlockNumber: returnBlockNumber,
+	}
+
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockNumber", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
 func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {
 	outputToReturn := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    returnValue,

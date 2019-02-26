@@ -35,6 +35,14 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 			Uint32Value: ethTxIndex,
 		}).Build()}, err
 
+	case "getBlockNumber":
+		ethBlockNumber, err := s.handleSdkEthereumGetBlockNumber(ctx, executionContext, args, permissionScope)
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+			Uint64Value: ethBlockNumber,
+		}).Build()}, err
+
 	default:
 		return nil, errors.Errorf("unknown SDK service call method: %s", methodName)
 	}
@@ -116,4 +124,27 @@ func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, execut
 	}
 
 	return output.EthereumAbiPackedOutputs[0], output.EthereumBlockNumber, output.EthereumTxindex, nil
+}
+
+// outputArg0: ethBlockNumber (uint64)
+func (s *service) handleSdkEthereumGetBlockNumber(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	if len(args) != 0 {
+		return 0, errors.Errorf("invalid SDK ethereum getBlockNumber args: %v", args)
+	}
+
+	// get block timestamp
+	blockTimestamp := executionContext.currentBlockTimestamp
+
+	// execute the call
+	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
+	output, err := connector.EthereumGetBlockNumber(ctx, &services.EthereumGetBlockNumberInput{
+		ReferenceTimestamp: blockTimestamp,
+	})
+	if err != nil {
+		logger.Info("Sdk.Ethereum.GetBlockNumber failed", log.Error(err))
+		return 0, err
+	}
+
+	return output.EthereumBlockNumber, nil
 }

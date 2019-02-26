@@ -32,6 +32,16 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 	return s
 }
 
+func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+	logger := parent.WithTags(LogTag)
+	s := &service{
+		connection:       connection,
+		timestampFetcher: NewTimestampFetcher(NewFakeBlockAndTimestampGetter(logger), logger),
+		logger:           logger,
+	}
+	return s
+}
+
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -106,5 +116,22 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 		EthereumAbiPackedOutputs: [][]byte{output},
 		EthereumBlockNumber:      logs[0].BlockNumber,
 		EthereumTxindex:          logs[0].TxIndex,
+	}, nil
+}
+
+func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.EthereumGetBlockNumberInput) (*services.EthereumGetBlockNumberOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("getting current Ethereum block number")
+
+	ethereumBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	if ethereumBlockNumber == nil {
+		return nil, errors.Errorf("failed getting an actual current block number from Ethereum") // note: the geth simulator does not support this API
+	}
+
+	return &services.EthereumGetBlockNumberOutput{
+		EthereumBlockNumber: ethereumBlockNumber.Uint64(),
 	}, nil
 }
