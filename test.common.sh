@@ -39,19 +39,13 @@ go_test_junit_report () {
     cp ${OUT_DIR}/results.xml ${REPORTS_DIR}/results.xml # so that we have it in _out for uploading as artifact, and separately in _reports since CircleCI doesn't like test summary dir to contain huge files
 
     if [ $EXIT_CODE != 0 ]; then
-        #awk '/--- FAIL/,/=== RUN/' _out/standard/test.out > ./$OUT_DIR/fail.out
-        #cat ./$OUT_DIR/fail.out
-
         # junit-xml-stats is a globally installed npm package specifically for the purpose
         # of grouping together logs of failing tests ONLY.
-        junit-xml-stats ${OUT_DIR}/results.xml
-
-        # grep -B 150 -A 150 -- "test timed out" ./$OUT_DIR/test.out > ./$OUT_DIR/timed.out
-        # cat ./$OUT_DIR/timed.out
-
-        # if [ ! -s ./$OUT_DIR/fail.out ] && [ ! -s ./$OUT_DIR/timed.out ]; then
-        #     cat ./$OUT_DIR/test.out
-        # fi
+        if [ $NIGHTLY == 1 ]; then
+            junit-xml-stats ${OUT_DIR}/results.xml
+        else
+            node .circleci/flakiness_log_extractor.js ${OUT_DIR}/test.out
+        fi
 
         exit $EXIT_CODE
     fi
