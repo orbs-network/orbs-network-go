@@ -22,6 +22,7 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 var LogTag = log.String("adapter", "gossip")
 
 type metrics struct {
+	incomingConnectionAcceptSuccesses *metric.Gauge
 	incomingConnectionAcceptErrors    *metric.Gauge
 	incomingConnectionTransportErrors *metric.Gauge
 	outgoingConnectionSendErrors      *metric.Gauge
@@ -45,6 +46,7 @@ type directTransport struct {
 
 func getMetrics(registry metric.Registry) *metrics {
 	return &metrics{
+		incomingConnectionAcceptSuccesses: registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
 		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
 		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
 		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors.Count"),
