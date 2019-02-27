@@ -139,14 +139,13 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 		}()
 
 		// flood it with byzantine messages (DOS vector)
-		dosLoop := make(chan struct{})
 		byzLoopCount := 0
 		go func() {
 			for {
 				select {
 				case h.factory.conduit <- byzantineBlocksMessage:
 					byzLoopCount++
-				case <-dosLoop:
+				case <-ctx.Done():
 					return
 				}
 			}
