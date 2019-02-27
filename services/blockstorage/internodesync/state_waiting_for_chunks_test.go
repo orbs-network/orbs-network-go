@@ -110,3 +110,58 @@ func TestStateWaitingForChunks_RecoversFromByzantineMessageSource(t *testing.T) 
 		h.verifyMocks(t)
 	})
 }
+
+func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping chunks byzantine stress test in short mode")
+	}
+
+	test.WithContext(func(ctx context.Context) {
+		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
+		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
+		validBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(stateSourceAddress).Build().Message
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).
+			withNodeAddress(stateSourceAddress).
+			withWaitForChunksTimeout(5 * time.Second)
+
+		h.expectLastCommittedBlockHeightQueryFromStorage(10)
+		h.expectSendingOfBlockSyncRequest()
+
+		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
+
+		// spin up the state
+		var nextState syncState
+		stateProcessingFinished := make(chan struct{})
+		go func() {
+			nextState = state.processState(ctx)
+			stateProcessingFinished <- struct{}{}
+		}()
+
+		// flood it with byzantine messages (DOS vector)
+		dosLoop := make(chan struct{})
+		byzLoopCount := 0
+		go func() {
+			for {
+				select {
+				case h.factory.conduit <- byzantineBlocksMessage:
+					byzLoopCount++
+				case <-dosLoop:
+					return
+				}
+			}
+		}()
+
+		// send a valid block message after enough time has passed
+		time.Sleep(500 * time.Millisecond)
+		h.factory.conduit <- validBlocksMessage
+
+		// wait for state to transition (meaning the valid message was processed)
+		<-stateProcessingFinished
+
+		require.IsType(t, &processingBlocksState{}, nextState, "expecting to move to the processing state even though a byzantine message was hammering the flow")
+		h.logger.Info("loop finished", log.Int("byzantine-message-count", byzLoopCount))
+		require.True(t, byzLoopCount > 1, "expected more than one byzantine message to be processed")
+		h.verifyMocks(t)
+	})
+}
