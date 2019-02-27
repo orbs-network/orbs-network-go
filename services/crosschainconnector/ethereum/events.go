@@ -13,6 +13,12 @@ func repackEventABIWithTopics(eventABI abi.Event, log *adapter.TransactionLog) (
 		curTopicIndex = 1
 	}
 
+	nonIndexedData, err := eventABI.Inputs.NonIndexed().UnpackValues(log.Data)
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed unpacking non-indexed values: %v", nonIndexedData)
+	}
+
 	for _, arg := range eventABI.Inputs {
 		if arg.Indexed {
 
@@ -23,12 +29,11 @@ func repackEventABIWithTopics(eventABI abi.Event, log *adapter.TransactionLog) (
 			curTopicIndex++
 
 		} else {
-
-			b, err := log.PackedDataArgumentAt(curDataIndex)
+			repacked, err := abi.Arguments{arg}.Pack(nonIndexedData[curDataIndex])
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "failed repacking non-indexed field %v with value %v", arg, nonIndexedData[curDataIndex])
 			}
-			res = append(res, b...)
+			res = append(res, repacked...)
 			curDataIndex++
 
 		}
