@@ -47,14 +47,14 @@ func (r *Rate) export() rateExport {
 	r.maybeRotate()
 
 	return rateExport{
-		r.name + "PerSecond",
+		r.name,
 		r.movingAverage.Value(),
 		toMillis(hardCodedTickInterval.Nanoseconds()),
 	}
 }
 
 func (r *Rate) String() string {
-	return fmt.Sprintf("metric %s: %f per %s\n", r.name+"PerSecond", r.movingAverage.Value(), hardCodedTickInterval)
+	return fmt.Sprintf("metric %s: %f per %s\n", r.name, r.movingAverage.Value(), hardCodedTickInterval)
 }
 
 func (r *Rate) Measure(eventCount int64) {

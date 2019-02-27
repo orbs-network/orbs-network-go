@@ -72,7 +72,7 @@ type stateMachineMetrics struct {
 
 func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	return &stateMachineMetrics{
-		statesTransitioned: factory.NewGauge("BlockSync.StateTransitions"),
+		statesTransitioned: factory.NewGauge("BlockSync.StateTransitions.Count"),
 	}
 }
 
