@@ -130,33 +130,28 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 
-		// spin up the state
-		var nextState syncState
-		stateProcessingFinished := make(chan struct{})
-		go func() {
-			nextState = state.processState(ctx)
-			stateProcessingFinished <- struct{}{}
-		}()
-
-		// flood it with byzantine messages (DOS vector)
 		byzLoopCount := 0
-		go func() {
-			for {
-				select {
-				case h.factory.conduit <- byzantineBlocksMessage:
-					byzLoopCount++
-				case <-ctx.Done():
-					return
+		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
+			// flood it with byzantine messages (DOS vector)
+			byzLoopDone := make(chan struct{})
+			go func() {
+				for {
+					select {
+					case h.factory.conduit <- byzantineBlocksMessage:
+						byzLoopCount++
+					case <-byzLoopDone:
+						return
+					}
 				}
-			}
-		}()
+			}()
 
-		// send a valid block message after enough time has passed
-		time.Sleep(500 * time.Millisecond)
-		h.factory.conduit <- validBlocksMessage
+			// send a valid block message after enough time has passed
+			time.Sleep(500 * time.Millisecond)
+			h.factory.conduit <- validBlocksMessage
 
-		// wait for state to transition (meaning the valid message was processed)
-		<-stateProcessingFinished
+			// stop the byzantine loop
+			byzLoopDone <- struct{}{}
+		})
 
 		require.IsType(t, &processingBlocksState{}, nextState, "expecting to move to the processing state even though a byzantine message was hammering the flow")
 		h.logger.Info("loop finished", log.Int("byzantine-message-count", byzLoopCount))
