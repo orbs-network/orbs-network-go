@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
@@ -91,7 +92,9 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
 		blocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
 		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
-		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).withNodeAddress(stateSourceAddress)
+		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).
+			withNodeAddress(stateSourceAddress).
+			withWaitForChunksTimeout(time.Second) // this is infinity when it comes to this test, it should timeout on a deadlock if it takes more than a sec to get the chunks
 
 		h.expectLastCommittedBlockHeightQueryFromStorage(10)
 		h.expectSendingOfBlockSyncRequest()

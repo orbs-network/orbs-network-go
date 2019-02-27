@@ -110,6 +110,11 @@ func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
 	})
 }
 
+func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
+	h.config.collectChunks = d
+	return h
+}
+
 func (h *blockSyncHarness) withNodeAddress(address primitives.NodeAddress) *blockSyncHarness {
 	h.config.nodeAddress = address
 	return h
