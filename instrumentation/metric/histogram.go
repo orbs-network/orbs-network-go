@@ -59,7 +59,7 @@ func (h *Histogram) String() string {
 
 	return fmt.Sprintf(
 		"metric %s: [min=%f, p50=%f, p95=%f, p99=%f, max=%f, avg=%f, samples=%d, error rate=%f]\n",
-		h.name+"InMillis",
+		h.name,
 		toMillis(histo.Min()),
 		toMillis(histo.ValueAtQuantile(50)),
 		toMillis(histo.ValueAtQuantile(95)),
@@ -74,7 +74,7 @@ func (h *Histogram) Export() exportedMetric {
 	histo := h.histo.Merge()
 
 	return &histogramExport{
-		h.name + "InMillis",
+		h.name,
 		toMillis(histo.Min()),
 		toMillis(histo.ValueAtQuantile(50)),
 		toMillis(histo.ValueAtQuantile(95)),

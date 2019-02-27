@@ -32,25 +32,42 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, paren
 	return s
 }
 
+func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+	logger := parent.WithTags(LogTag)
+	s := &service{
+		connection:       connection,
+		timestampFetcher: NewTimestampFetcher(NewFakeBlockAndTimestampGetter(logger), logger),
+		logger:           logger,
+	}
+	return s
+}
+
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	var referenceBlockNumber *big.Int //TODO (https://github.com/orbs-network/orbs-network-go/issues/648) re-integrate
-	//referenceBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
-	//if err != nil {
-	//	return nil, err
-	//}
 
-	if referenceBlockNumber != nil {
+	var ethereumBlockNumber *big.Int
+	var err error
+	if input.EthereumBlockNumber != 0 {
+		ethereumBlockNumber = big.NewInt(0).SetUint64(input.EthereumBlockNumber)
+	} else {
+		ethereumBlockNumber, err = s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if ethereumBlockNumber != nil { // simulator returns nil from GetBlockByTimestamp
 		logger.Info("calling contract from ethereum",
 			log.String("address", input.EthereumContractAddress),
-			log.Int64("reference-block", referenceBlockNumber.Int64()))
+			log.Uint64("block-number", ethereumBlockNumber.Uint64()))
 	}
+
 	address, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
-	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, referenceBlockNumber)
+	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, ethereumBlockNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "ethereum call failed")
 	}
@@ -64,6 +81,11 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Transaction(primitives.Sha256(input.EthereumTxhash)))
 
+	ethereumTxHash, err := hexutil.Decode(input.EthereumTxhash)
+	if err != nil {
+		return nil, err
+	}
+
 	parsedABI, err := abi.JSON(strings.NewReader(input.EthereumJsonAbi))
 	if err != nil {
 		return nil, err
@@ -75,7 +97,7 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	}
 
 	// TODO(v1): use input.ReferenceTimestamp to reduce non-determinism here (ask OdedW how)
-	logs, err := s.connection.GetTransactionLogs(ctx, input.EthereumTxhash, eventABI.Id().Bytes())
+	logs, err := s.connection.GetTransactionLogs(ctx, ethereumTxHash, eventABI.Id().Bytes())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
 	}
@@ -91,6 +113,25 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	}
 
 	return &services.EthereumGetTransactionLogsOutput{
-		EthereumAbiPackedOutput: output,
+		EthereumAbiPackedOutputs: [][]byte{output},
+		EthereumBlockNumber:      logs[0].BlockNumber,
+		EthereumTxindex:          logs[0].TxIndex,
+	}, nil
+}
+
+func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.EthereumGetBlockNumberInput) (*services.EthereumGetBlockNumberOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("getting current Ethereum block number")
+
+	ethereumBlockNumber, err := s.timestampFetcher.GetBlockByTimestamp(ctx, input.ReferenceTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	if ethereumBlockNumber == nil {
+		return nil, errors.Errorf("failed getting an actual current block number from Ethereum") // note: the geth simulator does not support this API
+	}
+
+	return &services.EthereumGetBlockNumberOutput{
+		EthereumBlockNumber: ethereumBlockNumber.Uint64(),
 	}, nil
 }

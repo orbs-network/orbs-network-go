@@ -13,8 +13,8 @@ if [[ "${LAST_COMMIT_MESSAGE}" == *"#extraflaky"* ]]; then
     FAILFAST=""
     TIMEOUT_ACCEPTANCE="500m"
     TIMEOUT_REST="500m"
-    COUNT_ACCEPTANCE=350
-    COUNT_REST=700
+    COUNT_ACCEPTANCE=200
+    COUNT_REST=200
 fi
 
 if [[ $1 == "NIGHTLY" ]]; then
@@ -22,8 +22,8 @@ if [[ $1 == "NIGHTLY" ]]; then
     FAILFAST=""
     TIMEOUT_ACCEPTANCE="500m"
     TIMEOUT_REST="500m"
-    COUNT_ACCEPTANCE=1000
-    COUNT_REST=2000
+    COUNT_ACCEPTANCE=500
+    COUNT_REST=500
 fi
 
 if [ "$CIRCLE_NODE_INDEX" == 0 ] || [ "$CIRCLE_NODE_INDEX" == 1 ] || [ "$CIRCLE_NODE_INDEX" == 2 ] || [ "$CIRCLE_NODE_INDEX" == 3 ] || [ -z "$CIRCLE_NODE_INDEX" ]; then

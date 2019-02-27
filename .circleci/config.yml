@@ -169,6 +169,9 @@ workflows:
 #          requires:
 #            - deploy_testnet
       - release_gamma:
+          requires:
+            - tests
+            - e2e
           filters:
             tags:
               only: /^v.*/

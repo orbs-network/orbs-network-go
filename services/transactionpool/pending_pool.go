@@ -33,18 +33,20 @@ type pendingTransaction struct {
 }
 
 type pendingPoolMetrics struct {
-	transactionCountGauge        *metric.Gauge
-	poolSizeInBytesGauge         *metric.Gauge
-	transactionRatePerSecond     *metric.Rate
-	transactionNanosSpentInQueue *metric.Histogram
+	transactionCountGauge    *metric.Gauge
+	poolSizeInBytesGauge     *metric.Gauge
+	transactionRatePerSecond *metric.Rate
+	transactionSpentInQueue  *metric.Histogram
+	transactionServiceTime   *metric.Histogram
 }
 
 func newPendingPoolMetrics(factory metric.Factory) *pendingPoolMetrics {
 	return &pendingPoolMetrics{
-		transactionCountGauge:        factory.NewGauge("TransactionPool.PendingPool.TransactionCount"),
-		poolSizeInBytesGauge:         factory.NewGauge("TransactionPool.PendingPool.PoolSizeInBytes"),
-		transactionRatePerSecond:     factory.NewRate("TransactionPool.TransactionsEnteringPool"),
-		transactionNanosSpentInQueue: factory.NewLatency("TransactionPool.PendingPool.TimeSpentInQueue", 30*time.Minute),
+		transactionServiceTime:   factory.NewLatency("TransactionPool.ServiceTime.Millis", 30*time.Minute),
+		transactionCountGauge:    factory.NewGauge("TransactionPool.PendingPool.Transactions.Count"),
+		poolSizeInBytesGauge:     factory.NewGauge("TransactionPool.PendingPool.PoolSize.Bytes"),
+		transactionRatePerSecond: factory.NewRate("TransactionPool.TransactionsEnteringPool.PerSecond"),
+		transactionSpentInQueue:  factory.NewLatency("TransactionPool.PendingPool.TimeSpentInQueue.Millis", 30*time.Minute),
 	}
 }
 
@@ -117,6 +119,7 @@ func (p *pendingTxPool) remove(ctx context.Context, txHash primitives.Sha256, re
 
 		p.metrics.transactionCountGauge.Dec()
 		p.metrics.poolSizeInBytesGauge.SubUint32(sizeOfSignedTransaction(pendingTx.transaction))
+		p.metrics.transactionServiceTime.RecordSince(pendingTx.timeAdded)
 
 		return &pendingTx.gatewayNodeAddress
 	}
@@ -193,7 +196,7 @@ func (p *pendingTxPool) transactionPickedFromQueueUnderMutex(tx *protocol.Signed
 	txHash := digest.CalcTxHash(tx.Transaction())
 	ptx, found := p.transactionsByHash[txHash.KeyForMap()]
 	if found {
-		p.metrics.transactionNanosSpentInQueue.RecordSince(ptx.timeAdded)
+		p.metrics.transactionSpentInQueue.RecordSince(ptx.timeAdded)
 	}
 }
 

@@ -22,6 +22,7 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 var LogTag = log.String("adapter", "gossip")
 
 type metrics struct {
+	incomingConnectionAcceptSuccesses *metric.Gauge
 	incomingConnectionAcceptErrors    *metric.Gauge
 	incomingConnectionTransportErrors *metric.Gauge
 	outgoingConnectionSendErrors      *metric.Gauge
@@ -45,11 +46,12 @@ type directTransport struct {
 
 func getMetrics(registry metric.Registry) *metrics {
 	return &metrics{
-		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors"),
-		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors"),
-		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors"),
-		outgoingConnectionKeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors"),
-		outgoingConnectionSendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors"),
+		incomingConnectionAcceptSuccesses: registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
+		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
+		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
+		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors.Count"),
+		outgoingConnectionKeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors.Count"),
+		outgoingConnectionSendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors.Count"),
 	}
 }
 
