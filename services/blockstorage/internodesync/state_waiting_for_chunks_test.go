@@ -87,11 +87,12 @@ func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 	require.Nil(t, nextState, "context terminated, expected nil state")
 }
 
-func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T) {
+func TestStateWaitingForChunks_RecoversFromByzantineMessageSource(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
-		blocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
+		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
 		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
+		validBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(stateSourceAddress).Build().Message
 		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).
 			withNodeAddress(stateSourceAddress).
 			withWaitForChunksTimeout(time.Second) // this is infinity when it comes to this test, it should timeout on a deadlock if it takes more than a sec to get the chunks
@@ -101,10 +102,11 @@ func TestStateWaitingForChunks_MovesToIdleOnIncorrectMessageSource(t *testing.T)
 
 		state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
 		nextState := h.processStateInBackgroundAndWaitUntilFinished(ctx, state, func() {
-			h.factory.conduit <- blocksMessage
+			h.factory.conduit <- byzantineBlocksMessage
+			h.factory.conduit <- validBlocksMessage
 		})
 
-		require.IsType(t, &idleState{}, nextState, "expecting to abort sync and go back to idle (ignore blocks)")
+		require.IsType(t, &processingBlocksState{}, nextState, "expecting to move to the processing state even though a byzantine message arrived in the flow")
 		h.verifyMocks(t)
 	})
 }
