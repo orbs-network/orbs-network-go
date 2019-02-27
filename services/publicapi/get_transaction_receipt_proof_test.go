@@ -83,6 +83,6 @@ func TestGetTransactionReceiptProof_PrepareResponse_NilProof(t *testing.T) {
 func TestGetTransactionReceiptProof_EmptyResponse(t *testing.T) {
 	response := toGetTxProofOutput(nil, nil)
 
-	require.EqualValues(t, protocol.REQUEST_STATUS_BAD_REQUEST, response.ClientResponse.RequestResult().RequestStatus(), "Request status is wrong")
+	require.EqualValues(t, protocol.REQUEST_STATUS_NOT_FOUND, response.ClientResponse.RequestResult().RequestStatus(), "Request status is wrong")
 	require.EqualValues(t, protocol.TRANSACTION_STATUS_NO_RECORD_FOUND, response.ClientResponse.TransactionStatus(), "txStatus response is wrong")
 }
