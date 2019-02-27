@@ -3,6 +3,7 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -19,7 +20,7 @@ type TransactionLog struct {
 }
 
 // TODO(v1): this assumes that in events Data every input is 32 bytes (eg. no tuples), is this always the case? [OdedW]
-func (l *TransactionLog) PackedDataArgumentAt(index int) ([]byte, error) {
+func (l *TransactionLog) PackedDataArgumentAt(index int, arg abi.Argument) ([]byte, error) {
 	from := index * 32
 	if from+32 > len(l.Data) {
 		return nil, errors.Errorf("request index %d is out of bounds, got %d bytes", index, len(l.Data))

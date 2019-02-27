@@ -1,1 +1,1 @@
-[{"constant":false,"inputs":[{"name":"value","type":"address[]"}],"name":"fire","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"value","type":"address[]"}],"name":"EventWithAddressArray","type":"event"}]
+[{"constant":false,"inputs":[{"name":"addresses","type":"address[]"}],"name":"fire","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"value","type":"address[]"}],"name":"EventWithAddressArray","type":"event"}]

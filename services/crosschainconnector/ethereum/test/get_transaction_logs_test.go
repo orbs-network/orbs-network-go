@@ -83,14 +83,15 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
-		addresses := [][20]byte{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}}
+		addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}}
+
 		tx, err := deployedContract.Transact(auth, "fire", addresses)
 		simulator.Commit()
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: hexutil.Encode(contractAddress.Bytes()),
-			EthereumTxhash:          primitives.Uint256(tx.Hash().Bytes()),
+			EthereumContractAddress: contractAddress.Hex(),
+			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "EventWithAddressArray",
 			EthereumJsonAbi:         string(contractABI),
 			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
@@ -101,9 +102,9 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		require.NoError(t, err, "failed parsing ABI")
 
 		event := new(struct {
-			Value [][20]byte
+			Value []common.Address
 		})
-		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "EventWithAddressArray", out.EthereumAbiPackedOutput)
+		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "EventWithAddressArray", out.EthereumAbiPackedOutputs[0])
 		require.NoError(t, err, "failed unpacking event")
 		require.EqualValues(t, addresses, event.Value, "event did not include expected addresses")
 	})
