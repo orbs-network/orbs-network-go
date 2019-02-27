@@ -89,8 +89,8 @@ func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 
 func TestStateWaitingForChunks_RecoversFromByzantineMessageSource(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
-		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
+		differentThanStateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(differentThanStateSourceAddress).Build().Message
 		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
 		validBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(stateSourceAddress).Build().Message
 		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).
@@ -117,8 +117,8 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		messageSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
-		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(messageSourceAddress).Build().Message
+		differentThanStateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
+		byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(differentThanStateSourceAddress).Build().Message
 		stateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
 		validBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(stateSourceAddress).Build().Message
 		h := newBlockSyncHarness(log.DefaultTestingLogger(t)).
