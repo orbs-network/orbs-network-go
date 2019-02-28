@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"runtime"
 )
 
 type BlockPairCommitter interface {
@@ -19,7 +20,7 @@ type BlockPairCommitter interface {
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
-	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error
+	ScanBlocks(from primitives.BlockHeight, pageSize uint, f adapter.CursorFunc) error
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
@@ -37,11 +38,17 @@ func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPair
 
 	// scan all available blocks starting the requested height
 	committedHeight := requestedHeight - 1
-	err = source.ScanBlocks(requestedHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
-		requestedHeight = syncOneBlock(ctx, page[0], committer, logger)
-		committedHeight = h
-		return requestedHeight == h+1
+	err = source.ScanBlocks(requestedHeight, 255, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		for _, block := range page {
+			requestedHeight = syncOneBlock(ctx, block, committer, logger)
+			committedHeight = block.TransactionsBlock.Header.BlockHeight()
+		}
+
+		runtime.GC()
+
+		return requestedHeight == h+255
 	})
+
 	if err != nil {
 		return 0, err
 	}

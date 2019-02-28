@@ -14,7 +14,7 @@ type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairCon
 type BlockPersistence interface {
 	WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error)
 
-	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f CursorFunc) error
+	ScanBlocks(from primitives.BlockHeight, pageSize uint, f CursorFunc) error
 
 	GetLastBlockHeight() (primitives.BlockHeight, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
