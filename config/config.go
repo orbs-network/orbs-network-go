@@ -121,6 +121,7 @@ type BlockStorageConfig interface {
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type FilesystemBlockPersistenceConfig interface {
