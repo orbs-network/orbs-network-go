@@ -117,6 +117,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42
 
   e2e_testnet_leanhelix:
@@ -126,6 +127,7 @@ jobs:
     steps:
     - checkout
     - run: ./git-submodule-checkout.sh
+    - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
   release_gamma:
@@ -165,12 +167,12 @@ workflows:
             branches:
               only:
                 - master
-#      - e2e_testnet_benchmark:
-#          requires:
-#            - deploy_testnet
-#      - e2e_testnet_leanhelix:
-#          requires:
-#            - deploy_testnet
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release_gamma:
           requires:
             - tests
