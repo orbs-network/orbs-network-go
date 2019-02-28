@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
+func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
 		simulator := adapter.NewEthereumSimulatorConnection(logger)

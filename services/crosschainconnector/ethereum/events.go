@@ -27,7 +27,7 @@ func repackEventABIWithTopics(eventABI abi.Event, log *adapter.TransactionLog) (
 				return nil, errors.Wrapf(err, "failed unpacking indexed value: %v", log.PackedTopics[topicIndex])
 			}
 			unpacked = append(unpacked, v[0])
-
+			topicIndex++
 		}
 	}
 
