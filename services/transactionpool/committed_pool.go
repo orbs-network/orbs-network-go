@@ -25,8 +25,8 @@ type committedPoolMetrics struct {
 
 func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
 	return &committedPoolMetrics{
-		transactionCount: factory.NewGauge("TransactionPool.CommittedPool.TransactionCount"),
-		poolSizeInBytes:  factory.NewGauge("TransactionPool.CommittedPool.PoolSizeInBytes"),
+		transactionCount: factory.NewGauge("TransactionPool.CommittedPool.Transactions.Count"),
+		poolSizeInBytes:  factory.NewGauge("TransactionPool.CommittedPool.PoolSize.Bytes"),
 	}
 }
 

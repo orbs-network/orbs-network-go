@@ -15,16 +15,18 @@ import (
 var LogTag = log.Service("consensus-context")
 
 type metrics struct {
-	createTxBlockTime      *metric.Histogram
-	createResultsBlockTime *metric.Histogram
-	transactionsRate       *metric.Rate
+	createTxBlockTime                         *metric.Histogram
+	createResultsBlockTime                    *metric.Histogram
+	processTransactionsSeInCreateResultsBlock *metric.Histogram
+	transactionsRate                          *metric.Rate
 }
 
 func newMetrics(factory metric.Factory) *metrics {
 	return &metrics{
-		createTxBlockTime:      factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime", 10*time.Second),
-		createResultsBlockTime: factory.NewLatency("ConsensusContext.CreateResultsBlockTime", 10*time.Second),
-		transactionsRate:       factory.NewRate("ConsensusContext.TransactionsPerSecond"),
+		createTxBlockTime:                         factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime.Millis", 10*time.Second),
+		createResultsBlockTime:                    factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
+		processTransactionsSeInCreateResultsBlock: factory.NewLatency("ConsensusContext.ProcessTransactionsSetInCreateResultsBlock.Millis", 10*time.Second),
+		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
 	}
 }
 

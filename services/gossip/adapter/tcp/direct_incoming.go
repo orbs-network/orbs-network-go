@@ -69,6 +69,7 @@ func (t *directTransport) serverMainLoop(parentCtx context.Context, listenPort u
 			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
 			continue
 		}
+		t.metrics.incomingConnectionAcceptSuccesses.Inc()
 		supervised.GoOnce(t.logger, func() {
 			t.serverHandleIncomingConnection(ctx, conn)
 		})

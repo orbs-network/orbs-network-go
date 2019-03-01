@@ -56,8 +56,7 @@ Waiting for chunks is when we are broadcasting to the source our request for chu
 
 > waiting -> idle
 
-* We jump back to idle when the response appears to be byzantine
-* Waiting also transitioned to idle if the timeout for waiting for the chunks has expired
+We jump back to idle when the timeout for waiting for the chunks has expired
 
 > waiting -> processing
 

@@ -41,21 +41,26 @@ type metrics struct {
 	timeSinceLastElectionMillis *metric.Histogram
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
-	consensusRoundTickTime      *metric.Histogram
-	failedConsensusTicksRate    *metric.Rate
-	timedOutConsensusTicksRate  *metric.Rate
 	votingTime                  *metric.Histogram
 }
 
-func newMetrics(m metric.Factory, consensusTimeout time.Duration) *metrics {
+type Config interface {
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
+	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
+}
+
+func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommitMillis", 30*time.Minute),
-		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElectionMillis", 30*time.Minute),
-		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElectionCount"),
-		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId"),
-		consensusRoundTickTime:      m.NewLatency("ConsensusAlgo.LeanHelix.RoundTickTime", consensusTimeout),
-		failedConsensusTicksRate:    m.NewRate("ConsensusAlgo.LeanHelix.FailedTicksPerSecond"),
-		timedOutConsensusTicksRate:  m.NewRate("ConsensusAlgo.LeanHelix.TimedOutTicksPerSecond"),
+		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis", 30*time.Minute),
+		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis", 30*time.Minute),
+		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Value"),
+		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Value"),
 	}
 }
 
@@ -89,7 +94,7 @@ func NewLeanHelixConsensusAlgo(
 		logger:        logger,
 		config:        config,
 		blockProvider: provider,
-		metrics:       newMetrics(metricFactory, config.LeanHelixConsensusRoundTimeoutInterval()),
+		metrics:       newMetrics(metricFactory),
 		leanHelix:     nil,
 	}
 

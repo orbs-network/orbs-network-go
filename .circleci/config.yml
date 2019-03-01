@@ -28,10 +28,35 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
+      - run: sudo apt-get install -y nodejs
+      - run: sudo npm install junit-xml-stats -g
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
+      - store_artifacts:
+          path: _out
+          destination: test-output
+      - store_artifacts:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          destination: test-results
+      - store_test_results:
+          path: _reports
+
+  nightly:
+    docker:
+      - image: circleci/golang:1.11.4
+    parallelism: 6
+    resource_class: xlarge
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
+      - run:
+          command: ./test.flakiness.sh NIGHTLY
+          no_output_timeout: 300m
       - store_artifacts:
           path: _out
           destination: test-output
@@ -92,6 +117,7 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42
 
   e2e_testnet_leanhelix:
@@ -101,6 +127,7 @@ jobs:
     steps:
     - checkout
     - run: ./git-submodule-checkout.sh
+    - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
   release_gamma:
@@ -140,15 +167,30 @@ workflows:
             branches:
               only:
                 - master
-#      - e2e_testnet_benchmark:
-#          requires:
-#            - deploy_testnet
-#      - e2e_testnet_leanhelix:
-#          requires:
-#            - deploy_testnet
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release_gamma:
+          requires:
+            - tests
+            - e2e
           filters:
             tags:
               only: /^v.*/
             branches:
               only: master
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 23 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - nightly
+
+

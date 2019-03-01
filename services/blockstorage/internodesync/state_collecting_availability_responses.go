@@ -30,7 +30,7 @@ func (s *collectingAvailabilityResponsesState) String() string {
 func (s *collectingAvailabilityResponsesState) processState(ctx context.Context) syncState {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	start := time.Now()
-	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
@@ -43,14 +43,14 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx)
 	if err != nil {
 		logger.Info("failed to broadcast block availability request", log.Error(err))
+		s.metrics.timesFailedSendingAvailabilityRequest.Inc()
 		return s.factory.CreateIdleState()
 	}
-
+	s.metrics.timesSucceededSendingAvailabilityRequest.Inc()
 	waitForResponses := s.createTimer()
 	for {
 		select {
 		case <-waitForResponses.C:
-			s.metrics.timesSuccessful.Inc()
 			logger.Info("finished waiting for responses", log.Int("responses-received", len(responses)))
 			return s.factory.CreateFinishedCARState(responses)
 		case e := <-s.conduit:

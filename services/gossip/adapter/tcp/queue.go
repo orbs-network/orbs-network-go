@@ -12,6 +12,7 @@ type transportQueue struct {
 	networkAddress string
 	maxBytes       int
 	maxMessages    int
+	disabled       bool // not under mutex on purpose
 
 	protected struct {
 		sync.Mutex
@@ -30,6 +31,10 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int) *transportQueue {
 }
 
 func (q *transportQueue) Push(data *adapter.TransportData) error {
+	if q.disabled {
+		return nil
+	}
+
 	err := q.consumeBytes(data)
 	if err != nil {
 		return err
@@ -51,6 +56,27 @@ func (q *transportQueue) Pop(ctx context.Context) *adapter.TransportData {
 		q.releaseBytes(res)
 		return res
 	}
+}
+
+func (q *transportQueue) Clear(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-q.channel:
+			q.releaseBytes(res)
+		default:
+			return
+		}
+	}
+}
+
+func (q *transportQueue) Disable() {
+	q.disabled = true
+}
+
+func (q *transportQueue) Enable() {
+	q.disabled = false
 }
 
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {

@@ -76,7 +76,7 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metricRegistry.ReportEvery(ctx, nodeConfig.MetricsReportInterval(), logger)
+	metricRegistry.PeriodicallyReport(ctx, logger)
 
 	logger.Info("Node started")
 

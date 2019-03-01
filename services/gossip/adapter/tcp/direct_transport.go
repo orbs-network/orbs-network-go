@@ -22,11 +22,12 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 var LogTag = log.String("adapter", "gossip")
 
 type metrics struct {
+	incomingConnectionAcceptSuccesses *metric.Gauge
 	incomingConnectionAcceptErrors    *metric.Gauge
 	incomingConnectionTransportErrors *metric.Gauge
-	outgoingConnectionFailedSend      *metric.Gauge
-	outgoingConnectionFailedKeepalive *metric.Gauge
-	outgoingConnectionSendQueueFull   *metric.Gauge
+	outgoingConnectionSendErrors      *metric.Gauge
+	outgoingConnectionKeepaliveErrors *metric.Gauge
+	outgoingConnectionSendQueueErrors *metric.Gauge
 }
 
 type directTransport struct {
@@ -45,11 +46,12 @@ type directTransport struct {
 
 func getMetrics(registry metric.Registry) *metrics {
 	return &metrics{
-		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.AcceptErrors"),
-		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors"),
-		outgoingConnectionFailedSend:      registry.NewGauge("Gossip.OutgoingConnection.FailedSendErrors"),
-		outgoingConnectionFailedKeepalive: registry.NewGauge("Gossip.OutgoingConnection.FailedKeepaliveErrors"),
-		outgoingConnectionSendQueueFull:   registry.NewGauge("Gossip.OutgoingConnection.QueueFull"),
+		incomingConnectionAcceptSuccesses: registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
+		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
+		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
+		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors.Count"),
+		outgoingConnectionKeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors.Count"),
+		outgoingConnectionSendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors.Count"),
 	}
 }
 
@@ -68,6 +70,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	for peerNodeAddress := range t.config.GossipPeers(0) {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES)
+			t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
 		}
 	}
 

@@ -28,7 +28,7 @@ func (s *idleState) String() string {
 
 func (s *idleState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	noCommitTimer := s.createTimer()

@@ -26,8 +26,8 @@ type metrics struct {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		readKeys:  m.NewRate("StateStorage.ReadRequestedKeysPerSecond"),
-		writeKeys: m.NewRate("StateStorage.WriteRequestedKeysPerSecond"),
+		readKeys:  m.NewRate("StateStorage.ReadRequestedKeys.PerSecond"),
+		writeKeys: m.NewRate("StateStorage.WriteRequestedKeys.PerSecond"),
 	}
 }
 

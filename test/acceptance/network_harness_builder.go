@@ -42,8 +42,13 @@ func newHarness() *networkHarnessBuilder {
 		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
 	}
 
+	callerFuncName := getCallerFuncName(2)
+	if callerFuncName == "getStressTestHarness" {
+		callerFuncName = getCallerFuncName(3)
+	}
+
 	harness := n.
-		WithTestId(getCallerFuncName()).
+		WithTestId(callerFuncName).
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
@@ -190,8 +195,8 @@ func dumpStateOnFailure(tb testing.TB, network *NetworkHarness) {
 	}
 }
 
-func getCallerFuncName() string {
-	pc, _, _, _ := runtime.Caller(3)
+func getCallerFuncName(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip)
 	packageAndFuncName := runtime.FuncForPC(pc).Name()
 	parts := strings.Split(packageAndFuncName, ".")
 	return parts[len(parts)-1]

@@ -34,7 +34,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	start := time.Now()
-	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 
 	if s.blocks == nil {
 		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
@@ -44,18 +44,18 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	firstBlockHeight := s.blocks.SignedChunkRange.FirstBlockHeight()
 	lastBlockHeight := s.blocks.SignedChunkRange.LastBlockHeight()
 
+	numBlocks := len(s.blocks.BlockPairs)
 	logger.Info("committing blocks from sync",
-		log.Int("block-count", len(s.blocks.BlockPairs)),
+		log.Int("block-count", numBlocks),
 		log.Stringable("sender", s.blocks.Sender),
 		log.Stringable("first-block-height", firstBlockHeight),
 		log.Stringable("last-block-height", lastBlockHeight))
 
+	s.metrics.blocksRate.Measure(int64(numBlocks))
 	for _, blockPair := range s.blocks.BlockPairs {
 		if !s.factory.conduit.drainAndCheckForShutdown(ctx) {
 			return nil
 		}
-
-		s.metrics.blocksRate.Measure(1)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair})
 
 		if err != nil {

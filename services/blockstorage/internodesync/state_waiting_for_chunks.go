@@ -31,12 +31,13 @@ func (s *waitingForChunksState) String() string {
 
 func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 	start := time.Now()
-	defer s.metrics.stateLatency.RecordSince(start) // runtime metric
+	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	err := s.client.petitionerSendBlockSyncRequest(ctx, gossipmessages.BLOCK_TYPE_BLOCK_PAIR, s.sourceNodeAddress)
 	if err != nil {
 		logger.Info("could not request block chunk from source", log.Error(err), log.Stringable("source", s.sourceNodeAddress))
+
 		return s.factory.CreateIdleState()
 	}
 
@@ -50,16 +51,16 @@ func (s *waitingForChunksState) processState(ctx context.Context) syncState {
 		case e := <-s.conduit:
 			switch blocks := e.(type) {
 			case *gossipmessages.BlockSyncResponseMessage:
-				if !blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) { // aborting, back to idle
+				if blocks.Sender.SenderNodeAddress().Equal(s.sourceNodeAddress) {
+					logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
+					s.metrics.timesSuccessful.Inc()
+					return s.factory.CreateProcessingBlocksState(blocks)
+				} else { // we do not abort in this case, just keep waiting for the real message to come in
 					logger.Info("byzantine message detected, expected source key does not match incoming",
 						log.Stringable("source", s.sourceNodeAddress),
 						log.Stringable("message-sender", blocks.Sender.SenderNodeAddress()))
 					s.metrics.timesByzantine.Inc()
-					return s.factory.CreateIdleState()
 				}
-				logger.Info("got blocks from sync", log.Stringable("source", s.sourceNodeAddress))
-				s.metrics.timesSuccessful.Inc()
-				return s.factory.CreateProcessingBlocksState(blocks)
 			}
 		case <-ctx.Done():
 			return nil

@@ -23,7 +23,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 
 	// if above round time, we'll have leader changes when no traffic
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 9*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 5*time.Second)
 
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 
@@ -41,7 +41,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 100)
 
 	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
-	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 5*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 6*time.Second)
 
 	// makes sync slower, 4*slow_network_latency
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Second)
@@ -70,7 +70,6 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
-	cfg.SetDuration(METRICS_REPORT_INTERVAL, 30*time.Second)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
