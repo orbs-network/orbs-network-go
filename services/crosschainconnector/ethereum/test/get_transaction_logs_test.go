@@ -94,7 +94,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "EventWithAddressArray",
 			EthereumJsonAbi:         string(contractABI),
-			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
+			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
 		})
 		require.NoError(t, err, "failed getting logs")
 

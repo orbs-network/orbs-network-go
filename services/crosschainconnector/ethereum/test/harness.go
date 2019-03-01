@@ -88,6 +88,7 @@ func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
 	cfg := ConfigForSimulatorConnection()
 
 	return &harness{
+		config:     cfg,
 		simAdapter: conn,
 		logger:     logger,
 		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger),

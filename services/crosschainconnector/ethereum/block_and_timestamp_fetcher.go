@@ -32,10 +32,10 @@ func (f *EthereumBasedBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Co
 		return nil, nil
 	}
 
-	return &BlockHeightAndTime{Time: header.Time.Int64(), Number: header.Number.Int64()}, nil
+	return &BlockHeightAndTime{TimeSeconds: header.Time.Int64(), Number: header.Number.Int64()}, nil
 }
 
 type BlockHeightAndTime struct {
-	Number int64
-	Time   int64
+	Number      int64
+	TimeSeconds int64
 }
