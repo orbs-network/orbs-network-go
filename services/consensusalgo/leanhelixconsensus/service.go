@@ -160,7 +160,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 		}
 
-		// TODO(v1): consider adding a "go" command here so this step becomes async tell and doesn't block the block sync
+		// do not add a "go" command here (so this step becomes async tell and doesn't block the block sync) because we want to control the sync rate
 		s.leanHelix.UpdateState(ctx, lhBlock, lhBlockProof)
 	}
 
