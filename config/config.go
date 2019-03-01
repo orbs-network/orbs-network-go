@@ -178,6 +178,11 @@ type TransactionPoolConfig interface {
 	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
+type EthereumCrosschainConnectorConfig interface {
+	EthereumFinalityTimeComponent() time.Duration
+	EthereumFinalityBlocksComponent() uint32
+}
+
 type FederationNode interface {
 	NodeAddress() primitives.NodeAddress
 }

@@ -17,14 +17,14 @@ import (
 
 func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	// the idea of this test is to make sure that the entire 'call-from-ethereum' logic works on a specific timestamp and different states in time (blocks)
-	// it requires ganache or some other simulation to transact
+	// it requires ganache or some other RPC backend to transact
 
 	if !runningWithDocker() {
 		t.Skip("this test relies on external components - ganache, and will be skipped unless running in docker")
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		h := newRpcEthereumConnectorHarness(t, getConfig())
+		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
 		h.deployContractsToGanache(t, 2, time.Second)
 
 		expectedTextFromEthereum := "test3"
@@ -72,18 +72,4 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 func runningWithDocker() bool {
 	return os.Getenv("EXTERNAL_TEST") == "true"
-}
-
-func getConfig() *ethereumConnectorConfigForTests {
-	var cfg ethereumConnectorConfigForTests
-
-	if endpoint := os.Getenv("ETHEREUM_ENDPOINT"); endpoint != "" {
-		cfg.endpoint = endpoint
-	}
-
-	if privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY"); privateKey != "" {
-		cfg.privateKeyHex = privateKey
-	}
-
-	return &cfg
 }

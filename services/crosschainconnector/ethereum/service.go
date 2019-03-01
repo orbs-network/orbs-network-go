@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -20,24 +21,27 @@ type service struct {
 	connection       adapter.EthereumConnection
 	logger           log.BasicLogger
 	timestampFetcher TimestampFetcher
+	config           config.EthereumCrosschainConnectorConfig
 }
 
-func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:       connection,
 		timestampFetcher: NewTimestampFetcher(NewBlockTimestampFetcher(connection), logger),
 		logger:           logger,
+		config:           config,
 	}
 	return s
 }
 
-func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, parent log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:       connection,
 		timestampFetcher: NewTimestampFetcher(NewFakeBlockAndTimestampGetter(logger), logger),
 		logger:           logger,
+		config:           config,
 	}
 	return s
 }

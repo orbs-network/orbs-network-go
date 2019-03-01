@@ -3,9 +3,7 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -27,15 +25,6 @@ type harness struct {
 	config     *ethereumConnectorConfigForTests
 }
 
-type ethereumConnectorConfigForTests struct {
-	endpoint      string
-	privateKeyHex string
-}
-
-func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
-	return c.endpoint
-}
-
 func (h *harness) deploySimulatorStorageContract(ctx context.Context, text string) error {
 	address, err := h.simAdapter.DeploySimpleStorageContract(h.simAdapter.GetAuth(), text)
 	h.simAdapter.Commit()
@@ -52,7 +41,7 @@ func (h *harness) getAddress() string {
 }
 
 func (h *harness) deployRpcStorageContract(text string) (string, error) {
-	auth, err := h.authFromConfig()
+	auth, err := h.config.GetAuthFromConfig()
 	if err != nil {
 		return "", err
 	}
@@ -84,32 +73,24 @@ func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigF
 		config:     cfg,
 		rpcAdapter: a,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(a, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger),
 	}
-}
-
-func (h *harness) authFromConfig() (*bind.TransactOpts, error) {
-	key, err := crypto.HexToECDSA(h.config.privateKeyHex)
-	if err != nil {
-		return nil, err
-	}
-
-	return bind.NewKeyedTransactor(key), nil
 }
 
 func (h *harness) WithFakeTSF() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.logger)
+	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.config, h.logger)
 	return h
 }
 
 func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
 	logger := log.DefaultTestingLogger(tb)
 	conn := adapter.NewEthereumSimulatorConnection(logger)
+	cfg := ConfigForSimulatorConnection()
 
 	return &harness{
 		simAdapter: conn,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(conn, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger),
 	}
 }
 

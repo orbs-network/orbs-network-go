@@ -27,7 +27,7 @@ func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
 		logger := log.DefaultTestingLogger(t)
 		simulator := adapter.NewEthereumSimulatorConnection(logger)
 		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
+		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
 
 		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 		simulator.Commit()
@@ -71,7 +71,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		logger := log.DefaultTestingLogger(t)
 		simulator := adapter.NewEthereumSimulatorConnection(logger)
 		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
+		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
 
 		contractABI, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.abi")
 		require.NoError(t, err, "failed reading contract ABI")
