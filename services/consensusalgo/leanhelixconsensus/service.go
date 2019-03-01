@@ -44,17 +44,6 @@ type metrics struct {
 	votingTime                  *metric.Histogram
 }
 
-type Config interface {
-	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
-	LeanHelixConsensusRoundTimeoutInterval() time.Duration
-	LeanHelixShowDebug() bool
-	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	VirtualChainId() primitives.VirtualChainId
-	NetworkType() protocol.SignerNetworkType
-}
-
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
 		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis", 30*time.Minute),
