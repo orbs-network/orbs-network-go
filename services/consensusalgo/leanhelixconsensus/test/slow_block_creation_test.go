@@ -13,6 +13,11 @@ import (
 	"testing"
 )
 
+// This test shows the shy leader problem, that when we sync in lean helix, the petitioner
+// thinks he is the leader on v=0 of old blocks and tries to propose a block.
+// This causes it to get stuck on GetTransactionsForOrdering (9 seconds when no traffic)
+// and broadcast large pre prepares that nobody cares about to everybody (network pollution).
+
 func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness().start(t, ctx)

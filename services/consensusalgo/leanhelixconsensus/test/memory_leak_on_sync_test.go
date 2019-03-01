@@ -16,6 +16,11 @@ import (
 
 const MAX_LEAK_BYTES = 5 * 1024 * 1024
 
+// This test shows showing a potential memory leak during sync. Let's say the node is syncing 0-10K
+// blocks and the rest of the nodes are closing together 100 blocks in that time (10K to 10K+100).
+// All the consensus messages from these 100 future terms are stored in the lean helix future cache.
+// This can will eventually consume all memory and cause the node to crash.
+
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness().start(t, ctx)
