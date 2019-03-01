@@ -76,6 +76,8 @@ type NodeConfig interface {
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
+	EthereumFinalityTimeComponent() time.Duration
+	EthereumFinalityBlocksComponent() uint32
 
 	// logger
 	LoggerHttpEndpoint() string
