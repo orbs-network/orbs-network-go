@@ -1,10 +1,14 @@
 package test
 
+const Passed = "--- PASS:"
 const Failed = "--- FAIL:"
 const BeforeLoggerCreated = "before logger is created"
 const LoggedWithLogger = "logged using the logger"
+const ErrorWithLogger = "error logged using the logger"
 const BeforeCallPanic = "about to call theFunctionThrowingThePanic"
 const AfterCallPanic = "after call to theFunctionThrowingThePanic"
+const BeforeLoggerError = "about to call logger.Error"
+const AfterLoggerError = "after call to logger.Error"
 const ParentScopeBeforeTest = "this is in parent before the sub test"
 const ParentScopeAfterTest = "this is parent after the sub test"
 const MustShow = "this is supposed to show even if the test fails"
