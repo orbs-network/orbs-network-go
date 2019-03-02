@@ -25,7 +25,9 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 
 	electedValidatorsAddresses, err := s.callElectionsSystemContract(ctx, lastCommittedBlockHeight)
 	if err != nil {
-		s.logger.Error("cannot get elected validators from system contract", log.Error(err), log.BlockHeight(lastCommittedBlockHeight))
+		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
+			s.logger.Error("cannot get elected validators from system contract", log.Error(err), log.BlockHeight(lastCommittedBlockHeight))
+		}
 		return nil, err
 	}
 	s.logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), log.BlockHeight(lastCommittedBlockHeight))
