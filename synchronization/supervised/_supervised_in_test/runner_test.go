@@ -43,6 +43,9 @@ func TestGoOnce_Panics(t *testing.T) {
 		t.Log(logLine.BeforeCallPanic)
 		theFunctionThrowingThePanic()
 		t.Log(logLine.AfterCallPanic)
+
+		testLogger.Info(logLine.MustNotShow)
+		t.Log(logLine.MustNotShow)
 	})
 
 	// Test lingers for the exception in goroutine to arrive
@@ -61,6 +64,9 @@ func TestGoOnce_LogsError(t *testing.T) {
 		t.Log(logLine.BeforeLoggerError)
 		testLogger.Error(logLine.ErrorWithLogger)
 		t.Log(logLine.AfterLoggerError)
+
+		testLogger.Info(logLine.MustNotShow)
+		t.Log(logLine.MustShow)
 	})
 
 	// Test lingers for the exception in goroutine to arrive
