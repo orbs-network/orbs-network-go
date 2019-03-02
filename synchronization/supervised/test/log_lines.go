@@ -2,6 +2,7 @@ package test
 
 const Passed = "--- PASS:"
 const Failed = "--- FAIL:"
+const PanicOhNo = "panic: oh no"
 const BeforeLoggerCreated = "before logger is created"
 const LoggedWithLogger = "logged using the logger"
 const ErrorWithLogger = "error logged using the logger"

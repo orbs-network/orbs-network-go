@@ -31,7 +31,7 @@ func Test_LogsError(t *testing.T) {
 	t.Log(logLine.AfterLoggerError)
 
 	testLogger.Info(logLine.MustNotShow)
-	t.Log(logLine.MustNotShow)
+	t.Log(logLine.MustShow)
 }
 
 func TestGoOnce_Panics(t *testing.T) {
@@ -71,8 +71,6 @@ func TestGoOnce_LogsError(t *testing.T) {
 }
 
 func TestTRun_Panics(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
-
 	t.Run("SubTest", func(t *testing.T) {
 		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
@@ -83,15 +81,13 @@ func TestTRun_Panics(t *testing.T) {
 			theFunctionThrowingThePanic()
 			t.Log(logLine.AfterCallPanic)
 
+			subTestLogger.Info(logLine.MustNotShow)
+			t.Log(logLine.MustNotShow)
 		})
 	})
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func TestTRun_LogsError(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
-
 	t.Run("SubTest", func(t *testing.T) {
 		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
@@ -102,16 +98,15 @@ func TestTRun_LogsError(t *testing.T) {
 			subTestLogger.Error(logLine.ErrorWithLogger)
 			t.Log(logLine.AfterLoggerError)
 
+			subTestLogger.Info(logLine.MustNotShow)
+			t.Log(logLine.MustShow)
 		})
 	})
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func TestTRun_GoOnce_Panics(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
-
 	t.Run("SubTest", func(t *testing.T) {
+		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
@@ -120,20 +115,22 @@ func TestTRun_GoOnce_Panics(t *testing.T) {
 				t.Log(logLine.BeforeCallPanic)
 				theFunctionThrowingThePanic()
 				t.Log(logLine.AfterCallPanic)
+
+				subTestLogger.Info(logLine.MustNotShow)
+				t.Log(logLine.MustNotShow)
 			})
 
 			// SubTest lingers for the exception in goroutine to arrive
 			time.Sleep(100 * time.Millisecond)
+			subTestLogger.Info(logLine.MustNotShow)
+			t.Log(logLine.MustShow)
 		})
 	})
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func TestTRun_GoOnce_LogsError(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
-
 	t.Run("SubTest", func(t *testing.T) {
+		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
@@ -142,21 +139,24 @@ func TestTRun_GoOnce_LogsError(t *testing.T) {
 				t.Log(logLine.BeforeLoggerError)
 				subTestLogger.Error(logLine.ErrorWithLogger)
 				t.Log(logLine.AfterLoggerError)
+
+				subTestLogger.Info(logLine.MustNotShow)
+				t.Log(logLine.MustShow)
 			})
 
 			// SubTest lingers for the exception in goroutine to arrive
 			time.Sleep(100 * time.Millisecond)
+			subTestLogger.Info(logLine.MustNotShow)
+			t.Log(logLine.MustShow)
 		})
 	})
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
 	subTestPassedChannel := make(chan bool)
 
 	t.Run("SubTest", func(t *testing.T) {
+		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
@@ -168,6 +168,9 @@ func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
 				t.Log(logLine.BeforeCallPanic)
 				theFunctionThrowingThePanic()
 				t.Log(logLine.AfterCallPanic)
+
+				subTestLogger.Info(logLine.MustNotShow)
+				t.Log(logLine.MustNotShow)
 			})
 
 			// SubTest is now passing successfully since it returns without any issues
@@ -178,15 +181,13 @@ func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
 	subTestPassedChannel <- true
 	// ParentTest lingers for the exception in goroutine to arrive
 	time.Sleep(100 * time.Millisecond)
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
-	t.Log(logLine.ParentScopeBeforeTest)
 	subTestPassedChannel := make(chan bool)
 
 	t.Run("SubTest", func(t *testing.T) {
+		t.Log(logLine.BeforeLoggerCreated)
 		subTestLogger := log.DefaultTestingLogger(t)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
@@ -198,6 +199,9 @@ func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
 				t.Log(logLine.BeforeLoggerError)
 				subTestLogger.Error(logLine.ErrorWithLogger)
 				t.Log(logLine.AfterLoggerError)
+
+				subTestLogger.Info(logLine.MustNotShow)
+				t.Log(logLine.MustShow)
 			})
 
 			// SubTest is now passing successfully since it returns without any issues
@@ -208,8 +212,6 @@ func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
 	subTestPassedChannel <- true
 	// ParentTest lingers for the exception in goroutine to arrive
 	time.Sleep(100 * time.Millisecond)
-
-	t.Log(logLine.ParentScopeAfterTest)
 }
 
 func theFunctionThrowingThePanic() {
