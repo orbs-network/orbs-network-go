@@ -22,8 +22,8 @@ type systemReporter struct {
 func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
 	r := &systemReporter{
 		metrics: systemMetrics{
-			rssBytes:       metricFactory.NewGauge("System.Memory.Rss.Bytes"),
-			cpuUtilization: metricFactory.NewGauge("System.CPU.PerCent"),
+			rssBytes:       metricFactory.NewGauge("OS.Process.Memory.Bytes"),
+			cpuUtilization: metricFactory.NewGauge("OS.Process.CPU.PerCent"),
 		},
 	}
 
