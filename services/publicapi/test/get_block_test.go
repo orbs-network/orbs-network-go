@@ -85,7 +85,7 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 		// value test
 		require.NoError(t, err, "error happened when it should not")
 		require.NotNil(t, result, "get block returned nil instead of object")
-		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, result.ClientResponse.RequestResult().RequestStatus(), "got wrong status")
+		require.Equal(t, protocol.REQUEST_STATUS_NOT_FOUND, result.ClientResponse.RequestResult().RequestStatus(), "got wrong status")
 		require.Equal(t, lastCommitedPair.TransactionsBlock.Header.BlockHeight(), result.ClientResponse.RequestResult().BlockHeight(), "got wrong block height")
 		require.Equal(t, lastCommitedPair.TransactionsBlock.Header.Timestamp(), result.ClientResponse.RequestResult().BlockTimestamp(), "got wrong timestamp")
 		require.Equal(t, 0, len(result.ClientResponse.TransactionsBlockHeader().Raw()), "TransactionsBlockHeader should be empty")
