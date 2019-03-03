@@ -16,7 +16,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", queue.networkAddress))
 		t.logger.Info("attempting outgoing transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
-		conn, err := net.Dial("tcp", queue.networkAddress)
+		conn, err := net.DialTimeout("tcp", queue.networkAddress, t.config.GossipNetworkTimeout())
 
 		if err != nil {
 			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
