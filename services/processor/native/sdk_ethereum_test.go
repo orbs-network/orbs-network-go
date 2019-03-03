@@ -31,7 +31,7 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 
 	var out string
 	sampleABI := `[{"inputs":[{"name":"sentence","type":"string"}],"name":"said","type":"event"}]`
-	ethBlockNumber, ethTxIndex := s.SdkEthereumGetTransactionLog(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "ExampleAddress", sampleABI, "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b", "said", &out)
+	ethBlockNumber, ethTxIndex := s.SdkEthereumGetTransactionLog(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, "0x88df016429689c079f3b2f6ad39fa052532c56795b733da78a91ebe6a713944b", sampleABI, "said", &out)
 
 	require.Equal(t, "hello etherworld", out, "did not get the expected return value from transaction log")
 	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from transaction log")

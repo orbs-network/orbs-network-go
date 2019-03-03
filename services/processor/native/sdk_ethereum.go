@@ -70,7 +70,7 @@ func (s *service) SdkEthereumCallMethod(executionContextId sdkContext.ContextId,
 	}
 }
 
-func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethContractAddress string, jsonAbi string, ethTxHash string, eventName string, out interface{}) (ethBlockNumber uint64, ethTxIndex uint32) {
+func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethTxHash string, jsonAbi string, eventName string, out interface{}) (ethBlockNumber uint64, ethTxIndex uint32) {
 	parsedABI, err := abi.JSON(strings.NewReader(jsonAbi))
 	if err != nil {
 		panic(err.Error())
@@ -82,19 +82,14 @@ func (s *service) SdkEthereumGetTransactionLog(executionContextId sdkContext.Con
 		MethodName:    "getTransactionLog",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
-				// ethContractAddress
+				// ethTxHash
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: ethContractAddress,
+				StringValue: ethTxHash,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// jsonAbi
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
 				StringValue: jsonAbi,
-			}).Build(),
-			(&protocol.ArgumentBuilder{
-				// ethTxHash
-				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: ethTxHash,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// eventName

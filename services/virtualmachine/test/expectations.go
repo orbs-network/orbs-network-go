@@ -139,13 +139,12 @@ func (h *harness) verifyEthereumConnectorMethodCalled(t *testing.T) {
 	require.True(t, ok, "did not call ethereum connector: %v", err)
 }
 
-func (h *harness) expectEthereumConnectorGetTransactionLogs(expectedContractAddress string, expectedEventName string, expectedTxHash string, returnError error, returnOutput []byte, returnBlockNumber uint64, returnTxIndex uint32) {
+func (h *harness) expectEthereumConnectorGetTransactionLogs(expectedTxHash string, expectedEventName string, returnError error, returnOutput []byte, returnBlockNumber uint64, returnTxIndex uint32) {
 	contractMatcher := func(i interface{}) bool {
 		input, ok := i.(*services.EthereumGetTransactionLogsInput)
 		return ok &&
-			input.EthereumContractAddress == expectedContractAddress &&
-			input.EthereumEventName == expectedEventName &&
-			input.EthereumTxhash == expectedTxHash
+			input.EthereumTxhash == expectedTxHash &&
+			input.EthereumEventName == expectedEventName
 	}
 
 	outputToReturn := &services.EthereumGetTransactionLogsOutput{
@@ -154,7 +153,7 @@ func (h *harness) expectEthereumConnectorGetTransactionLogs(expectedContractAddr
 		EthereumTxindex:          returnTxIndex,
 	}
 
-	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetTransactionLogs", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s, event equals %s and txHash equals %s", expectedContractAddress, expectedEventName, expectedTxHash), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetTransactionLogs", mock.Any, mock.AnyIf(fmt.Sprintf("txHash equals %s and event equals %s", expectedTxHash, expectedEventName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
 func (h *harness) expectEthereumConnectorGetBlockNumber(returnError error, returnBlockNumber uint64) {

@@ -29,7 +29,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 		auth := simulator.GetAuth()
 		connector := ethereum.NewEthereumCrosschainConnector(simulator, logger)
 
-		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
+		_, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
@@ -43,11 +43,10 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: contractAddress.Hex(),
-			EthereumTxhash:          tx.Hash().Hex(),
-			EthereumEventName:       "TransferredOut",
-			EthereumJsonAbi:         contract.EmitEventAbi,
-			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
+			EthereumTxhash:     tx.Hash().Hex(),
+			EthereumEventName:  "TransferredOut",
+			EthereumJsonAbi:    contract.EmitEventAbi,
+			ReferenceTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		})
 		require.NoError(t, err, "failed getting logs")
 
@@ -79,7 +78,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		contractBin, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.bin")
 		require.NoError(t, err, "failed reading contract binary")
 
-		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, string(contractABI), string(contractBin))
+		_, deployedContract, err := simulator.DeployEthereumContract(auth, string(contractABI), string(contractBin))
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
@@ -90,11 +89,10 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		require.NoError(t, err, "failed emitting event")
 
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-			EthereumContractAddress: contractAddress.Hex(),
-			EthereumTxhash:          tx.Hash().Hex(),
-			EthereumEventName:       "Vote",
-			EthereumJsonAbi:         string(contractABI),
-			ReferenceTimestamp:      primitives.TimestampNano(0), //TODO real timestamp
+			EthereumTxhash:     tx.Hash().Hex(),
+			EthereumEventName:  "Vote",
+			EthereumJsonAbi:    string(contractABI),
+			ReferenceTimestamp: primitives.TimestampNano(0), //TODO real timestamp
 		})
 		require.NoError(t, err, "failed getting logs")
 

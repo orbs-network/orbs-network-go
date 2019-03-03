@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"math/big"
@@ -79,7 +78,7 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 
 func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *services.EthereumGetTransactionLogsInput) (*services.EthereumGetTransactionLogsOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Transaction(primitives.Sha256(input.EthereumTxhash)))
+	logger.Info("getting transaction logs", log.String("event", input.EthereumEventName), log.String("txhash", input.EthereumTxhash))
 
 	ethereumTxHash, err := hexutil.Decode(input.EthereumTxhash)
 	if err != nil {
@@ -99,12 +98,12 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	// TODO(v1): use input.ReferenceTimestamp to reduce non-determinism here (ask OdedW how)
 	logs, err := s.connection.GetTransactionLogs(ctx, ethereumTxHash, eventABI.Id().Bytes())
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
+		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s", input.EthereumTxhash)
 	}
 
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/597): support multiple logs
 	if len(logs) != 1 {
-		return nil, errors.Errorf("expected exactly one log entry for txhash %s of contract %s but got %d", input.EthereumTxhash, input.EthereumContractAddress, len(logs))
+		return nil, errors.Errorf("expected exactly one log entry for txhash %s but got %d", input.EthereumTxhash, len(logs))
 	}
 
 	output, err := repackEventABIWithTopics(eventABI, logs[0])

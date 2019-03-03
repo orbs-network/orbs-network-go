@@ -86,22 +86,20 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 	return output.EthereumAbiPackedOutput, nil
 }
 
-// inputArg0: ethContractAddress (string)
+// inputArg0: ethTxHash (string)
 // inputArg1: jsonAbi (string)
-// inputArg2: ethTxHash (string)
-// inputArg3: eventName (string)
+// inputArg2: eventName (string)
 // outputArg0: ethereumABIPackedOutput ([]byte)
 // outputArg1: ethBlockNumber (uint64)
 // outputArg2: ethTxIndex (uint32)
 func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, uint64, uint32, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() || !args[3].IsTypeStringValue() {
+	if len(args) != 3 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() {
 		return nil, 0, 0, errors.Errorf("invalid SDK ethereum getTransactionLog args: %v", args)
 	}
-	ethContractAddress := args[0].StringValue()
+	ethTxHash := args[0].StringValue()
 	jsonAbi := args[1].StringValue()
-	ethTxHash := args[2].StringValue()
-	eventName := args[3].StringValue()
+	eventName := args[2].StringValue()
 
 	// get block timestamp
 	blockTimestamp := executionContext.currentBlockTimestamp
@@ -109,11 +107,10 @@ func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, execut
 	// execute the call
 	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
 	output, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
-		ReferenceTimestamp:      blockTimestamp,
-		EthereumContractAddress: ethContractAddress,
-		EthereumEventName:       eventName,
-		EthereumJsonAbi:         jsonAbi,
-		EthereumTxhash:          ethTxHash,
+		ReferenceTimestamp: blockTimestamp,
+		EthereumTxhash:     ethTxHash,
+		EthereumEventName:  eventName,
+		EthereumJsonAbi:    jsonAbi,
 	})
 	if err != nil {
 		logger.Info("Sdk.Ethereum.GetTransactionLog failed", log.Error(err), log.String("jsonAbi", jsonAbi))
