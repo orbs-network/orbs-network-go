@@ -177,6 +177,17 @@ type TransactionPoolConfig interface {
 	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
+type LeanHelixConsensusConfig interface {
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
+}
+
 type FederationNode interface {
 	NodeAddress() primitives.NodeAddress
 }
