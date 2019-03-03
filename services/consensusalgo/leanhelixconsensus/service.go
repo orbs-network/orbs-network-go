@@ -29,7 +29,7 @@ type service struct {
 	com              *communication
 	blockProvider    *blockProvider
 	logger           log.BasicLogger
-	config           Config
+	config           config.LeanHelixConsensusConfig
 	metrics          *metrics
 	leanHelix        *leanhelix.LeanHelix
 	lastCommitTime   time.Time
@@ -42,17 +42,6 @@ type metrics struct {
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
 	votingTime                  *metric.Histogram
-}
-
-type Config interface {
-	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
-	LeanHelixConsensusRoundTimeoutInterval() time.Duration
-	LeanHelixShowDebug() bool
-	ActiveConsensusAlgo() consensus.ConsensusAlgoType
-	VirtualChainId() primitives.VirtualChainId
-	NetworkType() protocol.SignerNetworkType
 }
 
 func newMetrics(m metric.Factory) *metrics {
@@ -70,7 +59,7 @@ func NewLeanHelixConsensusAlgo(
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
 	parentLogger log.BasicLogger,
-	config Config,
+	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
 
 ) services.ConsensusAlgoLeanHelix {
@@ -171,6 +160,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 		}
 
+		// do not add a "go" command here (so this step becomes async tell and doesn't block the block sync) because we want to control the sync rate
 		s.leanHelix.UpdateState(ctx, lhBlock, lhBlockProof)
 	}
 

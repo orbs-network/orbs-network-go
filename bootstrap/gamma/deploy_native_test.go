@@ -24,7 +24,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 
 		t.Log("deploying contract")
 
-		contract.DeployCounterContract(ctx, 1) // leader is nodeIndex 0, validator is nodeIndex 1
+		contract.DeployNativeCounterContract(ctx, 1, 0) // leader is nodeIndex 0, validator is nodeIndex 1
 
 		require.True(t, test.Eventually(3*time.Second, func() bool {
 			return counterStart == contract.CounterGet(ctx, 0)

@@ -8,6 +8,7 @@ TIMEOUT_ACCEPTANCE="20m"
 TIMEOUT_REST="10m"
 COUNT_ACCEPTANCE=35
 COUNT_REST=70
+NIGHTLY=0
 
 if [[ "${LAST_COMMIT_MESSAGE}" == *"#extraflaky"* ]]; then
     FAILFAST=""
@@ -18,6 +19,7 @@ if [[ "${LAST_COMMIT_MESSAGE}" == *"#extraflaky"* ]]; then
 fi
 
 if [[ $1 == "NIGHTLY" ]]; then
+    NIGHTLY=1
     echo "performing nightly build (count 1000/2000 , no failfast)"
     FAILFAST=""
     TIMEOUT_ACCEPTANCE="500m"
