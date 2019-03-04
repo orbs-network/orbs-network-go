@@ -143,9 +143,9 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 			require.NoError(t, err, "failed parsing ABI")
 
 			event := new(struct {
-				Voter        common.Address
-				Nodeslist    []common.Address
-				Vote_counter *big.Int
+				Voter       common.Address
+				Nodeslist   []common.Address
+				VoteCounter *big.Int
 			})
 			err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "Vote", out.EthereumAbiPackedOutputs[0])
 			require.NoError(t, err, "failed unpacking event")
