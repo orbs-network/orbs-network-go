@@ -76,6 +76,24 @@ func getCPUStats() (uint64, error) {
 	return e.User + e.Nice + e.System + e.Idle, nil
 }
 
+/**
+
+https://github.com/Leo-G/DevopsWiki/wiki/How-Linux-CPU-Usage-Time-and-Percentage-is-calculated
+
+Because the values reported by procfs are reported since startup, you have to sample twice and get the difference to gain meaningful insight.
+
+For example, all processor cycles since the startup were reported as 1000 (cpu1), and after we check the second time 2000 (cpu2).
+
+In the meantime, if we sample the process time as 100 (process1) and 200 (process2) respectively, we can calculate
+the amount of cycles was spend on this particular process:
+
+	percent = (process2 - process1) / (cpu2 - cpu1) * 100 = (200 - 100) / (2000 - 1000) * 100 = 100 / 1000 * 100 = 10
+
+Here we take an easy way and sample cpu stats for all available processors and don't differentiate between cores,
+and also don't take into account any cpu limits if they were applied and if it affected the procfs reporting.
+
+*/
+
 func getCPUUtilization() (int64, error) {
 	pid := uint64(os.Getpid())
 
