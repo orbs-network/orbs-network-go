@@ -33,7 +33,8 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 // returns true if should attempt reconnect on error
 func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
 	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
-
+	t.metrics.activeOutgoingConnections.Inc()
+	defer t.metrics.activeOutgoingConnections.Dec()
 	queue.Clear(ctx)
 	queue.Enable()
 	defer queue.Disable()
