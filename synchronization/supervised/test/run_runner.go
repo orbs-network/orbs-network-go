@@ -16,6 +16,7 @@ func executeGoTestRunner(t *testing.T, expectedLogs []string, unexpectedLogs []s
 		path.Join(runtime.GOROOT(), "bin", "go"),
 		"test",
 		"github.com/orbs-network/orbs-network-go/synchronization/supervised/_supervised_in_test/",
+		"-v",
 		"-run",
 		"^("+t.Name()+")$").CombinedOutput()
 

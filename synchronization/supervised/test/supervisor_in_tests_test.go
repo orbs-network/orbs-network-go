@@ -49,9 +49,21 @@ func TestTRun_GoOnce_LogsError(t *testing.T) {
 }
 
 func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
+	expectedLogsOnPanic := []string{
+		Passed, BeforeLoggerCreated, LoggedWithLogger, PanicOhNo,
+	}
+	unexpectedLogsOnPanic := []string{
+		Failed, AfterCallPanic, MustNotShow,
+	}
 	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
 }
 
 func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
+	expectedLogsOnLogError := []string{
+		Passed, BeforeLoggerCreated, LoggedWithLogger, ErrorWithLogger,
+	}
+	unexpectedLogsOnLogError := []string{
+		Failed, MustNotShow,
+	}
 	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
 }

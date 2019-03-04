@@ -163,9 +163,11 @@ func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
 
 	t.Run("SubTest", func(t *testing.T) {
 		t.Log(logLine.BeforeLoggerCreated)
-		subTestLogger := log.DefaultTestingLogger(t)
+		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
+		subTestLogger := log.GetLogger().WithOutput(testOutput)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
+			defer testOutput.TestTerminated() // this is required to prevent crash
 
 			supervised.GoOnce(subTestLogger, func() {
 				<-subTestPassedChannel
@@ -194,9 +196,11 @@ func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
 
 	t.Run("SubTest", func(t *testing.T) {
 		t.Log(logLine.BeforeLoggerCreated)
-		subTestLogger := log.DefaultTestingLogger(t)
+		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
+		subTestLogger := log.GetLogger().WithOutput(testOutput)
 		subTestLogger.Info(logLine.LoggedWithLogger)
 		supervised.Recover(subTestLogger, func() { // t.Run is dangerous because it creates an unsupervised goroutine, we must use Recover inside
+			defer testOutput.TestTerminated() // this is required to prevent crash
 
 			supervised.GoOnce(subTestLogger, func() {
 				<-subTestPassedChannel
