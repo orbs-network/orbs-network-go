@@ -38,7 +38,7 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		timeout := e.CalcTimeout(view)
 		e.view = view
 		e.blockHeight = blockHeight
-		e.safeTimerStop()
+		e.Stop()
 		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
 	}
 	e.electionHandler = electionHandler
@@ -48,7 +48,7 @@ func (e *exponentialBackoffElectionTrigger) ElectionChannel() chan func(ctx cont
 	return e.electionChannel
 }
 
-func (e *exponentialBackoffElectionTrigger) safeTimerStop() {
+func (e *exponentialBackoffElectionTrigger) Stop() {
 	if e.triggerTimer != nil {
 		active := e.triggerTimer.Stop()
 		if !active {

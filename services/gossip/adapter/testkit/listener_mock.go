@@ -25,7 +25,7 @@ func ListenTo(transport adapter.Transport, nodeAddress primitives.NodeAddress) *
 }
 
 func (l *MockTransportListener) ExpectReceive(payloads [][]byte) {
-	l.WhenOnTransportMessageReceived(payloads).Return().Times(1)
+	l.WhenOnTransportMessageReceived(payloads).Return().AtLeast(1)
 }
 
 func (l *MockTransportListener) ExpectNotReceive() {

@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 contract EmitAddressArrayEvent {
-    event EventWithAddressArray(address[] value);
+    event Vote(address indexed voter, address[] nodeslist, uint vote_counter);
 
     function fire(address[] memory addresses) public {
-        emit EventWithAddressArray(addresses);
+        emit Vote(msg.sender, addresses, 42);
     }
 }

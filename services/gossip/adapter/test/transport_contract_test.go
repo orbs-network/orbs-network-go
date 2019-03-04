@@ -15,7 +15,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
@@ -48,8 +47,7 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 			c.listeners[2].ExpectReceive(data.Payloads)
 			c.listeners[3].ExpectNotReceive()
 
-			require.NoError(t, c.transports[3].Send(ctx, data))
-			c.verify(t)
+			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
 		})
 	}
 }
@@ -71,8 +69,7 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 			c.listeners[2].ExpectReceive(data.Payloads)
 			c.listeners[3].ExpectNotReceive()
 
-			require.NoError(t, c.transports[3].Send(ctx, data))
-			c.verify(t)
+			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
 		})
 	}
 }
@@ -142,17 +139,24 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
 	}
 
-	// TODO(v1): improve this, we need some time until everybody connects to everybody else
-	// TODO(v1): maybe add an adapter function to check how many active outgoing connections we have
-	// @electricmonk proposal: Adapter could take a ConnectionListener that gets notified on connects/disconnects, and the test could provide such a listener to block until the desired number of connections has been reached
-	time.Sleep(2 * configs[0].GossipConnectionKeepAliveInterval())
-
 	return res
 }
 
-func (c *transportContractContext) verify(t *testing.T) {
-	for _, mockListener := range c.listeners {
-		// TODO(v1): reduce eventually timeout to test.EVENTUALLY_ADAPTER_TIMEOUT once we remove memberlist
-		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, mockListener))
-	}
+func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, sender adapter.Transport, data *adapter.TransportData) bool {
+	cfg := config.ForGossipAdapterTests(nil, 0, nil)
+	return test.Eventually(2*cfg.GossipNetworkTimeout(), func() bool {
+
+		err := sender.Send(ctx, data)
+		if err != nil {
+			return false
+		}
+
+		for _, mockListener := range c.listeners {
+			if ok, _ := mockListener.Verify(); !ok {
+				return false
+			}
+		}
+		return true
+
+	})
 }

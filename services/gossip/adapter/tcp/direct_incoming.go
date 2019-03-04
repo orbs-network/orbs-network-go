@@ -80,6 +80,8 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
+	t.metrics.activeIncomingConnections.Inc()
+	defer t.metrics.activeIncomingConnections.Dec()
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
@@ -87,6 +89,7 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 			t.metrics.incomingConnectionTransportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 			conn.Close()
+
 			return
 		}
 

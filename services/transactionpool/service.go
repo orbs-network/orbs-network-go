@@ -41,6 +41,7 @@ type service struct {
 
 	metrics struct {
 		blockHeight *metric.Gauge
+		commitRate  *metric.Rate
 	}
 
 	addCommitLock sync.RWMutex
