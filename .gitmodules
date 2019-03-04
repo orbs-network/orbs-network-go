@@ -46,3 +46,6 @@
 [submodule "vendor/github.com/orbs-network/orbs-ethereum-contracts"]
 	path = vendor/github.com/orbs-network/orbs-ethereum-contracts
 	url = https://github.com/orbs-network/orbs-ethereum-contracts
+[submodule "vendor/github.com/c9s/goprocinfo"]
+	path = vendor/github.com/c9s/goprocinfo
+	url = https://github.com/c9s/goprocinfo
