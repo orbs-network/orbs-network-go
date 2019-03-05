@@ -26,12 +26,18 @@ func getTransactionCount(t *testing.T, h *harness) float64 {
 
 func groupErrors(errors []error) map[string]int {
 	groupedErrors := make(map[string]int)
-
 	for _, error := range errors {
 		groupedErrors[error.Error()]++
 	}
-
 	return groupedErrors
+}
+
+func groupStrings(strings []string) map[string]int {
+	groupedStrings := make(map[string]int)
+	for _, str := range strings {
+		groupedStrings[str]++
+	}
+	return groupedStrings
 }
 
 func TestE2EStress(t *testing.T) {
@@ -50,7 +56,9 @@ func TestE2EStress(t *testing.T) {
 
 	limiter := rate.NewLimiter(1000, 50)
 
+	var mutex sync.Mutex
 	var errors []error
+	var errorTransactionStatuses []string
 
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.Background()); err == nil {
@@ -62,13 +70,18 @@ func TestE2EStress(t *testing.T) {
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				_, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				response, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 
 				if err2 != nil {
+					mutex.Lock()
+					defer mutex.Unlock()
 					errors = append(errors, err2)
+					errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
 				}
 			}()
 		} else {
+			mutex.Lock()
+			defer mutex.Unlock()
 			errors = append(errors, err)
 		}
 	}
@@ -88,6 +101,12 @@ func TestE2EStress(t *testing.T) {
 			fmt.Printf("%d times: %s\n", v, k)
 		}
 		fmt.Println("===== ERRORS =====")
+		fmt.Println()
+		fmt.Println("===== FAILED TX STATUSES =====")
+		for k, v := range groupStrings(errorTransactionStatuses) {
+			fmt.Printf("%d times: %s\n", v, k)
+		}
+		fmt.Println("===== FAILED TX STATUSES =====")
 		fmt.Println()
 	}
 
