@@ -31,6 +31,7 @@ type configForBlockStorageTests struct {
 	queryGraceStart       time.Duration
 	queryGraceEnd         time.Duration
 	queryExpirationWindow time.Duration
+	blockTrackerGrace     time.Duration
 }
 
 func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
@@ -59,6 +60,10 @@ func (c *configForBlockStorageTests) BlockStorageTransactionReceiptQueryTimestam
 
 func (c *configForBlockStorageTests) TransactionExpirationWindow() time.Duration {
 	return c.queryExpirationWindow
+}
+
+func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
+	return c.blockTrackerGrace
 }
 
 type harness struct {
@@ -203,6 +208,7 @@ func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig 
 	cfg.queryGraceStart = 5 * time.Second
 	cfg.queryGraceEnd = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
+	cfg.blockTrackerGrace = 1 * time.Hour
 
 	return cfg
 }

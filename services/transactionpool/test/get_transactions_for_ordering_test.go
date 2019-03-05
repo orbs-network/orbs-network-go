@@ -17,7 +17,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 			CurrentBlockHeight:      3,
-			CurrentBlockTimestamp:   0,
+			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
 		})
 
@@ -37,7 +37,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 		go func() {
 			_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 				CurrentBlockHeight:      3,
-				CurrentBlockTimestamp:   0,
+				PrevBlockTimestamp:      0,
 				MaxNumberOfTransactions: 1,
 			})
 			doneWait <- err
@@ -51,18 +51,53 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 	test.WithContext(func(ctx context.Context) {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t).start(ctx)
 
-		ch := make(chan int)
+		ch := make(chan *services.GetTransactionsForOrderingOutput)
 
 		go func() {
 			out, err := h.getTransactionsForOrdering(ctx, 2, 1)
 			require.NoError(t, err)
-			ch <- len(out.SignedTransactions)
+			ch <- out
 		}()
 
 		time.Sleep(50 * time.Millisecond) // make sure we wait, also deals with https://github.com/orbs-network/orbs-network-go/issues/852
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
-		numOfTxs := <-ch
-		require.EqualValues(t, 1, numOfTxs, "did not wait for transaction to reach pool")
+		out := <-ch
+		require.EqualValues(t, 1, len(out.SignedTransactions), "did not wait for transaction to reach pool")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp is zero")
+	})
+}
+
+func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(t).start(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			CurrentBlockHeight:      1,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.Zero(t, len(out.SignedTransactions), "number of transactions should be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
+	})
+}
+
+func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(t).start(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			CurrentBlockHeight:      2,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.NotZero(t, len(out.SignedTransactions), "number of transactions should not be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
 	})
 }

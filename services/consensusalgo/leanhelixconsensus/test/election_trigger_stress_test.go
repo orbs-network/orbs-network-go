@@ -28,7 +28,7 @@ func buildElectionTrigger(ctx context.Context, logger log.BasicLogger, timeout t
 	return et
 }
 
-func TestStress_FrequentRegisters(t *testing.T) {
+func TestElectionTrigger_Stress_FrequentRegisters(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, log.DefaultTestingLogger(t), 1*time.Microsecond)
 
