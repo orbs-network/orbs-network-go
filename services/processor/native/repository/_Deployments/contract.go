@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
@@ -35,6 +36,7 @@ func isImplicitlyDeployed(serviceName string) bool {
 	switch serviceName {
 	case
 		CONTRACT_NAME,
+		globalpreorder_systemcontract.CONTRACT_NAME,
 		info_systemcontract.CONTRACT_NAME:
 		return true
 	}
