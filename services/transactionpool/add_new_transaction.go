@@ -33,7 +33,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
-		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER // TODO: change to system error
+		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER // TODO(https://github.com/orbs-network/orbs-network-go/issues/1017): change to system error
 		if errRejected, ok := err.(*ErrTransactionRejected); ok {
 			status = errRejected.TransactionStatus
 		}
