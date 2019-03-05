@@ -10,7 +10,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
+
+const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
 
 func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	lastCommittedBlockHeight := currentBlockHeight - 1
@@ -23,13 +26,7 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 		return federationNodesAddresses, nil
 	}
 
-	electedValidatorsAddresses, err := s.callElectionsSystemContract(ctx, lastCommittedBlockHeight)
-	if err != nil {
-		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
-			s.logger.Error("cannot get elected validators from system contract", log.Error(err), log.BlockHeight(lastCommittedBlockHeight))
-		}
-		return nil, err
-	}
+	electedValidatorsAddresses := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
 	s.logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), log.BlockHeight(lastCommittedBlockHeight))
 
 	// elections not active yet
@@ -38,6 +35,35 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 	}
 
 	return electedValidatorsAddresses, nil
+}
+
+func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) []primitives.NodeAddress {
+	attempts := 1
+	for {
+
+		// exit on system shutdown
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		electedValidatorsAddresses, err := s.callElectionsSystemContract(ctx, blockHeight)
+		if err == nil {
+			return electedValidatorsAddresses
+		}
+
+		// log every 500 failures
+		if attempts%500 == 1 {
+			if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
+				s.logger.Error("cannot get elected validators from system contract", log.Error(err), log.BlockHeight(blockHeight), log.Int("attempts", attempts))
+			}
+		}
+
+		// sleep or wait for ctx done, whichever comes first
+		sleepOrShutdown, _ := context.WithTimeout(ctx, CALL_ELECTIONS_CONTRACT_INTERVAL)
+		<-sleepOrShutdown.Done()
+
+		attempts++
+	}
 }
 
 func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
