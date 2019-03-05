@@ -2,51 +2,11 @@ package merkle
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"sync"
 )
-
-//const trieRadix = 16
-
-type TrieProof []*TrieProofNode
-
-// TODO replace proofNode with membuf/proto
-type TrieProofNode struct {
-	path  []byte // TODO parity bool?
-	value primitives.Sha256
-	left  primitives.Sha256
-	right primitives.Sha256
-}
-
-func newProofNode(n *node) *TrieProofNode {
-	pn := &TrieProofNode{
-		path:  n.path,
-		value: n.value,
-		left:  primitives.Sha256{},
-		right: primitives.Sha256{},
-	}
-	if n.left != nil {
-		pn.left = n.left.hash
-	}
-	if n.right != nil {
-		pn.right = n.right.hash
-	}
-	return pn
-}
-
-func (pn *TrieProofNode) hash() primitives.Sha256 {
-	serializedNode := fmt.Sprintf("%+v", pn)
-	return hash.CalcSha256([]byte(serializedNode))
-}
-
-func createEmptyTrieNode() *node {
-	tmp := createNode([]byte{}, zeroValueHash)
-	tmp.hash = hashTrieNode(tmp)
-	return tmp
-}
 
 type Forest struct {
 	mutex sync.Mutex
@@ -56,6 +16,12 @@ type Forest struct {
 func NewForest() (*Forest, primitives.Sha256) {
 	var emptyNode = createEmptyTrieNode()
 	return &Forest{sync.Mutex{}, []*node{emptyNode}}, emptyNode.hash
+}
+
+func createEmptyTrieNode() *node {
+	tmp := createNode([]byte{}, zeroValueHash)
+	tmp.hash = hashTrieNode(tmp)
+	return tmp
 }
 
 func (f *Forest) findRoot(rootHash primitives.Sha256) *node {
@@ -78,66 +44,153 @@ func (f *Forest) appendRoot(root *node) {
 	f.roots = append(f.roots, root)
 }
 
-func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (TrieProof, error) {
+type TrieProofNode struct {
+	otherChildHash primitives.Sha256 // the "other child"'s hash
+	prefixSize     int               // "my" prefix size
+}
+type TrieProof struct {
+	nodes          []*TrieProofNode
+	path           []byte
+	extraHashLeft  []byte
+	extraHashRight []byte
+}
+
+func newTrieProof() *TrieProof {
+	return &TrieProof{
+		make([]*TrieProofNode, 0, 10), nil, nil, nil,
+	}
+}
+
+func (tp *TrieProof) appendToProof(n, otherChild *node) {
+	tp.nodes = append(tp.nodes, &TrieProofNode{otherChild.hash, len(n.path)})
+}
+
+func (f *Forest) GetProof(rootHash primitives.Sha256, path []byte) (*TrieProof, error) {
 	current := f.findRoot(rootHash)
 	if current == nil {
 		return nil, errors.Errorf("unknown root")
 	}
 
-	proof := make(TrieProof, 0, 10)
-	proof = append(proof, newProofNode(current))
-
-	path = toBin(path)
-	for p := path; bytes.HasPrefix(p, current.path); {
+	proof := newTrieProof()
+	totalPathLen := toBinSize(path)
+	currentPathLen := 0
+	path = toBin(path, totalPathLen)
+	for p := path; bytes.HasPrefix(p, current.path) && len(p) > len(current.path); {
 		p = p[len(current.path):]
+		currentPathLen += len(current.path)
 
-		if len(p) != 0 {
-			if current = current.getChild(p[0]); current != nil {
-				proof = append(proof, newProofNode(current))
-				p = p[1:]
-			} else {
-				break
-			}
+		parent := current
+		sibling := current
+		if p[0] == 0 {
+			sibling = parent.right
+			current = parent.left
+		} else {
+			sibling = parent.left
+			current = parent.right
+		}
+
+		if current != nil {
+			proof.appendToProof(parent, sibling)
+			p = p[1:]
+			currentPathLen++
 		} else {
 			break
 		}
 	}
+	if current != nil { // last node unless wrong key size
+		proof.appendToProof(current, current) // last node is on-path-child hash and it's prefix
+		// for exclusion: we need to explain how we calculate the last node's hash and where the path diverged
+		if !current.isLeaf() {
+			proof.extraHashLeft = current.left.hash
+			proof.extraHashRight = current.right.hash
+		} else {
+			proof.extraHashLeft = current.value
+		}
+		copy(path[currentPathLen:currentPathLen+len(current.path)], current.path) // for exclusion : the path used for proof
+	}
+	proof.path = path
 	return proof, nil
 }
 
-func (f *Forest) Verify(rootHash primitives.Sha256, proof TrieProof, path []byte, value primitives.Sha256) (bool, error) {
-	path = toBin(path)
-	currentHash := rootHash
-	emptyMerkleHash := primitives.Sha256{}
+func (f *Forest) Verify(rootHash primitives.Sha256, proof *TrieProof, path []byte, valueHash primitives.Sha256) (bool, error) {
+	if proof == nil || len(proof.nodes) == 0 {
+		return valueHash.Equal(zeroValueHash), nil
+	}
 
-	for i, currentNode := range proof {
-		calcHash := currentNode.hash()
-		if !calcHash.Equal(currentHash) { // validate current node against expected hash
-			return false, errors.Errorf("proof hash mismatch at node %d", i)
-		}
-		if bytes.Equal(path, currentNode.path) {
-			return value.Equal(currentNode.value), nil
-		}
-		if len(path) <= len(currentNode.path) {
-			return value.Equal(zeroValueHash), nil
-		}
-		if !bytes.HasPrefix(path, currentNode.path) {
-			return value.Equal(zeroValueHash), nil
-		}
+	lastNodePathIndex := calculateLastNodePathIndex(proof)
+	pathFromVerify := toBin(path, toBinSize(path))
 
-		if path[len(currentNode.path)] == 0 {
-			currentHash = currentNode.left
+	if !verifyProofIsSelfConsistent(rootHash, proof, pathFromVerify, lastNodePathIndex) {
+		return false, errors.Errorf("proof is not self consistent with given key")
+	}
+
+	if !valueHash.Equal(zeroValueHash) {
+		return verifyProofInclusion(proof, pathFromVerify, valueHash, lastNodePathIndex), nil
+	} else {
+		return verifyProofExclusion(proof, pathFromVerify, lastNodePathIndex)
+	}
+}
+
+func calculateLastNodePathIndex(proof *TrieProof) int {
+	LastNodeIndex := len(proof.nodes) - 1
+	lastNodePathIndex := 0
+	for i := 0; i < LastNodeIndex; i++ {
+		lastNodePathIndex = lastNodePathIndex + proof.nodes[i].prefixSize + 1
+	}
+	return lastNodePathIndex
+}
+
+func verifyProofIsSelfConsistent(rootHash primitives.Sha256, proof *TrieProof, pathFromVerify []byte, lastNodePathIndex int) bool {
+	lastNodeIndex := len(proof.nodes) - 1
+	keyEndInd := lastNodePathIndex + proof.nodes[lastNodeIndex].prefixSize
+	keyStartInd := lastNodePathIndex
+	currentHash := proof.nodes[lastNodeIndex].otherChildHash
+
+	for i := lastNodeIndex - 1; i >= 0; i-- {
+		keyEndInd = keyStartInd - 1
+		keyStartInd = keyEndInd - proof.nodes[i].prefixSize
+		if pathFromVerify[keyEndInd] == 0 {
+			currentHash = hashBytes(currentHash, proof.nodes[i].otherChildHash, pathFromVerify[keyStartInd:keyEndInd])
 		} else {
-			currentHash = currentNode.right
-		}
-		path = path[len(currentNode.path)+1:]
-
-		if emptyMerkleHash.Equal(currentHash) {
-			return value.Equal(zeroValueHash), nil
+			currentHash = hashBytes(proof.nodes[i].otherChildHash, currentHash, pathFromVerify[keyStartInd:keyEndInd])
 		}
 	}
 
-	return false, errors.Errorf("proof incomplete ")
+	return bytes.Equal(currentHash, rootHash)
+}
+
+func verifyProofInclusion(proof *TrieProof, verifyPath []byte, verifyValueHash primitives.Sha256, lastNodePathIndex int) bool {
+	lastNodeIndex := len(proof.nodes) - 1
+	calculatedHash := hashBytes(verifyValueHash, verifyPath[lastNodePathIndex:])
+	lastNodeHash := proof.nodes[lastNodeIndex].otherChildHash
+	return bytes.Equal(lastNodeHash, calculatedHash)
+}
+
+func verifyProofExclusion(proof *TrieProof, pathFromVerify []byte, lastNodePathIndex int) (bool, error) {
+	pathLen := len(proof.path)
+	if pathLen != len(pathFromVerify) {
+		return false, errors.Errorf("proof length is not consistent with given key length")
+	}
+
+	lastNodeIndex := len(proof.nodes) - 1
+	lastNodePrefix := proof.path[lastNodePathIndex : lastNodePathIndex+proof.nodes[lastNodeIndex].prefixSize]
+
+	var calculatedHash []byte
+	if proof.extraHashRight != nil {
+		calculatedHash = hashBytes(proof.extraHashLeft, proof.extraHashRight, lastNodePrefix)
+	} else {
+		calculatedHash = hashBytes(proof.extraHashLeft, lastNodePrefix)
+	}
+	lastNodeHash := proof.nodes[lastNodeIndex].otherChildHash
+	isHashEqual := bytes.Equal(lastNodeHash, calculatedHash)
+
+	isBeginOfPathEqual := bytes.Equal(proof.path[:lastNodePathIndex], pathFromVerify[:lastNodePathIndex])
+	isEndOfPathEqual := true
+	if lastNodePathIndex < pathLen {
+		isEndOfPathEqual = bytes.Equal(lastNodePrefix, pathFromVerify[lastNodePathIndex:])
+	}
+
+	return isHashEqual && isBeginOfPathEqual && !isEndOfPathEqual, nil
 }
 
 func (f *Forest) Forget(rootHash primitives.Sha256) {
@@ -176,7 +229,7 @@ func (f *Forest) Update(rootMerkle primitives.Sha256, diffs TrieDiffs) (primitiv
 	sandbox := make(dirtyNodes)
 
 	for _, diff := range diffs {
-		root = insert(diff.Value, nil, 0, root, toBin(diff.Key), sandbox)
+		root = insert(diff.Value, nil, 0, root, toBin(diff.Key, toBinSize(diff.Key)), sandbox)
 	}
 
 	root = collapseAndHash(root, sandbox, hashTrieNode)
@@ -189,20 +242,47 @@ func (f *Forest) Update(rootMerkle primitives.Sha256, diffs TrieDiffs) (primitiv
 }
 
 func hashTrieNode(n *node) primitives.Sha256 {
-	return newProofNode(n).hash()
+	if n.isLeaf() {
+		return hashBytes(generateLeafParts(n)...)
+	} else {
+		return hashBytes(generateNodeParts(n)...)
+	}
 }
 
-func toBin(s []byte) []byte {
-	bitsArray := make([]byte, len(s)*8)
-	for i, b := range s {
-		bitsArray[i*8] = 1 & (b >> 7)
-		bitsArray[i*8+1] = 1 & (b >> 6)
-		bitsArray[i*8+2] = 1 & (b >> 5)
-		bitsArray[i*8+3] = 1 & (b >> 4)
-		bitsArray[i*8+4] = 1 & (b >> 3)
-		bitsArray[i*8+5] = 1 & (b >> 2)
-		bitsArray[i*8+6] = 1 & (b >> 1)
-		bitsArray[i*8+7] = 1 & b
+func hashBytes(parts ...[]byte) primitives.Sha256 {
+	return hash.CalcSha256(parts...)
+}
+
+func generateLeafParts(n *node) [][]byte {
+	res := make([][]byte, 2)
+	res[0] = n.value
+	res[1] = n.path
+	return res
+}
+
+func generateNodeParts(n *node) [][]byte {
+	res := make([][]byte, 3)
+	res[0] = make([]byte, hash.SHA256_HASH_SIZE_BYTES)
+	if n.left != nil {
+		copy(res[0], n.left.hash)
+	}
+	res[1] = make([]byte, hash.SHA256_HASH_SIZE_BYTES)
+	if n.right != nil {
+		copy(res[1], n.right.hash)
+	}
+	res[2] = n.path
+	return res
+}
+
+func toBinSize(s []byte) int {
+	return len(s) * 8
+}
+
+func toBin(s []byte, size int) []byte {
+	bitsArray := make([]byte, size)
+	for i := 0; i < size; i++ {
+		b := s[i/8]
+		bitsArray[i] = 1 & (b >> uint(7-(i%8)))
 	}
 	return bitsArray
 }
