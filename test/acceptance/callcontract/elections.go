@@ -11,7 +11,7 @@ import (
 )
 
 type ElectionsClient interface {
-	UnsafeTestsSetElectedValidators(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256)
+	UnsafeTestsSetElectedValidators(ctx context.Context, nodeIndex int, electedValidatorIndexes []int) (*client.SendTransactionResponse, primitives.Sha256)
 }
 
 func (c *contractClient) UnsafeTests_SetElectedValidators(ctx context.Context, nodeIndex int, electedValidatorIndexes []int) (*client.SendTransactionResponse, primitives.Sha256) {
