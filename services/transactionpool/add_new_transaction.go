@@ -33,8 +33,12 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	}
 
 	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
-		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER // TODO: change to system error
+		if errRejected, ok := err.(*ErrTransactionRejected); ok {
+			status = errRejected.TransactionStatus
+		}
 		logger.Error("error validating transaction for preorder", log.Error(err))
+		// TODO: add metric here
 		return s.addTransactionOutputFor(nil, status), err
 	}
 

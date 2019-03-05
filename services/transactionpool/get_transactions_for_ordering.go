@@ -173,7 +173,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction())
 			r.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
-			r.reject(txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
+			r.reject(txHash, preOrderResults[i])
 		}
 	}
 

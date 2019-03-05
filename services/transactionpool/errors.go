@@ -16,6 +16,9 @@ func (e *ErrTransactionRejected) Error() string {
 	if e == nil {
 		return "<nil>"
 	}
-
-	return fmt.Sprintf("transaction rejected: %s (expected %s but got %s)", e.TransactionStatus, e.Expected.Value(), e.Actual.Value())
+	if e.Expected != nil && e.Actual != nil {
+		return fmt.Sprintf("transaction rejected: %s (expected %s but got %s)", e.TransactionStatus, e.Expected.Value(), e.Actual.Value())
+	} else {
+		return fmt.Sprintf("transaction rejected: %s", e.TransactionStatus)
+	}
 }
