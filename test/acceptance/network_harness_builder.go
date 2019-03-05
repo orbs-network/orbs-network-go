@@ -116,9 +116,11 @@ func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx c
 
 func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *NetworkHarness)) {
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-	logger, errorRecorder := b.makeLogger(tb, testId)
+	logger, testOutput := b.makeLogger(tb, testId)
 
 	supervised.Recover(logger, func() {
+		defer testOutput.TestTerminated() // this will suppress test failures from goroutines after test terminates
+		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
@@ -126,7 +128,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
 			defer dumpStateOnFailure(tb, network)
-			defer test.RequireNoUnexpectedErrors(tb, errorRecorder)
+			defer test.RequireNoUnexpectedErrors(tb, testOutput)
 
 			if b.setupFunc != nil {
 				b.setupFunc(ctx, network)
@@ -137,8 +139,9 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 
 			logger.Info("acceptance network running test")
 			f(tb, ctx, network)
-			time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 		})
+
+		time.Sleep(10 * time.Millisecond) // give context dependent goroutines time to terminate gracefully
 	})
 }
 
@@ -150,7 +153,7 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, test.ErrorTracker) {
+func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, *log.TestOutput) {
 
 	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
 	for _, pattern := range b.allowedErrors {

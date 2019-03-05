@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-type Output interface {
-	Append(level string, message string, fields ...*Field)
-}
-
 type basicOutput struct {
 	formatter LogFormatter
 	writer    io.Writer

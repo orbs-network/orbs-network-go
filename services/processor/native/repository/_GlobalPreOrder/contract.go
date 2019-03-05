@@ -1,7 +1,10 @@
 package globalpreorder_systemcontract
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
 // helpers for avoiding reliance on strings throughout the system
@@ -11,8 +14,69 @@ const METHOD_APPROVE = "approve"
 /////////////////////////////////////////////////////////////////
 // contract starts here
 
-var PUBLIC = sdk.Export(approve)
+var PUBLIC = sdk.Export(approve, refreshSubscription)
 
 func approve() {
-	// TODO(https://github.com/orbs-network/orbs-network-go/issues/572): add subscription check here (panic on error)
+	problem := _readSubscriptionProblem()
+	if len(problem) != 0 {
+		panic(problem)
+	}
+}
+
+func refreshSubscription(ethContractAddress string) {
+	currentContract := _readSubscriptionContract()
+
+	if len(currentContract) != 0 && currentContract != ethContractAddress {
+		panic(fmt.Sprintf("can only refresh current contract %s", currentContract))
+	}
+
+	if len(currentContract) == 0 {
+		_writeSubscriptionContract(ethContractAddress)
+	}
+
+	jsonAbi := `
+	[
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "checkSubscription",
+      "outputs": [
+        {
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ]
+	`
+	var output string
+	ethereum.CallMethod(ethContractAddress, jsonAbi, "checkSubscription", &output)
+	if len(output) == 0 {
+		_clearSubscriptionProblem()
+	} else {
+		_writeSubscriptionProblem(output)
+	}
+}
+
+func _readSubscriptionProblem() string {
+	return state.ReadString([]byte("SubscriptionProblem"))
+}
+
+func _writeSubscriptionProblem(problemStatus string) {
+	state.WriteString([]byte("SubscriptionProblem"), problemStatus)
+}
+
+func _clearSubscriptionProblem() {
+	state.Clear([]byte("SubscriptionProblem"))
+}
+
+func _readSubscriptionContract() string {
+	return state.ReadString([]byte("SubscriptionContract"))
+}
+
+func _writeSubscriptionContract(ethContractAddress string) {
+	state.WriteString([]byte("SubscriptionContract"), ethContractAddress)
 }

@@ -8,6 +8,13 @@ import (
 
 func (s *service) verifyTransactionSignatures(signedTransactions []*protocol.SignedTransaction, resultStatuses []protocol.TransactionStatus) {
 	for i, signedTransaction := range signedTransactions {
+
+		// skip transactions that already failed due to different reasons
+		if resultStatuses[i] != protocol.TRANSACTION_STATUS_RESERVED {
+			continue
+		}
+
+		// check transaction signature
 		switch signedTransaction.Transaction().Signer().Scheme() {
 		case protocol.SIGNER_SCHEME_EDDSA:
 			if verifyEd25519Signer(signedTransaction) {
@@ -18,6 +25,7 @@ func (s *service) verifyTransactionSignatures(signedTransactions []*protocol.Sig
 		default:
 			resultStatuses[i] = protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME
 		}
+
 	}
 }
 

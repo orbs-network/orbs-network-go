@@ -1,70 +1,69 @@
 package test
 
-import (
-	"os/exec"
-	"path"
-	"runtime"
-	"strings"
-	"testing"
+import "testing"
 
-	"github.com/stretchr/testify/require"
-)
-
-func TestGoOnce_FailsTestOnPanicAndPrintsLogs(t *testing.T) {
-	expectedLogs := []string{
-		Failed,
-		BeforeLoggerCreated,
-		LoggedWithLogger,
-		BeforeCallPanic,
-		MustShow,
-	}
-	unexpectedLogs := []string{
-		AfterCallPanic,
-		MustNotShow,
-	}
-	out, _ := exec.Command(
-		path.Join(runtime.GOROOT(), "bin", "go"),
-		"test",
-		"github.com/orbs-network/orbs-network-go/synchronization/supervised/_supervised_in_test/",
-		"-run",
-		"^(TestGoOnce_FailsTestOnPanicAndPrintsLogs)$").CombinedOutput()
-
-	output := string(out)
-
-	for _, logLine := range expectedLogs {
-		require.Truef(t, strings.Contains(output, logLine), "log does not contain: %s", logLine)
-	}
-	for _, logLine := range unexpectedLogs {
-		require.Falsef(t, strings.Contains(output, logLine), "log should not contain: %s", logLine)
-	}
-
+var expectedLogsOnPanic = []string{
+	Failed, BeforeLoggerCreated, LoggedWithLogger, BeforeCallPanic, PanicOhNo,
+}
+var unexpectedLogsOnPanic = []string{
+	Passed, AfterCallPanic, MustNotShow,
 }
 
-func TestTRun_FailsTestOnPanicAndPrintsLogs(t *testing.T) {
-	expectedLogs := []string{
-		Failed,
-		ParentScopeBeforeTest,
-		BeforeLoggerCreated,
-		LoggedWithLogger,
-		BeforeCallPanic,
-		ParentScopeAfterTest,
-	}
-	unexpectedLogs := []string{
-		AfterCallPanic,
-	}
-	out, _ := exec.Command(
-		path.Join(runtime.GOROOT(), "bin", "go"),
-		"test",
-		"github.com/orbs-network/orbs-network-go/synchronization/supervised/_supervised_in_test/",
-		"-run",
-		"^(TestTRun_FailsTestOnPanicAndPrintsLogs)$").CombinedOutput()
+var expectedLogsOnLogError = []string{
+	Failed, BeforeLoggerCreated, LoggedWithLogger, BeforeLoggerError, ErrorWithLogger, AfterLoggerError, MustShow,
+}
+var unexpectedLogsOnLogError = []string{
+	Passed, MustNotShow,
+}
 
-	output := string(out)
+func Test_Panics(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
+}
 
-	for _, logLine := range expectedLogs {
-		require.Truef(t, strings.Contains(output, logLine), "log does not contain: %s", logLine)
+func Test_LogsError(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
+}
+
+func TestGoOnce_Panics(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
+}
+
+func TestGoOnce_LogsError(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
+}
+
+func TestTRun_Panics(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
+}
+
+func TestTRun_LogsError(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
+}
+
+func TestTRun_GoOnce_Panics(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
+}
+
+func TestTRun_GoOnce_LogsError(t *testing.T) {
+	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
+}
+
+func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
+	expectedLogsOnPanic := []string{
+		Passed, BeforeLoggerCreated, LoggedWithLogger, PanicOhNo,
 	}
-	for _, logLine := range unexpectedLogs {
-		require.Falsef(t, strings.Contains(output, logLine), "log should not contain: %s", logLine)
+	unexpectedLogsOnPanic := []string{
+		Failed, AfterCallPanic, MustNotShow,
 	}
+	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
+}
+
+func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
+	expectedLogsOnLogError := []string{
+		Passed, BeforeLoggerCreated, LoggedWithLogger, ErrorWithLogger,
+	}
+	unexpectedLogsOnLogError := []string{
+		Failed, MustNotShow,
+	}
+	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
 }

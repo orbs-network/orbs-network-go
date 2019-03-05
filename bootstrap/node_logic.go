@@ -75,6 +75,7 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
+	metric.NewSystemReporter(ctx, metricRegistry, logger)
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.PeriodicallyReport(ctx, logger)
 

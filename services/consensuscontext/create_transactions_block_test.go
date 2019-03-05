@@ -14,7 +14,7 @@ func TestCalculateNewBlockTimestampWithPrevBlockInThePast(t *testing.T) {
 	prevBlockTimestamp := now - 1000
 
 	res := digest.CalcNewBlockTimestamp(prevBlockTimestamp, now)
-	require.Equal(t, res, now+1, "return 1 nano later than max between now and prev block timestamp")
+	require.Equal(t, res, now, "return 1 nano later than max between now and prev block timestamp")
 }
 
 func TestCalculateNewBlockTimestampWithPrevBlockInTheFuture(t *testing.T) {
