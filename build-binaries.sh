@@ -1,12 +1,5 @@
 #!/bin/bash -x
 
-LAST_COMMIT_MESSAGE=`git --no-pager log --decorate=short --pretty=oneline -n1 $CIRCLE_SHA1`
-
-BUILD_FLAGS=""
-if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
-    BUILD_FLAGS="unsafetests"
-fi
-
 rm -rf _bin
 export CONFIG_PKG="github.com/orbs-network/orbs-network-go/config"
 
