@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type rejectedTransaction struct {
@@ -79,7 +80,10 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	// close first  block immediately without waiting (important for gamma)
 	if input.CurrentBlockHeight == 1 {
-		return &services.GetTransactionsForOrderingOutput{SignedTransactions: nil}, nil
+		return &services.GetTransactionsForOrderingOutput{
+			SignedTransactions:     nil,
+			ProposedBlockTimestamp: proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp),
+		}, nil
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
@@ -91,13 +95,12 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return nil, err
 	}
 
-	proposedBlockTimestamp := input.CurrentBlockTimestamp
 	pov := &vmPreOrderValidator{vm: s.virtualMachine}
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolTimeBetweenEmptyBlocks())
 	defer cancel()
 
-	runBatch := func() (*transactionBatch, error) {
+	runBatch := func(proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
 		batch := &transactionBatch{
 			logger:               s.logger,
 			maxNumOfTransactions: input.MaxNumberOfTransactions,
@@ -105,21 +108,31 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		}
 		batch.fetchUsing(s.pendingPool)
 		batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, proposedBlockTimestamp)
-		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
+		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp)
 	}
 
-	batch, err := runBatch()
+	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
+	batch, err := runBatch(proposedBlockTimestamp)
 	if !batch.hasEnoughTransactions(1) {
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
-			batch, err = runBatch()
+			// propose a new time since we've been waiting
+			proposedBlockTimestamp = proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
+			batch, err = runBatch(proposedBlockTimestamp)
 		}
 	}
 
 	// even on error we want to reject transactions first to their senders before exiting
 	batch.notifyRejections(ctx, s.pendingPool)
-	out := &services.GetTransactionsForOrderingOutput{SignedTransactions: batch.validTransactions}
+	out := &services.GetTransactionsForOrderingOutput{
+		SignedTransactions:     batch.validTransactions,
+		ProposedBlockTimestamp: proposedBlockTimestamp,
+	}
 
 	return out, err
+}
+
+func proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
+	return digest.CalcNewBlockTimestamp(prevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
 }
 
 func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker, proposedBlockTimestamp primitives.TimestampNano) {
@@ -173,7 +186,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction())
 			r.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
-			r.reject(txHash, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
+			r.reject(txHash, preOrderResults[i])
 		}
 	}
 

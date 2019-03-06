@@ -123,6 +123,7 @@ type BlockStorageConfig interface {
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
+	BlockTrackerGraceTimeout() time.Duration
 }
 
 type FilesystemBlockPersistenceConfig interface {
@@ -181,6 +182,17 @@ type TransactionPoolConfig interface {
 type EthereumCrosschainConnectorConfig interface {
 	EthereumFinalityTimeComponent() time.Duration
 	EthereumFinalityBlocksComponent() uint32
+}
+
+type LeanHelixConsensusConfig interface {
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixShowDebug() bool
+	ActiveConsensusAlgo() consensus.ConsensusAlgoType
+	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 type FederationNode interface {

@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 var federationNodeAddressesForTest = []primitives.NodeAddress{
@@ -44,7 +45,7 @@ func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.Trans
 		MaxBlockSizeKb:          0,
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           hash.CalcSha256([]byte{1}),
-		PrevBlockTimestamp:      0,
+		PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
 	})
 	if err != nil {
 		return nil, err
@@ -74,6 +75,7 @@ func (h *harness) expectTxPoolToReturnXTransactions(numTransactionsToReturn uint
 	for i := uint32(0); i < numTransactionsToReturn; i++ {
 		targetAddress := builders.ClientAddressForEd25519SignerForTests(2)
 		output.SignedTransactions = append(output.SignedTransactions, builders.TransferTransaction().WithAmountAndTargetAddress(uint64(i+1)*10, targetAddress).Build())
+		output.ProposedBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 	}
 
 	h.transactionPool.When("GetTransactionsForOrdering", mock.Any, mock.Any).Return(output, nil).Times(1)

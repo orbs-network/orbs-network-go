@@ -55,12 +55,18 @@ func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t)
 
-		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("contract not approved"))
+		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("subscription problem"))
 
-		tx := builders.Transaction().Build()
-		results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tx})
-		require.Error(t, err, "transaction set pre order should fail")
-		require.Equal(t, []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER}, results, "transactionSetPreOrder returned statuses should match")
+		txs := []*protocol.SignedTransaction{}
+		txs = append(txs, builders.TransferTransaction().Build())
+		txs = append(txs, builders.Transaction().WithContract(globalpreorder_systemcontract.CONTRACT_NAME).Build())
+		txs = append(txs, builders.TransferTransaction().Build())
+
+		results, err := h.transactionSetPreOrder(ctx, txs)
+		require.NoError(t, err, "transaction set pre order should not fail")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[0], "first tx should be rejected")
+		require.Equal(t, protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, results[1], "second tx should not be rejected since it is made to _GlobalPreOrder")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[2], "third tx should be rejected")
 
 		h.verifySystemContractCalled(t)
 	})

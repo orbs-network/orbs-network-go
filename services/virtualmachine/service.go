@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -95,18 +96,23 @@ func (s *service) ProcessTransactionSet(ctx context.Context, input *services.Pro
 func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
+	// all statuses start as protocol.TRANSACTION_STATUS_RESERVED (zero)
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 
 	// check subscription
 	err := s.callGlobalPreOrderSystemContract(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
 	if err != nil {
-		for i := 0; i < len(statuses); i++ {
-			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
+		for i := 0; i < len(input.SignedTransactions); i++ {
+			// always allow transactions to _GlobalPreOrder to go through
+			if input.SignedTransactions[i].Transaction().ContractName() != globalpreorder_systemcontract.CONTRACT_NAME {
+				// but reject all others
+				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
+			}
 		}
-	} else {
-		// check signatures
-		s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
+
+	// check signatures
+	s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 
 	if err != nil {
 		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
@@ -116,6 +122,21 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 
 	return &services.TransactionSetPreOrderOutput{
 		PreOrderResults: statuses,
+	}, nil
+}
+
+func (s *service) CallSystemContract(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.BlockHeight(input.BlockHeight))
+	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
+	if outputArgs == nil {
+		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+	}
+
+	return &services.CallSystemContractOutput{
+		OutputArgumentArray: outputArgs,
+		CallResult:          callResult,
 	}, err
 }
 

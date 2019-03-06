@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-func TestEthereumConnector_GetTransactionLogs(t *testing.T) {
+func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
 		simulator := adapter.NewEthereumSimulatorConnection(logger)
@@ -83,7 +83,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		simulator.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
-		addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}}
+		addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}, {0x7, 0x8}, {0x9}}
 
 		tx, err := deployedContract.Transact(auth, "fire", addresses)
 		simulator.Commit()
@@ -92,7 +92,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: contractAddress.Hex(),
 			EthereumTxhash:          tx.Hash().Hex(),
-			EthereumEventName:       "EventWithAddressArray",
+			EthereumEventName:       "Vote",
 			EthereumJsonAbi:         string(contractABI),
 			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
 		})
@@ -102,11 +102,13 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		require.NoError(t, err, "failed parsing ABI")
 
 		event := new(struct {
-			Value []common.Address
+			Voter        common.Address
+			Nodeslist    []common.Address
+			Vote_counter *big.Int
 		})
-		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "EventWithAddressArray", out.EthereumAbiPackedOutputs[0])
+		err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "Vote", out.EthereumAbiPackedOutputs[0])
 		require.NoError(t, err, "failed unpacking event")
-		require.EqualValues(t, addresses, event.Value, "event did not include expected addresses")
+		require.EqualValues(t, addresses, event.Nodeslist, "event did not include expected addresses")
 	})
 }
 

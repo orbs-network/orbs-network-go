@@ -1,26 +1,16 @@
 package deployments_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-// helpers for avoiding reliance on strings throughout the system
-const CONTRACT_NAME = "_Deployments"
-const METHOD_GET_INFO = "getInfo"
-const METHOD_GET_CODE = "getCode"
-const METHOD_DEPLOY_SERVICE = "deployService"
-
-/////////////////////////////////////////////////////////////////
-// contract starts here
-
-var PUBLIC = sdk.Export(getInfo, getCode, deployService)
-
 func getInfo(serviceName string) uint32 {
-	if isImplicitlyDeployed(serviceName) {
+	if _isImplicitlyDeployed(serviceName) {
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
 
@@ -29,16 +19,6 @@ func getInfo(serviceName string) uint32 {
 		panic("contract not deployed")
 	}
 	return processorType
-}
-
-func isImplicitlyDeployed(serviceName string) bool {
-	switch serviceName {
-	case
-		CONTRACT_NAME,
-		info_systemcontract.CONTRACT_NAME:
-		return true
-	}
-	return false
 }
 
 func getCode(serviceName string) []byte {
@@ -50,6 +30,10 @@ func getCode(serviceName string) []byte {
 }
 
 func deployService(serviceName string, processorType uint32, code []byte) {
+	if processorType == uint32(protocol.PROCESSOR_TYPE_NATIVE) {
+		_validateNativeDeploymentLock()
+	}
+
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/571): sanitize serviceName
 
 	existingProcessorType := _readProcessor(serviceName)
@@ -64,6 +48,18 @@ func deployService(serviceName string, processorType uint32, code []byte) {
 	}
 
 	service.CallMethod(serviceName, "_init")
+}
+
+func _isImplicitlyDeployed(serviceName string) bool {
+	switch serviceName {
+	case
+		CONTRACT_NAME,
+		info_systemcontract.CONTRACT_NAME,
+		elections_systemcontract.CONTRACT_NAME,
+		globalpreorder_systemcontract.CONTRACT_NAME:
+		return true
+	}
+	return false
 }
 
 func _readProcessor(serviceName string) uint32 {

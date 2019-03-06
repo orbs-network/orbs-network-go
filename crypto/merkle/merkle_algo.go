@@ -13,7 +13,7 @@ func GetZeroValueHash() primitives.Sha256 {
 var zeroValueHash = GetZeroValueHash()
 
 type node struct {
-	path  []byte // TODO  parity bool
+	path  []byte
 	value primitives.Sha256
 	hash  primitives.Sha256
 	left  *node

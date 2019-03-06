@@ -63,7 +63,7 @@ func CalcStateDiffHash(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha
 
 func CalcNewBlockTimestamp(prevBlockTimestamp primitives.TimestampNano, now primitives.TimestampNano) primitives.TimestampNano {
 	if now > prevBlockTimestamp {
-		return now + 1
+		return now
 	}
 	return prevBlockTimestamp + 1
 }

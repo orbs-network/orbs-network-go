@@ -44,13 +44,13 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	})
 }
 
-func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
+func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder").start(ctx)
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
-		})
+		}, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER)
 
 		h.ignoringForwardMessages()
 
@@ -68,7 +68,37 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks(t *testing.T) {
 		require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
 
 		typedError := err.(*transactionpool.ErrTransactionRejected)
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER, typedError.TransactionStatus, "error did not contain expected transaction status")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, typedError.TransactionStatus, "error did not contain expected transaction status")
+
+		require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
+	})
+}
+
+func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder").start(ctx)
+		tx := builders.TransferTransaction().Build()
+		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
+			return t == tx
+		}, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH)
+
+		h.ignoringForwardMessages()
+
+		blockHeight := primitives.BlockHeight(3)
+		blockTime := primitives.TimestampNano(time.Now().UnixNano())
+		h.fastForwardToHeightAndTime(ctx, blockHeight, blockTime)
+
+		out, err := h.addNewTransaction(ctx, tx)
+
+		require.NotNil(t, out, "output must not be nil even on errors")
+		require.Equal(t, blockHeight, out.BlockHeight)
+		require.Equal(t, blockTime, out.BlockTimestamp)
+
+		require.Error(t, err, "an transaction that failed pre-order checks was added to the pool")
+		require.IsType(t, &transactionpool.ErrTransactionRejected{}, err, "error was not of the expected type")
+
+		typedError := err.(*transactionpool.ErrTransactionRejected)
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, typedError.TransactionStatus, "error did not contain expected transaction status")
 
 		require.NoError(t, h.verifyMocks(), "mocks were not called as expected")
 	})

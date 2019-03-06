@@ -8,6 +8,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestReturnBlockPair(t *testing.T) {
@@ -37,8 +38,20 @@ func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 		harness, _ := generateAndCommitOneBlock(ctx, t)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1000})
 
-		require.Error(t, err, "far future is not valid")
-		require.Nil(t, output, "block data should be nil")
+		require.NoError(t, err, "far future is not found but valid")
+		require.Nil(t, output.BlockPair, "block pair result should be nil")
+	})
+}
+
+func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness, _ := generateAndCommitOneBlock(ctx, t)
+
+		childCtx, _ := context.WithTimeout(ctx, time.Millisecond)
+		output, err := harness.blockStorage.GetBlockPair(childCtx, &services.GetBlockPairInput{BlockHeight: 2})
+
+		require.NoError(t, err, "far future is not found but valid")
+		require.Nil(t, output.BlockPair, "block pair result should be nil")
 	})
 }
 

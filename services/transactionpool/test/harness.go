@@ -154,12 +154,12 @@ func (h *harness) ignoringTransactionResults() {
 func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHeight primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
 		CurrentBlockHeight:      currentBlockHeight,
-		CurrentBlockTimestamp:   primitives.TimestampNano(time.Now().UnixNano()),
+		PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
 		MaxNumberOfTransactions: maxNumOfTransactions,
 	})
 }
 
-func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool) {
+func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransaction) bool, rejectStatus protocol.TransactionStatus) {
 	h.vm.Reset().When("TransactionSetPreOrder", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.TransactionSetPreOrderInput) (*services.TransactionSetPreOrderOutput, error) {
 		if !h.ignoreBlockHeightChecks && input.CurrentBlockHeight != h.lastBlockHeight+1 {
 			panic(fmt.Sprintf("invalid block height, current is %d and last committed is %d", input.CurrentBlockHeight, h.lastBlockHeight))
@@ -167,7 +167,7 @@ func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransactio
 		statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 		for i, tx := range input.SignedTransactions {
 			if failOn(tx) {
-				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+				statuses[i] = rejectStatus
 			} else {
 				statuses[i] = protocol.TRANSACTION_STATUS_PRE_ORDER_VALID
 			}
@@ -181,7 +181,7 @@ func (h *harness) failPreOrderCheckFor(failOn func(tx *protocol.SignedTransactio
 func (h *harness) passAllPreOrderChecks() {
 	h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
 		return false
-	})
+	}, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 }
 
 func (h *harness) fastForwardTo(ctx context.Context, height primitives.BlockHeight) {
