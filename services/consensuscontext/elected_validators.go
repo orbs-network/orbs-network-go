@@ -26,6 +26,7 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 		return federationNodesAddresses, nil
 	}
 
+	s.logger.Info("querying elected validators", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
 	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
 	if err != nil {
 		return nil, err
