@@ -13,27 +13,6 @@ import (
 	"time"
 )
 
-func getTransactionCount(t *testing.T, h *harness) float64 {
-	var m metrics
-
-	require.True(t, test.Eventually(1*time.Minute, func() bool {
-		m = h.getMetrics()
-		return m != nil
-	}), "could not retrieve metrics")
-
-	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
-}
-
-func groupErrors(errors []error) map[string]int {
-	groupedErrors := make(map[string]int)
-
-	for _, error := range errors {
-		groupedErrors[error.Error()]++
-	}
-
-	return groupedErrors
-}
-
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
 	ctrlRand := rand.NewControlledRand(t)
@@ -50,7 +29,9 @@ func TestE2EStress(t *testing.T) {
 
 	limiter := rate.NewLimiter(1000, 50)
 
+	var mutex sync.Mutex
 	var errors []error
+	var errorTransactionStatuses []string
 
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.Background()); err == nil {
@@ -62,13 +43,18 @@ func TestE2EStress(t *testing.T) {
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				_, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				response, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 
 				if err2 != nil {
+					mutex.Lock()
+					defer mutex.Unlock()
 					errors = append(errors, err2)
+					errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
 				}
 			}()
 		} else {
+			mutex.Lock()
+			defer mutex.Unlock()
 			errors = append(errors, err)
 		}
 	}
@@ -89,6 +75,12 @@ func TestE2EStress(t *testing.T) {
 		}
 		fmt.Println("===== ERRORS =====")
 		fmt.Println()
+		fmt.Println("===== FAILED TX STATUSES =====")
+		for k, v := range groupStrings(errorTransactionStatuses) {
+			fmt.Printf("%d times: %s\n", v, k)
+		}
+		fmt.Println("===== FAILED TX STATUSES =====")
+		fmt.Println()
 	}
 
 	require.Condition(t, func() (success bool) {
@@ -102,4 +94,31 @@ func TestE2EStress(t *testing.T) {
 	//require.Condition(t, func() (success bool) {
 	//	return ratePerSecond >= config.targetTPS
 	//}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
+}
+
+func getTransactionCount(t *testing.T, h *harness) float64 {
+	var m metrics
+
+	require.True(t, test.Eventually(1*time.Minute, func() bool {
+		m = h.getMetrics()
+		return m != nil
+	}), "could not retrieve metrics")
+
+	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
+}
+
+func groupErrors(errors []error) map[string]int {
+	groupedErrors := make(map[string]int)
+	for _, error := range errors {
+		groupedErrors[error.Error()]++
+	}
+	return groupedErrors
+}
+
+func groupStrings(strings []string) map[string]int {
+	groupedStrings := make(map[string]int)
+	for _, str := range strings {
+		groupedStrings[str]++
+	}
+	return groupedStrings
 }

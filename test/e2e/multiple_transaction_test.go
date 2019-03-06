@@ -34,7 +34,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			printTestTime(t, "send transaction - end", &lt)
 
 			txIds = append(txIds, txId)
-			require.NoError(t, err, "transaction for amount %d should not return error", amount)
+			require.NoError(t, err, "transaction for amount %d should not return error\nresponse: %+v", amount, response)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 		}
