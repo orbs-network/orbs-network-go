@@ -1,4 +1,4 @@
-package external
+package test
 
 import (
 	"context"
@@ -8,12 +8,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
-	ethereumTest "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 )
@@ -116,7 +114,7 @@ func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConn
 }
 
 func createRpcClient(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	cfg := ethereumTest.ConfigForExternalRPCConnection()
+	cfg := ConfigForExternalRPCConnection()
 
 	a := adapter.NewEthereumRpcConnection(cfg, log.DefaultTestingLogger(tb))
 	auth, err := cfg.GetAuthFromConfig()
@@ -133,8 +131,4 @@ func createSimulator(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.
 	commit := a.Commit
 
 	return a, opts, commit
-}
-
-func runningWithDocker() bool {
-	return os.Getenv("EXTERNAL_TEST") == "true"
 }

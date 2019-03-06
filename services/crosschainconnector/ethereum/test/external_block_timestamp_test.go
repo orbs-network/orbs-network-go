@@ -9,7 +9,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
-		h.deployContractsToGanache(t, 2, time.Second)
+		h.deployContractsToGanache(t, 2, time.Second) // this is only to advance blocks
 
 		expectedTextFromEthereum := "test3"
 		contractAddress3, err := h.deployRpcStorageContract(expectedTextFromEthereum)
@@ -40,11 +39,14 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
+			WithTimestamp(time.Now()).
 			WithContractAddress(contractAddress3).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
 			WithPackedArguments(ethCallData).
 			Build()
+
+		t.Log("contractAddress3", contractAddress3)
 
 		output, err := h.connector.EthereumCallContract(ctx, input)
 		require.NoError(t, err, "expecting call to succeed")
@@ -68,8 +70,4 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		output, err = h.connector.EthereumCallContract(ctx, input)
 		require.Error(t, err, "expecting call to fail as contract is not yet deployed in a past time block")
 	})
-}
-
-func runningWithDocker() bool {
-	return os.Getenv("EXTERNAL_TEST") == "true"
 }

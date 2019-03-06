@@ -60,3 +60,7 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 
 	return &cfg
 }
+
+func runningWithDocker() bool {
+	return os.Getenv("EXTERNAL_TEST") == "true"
+}
