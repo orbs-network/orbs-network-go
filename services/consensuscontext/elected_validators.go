@@ -26,7 +26,10 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 		return federationNodesAddresses, nil
 	}
 
-	electedValidatorsAddresses := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
+	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
+	if err != nil {
+		return nil, err
+	}
 	s.logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), log.BlockHeight(lastCommittedBlockHeight))
 
 	// elections not active yet
@@ -37,18 +40,18 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 	return electedValidatorsAddresses, nil
 }
 
-func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) []primitives.NodeAddress {
+func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	attempts := 1
 	for {
 
 		// exit on system shutdown
 		if ctx.Err() != nil {
-			return nil
+			return nil, errors.New("context terminated during callElectionsSystemContractUntilSuccess")
 		}
 
 		electedValidatorsAddresses, err := s.callElectionsSystemContract(ctx, blockHeight)
 		if err == nil {
-			return electedValidatorsAddresses
+			return electedValidatorsAddresses, nil
 		}
 
 		// log every 500 failures
