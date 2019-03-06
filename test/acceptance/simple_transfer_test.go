@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func TestCommitTransactionWithLeanHelix(t *testing.T) {
+func TestLeanHelix_CommitTransaction(t *testing.T) {
 	newHarness().
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).

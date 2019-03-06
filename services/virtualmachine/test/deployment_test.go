@@ -23,9 +23,9 @@ func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
 		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
-		require.Error(t, err, "run local method should fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, result, "run local method should return not deployed")
-		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
+		require.Error(t, err, "process query should fail")
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, result, "process query should return not deployed")
+		require.Equal(t, []byte{}, outputArgs, "process query should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 
 		h.verifySystemContractCalled(t)

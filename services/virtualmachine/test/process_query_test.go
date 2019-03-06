@@ -23,9 +23,9 @@ func TestProcessQuery_Success(t *testing.T) {
 		})
 
 		result, outputArgs, refHeight, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
-		require.NoError(t, err, "run local method should not fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
-		require.EqualValues(t, builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "run local method should return matching output args")
+		require.NoError(t, err, "process query should not fail")
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "process query should return successful result")
+		require.EqualValues(t, builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "process query should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 		require.Equal(t, (&protocol.EventsArrayBuilder{}).Build().RawEventsArray(), outputEvents)
 
@@ -46,9 +46,9 @@ func TestProcessQuery_ContractError(t *testing.T) {
 		})
 
 		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
-		require.Error(t, err, "run local method should fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, result, "run local method should return contract error")
-		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
+		require.Error(t, err, "process query should fail")
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, result, "process query should return contract error")
+		require.Equal(t, []byte{}, outputArgs, "process query should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 
 		h.verifySystemContractCalled(t)
@@ -68,9 +68,9 @@ func TestProcessQuery_UnexpectedError(t *testing.T) {
 		})
 
 		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")
-		require.Error(t, err, "run local method should fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "run local method should return unexpected error")
-		require.Equal(t, []byte{}, outputArgs, "run local method should return matching output args")
+		require.Error(t, err, "process query should fail")
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, result, "process query should return unexpected error")
+		require.Equal(t, []byte{}, outputArgs, "process query should return matching output args")
 		require.EqualValues(t, 12, refHeight)
 
 		h.verifySystemContractCalled(t)
