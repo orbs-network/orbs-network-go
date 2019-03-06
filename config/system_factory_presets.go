@@ -71,6 +71,10 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 
+	// 2 minutes + 90 blocks is about 25 minutes which is final enough
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 2*time.Minute)
+	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 90)
+
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
@@ -174,6 +178,8 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 200*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 0*time.Millisecond)
+	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 
 	cfg.SetFederationNodes(federationNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
@@ -202,6 +208,8 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 20*time.Minute)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ropsten and ganache
+	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")

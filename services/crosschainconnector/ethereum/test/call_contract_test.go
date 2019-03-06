@@ -19,9 +19,12 @@ import (
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
-		config := &ethereumConnectorConfigForTests{"all your base", ""}
+		config := &ethereumConnectorConfigForTests{
+			endpoint:      "all your base",
+			privateKeyHex: "",
+		}
 		conn := adapter.NewEthereumRpcConnection(config, logger)
-		connector := ethereum.NewEthereumCrosschainConnector(conn, logger)
+		connector := ethereum.NewEthereumCrosschainConnector(conn, config, logger)
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
 		_, err := connector.EthereumCallContract(ctx, input)

@@ -81,7 +81,9 @@ const (
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
-	ETHEREUM_ENDPOINT = "ETHEREUM_ENDPOINT"
+	ETHEREUM_ENDPOINT                  = "ETHEREUM_ENDPOINT"
+	ETHEREUM_FINALITY_TIME_COMPONENT   = "ETHEREUM_FINALITY_TIME_COMPONENT"
+	ETHEREUM_FINALITY_BLOCKS_COMPONENT = "ETHEREUM_FINALITY_BLOCKS_COMPONENT"
 
 	LOGGER_HTTP_ENDPOINT            = "LOGGER_HTTP_ENDPOINT"
 	LOGGER_BULK_SIZE                = "LOGGER_BULK_SIZE"
@@ -338,6 +340,14 @@ func (c *config) LeanHelixConsensusMinimumCommitteeSize() uint32 {
 
 func (c *config) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
+}
+
+func (c *config) EthereumFinalityTimeComponent() time.Duration {
+	return c.kv[ETHEREUM_FINALITY_TIME_COMPONENT].DurationValue
+}
+
+func (c *config) EthereumFinalityBlocksComponent() uint32 {
+	return c.kv[ETHEREUM_FINALITY_BLOCKS_COMPONENT].Uint32Value
 }
 
 func (c *config) LoggerHttpEndpoint() string {

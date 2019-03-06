@@ -3,9 +3,8 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -15,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
-	"time"
 )
 
 type harness struct {
@@ -25,15 +23,6 @@ type harness struct {
 	logger     log.BasicLogger
 	address    string
 	config     *ethereumConnectorConfigForTests
-}
-
-type ethereumConnectorConfigForTests struct {
-	endpoint      string
-	privateKeyHex string
-}
-
-func (c *ethereumConnectorConfigForTests) EthereumEndpoint() string {
-	return c.endpoint
 }
 
 func (h *harness) deploySimulatorStorageContract(ctx context.Context, text string) error {
@@ -52,7 +41,7 @@ func (h *harness) getAddress() string {
 }
 
 func (h *harness) deployRpcStorageContract(text string) (string, error) {
-	auth, err := h.authFromConfig()
+	auth, err := h.config.GetAuthFromConfig()
 	if err != nil {
 		return "", err
 	}
@@ -64,13 +53,13 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) deployContractsToGanache(t *testing.T, count int, delayBetweenContracts time.Duration) error {
-	// create two blocks, in ganache transaction -> block
+func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) error {
+	c, err := rpc.Dial(h.config.endpoint)
+	require.NoError(t, err, "failed creating Ethereum rpc client")
+	//start := time.Now()
 	for i := 0; i < count; i++ {
-		_, err := h.deployRpcStorageContract("junk-we-do-not-care-about")
-		require.NoError(t, err, "failed deploying contract number %d to Ethereum", i)
-
-		time.Sleep(delayBetweenContracts)
+		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed increasing time")
+		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
 
 	return nil
@@ -84,32 +73,25 @@ func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigF
 		config:     cfg,
 		rpcAdapter: a,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(a, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger),
 	}
-}
-
-func (h *harness) authFromConfig() (*bind.TransactOpts, error) {
-	key, err := crypto.HexToECDSA(h.config.privateKeyHex)
-	if err != nil {
-		return nil, err
-	}
-
-	return bind.NewKeyedTransactor(key), nil
 }
 
 func (h *harness) WithFakeTSF() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.logger)
+	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.config, h.logger)
 	return h
 }
 
 func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
 	logger := log.DefaultTestingLogger(tb)
 	conn := adapter.NewEthereumSimulatorConnection(logger)
+	cfg := ConfigForSimulatorConnection()
 
 	return &harness{
+		config:     cfg,
 		simAdapter: conn,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(conn, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger),
 	}
 }
 

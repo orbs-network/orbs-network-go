@@ -1,11 +1,10 @@
-package external
+package test
 
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
@@ -13,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 )
@@ -116,10 +114,10 @@ func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConn
 }
 
 func createRpcClient(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	cfg := getConfig()
+	cfg := ConfigForExternalRPCConnection()
 
 	a := adapter.NewEthereumRpcConnection(cfg, log.DefaultTestingLogger(tb))
-	auth, err := authFromConfig(cfg)
+	auth, err := cfg.GetAuthFromConfig()
 	if err != nil {
 		panic(err)
 	}
@@ -133,40 +131,4 @@ func createSimulator(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.
 	commit := a.Commit
 
 	return a, opts, commit
-}
-
-func runningWithDocker() bool {
-	return os.Getenv("EXTERNAL_TEST") == "true"
-}
-
-type localconfig struct {
-	endpoint      string
-	privateKeyHex string
-}
-
-func (c *localconfig) EthereumEndpoint() string {
-	return c.endpoint
-}
-
-func authFromConfig(cfg *localconfig) (*bind.TransactOpts, error) {
-	key, err := crypto.HexToECDSA(cfg.privateKeyHex)
-	if err != nil {
-		return nil, err
-	}
-
-	return bind.NewKeyedTransactor(key), nil
-}
-
-func getConfig() *localconfig {
-	var cfg localconfig
-
-	if endpoint := os.Getenv("ETHEREUM_ENDPOINT"); endpoint != "" {
-		cfg.endpoint = endpoint
-	}
-
-	if privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY"); privateKey != "" {
-		cfg.privateKeyHex = privateKey
-	}
-
-	return &cfg
 }

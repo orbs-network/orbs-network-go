@@ -29,6 +29,7 @@ func (c *connectorCommon) DeploySimpleStorageContract(auth *bind.TransactOpts, s
 	return address.Bytes(), err
 }
 
+// this is a helper for integration test, not used in production code
 func (c *connectorCommon) DeployEthereumContract(auth *bind.TransactOpts, abijson string, bytecode string, params ...interface{}) (*common.Address, *bind.BoundContract, error) {
 	client, err := c.getContractCaller()
 	if err != nil {

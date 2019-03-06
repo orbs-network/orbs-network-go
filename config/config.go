@@ -76,6 +76,8 @@ type NodeConfig interface {
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
+	EthereumFinalityTimeComponent() time.Duration
+	EthereumFinalityBlocksComponent() uint32
 
 	// logger
 	LoggerHttpEndpoint() string
@@ -175,6 +177,11 @@ type TransactionPoolConfig interface {
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 	TransactionPoolNodeSyncRejectTime() time.Duration
+}
+
+type EthereumCrosschainConnectorConfig interface {
+	EthereumFinalityTimeComponent() time.Duration
+	EthereumFinalityBlocksComponent() uint32
 }
 
 type LeanHelixConsensusConfig interface {
