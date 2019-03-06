@@ -2,19 +2,9 @@ package globalpreorder_systemcontract
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
-
-// helpers for avoiding reliance on strings throughout the system
-const CONTRACT_NAME = "_GlobalPreOrder"
-const METHOD_APPROVE = "approve"
-
-/////////////////////////////////////////////////////////////////
-// contract starts here
-
-var PUBLIC = sdk.Export(approve, refreshSubscription)
 
 func approve() {
 	problem := _readSubscriptionProblem()

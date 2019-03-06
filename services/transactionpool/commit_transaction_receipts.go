@@ -21,6 +21,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		}, nil
 	}
 
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
 	s.addCommitLock.Lock()
 	defer s.addCommitLock.Unlock()
 
