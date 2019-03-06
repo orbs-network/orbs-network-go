@@ -7,29 +7,6 @@ import (
 	"time"
 )
 
-type fakeTLog struct {
-	mock.Mock
-}
-
-func (t *fakeTLog) Error(args ...interface{}) {
-	t.Called(args...)
-}
-
-func (t *fakeTLog) Fatal(args ...interface{}) {
-	t.Called(args...)
-}
-
-func (t *fakeTLog) Log(args ...interface{}) {
-	t.Called(args...)
-}
-
-type nopFormatter struct {
-}
-
-func (nopFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
-	return message
-}
-
 func TestTestOutputLogsToTLog(t *testing.T) {
 	m := &fakeTLog{}
 	o := NewTestOutput(m, nopFormatter{})
@@ -68,5 +45,57 @@ func TestOutputLogsAllowedErrorToTLogAsInfo(t *testing.T) {
 	_, err := m.Verify()
 	require.NoError(t, err)
 	require.False(t, o.HasErrors())
+}
 
+func TestOutputStopsRecordingErrorsAfterTestTerminated(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+
+	m.When("Error", "foo").Times(0)
+
+	o.TestTerminated()
+	o.Append("error", "foo")
+
+	_, err := m.Verify()
+	require.NoError(t, err)
+}
+
+func TestOutputRecoversFromTestRunnerPanicsDuringRecordError(t *testing.T) {
+	m := &fakeTLog{}
+	o := NewTestOutput(m, nopFormatter{})
+
+	m.When("Error", "foo").Call(func(string) {
+		panic("test runner panic")
+	})
+
+	require.NotPanics(t, func() {
+		o.Append("error", "foo")
+	})
+}
+
+type fakeTLog struct {
+	mock.Mock
+}
+
+func (t *fakeTLog) Error(args ...interface{}) {
+	t.Called(args...)
+}
+
+func (t *fakeTLog) Fatal(args ...interface{}) {
+	t.Called(args...)
+}
+
+func (t *fakeTLog) Log(args ...interface{}) {
+	t.Called(args...)
+}
+
+func (t *fakeTLog) Name() string {
+	return "FakeTestName"
+}
+
+type nopFormatter struct {
+}
+
+func (nopFormatter) FormatRow(timestamp time.Time, level string, message string, params ...*Field) (formattedRow string) {
+	return message
 }

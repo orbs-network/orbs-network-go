@@ -13,8 +13,6 @@ import (
 )
 
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
-	s.addCommitLock.RLock()
-	defer s.addCommitLock.RUnlock()
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
 	logger := s.logger.WithTags(log.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
@@ -27,21 +25,21 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
-	if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
-		logger.Info("transaction already committed")
-		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
-	}
-
+	// TK: this was originally after the check in the committed pool but moved here to make s.addCommitLock more fine grained
 	if err := s.validateSingleTransactionForPreOrder(ctx, input.SignedTransaction); err != nil {
-		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER
+		status := protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER // TODO(https://github.com/orbs-network/orbs-network-go/issues/1017): change to system error
+		if errRejected, ok := err.(*ErrTransactionRejected); ok {
+			status = errRejected.TransactionStatus
+		}
 		logger.Error("error validating transaction for preorder", log.Error(err))
+		// TODO: add metric here
 		return s.addTransactionOutputFor(nil, status), err
 	}
 
-	address := s.config.NodeAddress()
-	if _, err := s.pendingPool.add(input.SignedTransaction, address); err != nil {
-		logger.Error("error adding transaction to pending pool", log.Error(err))
-		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
+	// TK: this was originally in the body of this function but extracted to a function to make s.addCommitLock more fine grained
+	output, err := s.addToPendingPoolAfterCheckingCommitted(input.SignedTransaction, txHash, logger)
+	if output != nil {
+		return output, err
 	}
 
 	logger.Info("adding new transaction to the pool", log.String("flow", "checkpoint"))
@@ -49,6 +47,25 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	s.transactionForwarder.submit(input.SignedTransaction)
 
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
+}
+
+func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.BasicLogger) (*services.AddNewTransactionOutput, error) {
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
+	s.addCommitLock.RLock()
+	defer s.addCommitLock.RUnlock()
+
+	if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
+		logger.Info("transaction already committed")
+		return s.addTransactionOutputFor(alreadyCommitted.receipt, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED), nil
+	}
+
+	address := s.config.NodeAddress()
+	if _, err := s.pendingPool.add(tx, address); err != nil {
+		logger.Error("error adding transaction to pending pool", log.Error(err))
+		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
+	}
+
+	return nil, nil
 }
 
 func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {

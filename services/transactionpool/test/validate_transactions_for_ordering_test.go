@@ -63,7 +63,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 		invalidTx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
 			return tx == invalidTx
-		})
+		}, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 
 		require.EqualErrorf(t,
 			h.validateTransactionsForOrdering(ctx, 2, builders.Transaction().Build(), invalidTx),

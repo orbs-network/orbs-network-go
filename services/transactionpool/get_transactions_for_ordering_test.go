@@ -95,9 +95,10 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 	test.WithContext(func(ctx context.Context) {
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
+		tx3 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.DefaultTestingLogger(t)}
-		err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER}}, 0, 0)
+		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2, tx3}, logger: log.DefaultTestingLogger(t)}
+		err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}}, 0, 0)
 
 		require.NoError(t, err, "this should really never happen")
 		require.Empty(t, b.transactionsForPreOrder, "did not empty transaction for preorder list")
@@ -105,8 +106,11 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 		require.Len(t, b.validTransactions, 1)
 		require.Equal(t, tx1, b.validTransactions[0], "valid transaction was rejected")
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER, b.transactionsToReject[0].status, "invalid transaction was not rejected")
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, b.transactionsToReject[0].status, "invalid transaction was not rejected")
 		require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+
+		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, b.transactionsToReject[1].status, "invalid transaction was not rejected")
+		require.Equal(t, digest.CalcTxHash(tx3.Transaction()), b.transactionsToReject[1].hash, "invalid transaction was not rejected")
 	})
 }
 

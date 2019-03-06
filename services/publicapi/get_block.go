@@ -43,7 +43,7 @@ func (s *service) GetBlock(parentCtx context.Context, input *services.GetBlockIn
 	}
 	if bpc.BlockPair == nil {
 		logger.Info("get block failed to get requested block height", log.BlockHeight(input.ClientRequest.BlockHeight()))
-		return s.toGetBlockErrOutputAddHeight(ctx, logger, protocol.REQUEST_STATUS_BAD_REQUEST)
+		return s.toGetBlockErrOutputAddHeight(ctx, logger, protocol.REQUEST_STATUS_NOT_FOUND)
 	}
 
 	return toGetBlockOutput(bpc.BlockPair), nil
@@ -88,7 +88,7 @@ func (s *service) toGetBlockErrOutputAddHeight(ctx context.Context, logger log.B
 		logger.Info("block storage failed while getting last block", log.Error(err))
 		return toGetBlockErrOutput(protocol.REQUEST_STATUS_SYSTEM_ERROR, 0, 0), err
 	}
-	return toGetBlockErrOutput(protocol.REQUEST_STATUS_BAD_REQUEST, bk.LastCommittedBlockHeight, bk.LastCommittedBlockTimestamp), nil
+	return toGetBlockErrOutput(status, bk.LastCommittedBlockHeight, bk.LastCommittedBlockTimestamp), nil
 
 }
 

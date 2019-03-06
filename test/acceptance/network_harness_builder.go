@@ -15,9 +15,11 @@ import (
 	"time"
 )
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
-var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
+const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+const TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
+const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
+const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
 
 type networkHarnessBuilder struct {
 	numNodes                 int
@@ -33,7 +35,7 @@ type networkHarnessBuilder struct {
 }
 
 func newHarness() *networkHarnessBuilder {
-	n := &networkHarnessBuilder{maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+	n := &networkHarnessBuilder{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -116,9 +118,11 @@ func (b *networkHarnessBuilder) Start(tb testing.TB, f func(tb testing.TB, ctx c
 
 func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *NetworkHarness)) {
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-	logger, errorRecorder := b.makeLogger(tb, testId)
+	logger, testOutput := b.makeLogger(tb, testId)
 
 	supervised.Recover(logger, func() {
+		defer testOutput.TestTerminated() // this will suppress test failures from goroutines after test terminates
+		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
@@ -126,7 +130,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
 			defer dumpStateOnFailure(tb, network)
-			defer test.RequireNoUnexpectedErrors(tb, errorRecorder)
+			defer test.RequireNoUnexpectedErrors(tb, testOutput)
 
 			if b.setupFunc != nil {
 				b.setupFunc(ctx, network)
@@ -137,8 +141,9 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 
 			logger.Info("acceptance network running test")
 			f(tb, ctx, network)
-			time.Sleep(10 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 		})
+
+		time.Sleep(10 * time.Millisecond) // give context dependent goroutines time to terminate gracefully
 	})
 }
 
@@ -150,7 +155,7 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, test.ErrorTracker) {
+func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, *log.TestOutput) {
 
 	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
 	for _, pattern := range b.allowedErrors {

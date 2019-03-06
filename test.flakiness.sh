@@ -29,15 +29,15 @@ if [[ $1 == "NIGHTLY" ]]; then
 fi
 
 if [ "$CIRCLE_NODE_INDEX" == 0 ] || [ "$CIRCLE_NODE_INDEX" == 1 ] || [ "$CIRCLE_NODE_INDEX" == 2 ] || [ "$CIRCLE_NODE_INDEX" == 3 ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
-    go_test_junit_report acceptance ./test/acceptance -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_ACCEPTANCE $FAILFAST -tags "norecover"
+    go_test_junit_report acceptance ./test/acceptance -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_ACCEPTANCE $FAILFAST -tags "unsafetests"
 fi
 
 if [ "$CIRCLE_NODE_INDEX" == 4 ] || [ "$CIRCLE_NODE_INDEX" == 5 ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
-    go_test_junit_report blockstorage ./services/blockstorage/test -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags "norecover"
+    go_test_junit_report blockstorage ./services/blockstorage/test -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags "unsafetests"
 
-    go_test_junit_report internodesync ./services/blockstorage/internodesync -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags "norecover"
+    go_test_junit_report internodesync ./services/blockstorage/internodesync -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags "unsafetests"
 
-    go_test_junit_report servicesync ./services/blockstorage/servicesync -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags -tags "norecover"
+    go_test_junit_report servicesync ./services/blockstorage/servicesync -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags -tags "unsafetests"
 
-    go_test_junit_report transactionpool ./services/transactionpool/test -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags -tags "norecover"
+    go_test_junit_report transactionpool ./services/transactionpool/test -count $COUNT_ACCEPTANCE -timeout $TIMEOUT_REST $FAILFAST -tags -tags "unsafetests"
 fi

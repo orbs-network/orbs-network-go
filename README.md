@@ -191,8 +191,8 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
   * It's also recommended to uncheck `Show Ignored` tests and check `Show Passed` in the test panel after running the configuration
   * If you have a failed test which keeps failing due to cache click `Rerun Failed Tests` in the test panel (it will ignore cache)
 
-* The supervised package recovers and suppresses panics in goroutines. You can disable this behavior when running tests in the IDE:
-  * Under `Preferences | Go | Vendoring & Build Tags | Custom tags ` add the tag `norecover`
+* Running some tests that are unsafe for production deployments requires a special build flag, enable it if you're a core developer:
+  * Under `Preferences | Go | Vendoring & Build Tags | Custom tags ` add the tag `unsafetests`
 
 * You may enable the following automatic tools that run on file changes:
   * "go fmt" in `Preferences | Tools | File Watchers`, add with `+` the `go fmt` watcher

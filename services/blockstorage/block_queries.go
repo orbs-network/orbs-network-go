@@ -137,15 +137,6 @@ func (s *service) GetBlockPair(ctx context.Context, input *services.GetBlockPair
 
 	err := s.persistence.GetBlockTracker().WaitForBlock(timeoutCtx, input.BlockHeight)
 	if err != nil {
-		return nil, err
-	}
-
-	topHeight, err := s.persistence.GetLastBlockHeight()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to determine current height")
-	}
-
-	if topHeight < input.BlockHeight {
 		return &services.GetBlockPairOutput{
 			BlockPair: nil,
 		}, nil

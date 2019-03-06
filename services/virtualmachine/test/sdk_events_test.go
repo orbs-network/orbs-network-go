@@ -67,8 +67,8 @@ func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 		})
 
 		result, _, _, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
-		require.NoError(t, err, "run local method should not fail")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "run local method should return successful result")
+		require.NoError(t, err, "process query should not fail")
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "process query should return successful result")
 
 		expectedEventsArray := (&protocol.EventsArrayBuilder{
 			Events: []*protocol.EventBuilder{
