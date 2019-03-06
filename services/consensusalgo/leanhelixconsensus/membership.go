@@ -31,7 +31,7 @@ func (m *membership) MyMemberId() lhprimitives.MemberId {
 	return lhprimitives.MemberId(m.memberId)
 }
 
-func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) []lhprimitives.MemberId {
+func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) ([]lhprimitives.MemberId, error) {
 
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
 		CurrentBlockHeight: primitives.BlockHeight(blockHeight),
@@ -40,12 +40,12 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 	})
 	if err != nil {
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
-		return nil
+		return nil, err
 	}
 
 	nodeAddresses := toMemberIds(res.NodeAddresses)
 
-	return nodeAddresses
+	return nodeAddresses, nil
 }
 
 func toMemberIds(nodeAddresses []primitives.NodeAddress) []lhprimitives.MemberId {
