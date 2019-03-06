@@ -13,33 +13,6 @@ import (
 	"time"
 )
 
-func getTransactionCount(t *testing.T, h *harness) float64 {
-	var m metrics
-
-	require.True(t, test.Eventually(1*time.Minute, func() bool {
-		m = h.getMetrics()
-		return m != nil
-	}), "could not retrieve metrics")
-
-	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
-}
-
-func groupErrors(errors []error) map[string]int {
-	groupedErrors := make(map[string]int)
-	for _, error := range errors {
-		groupedErrors[error.Error()]++
-	}
-	return groupedErrors
-}
-
-func groupStrings(strings []string) map[string]int {
-	groupedStrings := make(map[string]int)
-	for _, str := range strings {
-		groupedStrings[str]++
-	}
-	return groupedStrings
-}
-
 func TestE2EStress(t *testing.T) {
 	h := newHarness()
 	ctrlRand := rand.NewControlledRand(t)
@@ -121,4 +94,31 @@ func TestE2EStress(t *testing.T) {
 	//require.Condition(t, func() (success bool) {
 	//	return ratePerSecond >= config.targetTPS
 	//}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
+}
+
+func getTransactionCount(t *testing.T, h *harness) float64 {
+	var m metrics
+
+	require.True(t, test.Eventually(1*time.Minute, func() bool {
+		m = h.getMetrics()
+		return m != nil
+	}), "could not retrieve metrics")
+
+	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
+}
+
+func groupErrors(errors []error) map[string]int {
+	groupedErrors := make(map[string]int)
+	for _, error := range errors {
+		groupedErrors[error.Error()]++
+	}
+	return groupedErrors
+}
+
+func groupStrings(strings []string) map[string]int {
+	groupedStrings := make(map[string]int)
+	for _, str := range strings {
+		groupedStrings[str]++
+	}
+	return groupedStrings
 }
