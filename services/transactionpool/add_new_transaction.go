@@ -51,8 +51,8 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 
 func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.BasicLogger) (*services.AddNewTransactionOutput, error) {
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
-	s.addCommitLock.RLock()
-	defer s.addCommitLock.RUnlock()
+	s.addCommitLock.Lock()
+	defer s.addCommitLock.Unlock()
 
 	if alreadyCommitted := s.committedPool.get(txHash); alreadyCommitted != nil {
 		logger.Info("transaction already committed")
