@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -13,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
-	"time"
 )
 
 type harness struct {
@@ -53,13 +53,13 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) deployContractsToGanache(t *testing.T, count int, delayBetweenContracts time.Duration) error {
-	// create two blocks, in ganache transaction -> block
+func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) error {
+	c, err := rpc.Dial(h.config.endpoint)
+	require.NoError(t, err, "failed creating Ethereum rpc client")
+	//start := time.Now()
 	for i := 0; i < count; i++ {
-		_, err := h.deployRpcStorageContract("junk-we-do-not-care-about")
-		require.NoError(t, err, "failed deploying contract number %d to Ethereum", i)
-
-		time.Sleep(delayBetweenContracts)
+		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed increasing time")
+		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
 
 	return nil

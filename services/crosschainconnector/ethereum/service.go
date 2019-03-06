@@ -65,7 +65,9 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 	if ethereumBlockNumber != nil { // simulator returns nil from GetBlockByTimestamp
 		logger.Info("calling contract from ethereum",
 			log.String("address", input.EthereumContractAddress),
-			log.Uint64("block-number", ethereumBlockNumber.Uint64()))
+			log.Uint64("requested-block", input.EthereumBlockNumber),
+			log.Uint64("actual-block-requested", ethereumBlockNumber.Uint64()))
+
 	}
 
 	address, err := hexutil.Decode(input.EthereumContractAddress)

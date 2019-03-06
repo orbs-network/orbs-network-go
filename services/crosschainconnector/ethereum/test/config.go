@@ -53,10 +53,8 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 		cfg.privateKeyHex = privateKey
 	}
 
-	// TODO (https://github.com/orbs-network/orbs-network-go/issues/990): these values should not be zeros since we want to test the finality with ganache
-	// this means we need to use RPC like "evm_mine" and "evm_increaseTime" to move time forward on ganache to reach the finality target
-	cfg.finalityTimeComponent = 0 * time.Millisecond
-	cfg.finalityBlocksComponent = 0
+	cfg.finalityTimeComponent = 10 * time.Second
+	cfg.finalityBlocksComponent = 1
 
 	return &cfg
 }

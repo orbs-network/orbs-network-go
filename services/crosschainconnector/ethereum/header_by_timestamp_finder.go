@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -9,6 +10,8 @@ import (
 	"math/big"
 	"time"
 )
+
+const NEAR_FUTURE_GRACE = 2 * time.Minute
 
 type TimestampFetcher interface {
 	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error)
@@ -42,6 +45,12 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 
 	if latest == nil { // simulator always returns nil block number
 		return nil, nil
+	}
+
+	latestNano := uint64(latest.TimeSeconds * int64(time.Second))
+	requestedNano := uint64(nano)
+	if latestNano < requestedNano && requestedNano-latestNano <= uint64(NEAR_FUTURE_GRACE) {
+		return big.NewInt(latest.Number), nil
 	}
 
 	// this was added to support simulations and tests, should not be relevant for production
@@ -86,7 +95,7 @@ func (f *finder) findBlockByTimeStamp(ctx context.Context, timestampSeconds int6
 	guessBlockNumber := currentBlockNumber - blocksToJump
 	guess, err := f.btg.ApproximateBlockAt(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get block by number")
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get header by block number %d", guessBlockNumber))
 	}
 
 	return f.findBlockByTimeStamp(ctx, timestampSeconds, guess.Number, guess.TimeSeconds, currentBlockNumber, currentTimestampSeconds)
