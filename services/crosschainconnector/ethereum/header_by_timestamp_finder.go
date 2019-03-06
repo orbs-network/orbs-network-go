@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -44,6 +45,12 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, nil
 	}
 
+	latestNano := int64(latest.TimeSeconds * int64(time.Second))
+	requestedNano := int64(nano)
+	if latestNano < requestedNano {
+		return nil, errors.Errorf("requested future block at time %s, latest block time is %s", time.Unix(0, requestedNano).UTC(), time.Unix(0, latestNano).UTC())
+	}
+
 	// this was added to support simulations and tests, should not be relevant for production
 	latestNum := latest.Number
 	latestNum -= 10000
@@ -55,39 +62,39 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, errors.Wrap(err, "failed to get past reference block")
 	}
 
-	theBlock, err := f.findBlockByTimeStamp(ctx, timestampInSeconds, back10k.Number, back10k.Time, latest.Number, latest.Time)
+	theBlock, err := f.findBlockByTimeStamp(ctx, timestampInSeconds, back10k.Number, back10k.TimeSeconds, latest.Number, latest.TimeSeconds)
 	return theBlock, err
 }
 
-func (f *finder) findBlockByTimeStamp(ctx context.Context, timestamp int64, currentBlockNumber, currentTimestamp, prevBlockNumber, prevTimestamp int64) (*big.Int, error) {
+func (f *finder) findBlockByTimeStamp(ctx context.Context, timestampSeconds int64, currentBlockNumber, currentTimestampSeconds, prevBlockNumber, prevTimestampSeconds int64) (*big.Int, error) {
 	f.logger.Info("searching for block in ethereum",
-		log.Int64("target-timestamp", timestamp),
+		log.Int64("target-timestamp", timestampSeconds),
 		log.Int64("current-block-number", currentBlockNumber),
-		log.Int64("current-timestamp", currentTimestamp),
+		log.Int64("current-timestamp", currentTimestampSeconds),
 		log.Int64("prev-block-number", prevBlockNumber),
-		log.Int64("prev-timestamp", prevTimestamp))
+		log.Int64("prev-timestamp", prevTimestampSeconds))
 	blockNumberDiff := currentBlockNumber - prevBlockNumber
 
 	// we stop when the range we are in-between is 1 or 0 (same block), it means we found a block with the exact timestamp or lowest from below
 	if blockNumberDiff == 1 || blockNumberDiff == 0 {
 		// if the block we are returning has a ts > target, it means we want one block before (so our ts is always bigger than block ts)
-		if currentTimestamp > timestamp {
+		if currentTimestampSeconds > timestampSeconds {
 			return big.NewInt(currentBlockNumber - 1), nil
 		} else {
 			return big.NewInt(currentBlockNumber), nil
 		}
 	}
 
-	timeDiff := currentTimestamp - prevTimestamp
+	timeDiff := currentTimestampSeconds - prevTimestampSeconds
 	secondsPerBlock := int64(math.Ceil(float64(timeDiff) / float64(blockNumberDiff)))
-	distanceToTargetFromCurrent := currentTimestamp - timestamp
+	distanceToTargetFromCurrent := currentTimestampSeconds - timestampSeconds
 	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock
 	f.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
 	guessBlockNumber := currentBlockNumber - blocksToJump
 	guess, err := f.btg.ApproximateBlockAt(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get block by number")
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get header by block number %d", guessBlockNumber))
 	}
 
-	return f.findBlockByTimeStamp(ctx, timestamp, guess.Number, guess.Time, currentBlockNumber, currentTimestamp)
+	return f.findBlockByTimeStamp(ctx, timestampSeconds, guess.Number, guess.TimeSeconds, currentBlockNumber, currentTimestampSeconds)
 }

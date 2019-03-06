@@ -14,6 +14,8 @@ ARG SKIP_DEVTOOLS
 
 ARG GIT_COMMIT
 
+ARG BUILD_FLAG
+
 ARG SEMVER
 
 RUN sh -x build-binaries.sh

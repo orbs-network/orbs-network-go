@@ -9,27 +9,34 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
+//TODO this test does not deal well with gaps in ganache, meaning that a ganache that has been standing idle for more than a few seconds will fail this test while
+// trying to assert that a contract cannot be called before it has been deployed
 func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	// the idea of this test is to make sure that the entire 'call-from-ethereum' logic works on a specific timestamp and different states in time (blocks)
-	// it requires ganache or some other simulation to transact
+	// it requires ganache or some other RPC backend to transact
 
 	if !runningWithDocker() {
 		t.Skip("this test relies on external components - ganache, and will be skipped unless running in docker")
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		h := newRpcEthereumConnectorHarness(t, getConfig())
-		h.deployContractsToGanache(t, 2, time.Second)
+		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
+		latestBlockInGanache, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+		require.NoError(t, err, "failed to get latest block in ganache")
+
+		timeBeforeContractWasDeployed := time.Unix(latestBlockInGanache.Time.Int64(), 0)
+		h.moveBlocksInGanache(t, 2, 1) // this is only to advance blocks
 
 		expectedTextFromEthereum := "test3"
 		contractAddress3, err := h.deployRpcStorageContract(expectedTextFromEthereum)
 		require.NoError(t, err, "failed deploying contract3 to Ethereum")
+
+		h.moveBlocksInGanache(t, 11, 1) // this is only to advance blocks
 
 		methodToCall := "getValues"
 
@@ -40,6 +47,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
+			WithTimestamp(timeBeforeContractWasDeployed.Add(14 * time.Second)).
 			WithContractAddress(contractAddress3).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
@@ -58,7 +66,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		require.Equal(t, expectedTextFromEthereum, ret.StringValue, "text part from eth")
 
 		input = builders.EthereumCallContractInput().
-			WithTimestamp(time.Now().Add(time.Duration(-3) * time.Second)).
+			WithTimestamp(timeBeforeContractWasDeployed).
 			WithContractAddress(contractAddress3).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
@@ -68,22 +76,4 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		output, err = h.connector.EthereumCallContract(ctx, input)
 		require.Error(t, err, "expecting call to fail as contract is not yet deployed in a past time block")
 	})
-}
-
-func runningWithDocker() bool {
-	return os.Getenv("EXTERNAL_TEST") == "true"
-}
-
-func getConfig() *ethereumConnectorConfigForTests {
-	var cfg ethereumConnectorConfigForTests
-
-	if endpoint := os.Getenv("ETHEREUM_ENDPOINT"); endpoint != "" {
-		cfg.endpoint = endpoint
-	}
-
-	if privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY"); privateKey != "" {
-		cfg.privateKeyHex = privateKey
-	}
-
-	return &cfg
 }
