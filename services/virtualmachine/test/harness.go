@@ -106,6 +106,17 @@ func (h *harness) processQuery(ctx context.Context, contractName primitives.Cont
 	return output.CallResult, output.OutputArgumentArray, output.ReferenceBlockHeight, output.OutputEventsArray, err
 }
 
+func (h *harness) callSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+	output, err := h.service.CallSystemContract(ctx, &services.CallSystemContractInput{
+		BlockHeight:        blockHeight,
+		BlockTimestamp:     0,
+		ContractName:       contractName,
+		MethodName:         methodName,
+		InputArgumentArray: builders.ArgumentsArray(args...),
+	})
+	return output.CallResult, output.OutputArgumentArray, err
+}
+
 type keyValuePair struct {
 	key   []byte
 	value []byte

@@ -125,6 +125,21 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	}, nil
 }
 
+func (s *service) CallSystemContract(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.BlockHeight(input.BlockHeight))
+	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
+	if outputArgs == nil {
+		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+	}
+
+	return &services.CallSystemContractOutput{
+		OutputArgumentArray: outputArgs,
+		CallResult:          callResult,
+	}, err
+}
+
 func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCallInput) (*handlers.HandleSdkCallOutput, error) {
 	var output []*protocol.Argument
 	var err error

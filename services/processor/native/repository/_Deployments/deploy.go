@@ -3,6 +3,7 @@ package deployments_systemcontract
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -54,6 +55,7 @@ func _isImplicitlyDeployed(serviceName string) bool {
 	case
 		CONTRACT_NAME,
 		info_systemcontract.CONTRACT_NAME,
+		elections_systemcontract.CONTRACT_NAME,
 		globalpreorder_systemcontract.CONTRACT_NAME:
 		return true
 	}
