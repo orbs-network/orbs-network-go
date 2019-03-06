@@ -11,9 +11,6 @@ import (
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
-	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
-	s.addCommitLock.Lock()
-	defer s.addCommitLock.Unlock()
 
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -24,9 +21,14 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 		}, nil
 	}
 
+	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
+	s.addCommitLock.Lock()
+	defer s.addCommitLock.Unlock()
+
 	newBh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
 	c := &committer{logger: logger, adder: s.committedPool, remover: s.pendingPool, nodeAddress: s.config.NodeAddress(), blockHeight: newBh, blockTime: ts}
+
 	c.commit(ctx, input.TransactionReceipts...)
 
 	s.blockTracker.IncrementTo(newBh)
