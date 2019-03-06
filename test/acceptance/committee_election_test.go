@@ -46,6 +46,8 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 			network.WaitForTransactionInNodeState(ctx, txHash, 2)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 2, 6))
 
+			t.Log("test done, shutting down")
+
 		})
 }
 
@@ -77,6 +79,8 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 			_, txHash := token.Transfer(ctx, 3, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 3)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 3, 6))
+
+			t.Log("test done, shutting down")
 
 		})
 }
@@ -122,6 +126,8 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 30, token.GetBalance(ctx, 0, 6))
 
+			t.Log("test done, shutting down")
+
 		})
 }
 
@@ -154,6 +160,8 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
+
+			t.Log("test done, shutting down")
 
 		})
 }
