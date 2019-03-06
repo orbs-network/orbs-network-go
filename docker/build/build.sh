@@ -4,15 +4,15 @@ export SEMVER=$(cat ./.version)
 
 LAST_COMMIT_MESSAGE=`git --no-pager log --decorate=short --pretty=oneline -n1 $CIRCLE_SHA1`
 
-BUILD_FLAGS=""
-if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
-    BUILD_FLAGS="unsafetests"
+BUILD_FLAG=""
+if [[ "${LAST_COMMIT_MESSAGE}" == *"unsafe"* ]]; then
+    BUILD_FLAG="unsafetests"
 fi
 
 docker build -f ./docker/build/Dockerfile.build \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --build-arg SEMVER=$SEMVER \
-    --build-arg BUILD_FLAGS=$BUILD_FLAGS \
+    --build-arg BUILD_FLAG=$BUILD_FLAG \
     -t orbs:build .
 
 [ "$(docker ps -a | grep orbs_build)" ] && docker rm -f orbs_build
