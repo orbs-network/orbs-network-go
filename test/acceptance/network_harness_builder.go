@@ -15,9 +15,11 @@ import (
 	"time"
 )
 
-var ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-var TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
-var DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
+const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+const TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
+const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
+const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
 
 type networkHarnessBuilder struct {
 	numNodes                 int
@@ -33,7 +35,7 @@ type networkHarnessBuilder struct {
 }
 
 func newHarness() *networkHarnessBuilder {
-	n := &networkHarnessBuilder{maxTxPerBlock: 30, requiredQuorumPercentage: 100}
+	n := &networkHarnessBuilder{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {

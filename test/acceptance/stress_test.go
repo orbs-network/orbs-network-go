@@ -17,7 +17,7 @@ func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	newHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
+			sendTransfersAndAssertTotalBalance(ctx, network, t, 200, rnd)
 		})
 }
 
