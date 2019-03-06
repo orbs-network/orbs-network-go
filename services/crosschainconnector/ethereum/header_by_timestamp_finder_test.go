@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
@@ -29,19 +28,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 
 		// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
 		_, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(1944035343000000000))
-		require.Error(t, err, "expecting an error when trying to go to the future")
-	})
-}
-
-func TestGetEthBlockByTimestampFromNearFutureReturnsLatest(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		logger := log.DefaultTestingLogger(t)
-		bfh := NewFakeBlockAndTimestampGetter(logger)
-		fetcher := NewTimestampFetcher(bfh, logger)
-
-		blockBI, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED*time.Second+NEAR_FUTURE_GRACE))
-		require.NoError(t, err, "expecting no error when trying to go to the near future")
-		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, blockBI.Int64(), "expected to get last block when asking for a block from near future")
+		require.EqualError(t, err, "requested future block at time 2031-08-09 09:49:03 +0000 UTC, latest block time is 2017-09-22 19:33:03 +0000 UTC", "expecting an error when trying to go to the future")
 	})
 }
 

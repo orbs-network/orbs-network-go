@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const NEAR_FUTURE_GRACE = 2 * time.Minute
-
 type TimestampFetcher interface {
 	GetBlockByTimestamp(ctx context.Context, nano primitives.TimestampNano) (*big.Int, error)
 }
@@ -47,10 +45,10 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, nil
 	}
 
-	latestNano := uint64(latest.TimeSeconds * int64(time.Second))
-	requestedNano := uint64(nano)
-	if latestNano < requestedNano && requestedNano-latestNano <= uint64(NEAR_FUTURE_GRACE) {
-		return big.NewInt(latest.Number), nil
+	latestNano := int64(latest.TimeSeconds * int64(time.Second))
+	requestedNano := int64(nano)
+	if latestNano < requestedNano {
+		return nil, errors.Errorf("requested future block at time %s, latest block time is %s", time.Unix(0, requestedNano).UTC(), time.Unix(0, latestNano).UTC())
 	}
 
 	// this was added to support simulations and tests, should not be relevant for production
