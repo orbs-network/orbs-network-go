@@ -73,7 +73,7 @@ services:
     image: orbs:build
     environment:
       API_ENDPOINT: http://orbs-network-node-3:8080/api/v1/
-      STRESS_TEST_NUMBER_OF_TRANSACTIONS: 5000
+      STRESS_TEST_NUMBER_OF_TRANSACTIONS: 500 # nerfed from 5000 due to
       STRESS_TEST_FAILURE_RATE: 20
       STRESS_TEST_TARGET_TPS: 100
       STRESS_TEST: 'true'
