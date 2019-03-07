@@ -13,7 +13,7 @@ import (
 func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	h := newDirectHarnessWithConnectedPeers(t, ctx)
+	h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
 	defer h.cleanupConnectedPeers()
 
 	cancel()
