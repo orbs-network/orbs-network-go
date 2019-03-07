@@ -45,10 +45,11 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, nil
 	}
 
-	latestNano := int64(latest.TimeSeconds * int64(time.Second))
-	requestedNano := int64(nano)
-	if latestNano < requestedNano {
-		return nil, errors.Errorf("requested future block at time %s, latest block time is %s", time.Unix(0, requestedNano).UTC(), time.Unix(0, latestNano).UTC())
+	requestedTime := time.Unix(0, int64(nano))
+	latestTime := time.Unix(0, int64(latest.TimeSeconds*int64(time.Second)))
+	truncatedRequestedTime := requestedTime.Add(time.Duration(-requestedTime.Nanosecond()))
+	if latestTime.Before(truncatedRequestedTime) {
+		return nil, errors.Errorf("requested future block at time %s, latest block time is %s", requestedTime.UTC(), latestTime.UTC())
 	}
 
 	// this was added to support simulations and tests, should not be relevant for production
