@@ -39,7 +39,7 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 	metricRegistry.NewText("Version.Semantic", version.Semantic)
 	metricRegistry.NewText("Version.Commit", version.Commit)
-	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String()[:6])
+	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String())
 
 	return metricRegistry
 }
