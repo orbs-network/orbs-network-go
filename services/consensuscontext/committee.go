@@ -22,7 +22,7 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	}
 
 	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.LeanHelixConsensusMinimumCommitteeSize(), uint32(len(electedValidatorsAddresses)))
-	s.logger.Info("Calculated committee size", log.Uint32("committee-size", committeeSize), log.Int("elected-validation-count", len(electedValidatorsAddresses)), log.Uint32("max-committee-size", input.MaxCommitteeSize))
+	s.logger.Info("Calculated committee size", log.BlockHeight(input.CurrentBlockHeight), log.Uint32("committee-size", committeeSize), log.Int("elected-validators-count", len(electedValidatorsAddresses)), log.Uint32("max-committee-size", input.MaxCommitteeSize))
 	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, electedValidatorsAddresses)
 	if err != nil {
 		return nil, err
