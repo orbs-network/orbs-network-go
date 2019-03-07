@@ -55,6 +55,7 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 
 	nodeAddresses := toMemberIds(res.NodeAddresses)
 	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
+	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
 	m.logger.Info("Received committee members", log.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
 	return nodeAddresses, nil
