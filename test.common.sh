@@ -44,7 +44,13 @@ go_test_junit_report () {
         if [ $NIGHTLY == 1 ]; then
             junit-xml-stats ${OUT_DIR}/results.xml
         else
-            node .circleci/flakiness_log_extractor.js ${OUT_DIR}/test.out
+            # find the last RUN line number in the log file
+            LOG_START_LINE=$(grep -n "^=== RUN" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
+            # find the last line number in the log file
+            LOG_END_LINE=$(cat ${OUT_DIR}/test.out | wc -l)
+            # print the lines in between these line numbers to get the required failed log
+            # and nothing else
+            sed -n "${LOG_START_LINE},${LOG_END_LINE}p" ${OUT_DIR}/test.out
         fi
 
         exit $EXIT_CODE
