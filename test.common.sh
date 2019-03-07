@@ -1,5 +1,6 @@
 #!/bin/bash
 
+NIGHTLY=0
 mkdir -p _out
 
 check_exit_code_and_report () {
@@ -47,7 +48,7 @@ go_test_junit_report () {
             # find the last RUN line number in the log file
             LOG_START_LINE=$(grep -n "^=== RUN" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
             # find the last line number in the log file
-            LOG_END_LINE=$(cat ${OUT_DIR}/test.out | wc -l)
+            LOG_END_LINE=$(cat ${OUT_DIR}/test.out | wc -l | awk '{$1=$1};1')
             # print the lines in between these line numbers to get the required failed log
             # and nothing else
             sed -n "${LOG_START_LINE},${LOG_END_LINE}p" ${OUT_DIR}/test.out
