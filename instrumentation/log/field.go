@@ -152,7 +152,7 @@ func Error(value error) *Field {
 }
 
 func BlockHeight(value primitives.BlockHeight) *Field {
-	return &Field{Key: "block-height", StringVal: value.String(), Type: StringType}
+	return &Field{Key: "block-height", Uint: uint64(value), Type: UintType}
 }
 
 func VirtualChainId(value primitives.VirtualChainId) *Field {

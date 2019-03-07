@@ -188,7 +188,7 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 
 func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.Stringable("block-height", block.Height()))
+	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.BlockHeight(primitives.BlockHeight(block.Height())))
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
 

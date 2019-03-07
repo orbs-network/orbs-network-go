@@ -107,8 +107,8 @@ func TestCompareLogger(t *testing.T) {
 
 	require.Equal(t, "expectation", jsonMap["level"])
 	require.Equal(t, "020363", jsonMap["bytes"])
-	require.Equal(t, "22b8", jsonMap["actual-block-height"])
-	require.Equal(t, "270f", jsonMap["expected-block-height"])
+	require.Equal(t, float64(8888), jsonMap["actual-block-height"])
+	require.Equal(t, float64(9999), jsonMap["expected-block-height"])
 }
 
 func TestNestedLogger(t *testing.T) {
@@ -159,7 +159,7 @@ func TestCustomLogFormatter(t *testing.T) {
 	require.Regexp(t, "Service initialized", out)
 	require.Regexp(t, "node=node1", out)
 	require.Regexp(t, "service=public-api", out)
-	require.Regexp(t, "block-height=270f", out)
+	require.Regexp(t, "block-height=9999", out)
 	require.Regexp(t, "vchainId=7b", out)
 	require.Regexp(t, "bytes=020363", out)
 	require.Regexp(t, "some-int-value=12", out)
