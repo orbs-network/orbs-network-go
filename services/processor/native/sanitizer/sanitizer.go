@@ -9,17 +9,17 @@ import (
 	"go/token"
 )
 
-type sanitizer struct {
+type Sanitizer struct {
 	config *SanitizerConfig
 }
 
-func NewSanitizer(config *SanitizerConfig) *sanitizer {
-	return &sanitizer{
+func NewSanitizer(config *SanitizerConfig) *Sanitizer {
+	return &Sanitizer{
 		config: config,
 	}
 }
 
-func (s *sanitizer) Process(code string) (string, error) {
+func (s *Sanitizer) Process(code string) (string, error) {
 	fset := token.NewFileSet()
 
 	astFile, err := parser.ParseFile(fset, "", code, 0)
@@ -41,7 +41,7 @@ func (s *sanitizer) Process(code string) (string, error) {
 	return resBuffer.String(), nil
 }
 
-func (s *sanitizer) verifyAll(astFile *ast.File) error {
+func (s *Sanitizer) verifyAll(astFile *ast.File) error {
 	err := s.verifyImports(astFile)
 	if err != nil {
 		return err

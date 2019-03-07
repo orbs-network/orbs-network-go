@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -20,8 +22,10 @@ var LogTag = log.Service("processor-native")
 
 type service struct {
 	logger     log.BasicLogger
+	config     config.NativeProcessorConfig
 	compiler   adapter.Compiler
 	sdkHandler handlers.ContractSdkCallHandler
+	sanitizer  *sanitizer.Sanitizer
 
 	contracts struct {
 		sync.RWMutex
@@ -46,12 +50,15 @@ func getMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewNativeProcessor(compiler adapter.Compiler, logger log.BasicLogger, metricFactory metric.Factory) services.Processor {
+func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, logger log.BasicLogger, metricFactory metric.Factory) services.Processor {
 	s := &service{
 		compiler: compiler,
+		config:   config,
 		logger:   logger.WithTags(LogTag),
 		metrics:  getMetrics(metricFactory),
 	}
+
+	s.sanitizer = s.createSanitizer()
 
 	s.contracts.instances = initializePreBuiltContractInstances()
 	s.contracts.deployedCache = make(map[string]*sdkContext.ContractInfo)

@@ -5,7 +5,7 @@ import (
 	"go/ast"
 )
 
-func (s *sanitizer) verifyImports(astFile *ast.File) error {
+func (s *Sanitizer) verifyImports(astFile *ast.File) error {
 	for _, importSpec := range astFile.Imports {
 		importPath := importSpec.Path.Value
 		if _, ok := s.config.ImportWhitelist[importPath]; !ok {
