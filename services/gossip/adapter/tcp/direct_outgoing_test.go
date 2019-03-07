@@ -13,7 +13,7 @@ import (
 func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	h := newDirectHarnessWithConnectedPeers(t, ctx)
+	h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
 	defer h.cleanupConnectedPeers()
 
 	cancel()
@@ -65,7 +65,7 @@ func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
 func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 
-		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
 		defer h.cleanupConnectedPeers()
 
 		err := h.transport.Send(ctx, &adapter.TransportData{
