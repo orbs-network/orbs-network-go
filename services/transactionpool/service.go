@@ -32,12 +32,13 @@ type service struct {
 		timestamp   primitives.TimestampNano
 	}
 
-	pendingPool          *pendingTxPool
-	committedPool        *committedTxPool
-	blockTracker         *synchronization.BlockTracker
-	transactionForwarder *transactionForwarder
-	transactionWaiter    *transactionWaiter
-	validationContext    *validationContext
+	pendingPool                  *pendingTxPool
+	committedPool                *committedTxPool
+	blockTracker                 *synchronization.BlockTracker
+	transactionForwarder         *transactionForwarder
+	transactionWaiter            *transactionWaiter
+	validationContext            *validationContext
+	addNewTransactionRateLimiter *requestRateLimiter
 
 	metrics struct {
 		blockHeight *metric.Gauge
