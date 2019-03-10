@@ -1,0 +1,1 @@
+[{"constant":false,"inputs":[{"name":"count","type":"int32"}],"name":"log","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"count","type":"int32"}],"name":"Log","type":"event"}]

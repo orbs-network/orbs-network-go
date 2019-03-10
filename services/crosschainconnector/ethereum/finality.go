@@ -2,7 +2,6 @@ package ethereum
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -40,8 +39,6 @@ func verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, re
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("==== got block number %d, safe block number is %d\n", blockNumber, safeBlockNumberBigInt.Int64())
 
 	// geth simulator returns nil from GetBlockByTimestamp
 	if safeBlockNumberBigInt == nil {

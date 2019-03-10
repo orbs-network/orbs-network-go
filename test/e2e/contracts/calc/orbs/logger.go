@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
-var PUBLIC = sdk.Export(read, bind)
+var PUBLIC = sdk.Export(sum, bind)
 var SYSTEM = sdk.Export(_init)
 
 func _init() {
@@ -21,7 +21,7 @@ func bind(ethContractAddress []byte, abi []byte) {
 	state.WriteString(ethABIKey, string(abi))
 }
 
-func read(tx1 string, tx2 string, tx3 string) uint64 {
+func sum(tx1 string, tx2 string, tx3 string) uint64 {
 	abi := state.ReadString(ethABIKey)
 	address := state.ReadString(ethAddressKey)
 	if abi == "" || address == "" {
