@@ -4,7 +4,10 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
@@ -29,6 +32,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("make sure it arrived to non-elected")
 
@@ -40,6 +44,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 4, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 4)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 4, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 4, []int{0, 1, 2, 3})
 
 			t.Log("make sure it arrived to elected")
 
@@ -79,6 +84,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 			_, txHash := token.Transfer(ctx, 3, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 3)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 3, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 3, []int{2, 3, 4, 5})
 
 			t.Log("test done, shutting down")
 
@@ -103,6 +109,7 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("elect 1,2,3,4 - first node loses")
 
@@ -114,6 +121,7 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{1, 2, 3, 4})
 
 			t.Log("elect 0,1,2,3 - first node returns")
 
@@ -125,6 +133,7 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 30, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("test done, shutting down")
 
@@ -149,6 +158,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("elect 0,1,2,3,4,5")
 
@@ -160,8 +170,18 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5})
 
 			t.Log("test done, shutting down")
 
 		})
+}
+
+func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
+	response := api.GetTransactionReceiptProof(ctx, txHash, nodeIndex)
+	signers, err := digest.GetBlockSignersFromReceiptProof(response.PackedProof())
+	require.NoError(t, err)
+	signerIndexes := testKeys.NodeAddressesForTestsToIndexes(signers)
+	t.Logf("signers of txHash %s are %v", txHash, signerIndexes)
+	require.Subset(t, allowedIndexes, signerIndexes, "tx signers should be subset of allowed group")
 }

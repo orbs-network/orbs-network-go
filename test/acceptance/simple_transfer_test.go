@@ -2,8 +2,11 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -16,15 +19,27 @@ func TestLeanHelix_CommitTransaction(t *testing.T) {
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
-			contract := network.DeployBenchmarkTokenContract(ctx, 5)
-			// leader is nodeIndex 0, validator is nodeIndex 1
-			_, txHash := contract.Transfer(ctx, 0, 17, 5, 6)
+			contract := callcontract.NewContractClient(network)
+			token := network.DeployBenchmarkTokenContract(ctx, 5)
+
+			_, txHash := token.Transfer(ctx, 0, 17, 5, 6)
 
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
+
 			t.Log("finished waiting for tx")
 
-			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, contract.GetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
-			require.EqualValues(t, 17, contract.GetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
+			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-17, token.GetBalance(ctx, 0, 5), "getBalance result for the sender on gateway node")
+			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6), "getBalance result for the receiver on gateway node")
+
+			t.Log("checking signers on the block proof")
+
+			response := contract.API.GetTransactionReceiptProof(ctx, txHash, 0)
+			signers, err := digest.GetBlockSignersFromReceiptProof(response.PackedProof())
+			require.NoError(t, err)
+			signerIndexes := testKeys.NodeAddressesForTestsToIndexes(signers)
+			require.Subset(t, []int{0, 1, 2, 3}, signerIndexes, "block proof signers should be subset of first 4 test nodes")
+			require.True(t, len(signerIndexes) >= 3, "block proof signers should include at least 3 nodes")
+
 			t.Log("test done")
 		})
 }
