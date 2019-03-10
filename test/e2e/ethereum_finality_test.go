@@ -15,18 +15,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
 
-const ORBS_CALC_CONTRACT = `
-package main
+const ORBS_CALC_CONTRACT = `package main
 
 import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"strings"
 )
 
 var PUBLIC = sdk.Export(sum, bind)
@@ -43,7 +44,7 @@ func bind(ethContractAddress []byte, abi []byte) {
 	state.WriteString(ethABIKey, string(abi))
 }
 
-func sum(tx1 string, tx2 string, tx3 string) uint64 {
+func sum(txCommaSeparatedList string) uint64 {
 	abi := state.ReadString(ethABIKey)
 	address := state.ReadString(ethAddressKey)
 	if abi == "" || address == "" {
@@ -51,18 +52,19 @@ func sum(tx1 string, tx2 string, tx3 string) uint64 {
 	}
 
 	var sum uint64
-	for _, txHash := range []string{tx1, tx2, tx3} {
+	for _, txHash := range strings.Split(txCommaSeparatedList, ",") {
 		var out struct {
 			Count int32
 		}
 
 		ethereum.GetTransactionLog(address, abi, txHash, "Log", &out)
 		sum += uint64(out.Count)
-
 	}
 
 	return sum
-}`
+}
+
+`
 
 func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 	privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY")
@@ -102,12 +104,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED.String(), res.TransactionStatus.String(), "deployment transaction not committed")
 		require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), res.ExecutionResult.String(), "deployment transaction not successful")
 
-		tx1, err := loggerContract.Log(auth, int32(1))
-		require.NoError(t, err, "failed sending Ethereum tx")
-		tx2, err := loggerContract.Log(auth, int32(2))
-		require.NoError(t, err, "failed sending Ethereum tx")
-		tx3, err := loggerContract.Log(auth, int32(3))
-		require.NoError(t, err, "failed sending Ethereum tx")
+		txHashes := sendEthTransactions(t, loggerContract, auth, 25)
 
 		ethBlockNumber := int64(0)
 		latestBlockTime := time.Unix(0, 0)
@@ -121,14 +118,24 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 			latestBlockTime = time.Unix(ethBlock.Time.Int64(), 0)
 		}
 
-		queryRes, err := h.runQuery(contractOwner.PublicKey, "LogCalculator", "sum", tx1.Hash().String(), tx2.Hash().String(), tx3.Hash().String())
+		queryRes, err := h.runQuery(contractOwner.PublicKey, "LogCalculator", "sum", strings.Join(txHashes, ","))
 		require.NoError(t, err, "failed reading log")
 		require.EqualValues(t, codec.REQUEST_STATUS_COMPLETED.String(), queryRes.RequestStatus.String(), "failed calling sum method")
 		require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), queryRes.ExecutionResult.String(), "failed calling sum method")
 
-		require.EqualValues(t, 6, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
+		require.EqualValues(t, 325, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
 	})
 
+}
+
+func sendEthTransactions(t testing.TB, loggerContract *eth.Logger, auth *bind.TransactOpts, numOfTxs int) (hashes []string) {
+	for i := 1; i <= numOfTxs; i++ {
+		tx, err := loggerContract.Log(auth, int32(i))
+		require.NoError(t, err, "failed sending Ethereum tx")
+		hashes = append(hashes, tx.Hash().String())
+	}
+
+	return
 }
 
 func readFile(path string) ([]byte, error) {

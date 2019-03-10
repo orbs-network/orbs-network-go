@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
+	"strings"
 )
 
 var PUBLIC = sdk.Export(sum, bind)
@@ -21,7 +22,7 @@ func bind(ethContractAddress []byte, abi []byte) {
 	state.WriteString(ethABIKey, string(abi))
 }
 
-func sum(tx1 string, tx2 string, tx3 string) uint64 {
+func sum(txCommaSeparatedList string) uint64 {
 	abi := state.ReadString(ethABIKey)
 	address := state.ReadString(ethAddressKey)
 	if abi == "" || address == "" {
@@ -29,14 +30,13 @@ func sum(tx1 string, tx2 string, tx3 string) uint64 {
 	}
 
 	var sum uint64
-	for _, txHash := range []string{tx1, tx2, tx3} {
+	for _, txHash := range strings.Split(txCommaSeparatedList, ",") {
 		var out struct {
 			Count int32
 		}
 
 		ethereum.GetTransactionLog(address, abi, txHash, "Log", &out)
 		sum += uint64(out.Count)
-
 	}
 
 	return sum
