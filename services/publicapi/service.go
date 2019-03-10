@@ -27,16 +27,18 @@ type service struct {
 }
 
 type metrics struct {
-	sendTransactionTime      *metric.Histogram
-	getTransactionStatusTime *metric.Histogram
-	runQueryTime             *metric.Histogram
+	sendTransactionTime          *metric.Histogram
+	getTransactionStatusTime     *metric.Histogram
+	runQueryTime                 *metric.Histogram
+	totalTransactionsFromClients *metric.Gauge
 }
 
 func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, getTransactionStatusTimeout time.Duration, runQueryTimeout time.Duration) *metrics {
 	return &metrics{
-		sendTransactionTime:      factory.NewLatency("PublicApi.SendTransactionProcessingTime.Millis", sendTransactionTimeout),
-		getTransactionStatusTime: factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime.Millis", getTransactionStatusTimeout),
-		runQueryTime:             factory.NewLatency("PublicApi.RunQueryProcessingTime.Millis", runQueryTimeout),
+		sendTransactionTime:          factory.NewLatency("PublicApi.SendTransactionProcessingTime.Millis", sendTransactionTimeout),
+		getTransactionStatusTime:     factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime.Millis", getTransactionStatusTimeout),
+		runQueryTime:                 factory.NewLatency("PublicApi.RunQueryProcessingTime.Millis", runQueryTimeout),
+		totalTransactionsFromClients: factory.NewGauge("PublicApi.TotalTransactionsFromClients.Count"),
 	}
 }
 
