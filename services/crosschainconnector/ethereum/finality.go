@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -25,7 +26,13 @@ func getFinalitySafeBlockNumber(ctx context.Context, referenceTimestamp primitiv
 
 	// regard finality blocks component
 	finalityBlocks := big.NewInt(int64(config.EthereumFinalityBlocksComponent()))
-	return new(big.Int).Sub(blockNumber, finalityBlocks), nil
+	blockAfterFinality := new(big.Int).Sub(blockNumber, finalityBlocks)
+
+	if blockAfterFinality.Int64() < 0 {
+		return nil, errors.Errorf("Got negative finality-safe block number %d; reference timestamp is %s, timestamp minus finality component is %s, block number correlating that time is %d", blockAfterFinality.Int64(), referenceTimestamp, augmentedReferenceTimestamp, blockNumber.Int64())
+	}
+
+	return blockAfterFinality, nil
 }
 
 func verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano, timestampFetcher TimestampFetcher, config config.EthereumCrosschainConnectorConfig) error {
@@ -33,6 +40,8 @@ func verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, re
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("==== got block number %d, safe block number is %d\n", blockNumber, safeBlockNumberBigInt.Int64())
 
 	// geth simulator returns nil from GetBlockByTimestamp
 	if safeBlockNumberBigInt == nil {
