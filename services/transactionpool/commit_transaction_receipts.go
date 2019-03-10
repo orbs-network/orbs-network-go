@@ -38,7 +38,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	s.metrics.commitRate.Measure(int64(len(input.TransactionReceipts)))
 
-	logger.Info("committed transaction receipts for block height", log.BlockHeight(newBh))
+	logger.Info("finished committing transaction receipts", log.BlockHeight(newBh))
 
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   newBh + 1,

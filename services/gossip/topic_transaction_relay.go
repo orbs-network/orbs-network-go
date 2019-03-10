@@ -2,10 +2,12 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -51,7 +53,13 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 	if err != nil {
 		return
 	}
-	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", message.SignedTransactions))
+
+	txHashes := make([]primitives.Sha256, len(message.SignedTransactions))
+	for i, tx := range message.SignedTransactions {
+		txHashes[i] = digest.CalcTxHash(tx.Transaction())
+	}
+
+	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", txHashes))
 
 	s.handlers.RLock()
 	defer s.handlers.RUnlock()
