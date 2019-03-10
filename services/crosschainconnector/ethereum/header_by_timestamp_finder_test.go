@@ -33,15 +33,15 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 	})
 }
 
-func TestGetEthBlockByTimestampOfLatestBlockSucceeds(t *testing.T) {
+func TestGetEthBlockByTimestampOfExactlyLatestBlockSucceeds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
 		bfh := NewFakeBlockAndTimestampGetter(logger)
 		fetcher := NewTimestampFetcher(bfh, logger)
 
-		// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
-		_, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED*time.Second+357*time.Millisecond))
+		b, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED*time.Second))
 		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
+		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.Int64(), "expecting block number to be of last value in fake db")
 	})
 }
 
