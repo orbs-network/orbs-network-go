@@ -91,9 +91,9 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 		})
 }
 
-func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
+func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	newHarness().
-		WithNumNodes(6).
+		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := callcontract.NewContractClient(network)
@@ -104,26 +104,26 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
 			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
 
-			t.Log("send transaction to the first node")
+			t.Log("send transaction to the first group")
 
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
-			t.Log("elect 1,2,3,4 - first node loses")
+			t.Log("elect 4,5,6,7 - entire first group loses")
 
-			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{1, 2, 3, 4})
+			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 4, []int{4, 5, 6, 7})
 			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
 
-			t.Log("send transaction to the first node after loss")
+			t.Log("send transaction to the first group after loss")
 
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{1, 2, 3, 4})
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{4, 5, 6, 7})
 
-			t.Log("elect 0,1,2,3 - first node returns")
+			t.Log("elect 0,1,2,3 - first group returns")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
 			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
@@ -142,7 +142,7 @@ func TestLeanHelix_NodeLosesElectionButReturns(t *testing.T) {
 
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	newHarness().
-		WithNumNodes(6).
+		WithNumNodes(7).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := callcontract.NewContractClient(network)
@@ -160,9 +160,9 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
-			t.Log("elect 0,1,2,3,4,5")
+			t.Log("elect 0,1,2,3,4,5,6")
 
-			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3, 4, 5})
+			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3, 4, 5, 6})
 			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
 
 			t.Log("send transaction")
@@ -170,7 +170,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5})
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5, 6})
 
 			t.Log("test done, shutting down")
 
