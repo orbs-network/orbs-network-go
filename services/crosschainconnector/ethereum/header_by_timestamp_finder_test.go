@@ -29,7 +29,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 
 		// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
 		_, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(1944035343000000000))
-		require.EqualError(t, err, "requested future block at time 2031-08-09 09:49:03 +0000 UTC, latest block time is 2017-09-22 19:33:03 +0000 UTC", "expecting an error when trying to go to the future")
+		require.EqualError(t, err, "requested future block at time 2031-08-09 09:49:03 +0000 UTC, latest block time is 2017-09-22 19:33:04 +0000 UTC", "expecting an error when trying to go to the future")
 	})
 }
 
@@ -42,6 +42,19 @@ func TestGetEthBlockByTimestampOfExactlyLatestBlockSucceeds(t *testing.T) {
 		b, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED*time.Second))
 		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
 		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.Int64(), "expecting block number to be of last value in fake db")
+	})
+}
+
+func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		bfh := NewFakeBlockAndTimestampGetter(logger)
+		fetcher := NewTimestampFetcher(bfh, logger)
+
+		b, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano((FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-1)*time.Second))
+		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
+		// why -1 below? because the algorithm locks us to a block with time stamp **less** than what we requested, so it finds the latest but it is greater (ts-wise) so it will return -1
+		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS-1, b.Int64(), "expecting block number to be of last value in fake db")
 	})
 }
 

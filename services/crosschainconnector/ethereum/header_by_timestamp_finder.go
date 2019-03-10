@@ -16,8 +16,9 @@ type TimestampFetcher interface {
 }
 
 type finder struct {
-	logger log.BasicLogger
-	btg    BlockAndTimestampGetter
+	logger    log.BasicLogger
+	btg       BlockAndTimestampGetter
+	lastKnown *BlockHeightAndTime
 }
 
 func NewTimestampFetcher(btg BlockAndTimestampGetter, logger log.BasicLogger) *finder {
@@ -36,6 +37,7 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 		return nil, errors.New("cannot query before ethereum genesis")
 	}
 
+	// approx always returns a new pointer
 	latest, err := f.btg.ApproximateBlockAt(ctx, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get latest block")
@@ -44,6 +46,8 @@ func (f *finder) GetBlockByTimestamp(ctx context.Context, nano primitives.Timest
 	if latest == nil { // simulator always returns nil block number
 		return nil, nil
 	}
+
+	f.lastKnown = latest
 
 	requestedTime := time.Unix(0, int64(nano))
 	latestTime := time.Unix(0, latest.TimeSeconds*int64(time.Second))
@@ -95,6 +99,12 @@ func (f *finder) findBlockByTimeStamp(ctx context.Context, targetTimestamp int64
 	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock
 	f.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
 	guessBlockNumber := current.Number - blocksToJump
+
+	// this will handle the case where we 'went' too far due to uneven distribution of time differences between blocks
+	if guessBlockNumber > f.lastKnown.Number {
+		return f.findBlockByTimeStamp(ctx, targetTimestamp, f.lastKnown, current)
+	}
+
 	guess, err := f.btg.ApproximateBlockAt(ctx, big.NewInt(guessBlockNumber))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to get header by block number %d", guessBlockNumber))
