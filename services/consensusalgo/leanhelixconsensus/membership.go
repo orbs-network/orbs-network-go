@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"strconv"
 	"strings"
 )
 
@@ -54,7 +55,8 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 
 	nodeAddresses := toMemberIds(res.NodeAddresses)
 	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
-	m.logger.Info("Received committee members", log.BlockHeight(primitives.BlockHeight(blockHeight)), log.Uint64("random-seed", seed), log.String("committee-members", committeeMembersStr))
+	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
+	m.logger.Info("Received committee members", log.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
 	return nodeAddresses, nil
 }
