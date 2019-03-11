@@ -130,6 +130,13 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			continue
 		}
 
+		if key == "ethereum-finality-blocks-component" {
+			var finalityBlocksComponent uint32
+			finalityBlocksComponent, err = parseUint32(value.(float64))
+			cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, finalityBlocksComponent)
+			continue
+		}
+
 		if key == "gossip-port" {
 			var gossipPort uint32
 			gossipPort, err = parseUint32(value.(float64))
