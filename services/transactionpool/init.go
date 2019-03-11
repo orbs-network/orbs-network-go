@@ -39,12 +39,13 @@ func NewTransactionPool(ctx context.Context,
 		config:         config,
 		logger:         logger,
 
-		pendingPool:          pendingPool,
-		committedPool:        committedPool,
-		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
-		blockHeightReporter:  blockHeightReporter,
-		transactionForwarder: txForwarder,
-		transactionWaiter:    waiter,
+		pendingPool:                         pendingPool,
+		committedPool:                       committedPool,
+		blockTracker:                        synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
+		blockHeightReporter:                 blockHeightReporter,
+		transactionForwarder:                txForwarder,
+		transactionWaiter:                   waiter,
+		addNewTransactionConcurrencyLimiter: NewRequestConcurrencyLimiter(100),
 	}
 
 	s.validationContext = s.createValidationContext()
