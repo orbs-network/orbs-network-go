@@ -131,6 +131,14 @@ func TestSetGossipPeers(t *testing.T) {
 	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.NodeAddress().KeyForMap()])
 }
 
+func TestSetEthereumFinalityBlocksComponent(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{"ethereum-finality-blocks-component": 17}`)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+	require.EqualValues(t, 17, cfg.EthereumFinalityBlocksComponent())
+}
+
 func TestSetGossipPort(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{"gossip-port": 4500}`)
 
