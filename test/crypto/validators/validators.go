@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
+// TODO: this file should be moved to /test/builders/blocks.go
+
 func AStructurallyValidBlock() *protocol.BlockPairContainer {
 
 	protocolVersion := primitives.ProtocolVersion(1)

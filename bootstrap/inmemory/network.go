@@ -230,6 +230,36 @@ func (n *Network) GetTransactionStatus(ctx context.Context, txHash primitives.Sh
 	return out.res.ClientResponse
 }
 
+type getTxProofResp struct {
+	res *services.GetTransactionReceiptProofOutput
+	err error
+}
+
+func (n *Network) GetTransactionReceiptProof(ctx context.Context, txHash primitives.Sha256, nodeIndex int) *client.GetTransactionReceiptProofResponse {
+	n.assertStarted(nodeIndex)
+
+	ch := make(chan getTxProofResp)
+	go func() {
+		defer close(ch)
+		publicApi := n.Nodes[nodeIndex].GetPublicApi()
+		output, err := publicApi.GetTransactionReceiptProof(ctx, &services.GetTransactionReceiptProofInput{
+			ClientRequest: (&client.GetTransactionReceiptProofRequestBuilder{
+				TransactionRef: builders.TransactionRef().WithTxHash(txHash).Builder(),
+			}).Build(),
+		})
+		select {
+		case ch <- getTxProofResp{res: output, err: err}:
+		case <-ctx.Done():
+			ch <- getTxProofResp{err: errors.Wrap(ctx.Err(), "aborted get tx receipt proof")}
+		}
+	}()
+	out := <-ch
+	if out.res == nil {
+		panic(fmt.Sprintf("error in get tx receipt proof: %s", out.err.Error())) // TODO(https://github.com/orbs-network/orbs-network-go/issues/531): improve
+	}
+	return out.res.ClientResponse
+}
+
 type runQueryResp struct {
 	res *services.RunQueryOutput
 	err error
