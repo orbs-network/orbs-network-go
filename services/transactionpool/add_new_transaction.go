@@ -14,8 +14,8 @@ import (
 
 func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	// too many concurrent AddNewTransaction goroutines from clients may choke the txPool and prevent CommitTransactionReceipts from being handled
-	s.addNewTransactionRateLimiter.RequestSlot()
-	defer s.addNewTransactionRateLimiter.ReleaseSlot()
+	s.addNewTransactionConcurrencyLimiter.RequestSlot()
+	defer s.addNewTransactionConcurrencyLimiter.ReleaseSlot()
 
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
