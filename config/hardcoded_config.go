@@ -77,7 +77,8 @@ const (
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 	PUBLIC_API_NODE_SYNC_WARNING_TIME   = "PUBLIC_API_NODE_SYNC_WARNING_TIME"
 
-	PROCESSOR_ARTIFACT_PATH = "PROCESSOR_ARTIFACT_PATH"
+	PROCESSOR_ARTIFACT_PATH               = "PROCESSOR_ARTIFACT_PATH"
+	PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS = "PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS"
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
@@ -316,6 +317,10 @@ func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 
 func (c *config) ProcessorArtifactPath() string {
 	return c.kv[PROCESSOR_ARTIFACT_PATH].StringValue
+}
+
+func (c *config) ProcessorSanitizeDeployedContracts() bool {
+	return c.kv[PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS].BoolValue
 }
 
 func (c *config) GossipListenPort() uint16 {
