@@ -31,7 +31,7 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), log.BlockHeight(lastCommittedBlockHeight))
+	s.logger.Info("queried elected validators", log.BlockHeight(lastCommittedBlockHeight), log.Int("num-results", len(electedValidatorsAddresses)))
 
 	// elections not active yet
 	if len(electedValidatorsAddresses) == 0 {
