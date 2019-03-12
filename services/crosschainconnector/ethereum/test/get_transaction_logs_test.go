@@ -112,6 +112,40 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 	})
 }
 
+func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		simulator := adapter.NewEthereumSimulatorConnection(logger)
+		auth := simulator.GetAuth()
+		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
+
+		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
+		simulator.Commit()
+		require.NoError(t, err, "failed deploying contract to Ethereum")
+
+		amount := big.NewInt(42)
+		tuid := big.NewInt(33)
+		ethAddress := common.BigToAddress(big.NewInt(42000000000))
+		orbsAddress := anOrbsAddress()
+
+		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
+		simulator.Commit()
+		require.NoError(t, err, "failed emitting event")
+
+		incorrectContractAddress := "0x6C94224Eb459535C752D2684F3654a0D71e32516" // taken from somewhere else
+		require.NotEqual(t, incorrectContractAddress, contractAddress.Hex(), "contract should not accidentally match the one we use as incorrect")
+
+		_, err = connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
+			EthereumContractAddress: incorrectContractAddress,
+			EthereumTxhash:          tx.Hash().Hex(),
+			EthereumEventName:       "TransferredOut",
+			EthereumJsonAbi:         contract.EmitEventAbi,
+			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
+		})
+		require.Error(t, err, "failed getting logs")
+	})
+}
+
 func readFile(path string) ([]byte, error) {
 	absPath, _ := filepath.Abs(path)
 	return ioutil.ReadFile(absPath)
