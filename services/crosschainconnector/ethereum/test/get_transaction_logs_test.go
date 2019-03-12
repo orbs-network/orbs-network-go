@@ -142,7 +142,7 @@ func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T)
 			EthereumJsonAbi:         contract.EmitEventAbi,
 			ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
 		})
-		require.Error(t, err, "failed getting logs")
+		require.Error(t, err, "should fail getting logs due to incorrect contract")
 	})
 }
 
