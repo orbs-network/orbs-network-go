@@ -1,6 +1,7 @@
 package ethereum
 
 import (
+	"bytes"
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -70,12 +71,12 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 
 	}
 
-	address, err := hexutil.Decode(input.EthereumContractAddress)
+	ethereumContractAddress, err := hexutil.Decode(input.EthereumContractAddress)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
-	output, err := s.connection.CallContract(ctx, address, input.EthereumAbiPackedInputArguments, ethereumBlockNumber)
+	output, err := s.connection.CallContract(ctx, ethereumContractAddress, input.EthereumAbiPackedInputArguments, ethereumBlockNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "ethereum call failed")
 	}
@@ -92,6 +93,11 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 	ethereumTxHash, err := hexutil.Decode(input.EthereumTxhash)
 	if err != nil {
 		return nil, err
+	}
+
+	ethereumContractAddress, err := hexutil.Decode(input.EthereumContractAddress)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode the contract address %s", input.EthereumContractAddress)
 	}
 
 	parsedABI, err := abi.JSON(strings.NewReader(input.EthereumJsonAbi))
@@ -114,9 +120,15 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 		return nil, errors.Errorf("expected exactly one log entry for txhash %s of contract %s but got %d", input.EthereumTxhash, input.EthereumContractAddress, len(logs))
 	}
 
-	ethereumBlockNumber := logs[0].BlockNumber
-	ethereumTxIndex := logs[0].TxIndex
-	err = verifyBlockNumberIsFinalitySafe(ctx, ethereumBlockNumber, input.ReferenceTimestamp, s.timestampFetcher, s.config)
+	ethereumContractAddressResult := logs[0].ContractAddress
+	ethereumBlockNumberResult := logs[0].BlockNumber
+	ethereumTxIndexResult := logs[0].TxIndex
+
+	if !bytes.Equal(ethereumContractAddress, ethereumContractAddressResult) {
+		return nil, errors.Errorf("Ethereum txhash %s is under contract %s and not %s", input.EthereumTxhash, hexutil.Encode(ethereumContractAddressResult), input.EthereumContractAddress)
+	}
+
+	err = verifyBlockNumberIsFinalitySafe(ctx, ethereumBlockNumberResult, input.ReferenceTimestamp, s.timestampFetcher, s.config)
 	if err != nil {
 		return nil, err
 	}
@@ -128,8 +140,8 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 
 	return &services.EthereumGetTransactionLogsOutput{
 		EthereumAbiPackedOutputs: [][]byte{output},
-		EthereumBlockNumber:      ethereumBlockNumber,
-		EthereumTxindex:          ethereumTxIndex,
+		EthereumBlockNumber:      ethereumBlockNumberResult,
+		EthereumTxindex:          ethereumTxIndexResult,
 	}, nil
 }
 
