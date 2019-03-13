@@ -79,3 +79,16 @@ func NodeAddressesForTests() []primitives.NodeAddress {
 	}
 	return res
 }
+
+func NodeAddressesForTestsToIndexes(nodeAddresses []primitives.NodeAddress) []int {
+	var res []int
+	for _, nodeAddress := range nodeAddresses {
+		for index := 0; index < len(ecdsaSecp256K1KeyPairs); index++ {
+			if EcdsaSecp256K1KeyPairForTests(index).NodeAddress().Equal(nodeAddress) {
+				res = append(res, index)
+				break
+			}
+		}
+	}
+	return res
+}

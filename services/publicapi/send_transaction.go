@@ -35,6 +35,7 @@ func (s *service) SendTransactionAsync(parentCtx context.Context, input *service
 }
 
 func (s *service) sendTransaction(ctx context.Context, request *client.SendTransactionRequest, asyncMode bool) (*txOutput, error) {
+	s.metrics.totalTransactionsFromClients.Inc()
 	if request == nil {
 		err := errors.Errorf("client request is nil")
 		s.logger.Info("send transaction received missing input", log.Error(err))
