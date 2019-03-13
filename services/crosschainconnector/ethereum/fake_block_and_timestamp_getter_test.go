@@ -22,3 +22,22 @@ func TestFakeBlockHeaderFetcherOfLatest(t *testing.T) {
 	require.EqualValues(t, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, b.TimeSeconds, "expected ffc last block to be of specific ts")
 	require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.Number, "expected last block of constant number")
 }
+
+func TestSameTimeBlocks(t *testing.T) {
+	ffc := NewFakeBlockAndTimestampGetter(log.DefaultTestingLogger(t)).WithSameTimeBlocks(0.95)
+
+	dups := make(map[int64]int)
+	for _, t := range ffc.data {
+		dups[t]++
+	}
+
+	maxCount := 1
+	for _, c := range dups {
+		if c > 1 {
+			maxCount = c
+			break
+		}
+	}
+
+	require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS*0.95, maxCount, "expected number of same timestamp mismatch")
+}

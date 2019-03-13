@@ -72,3 +72,15 @@ func NewFakeBlockAndTimestampGetter(logger log.BasicLogger) *FakeBlockAndTimesta
 
 	return f
 }
+
+func (db *FakeBlockAndTimestampGetter) WithSameTimeBlocks(percent float64) *FakeBlockAndTimestampGetter {
+	percent = (1 - percent) / 2
+	locationOfStart := int64(FAKE_CLIENT_NUMBER_OF_BLOCKS * percent)
+	timeToSet := db.data[locationOfStart]
+
+	for i := locationOfStart; i < FAKE_CLIENT_NUMBER_OF_BLOCKS-locationOfStart; i++ {
+		db.data[i] = timeToSet
+	}
+
+	return db
+}

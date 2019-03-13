@@ -94,6 +94,9 @@ func (f *finder) findBlockByTimeStamp(ctx context.Context, targetTimestamp int64
 	}
 
 	timeDiff := current.TimeSeconds - prev.TimeSeconds
+	if timeDiff == 0 {
+		return nil, errors.Errorf("two blocks with the same timestamp detected - invalid state (ganache?) b1: %+v, b2: %+v", current, prev)
+	}
 	secondsPerBlock := int64(math.Ceil(float64(timeDiff) / float64(blockNumberDiff)))
 	distanceToTargetFromCurrent := current.TimeSeconds - targetTimestamp
 	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock

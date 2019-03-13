@@ -58,6 +58,19 @@ func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
 	})
 }
 
+func TestGetEthBlockByTimestampDoesNotPanicOnSameTimeBlocks(t *testing.T) {
+	// this test is only valid for when testing with ganache, where we might get this kind of scenario, cannot (?) happen on real ethereum
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		bfh := NewFakeBlockAndTimestampGetter(logger).WithSameTimeBlocks(0.95)
+		fetcher := NewTimestampFetcher(bfh, logger)
+
+		_, err := fetcher.GetBlockByTimestamp(ctx, primitives.TimestampNano(1500198628000000000)) // should be block 32599, but this fake db was reset to same ts
+		require.Error(t, err, "expecting no error when trying to get latest time with some extra millis")
+		t.Log(err)
+	})
+}
+
 func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
