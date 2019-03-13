@@ -89,7 +89,7 @@ func (c *committer) commit(ctx context.Context, receipts ...*protocol.Transactio
 			c.myReceipts = append(c.myReceipts, receipt)
 		}
 
-		c.logger.Info("transaction receipt committed", log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
+		c.logger.Info("transaction receipt committed", log.BlockHeight(c.blockHeight), log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
 	}
 
 	return

@@ -57,7 +57,7 @@ func tryOnce(errorer Errorer, f func()) {
 func recoverPanics(logger Errorer) {
 	if p := recover(); p != nil {
 		e := errors.Errorf("\npanic: %v\n\ngoroutine panicked at:\n%s\n\n", p, identifyPanic())
-		logger.Error("recovered panic", log.Error(e), log.String("stack-trace", string(debug.Stack())))
+		logger.Error("recovered panic", log.Error(e), log.String("panic", "true"), log.String("stack-trace", string(debug.Stack())))
 	}
 }
 

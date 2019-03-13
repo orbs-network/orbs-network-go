@@ -110,7 +110,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
 	if err != nil {
-		logger.Info("contract execution failed", log.Error(err))
+		logger.Info("contract execution failed", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.Error(err))
 
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
@@ -122,7 +122,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	// result
 	callResult := protocol.EXECUTION_RESULT_SUCCESS
 	if contractErr != nil {
-		logger.Info("contract returned error", log.Error(contractErr))
+		logger.Info("contract returned error", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.Error(contractErr))
 
 		callResult = protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT
 	}
