@@ -73,6 +73,7 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
+	ProcessorSanitizeDeployedContracts() bool
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
@@ -182,6 +183,10 @@ type TransactionPoolConfig interface {
 type EthereumCrosschainConnectorConfig interface {
 	EthereumFinalityTimeComponent() time.Duration
 	EthereumFinalityBlocksComponent() uint32
+}
+
+type NativeProcessorConfig interface {
+	ProcessorSanitizeDeployedContracts() bool
 }
 
 type LeanHelixConsensusConfig interface {

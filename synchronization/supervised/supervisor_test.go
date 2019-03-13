@@ -39,12 +39,13 @@ func TestGoOnce_ReportsOnPanic(t *testing.T) {
 
 	report := <-logger.errors
 	require.Equal(t, report.message, "recovered panic")
-	require.Len(t, report.fields, 2, "expected log to contain both error and stack trace")
+	require.Len(t, report.fields, 3, "expected log to contain error, stack trace and panic flag")
 
 	errorField := report.fields[0]
-	stackTraceField := report.fields[1]
+	panicField := report.fields[1]
+	stackTraceField := report.fields[2]
 	require.Contains(t, errorField.Value(), "foo")
-	require.Equal(t, stackTraceField.Key, "stack-trace")
+	require.Equal(t, panicField.Key, "panic")
 	require.Equal(t, stackTraceField.Key, "stack-trace")
 	require.Contains(t, stackTraceField.Value(), "localFunctionThatPanics")
 }

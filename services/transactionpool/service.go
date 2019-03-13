@@ -32,16 +32,18 @@ type service struct {
 		timestamp   primitives.TimestampNano
 	}
 
-	pendingPool          *pendingTxPool
-	committedPool        *committedTxPool
-	blockTracker         *synchronization.BlockTracker
-	transactionForwarder *transactionForwarder
-	transactionWaiter    *transactionWaiter
-	validationContext    *validationContext
+	pendingPool                         *pendingTxPool
+	committedPool                       *committedTxPool
+	blockTracker                        *synchronization.BlockTracker
+	transactionForwarder                *transactionForwarder
+	transactionWaiter                   *transactionWaiter
+	validationContext                   *validationContext
+	addNewTransactionConcurrencyLimiter *requestConcurrencyLimiter
 
 	metrics struct {
 		blockHeight *metric.Gauge
 		commitRate  *metric.Rate
+		commitCount *metric.Gauge
 	}
 
 	addCommitLock sync.RWMutex

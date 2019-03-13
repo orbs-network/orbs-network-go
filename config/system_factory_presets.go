@@ -75,6 +75,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 2*time.Minute)
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 90)
 
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false) // TODO(v1): change to true
+
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))

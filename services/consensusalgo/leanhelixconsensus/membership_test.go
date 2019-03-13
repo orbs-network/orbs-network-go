@@ -17,3 +17,11 @@ func TestToMemberIdsReturnsEmptyWhenGivenNil(t *testing.T) {
 	memberIds := toMemberIds(nil)
 	require.Equal(t, 0, len(memberIds), "toMemberIds() should return empty memberIds when given nil")
 }
+
+func TestNodeAddressesToCommaSeparatedString_NilArray(t *testing.T) {
+	require.Equal(t, "", nodeAddressesToCommaSeparatedString(nil))
+}
+
+func TestNodeAddressesToCommaSeparatedString(t *testing.T) {
+	require.True(t, len(nodeAddressesToCommaSeparatedString(keys.NodeAddressesForTests())) > 0, "returned zero length string although input is not empty")
+}

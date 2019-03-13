@@ -51,7 +51,7 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 		return nil, err
 	}
 
-	code, err := sanitizeDeployedSourceCode(string(codeBytes))
+	code, err := s.sanitizeDeployedSourceCode(string(codeBytes))
 	if err != nil {
 		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 	}

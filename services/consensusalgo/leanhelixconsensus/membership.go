@@ -6,6 +6,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"strconv"
+	"strings"
 )
 
 type membership struct {
@@ -31,6 +33,14 @@ func (m *membership) MyMemberId() lhprimitives.MemberId {
 	return lhprimitives.MemberId(m.memberId)
 }
 
+func nodeAddressesToCommaSeparatedString(nodeAddresses []primitives.NodeAddress) string {
+	addrs := make([]string, 0)
+	for _, nodeAddress := range nodeAddresses {
+		addrs = append(addrs, nodeAddress.String())
+	}
+	return strings.Join(addrs, ",")
+}
+
 func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) ([]lhprimitives.MemberId, error) {
 
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
@@ -44,6 +54,9 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 	}
 
 	nodeAddresses := toMemberIds(res.NodeAddresses)
+	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
+	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
+	m.logger.Info("Received committee members", log.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
 	return nodeAddresses, nil
 }

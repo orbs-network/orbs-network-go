@@ -1,8 +1,10 @@
 package e2e
 
 import (
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestInitialBlockHeight(t *testing.T) {
@@ -12,9 +14,10 @@ func TestInitialBlockHeight(t *testing.T) {
 	}
 
 	runMultipleTimes(t, func(t *testing.T) {
-
 		h := newHarness()
-		blockHeight := h.getMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
-		require.Truef(t, blockHeight >= expectedBlocks, "expected e2e network to launch with %v blocks, found only %v", expectedBlocks, blockHeight)
+		require.True(t, test.Eventually(2*time.Second, func() bool {
+			blockHeight := h.getMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
+			return blockHeight >= expectedBlocks
+		}), "expected e2e network to launch with %v blocks", expectedBlocks)
 	})
 }

@@ -39,18 +39,20 @@ func NewTransactionPool(ctx context.Context,
 		config:         config,
 		logger:         logger,
 
-		pendingPool:          pendingPool,
-		committedPool:        committedPool,
-		blockTracker:         synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
-		blockHeightReporter:  blockHeightReporter,
-		transactionForwarder: txForwarder,
-		transactionWaiter:    waiter,
+		pendingPool:                         pendingPool,
+		committedPool:                       committedPool,
+		blockTracker:                        synchronization.NewBlockTracker(logger, 0, uint16(config.BlockTrackerGraceDistance())),
+		blockHeightReporter:                 blockHeightReporter,
+		transactionForwarder:                txForwarder,
+		transactionWaiter:                   waiter,
+		addNewTransactionConcurrencyLimiter: NewRequestConcurrencyLimiter(100),
 	}
 
 	s.validationContext = s.createValidationContext()
 	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
-	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate.Seconds")
+	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate.PerSecond")
+	s.metrics.commitCount = metricFactory.NewGauge("TransactionPool.TotalCommits.Count")
 
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
