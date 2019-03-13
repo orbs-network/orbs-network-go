@@ -44,7 +44,7 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 
 	for _, tx := range input.Message.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Stringable("transaction", tx), log.Transaction(txHash))
+		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Transaction(txHash))
 		if _, err := s.pendingPool.add(tx, sender.SenderNodeAddress()); err != nil {
 			logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Transaction(txHash))
 		}

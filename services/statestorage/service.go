@@ -96,7 +96,6 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 }
 
 func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (*services.ReadKeysOutput, error) {
-	s.logger.Info("ReadKeys", log.BlockHeight(input.BlockHeight), log.String("contract", string(input.ContractName)))
 	if input.ContractName == "" {
 		return nil, errors.Errorf("missing contract name")
 	}

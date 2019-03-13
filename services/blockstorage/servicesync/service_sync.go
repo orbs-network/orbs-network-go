@@ -70,21 +70,17 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blockSource, committer BlockPairCommitter) {
 	ctx = trace.NewContext(ctx, committer.getServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("NewServiceBlockSync() start goroutine")
+	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
 	supervised.GoForever(ctx, logger, func() {
-
 		var height primitives.BlockHeight
 		var err error
 		for err == nil {
-			logger.Info("NewServiceBlockSync() starting to wait for block", log.Stringable("wait-for-block", height+1)) // TODO remove this
 			err = source.GetBlockTracker().WaitForBlock(ctx, height+1)
 			if err != nil {
-				logger.Info("NewServiceBlockSync() failed waiting for block", log.Error(err))
+				logger.Info("service block sync failed waiting for block", log.Error(err), log.BlockHeight(primitives.BlockHeight(height)))
 				return
 			}
-			logger.Info("NewServiceBlockSync() block arrived", log.Stringable("wait-for-block", height+1)) // TODO remove this
 			height, err = syncToTopBlock(ctx, source, committer, logger)
-			logger.Info("NewServiceBlockSync() synced to block", log.Stringable("wait-for-block", height)) // TODO remove this
 		}
 	})
 }

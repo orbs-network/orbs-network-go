@@ -20,6 +20,15 @@ func CalcTxHash(transaction *protocol.Transaction) primitives.Sha256 {
 	return hash.CalcSha256(transaction.Raw())
 }
 
+func CalcTxHashsFromSignedTransactions(transactions []*protocol.SignedTransaction) []primitives.Sha256 {
+	txHashes := make([]primitives.Sha256, len(transactions))
+	for i, tx := range transactions {
+		txHashes[i] = CalcTxHash(tx.Transaction())
+	}
+
+	return txHashes
+}
+
 func CalcSignedTxHashes(signedTransactions []*protocol.SignedTransaction) []primitives.Sha256 {
 	res := make([]primitives.Sha256, len(signedTransactions))
 	for i := 0; i < len(signedTransactions); i++ {
