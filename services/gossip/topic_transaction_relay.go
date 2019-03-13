@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 )
@@ -27,7 +26,10 @@ func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *g
 }
 
 func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
-	s.logger.Info("broadcasting forwarded transactions", trace.LogFieldFrom(ctx), log.Stringable("sender", input.Message.Sender), log.StringableSlice("transactions", input.Message.SignedTransactions))
+	s.logger.Info("broadcasting forwarded transactions",
+		trace.LogFieldFrom(ctx),
+		log.Stringable("sender", input.Message.Sender),
+		log.StringableSlice("transactions", digest.CalcTxHashsFromSignedTransactions(input.Message.SignedTransactions)))
 
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
@@ -54,12 +56,9 @@ func (s *service) receivedForwardedTransactions(ctx context.Context, header *gos
 		return
 	}
 
-	txHashes := make([]primitives.Sha256, len(message.SignedTransactions))
-	for i, tx := range message.SignedTransactions {
-		txHashes[i] = digest.CalcTxHash(tx.Transaction())
-	}
-
-	logger.Info("received forwarded transactions", log.Stringable("sender", message.Sender), log.StringableSlice("transactions", txHashes))
+	logger.Info("received forwarded transactions",
+		log.Stringable("sender", message.Sender),
+		log.StringableSlice("transactions", digest.CalcTxHashsFromSignedTransactions(message.SignedTransactions)))
 
 	s.handlers.RLock()
 	defer s.handlers.RUnlock()
