@@ -56,8 +56,8 @@ func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx contex
 	}
 
 	logger.Info("broadcast block availability request",
-		log.Stringable("first-block-height", firstBlockHeight),
-		log.Stringable("last-block-height", lastBlockHeight))
+		log.Uint64("first-block-height", uint64(firstBlockHeight)),
+		log.Uint64("last-block-height", uint64(lastBlockHeight)))
 
 	input := &gossiptopics.BlockAvailabilityRequestInput{
 		Message: &gossipmessages.BlockAvailabilityRequestMessage{
