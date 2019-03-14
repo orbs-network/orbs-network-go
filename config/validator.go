@@ -18,8 +18,8 @@ func NewValidator(logger log.BasicLogger) *validator {
 }
 
 func (v *validator) Validate(cfg NodeConfig) {
-	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be less than benchmark consensus timeout")
-	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be less than lean helix round timeout")
+	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be greater than benchmark consensus timeout")
+	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be greater than lean helix round timeout")
 }
 
 func (v *validator) requireGT(d1 func() time.Duration, d2 func() time.Duration, msg string) {

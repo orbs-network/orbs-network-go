@@ -14,23 +14,23 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemor
 	numNodes := 2
 	logger.Info("creating development network")
 
-	federationNodes := map[string]config.FederationNode{}
+	validatorNodes := map[string]config.ValidatorNode{}
 	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
 
 	var nodeOrder []primitives.NodeAddress
 	for i := 0; i < int(numNodes); i++ {
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		validatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 		privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
 		nodeOrder = append(nodeOrder, nodeAddress)
 	}
-	sharedTransport := gossipAdapter.NewTransport(ctx, logger, federationNodes)
+	sharedTransport := gossipAdapter.NewTransport(ctx, logger, validatorNodes)
 	cfgTemplate := config.TemplateForGamma(
-		federationNodes,
+		validatorNodes,
 		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
 	)
 
-	network := inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, nil)
+	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }

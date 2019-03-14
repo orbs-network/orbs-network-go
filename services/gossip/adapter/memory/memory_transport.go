@@ -34,14 +34,14 @@ type memoryTransport struct {
 	peers map[string]*peer
 }
 
-func NewTransport(ctx context.Context, logger log.BasicLogger, federation map[string]config.FederationNode) *memoryTransport {
+func NewTransport(ctx context.Context, logger log.BasicLogger, validators map[string]config.ValidatorNode) *memoryTransport {
 	transport := &memoryTransport{peers: make(map[string]*peer)}
 
 	transport.Lock()
 	defer transport.Unlock()
-	for _, node := range federation {
+	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("peer-listener", node.NodeAddress())), len(federation))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("peer-listener", node.NodeAddress())), len(validators))
 	}
 
 	return transport

@@ -67,10 +67,9 @@ func NewLeanHelixConsensusAlgo(
 
 	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
 
-	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
+	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
-	committeeSize := uint32(len(config.FederationNodes(0)))
-	membership := NewMembership(logger, config.NodeAddress(), consensusContext, committeeSize)
+	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
 	mgr := NewKeyManager(logger, config.NodePrivateKey())
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)

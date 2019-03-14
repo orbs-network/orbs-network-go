@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var federationNodeAddressesForTest = []primitives.NodeAddress{
+var validatorNodeAddressesForTest = []primitives.NodeAddress{
 	primitives.NodeAddress("dfc06c5be24a67adee80b35ab4f147bb1a35c55f"),
 	primitives.NodeAddress("92d469d7c004cc0b24a192d9457836bf38effa27"),
 	primitives.NodeAddress("a899b318e65915aa2de02841eeb72fe51fddad96"),
@@ -123,12 +123,12 @@ func newHarness(tb testing.TB) *harness {
 	txPool := &services.MockTransactionPool{}
 	machine := &services.MockVirtualMachine{}
 	state := &services.MockStateStorage{}
-	federationNodes := make(map[string]config.FederationNode)
-	for _, nodeAddress := range federationNodeAddressesForTest {
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
+	for _, nodeAddress := range validatorNodeAddressesForTest {
+		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 	}
 
-	cfg := config.ForConsensusContextTests(federationNodes)
+	cfg := config.ForConsensusContextTests(genesisValidatorNodes)
 
 	metricFactory := metric.NewRegistry()
 

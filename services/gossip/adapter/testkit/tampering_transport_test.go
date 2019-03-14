@@ -26,11 +26,11 @@ func newTamperingHarness(tb testing.TB, ctx context.Context) *tamperingHarness {
 	listener := &MockTransportListener{}
 	logger := log.DefaultTestingLogger(tb).WithTags(log.String("adapter", "transport"))
 
-	federationNodes := make(map[string]config.FederationNode)
-	federationNodes[senderAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(senderAddress))
-	federationNodes[listenerAddress] = config.NewHardCodedFederationNode(primitives.NodeAddress(listenerAddress))
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
+	genesisValidatorNodes[senderAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(senderAddress))
+	genesisValidatorNodes[listenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(listenerAddress))
 
-	transport := NewTamperingTransport(logger, memory.NewTransport(ctx, logger, federationNodes))
+	transport := NewTamperingTransport(logger, memory.NewTransport(ctx, logger, genesisValidatorNodes))
 
 	transport.RegisterListener(listener, primitives.NodeAddress(listenerAddress))
 
