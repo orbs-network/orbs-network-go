@@ -41,7 +41,7 @@ type metrics struct {
 	timeSinceLastElectionMillis *metric.Histogram
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
-	votingTime                  *metric.Histogram
+	lastCommittedTime           *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
@@ -50,6 +50,7 @@ func newMetrics(m metric.Factory) *metrics {
 		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis", 30*time.Minute),
 		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Value"),
 		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Value"),
+		lastCommittedTime:           m.NewGauge("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano"),
 	}
 }
 
@@ -201,6 +202,7 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 		logger.Info("onCommit - saving block to storage error: ", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 	now := time.Now()
+	s.metrics.lastCommittedTime.Update(now.UnixNano())
 	s.metrics.timeSinceLastCommitMillis.RecordSince(s.lastCommitTime)
 	s.lastCommitTime = now
 }

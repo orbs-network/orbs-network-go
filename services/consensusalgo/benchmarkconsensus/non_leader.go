@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *service) nonLeaderHandleCommit(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
@@ -59,6 +60,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	if err != nil {
 		return err
 	}
+	s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 
 	// remember the block in our last committed state variable
 	if blockPair.TransactionsBlock.Header.BlockHeight() == lastCommittedBlockHeight+1 {

@@ -187,6 +187,7 @@ type processingStateMetrics struct {
 	committedBlocks        *metric.Gauge
 	failedCommitBlocks     *metric.Gauge
 	failedValidationBlocks *metric.Gauge
+	lastCommittedTime      *metric.Gauge
 }
 
 func newStateMetrics(factory metric.Factory) *stateMetrics {
@@ -218,6 +219,7 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 			committedBlocks:        factory.NewGauge("BlockSync.ProcessingBlocksState.CommittedBlocks.Count"),
 			failedCommitBlocks:     factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToCommitBlocks.Count"),
 			failedValidationBlocks: factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToValidateBlocks.Count"),
+			lastCommittedTime:      factory.NewGauge("BlockSync.ProcessingBlocksState.LastCommitted.TimeNano"),
 		},
 	}
 }
