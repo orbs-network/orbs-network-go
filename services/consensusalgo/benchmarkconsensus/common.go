@@ -39,7 +39,8 @@ func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, 
 }
 
 func (s *service) requiredQuorumSize() int {
-	return int(math.Ceil(float64(s.config.NetworkSize(0)) * float64(s.config.BenchmarkConsensusRequiredQuorumPercentage()) / 100))
+	networkSize := len(s.config.GenesisValidatorNodes(0))
+	return int(math.Ceil(float64(networkSize) * float64(s.config.BenchmarkConsensusRequiredQuorumPercentage()) / 100))
 }
 
 func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {

@@ -106,7 +106,7 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 // config for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
 	processorArtifactPath string,
-	federationNodes map[string]FederationNode,
+	genesisValidatorNodes map[string]ValidatorNode,
 	gossipPeers map[string]GossipPeer,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
@@ -148,7 +148,7 @@ func ForE2E(
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
 	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetFederationNodes(federationNodes)
+	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	if processorArtifactPath != "" {
@@ -158,7 +158,7 @@ func ForE2E(
 }
 
 func ForAcceptanceTestNetwork(
-	federationNodes map[string]FederationNode,
+	genesisValidatorNodes map[string]ValidatorNode,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	maxTxPerBlock uint32,
@@ -184,7 +184,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 0*time.Millisecond)
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 
-	cfg.SetFederationNodes(federationNodes)
+	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	return cfg
@@ -192,7 +192,7 @@ func ForAcceptanceTestNetwork(
 
 // config for gamma dev network that runs with in-memory adapters except for contract compilation
 func TemplateForGamma(
-	federationNodes map[string]FederationNode,
+	genesisValidatorNodes map[string]ValidatorNode,
 	constantConsensusLeader primitives.NodeAddress,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
@@ -217,7 +217,7 @@ func TemplateForGamma(
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
 
-	cfg.SetFederationNodes(federationNodes)
+	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	return cfg

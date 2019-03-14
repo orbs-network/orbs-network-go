@@ -24,8 +24,7 @@ var LogTag = log.Service("consensus-algo-benchmark")
 type Config interface {
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	NetworkSize(asOfBlock uint64) uint32
-	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
+	GenesisValidatorNodes(asOfBlock uint64) map[string]config.ValidatorNode
 	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration

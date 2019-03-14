@@ -18,12 +18,12 @@ const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
 func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	lastCommittedBlockHeight := currentBlockHeight - 1
 
-	federationNodes := s.config.FederationNodes(uint64(lastCommittedBlockHeight))
-	federationNodesAddresses := toNodeAddresses(federationNodes)
+	genesisValidatorNodes := s.config.GenesisValidatorNodes(uint64(lastCommittedBlockHeight))
+	genesisValidatorNodesAddresses := toNodeAddresses(genesisValidatorNodes)
 
 	// genesis
 	if lastCommittedBlockHeight == 0 {
-		return federationNodesAddresses, nil
+		return genesisValidatorNodesAddresses, nil
 	}
 
 	s.logger.Info("querying elected validators", log.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
@@ -35,7 +35,7 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 
 	// elections not active yet
 	if len(electedValidatorsAddresses) == 0 {
-		return federationNodesAddresses, nil
+		return genesisValidatorNodesAddresses, nil
 	}
 
 	return electedValidatorsAddresses, nil
@@ -106,7 +106,7 @@ func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight p
 	return res, nil
 }
 
-func toNodeAddresses(nodes map[string]config.FederationNode) []primitives.NodeAddress {
+func toNodeAddresses(nodes map[string]config.ValidatorNode) []primitives.NodeAddress {
 	nodeAddresses := make([]primitives.NodeAddress, len(nodes))
 	i := 0
 	for _, value := range nodes {

@@ -86,7 +86,7 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 	require.EqualValues(t, 999, cfg.ActiveConsensusAlgo())
 }
 
-func TestSetFederationNodes(t *testing.T) {
+func TestSetGenesisValidatorNodes(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{
 	"federation-nodes": [
     {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
@@ -97,15 +97,15 @@ func TestSetFederationNodes(t *testing.T) {
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
+	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes(0)))
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
-	node1 := &hardCodedFederationNode{
+	node1 := &hardCodedValidatorNode{
 		nodeAddress: keyPair.NodeAddress(),
 	}
 
-	require.EqualValues(t, node1, cfg.FederationNodes(0)[keyPair.NodeAddress().KeyForMap()])
+	require.EqualValues(t, node1, cfg.GenesisValidatorNodes(0)[keyPair.NodeAddress().KeyForMap()])
 }
 
 func TestSetGossipPeers(t *testing.T) {
@@ -148,14 +148,14 @@ func TestSetGossipPort(t *testing.T) {
 }
 
 func TestMergeWithFileConfig(t *testing.T) {
-	nodes := make(map[string]FederationNode)
+	nodes := make(map[string]ValidatorNode)
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(2)
 
 	cfg := ForAcceptanceTestNetwork(nodes,
 		keyPair.NodeAddress(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100)
 
-	require.EqualValues(t, 0, len(cfg.FederationNodes(0)))
+	require.EqualValues(t, 0, len(cfg.GenesisValidatorNodes(0)))
 
 	cfg.MergeWithFileConfig(`
 {
@@ -178,7 +178,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	newKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
-	require.EqualValues(t, 3, len(cfg.FederationNodes(0)))
+	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes(0)))
 	require.EqualValues(t, true, cfg.LeanHelixShowDebug())
 	require.EqualValues(t, true, cfg.Profiling())
 	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())

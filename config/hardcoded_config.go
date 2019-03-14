@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type hardCodedFederationNode struct {
+type hardCodedValidatorNode struct {
 	nodeAddress primitives.NodeAddress
 }
 
@@ -25,7 +25,7 @@ type NodeConfigValue struct {
 
 type config struct {
 	kv                      map[string]NodeConfigValue
-	federationNodes         map[string]FederationNode
+	genesisValidatorNodes   map[string]ValidatorNode
 	gossipPeers             map[string]GossipPeer
 	nodeAddress             primitives.NodeAddress
 	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
@@ -100,8 +100,8 @@ const (
 	HTTP_ADDRESS = "HTTP_ADDRESS"
 )
 
-func NewHardCodedFederationNode(nodeAddress primitives.NodeAddress) FederationNode {
-	return &hardCodedFederationNode{
+func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
+	return &hardCodedValidatorNode{
 		nodeAddress: nodeAddress,
 	}
 }
@@ -158,8 +158,8 @@ func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mu
 	return c
 }
 
-func (c *config) SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig {
-	c.federationNodes = nodes
+func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig {
+	c.genesisValidatorNodes = nodes
 	return c
 }
 
@@ -168,7 +168,7 @@ func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeCo
 	return c
 }
 
-func (c *hardCodedFederationNode) NodeAddress() primitives.NodeAddress {
+func (c *hardCodedValidatorNode) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
 }
 
@@ -200,12 +200,8 @@ func (c *config) NetworkType() protocol.SignerNetworkType {
 	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
 }
 
-func (c *config) NetworkSize(asOfBlock uint64) uint32 {
-	return uint32(len(c.federationNodes))
-}
-
-func (c *config) FederationNodes(asOfBlock uint64) map[string]FederationNode {
-	return c.federationNodes
+func (c *config) GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode {
+	return c.genesisValidatorNodes
 }
 
 func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {

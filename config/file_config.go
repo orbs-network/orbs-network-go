@@ -41,8 +41,8 @@ func parseUint32(f64 float64) (uint32, error) {
 	}
 }
 
-func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, peers map[string]GossipPeer, err error) {
-	nodes = make(map[string]FederationNode)
+func parseNodesAndPeers(value interface{}) (nodes map[string]ValidatorNode, peers map[string]GossipPeer, err error) {
+	nodes = make(map[string]ValidatorNode)
 	peers = make(map[string]GossipPeer)
 
 	if nodeList, ok := value.([]interface{}); ok {
@@ -59,7 +59,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]FederationNode, pee
 				} else {
 					gossipPort := int(i)
 
-					nodes[nodeAddress.KeyForMap()] = &hardCodedFederationNode{
+					nodes[nodeAddress.KeyForMap()] = &hardCodedValidatorNode{
 						nodeAddress: nodeAddress,
 					}
 
@@ -145,11 +145,11 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		}
 
 		if key == "federation-nodes" {
-			var nodes map[string]FederationNode
+			var nodes map[string]ValidatorNode
 			var peers map[string]GossipPeer
 
 			nodes, peers, err = parseNodesAndPeers(value)
-			cfg.SetFederationNodes(nodes)
+			cfg.SetGenesisValidatorNodes(nodes)
 			cfg.SetGossipPeers(peers)
 			continue
 		}

@@ -9,24 +9,24 @@ import (
 
 func TestCommitteeSizeVSTotalNodesCount(t *testing.T) {
 
-	federationSize := uint32(10)
-	minimumCommitteeSize := federationSize - 2
+	TOTAL_VALIDATORS_SIZE := uint32(10)
+	MINIMUM_COMMITTEE_SIZE := TOTAL_VALIDATORS_SIZE - 2
 
 	testCases := []struct {
 		description            string
 		requestedCommitteeSize uint32
-		federationSize         uint32
+		totalValidatorsSize    uint32
 		expectedCommitteeSize  uint32
 	}{
-		{"Requested committee smaller than federation", federationSize - 1, federationSize, federationSize - 1},
-		{"Requested committee same size as federation", federationSize, federationSize, federationSize},
-		{"Requested committee larger than federation", federationSize + 1, federationSize, federationSize},
-		{"Requested committee less than minimum", minimumCommitteeSize - 1, federationSize, minimumCommitteeSize},
+		{"Requested committee smaller than total validators", TOTAL_VALIDATORS_SIZE - 1, TOTAL_VALIDATORS_SIZE, TOTAL_VALIDATORS_SIZE - 1},
+		{"Requested committee same size as total validators", TOTAL_VALIDATORS_SIZE, TOTAL_VALIDATORS_SIZE, TOTAL_VALIDATORS_SIZE},
+		{"Requested committee larger than total validators", TOTAL_VALIDATORS_SIZE + 1, TOTAL_VALIDATORS_SIZE, TOTAL_VALIDATORS_SIZE},
+		{"Requested committee less than minimum", MINIMUM_COMMITTEE_SIZE - 1, TOTAL_VALIDATORS_SIZE, MINIMUM_COMMITTEE_SIZE},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.description, func(t *testing.T) {
-			actualCommitteeSize := calculateCommitteeSize(testCase.requestedCommitteeSize, minimumCommitteeSize, testCase.federationSize)
+			actualCommitteeSize := calculateCommitteeSize(testCase.requestedCommitteeSize, MINIMUM_COMMITTEE_SIZE, testCase.totalValidatorsSize)
 			require.Equal(t, testCase.expectedCommitteeSize, actualCommitteeSize,
 				"Expected committee size is %d but the calculated committee size is %d",
 				testCase.expectedCommitteeSize, actualCommitteeSize)

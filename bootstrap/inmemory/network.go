@@ -44,7 +44,7 @@ type NodeDependencies struct {
 type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *NodeDependencies
 
 func NewNetworkWithNumOfNodes(
-	federation map[string]config.FederationNode,
+	validators map[string]config.ValidatorNode,
 	nodeOrder []primitives.NodeAddress,
 	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
 	parent log.BasicLogger,
@@ -61,7 +61,7 @@ func NewNetworkWithNumOfNodes(
 	parent.Info(configToStr(cfgTemplate))
 
 	for _, address := range nodeOrder {
-		federationNode := federation[address.KeyForMap()]
+		validatorNode := validators[address.KeyForMap()]
 		cfg := cfgTemplate.ForNode(address, privateKeys[address.KeyForMap()])
 		metricRegistry := metric.NewRegistry()
 
@@ -78,7 +78,7 @@ func NewNetworkWithNumOfNodes(
 			dep = provider(len(network.Nodes), cfg, nodeLogger, metricRegistry)
 		}
 
-		network.addNode(fmt.Sprintf("%s", federationNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
+		network.addNode(fmt.Sprintf("%s", validatorNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
 	}
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network

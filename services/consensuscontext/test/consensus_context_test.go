@@ -11,36 +11,32 @@ import (
 func TestRequestOrderingCommittee(t *testing.T) {
 	h := newHarness(t)
 	blockHeight := primitives.BlockHeight(1)
-	federationSize := len(h.config.FederationNodes(uint64(blockHeight)))
+	genesisValidatorsSize := len(h.config.GenesisValidatorNodes(uint64(blockHeight)))
 
-	t.Run("if MaxCommitteeSize <= federationSize, then return MaxCommitteeSize members", func(t *testing.T) {
+	t.Run("if MaxCommitteeSize <= genesisValidatorsSize, then return MaxCommitteeSize members", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,
 			RandomSeed:         0,
-			MaxCommitteeSize:   uint32(federationSize),
+			MaxCommitteeSize:   uint32(genesisValidatorsSize),
 		}
 		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodeAddresses)
-		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
+		actualNumberOfValidators := len(output.NodeAddresses)
+		require.Equal(t, genesisValidatorsSize, actualNumberOfValidators, "expected committee size is %d but got %d", genesisValidatorsSize, actualNumberOfValidators)
 	})
-	t.Run("if MaxCommitteeSize > federationSize, then return all federation members (federationSize)", func(t *testing.T) {
+	t.Run("if MaxCommitteeSize > genesisValidatorsSize, then return all genesis validators (genesisValidatorsSize)", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,
 			RandomSeed:         0,
-			MaxCommitteeSize:   uint32(federationSize + 1),
+			MaxCommitteeSize:   uint32(genesisValidatorsSize + 1),
 		}
 		output, err := h.service.RequestOrderingCommittee(context.Background(), input)
 		if err != nil {
 			t.Error(err)
 		}
-		actualFederationSize := len(output.NodeAddresses)
-		require.Equal(t, federationSize, actualFederationSize, "expected committee size is %d but got %d", federationSize, actualFederationSize)
+		actualNumberOfValidators := len(output.NodeAddresses)
+		require.Equal(t, genesisValidatorsSize, actualNumberOfValidators, "expected committee size is %d but got %d", genesisValidatorsSize, actualNumberOfValidators)
 	})
-}
-
-func TestCreateAndValidateTransactionsBlock(t *testing.T) {
-
 }

@@ -9,16 +9,16 @@ import (
 )
 
 func TestLeaderQuorum(t *testing.T) {
-	nodes := make(map[string]config.FederationNode)
+	nodes := make(map[string]config.ValidatorNode)
 
 	for i := 0; i < 6; i++ {
 		nodes[fmt.Sprintf("fake-key-node%d", i)] = nil
 	}
 
 	cfg := config.ForProduction("")
-	cfg.SetFederationNodes(nodes)
+	cfg.SetGenesisValidatorNodes(nodes)
 
-	require.NotZero(t, cfg.NetworkSize(0))
+	require.NotZero(t, len(cfg.GenesisValidatorNodes(0)))
 
 	s := &service{
 		config: cfg,
@@ -34,7 +34,7 @@ func (f *fakeFed) NodeAddress() primitives.NodeAddress {
 }
 
 func TestLeaderBadKey(t *testing.T) {
-	nodes := make(map[string]config.FederationNode)
+	nodes := make(map[string]config.ValidatorNode)
 
 	for i := 1; i < 6; i++ {
 		nodes[fmt.Sprintf("fake-key-node%d", i)] = nil
@@ -43,7 +43,7 @@ func TestLeaderBadKey(t *testing.T) {
 	nodes["fake-key-node0"] = fake
 
 	cfg := config.ForProduction("")
-	cfg.SetFederationNodes(nodes)
+	cfg.SetGenesisValidatorNodes(nodes)
 
 	s := &service{
 		config: cfg,

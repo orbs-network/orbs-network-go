@@ -14,8 +14,7 @@ type NodeConfig interface {
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	NetworkSize(asOfBlock uint64) uint32
-	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 	TransactionExpirationWindow() time.Duration
 
@@ -107,7 +106,7 @@ type mutableNodeConfig interface {
 	SetUint32(key string, value uint32) mutableNodeConfig
 	SetString(key string, value string) mutableNodeConfig
 	SetBool(key string, value bool) mutableNodeConfig
-	SetFederationNodes(nodes map[string]FederationNode) mutableNodeConfig
+	SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig
 	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
@@ -147,7 +146,7 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	FederationNodes(asOfBlock uint64) map[string]FederationNode
+	GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }
@@ -201,7 +200,7 @@ type LeanHelixConsensusConfig interface {
 	NetworkType() protocol.SignerNetworkType
 }
 
-type FederationNode interface {
+type ValidatorNode interface {
 	NodeAddress() primitives.NodeAddress
 }
 
