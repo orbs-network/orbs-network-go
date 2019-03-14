@@ -41,8 +41,29 @@ func parseUint32(f64 float64) (uint32, error) {
 	}
 }
 
-func parseNodesAndPeers(value interface{}) (nodes map[string]ValidatorNode, peers map[string]GossipPeer, err error) {
+func parseNodes(value interface{}) (nodes map[string]ValidatorNode, err error) {
 	nodes = make(map[string]ValidatorNode)
+
+	if nodeList, ok := value.([]interface{}); ok {
+		for _, item := range nodeList {
+			address := item.(string)
+
+			if nodeAddress, err := hex.DecodeString(address); err != nil {
+				return nodes, err
+			} else {
+				nodeAddress := primitives.NodeAddress(nodeAddress)
+
+				nodes[nodeAddress.KeyForMap()] = &hardCodedValidatorNode{
+					nodeAddress: nodeAddress,
+				}
+			}
+		}
+	}
+
+	return nodes, nil
+}
+
+func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
 	peers = make(map[string]GossipPeer)
 
 	if nodeList, ok := value.([]interface{}); ok {
@@ -50,18 +71,14 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]ValidatorNode, peer
 			kv := item.(map[string]interface{})
 
 			if nodeAddress, err := hex.DecodeString(kv["address"].(string)); err != nil {
-				return nodes, peers, err
+				return peers, err
 			} else {
 				nodeAddress := primitives.NodeAddress(nodeAddress)
 
 				if i, err := parseUint32(kv["port"].(float64)); err != nil {
-					return nodes, peers, err
+					return peers, err
 				} else {
 					gossipPort := int(i)
-
-					nodes[nodeAddress.KeyForMap()] = &hardCodedValidatorNode{
-						nodeAddress: nodeAddress,
-					}
 
 					peers[nodeAddress.KeyForMap()] = &hardCodedGossipPeer{
 						gossipEndpoint: kv["ip"].(string),
@@ -72,7 +89,7 @@ func parseNodesAndPeers(value interface{}) (nodes map[string]ValidatorNode, peer
 		}
 	}
 
-	return nodes, peers, nil
+	return peers, nil
 }
 
 func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
@@ -144,12 +161,16 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			continue
 		}
 
-		if key == "federation-nodes" {
+		if key == "genesis-validator-addresses" {
 			var nodes map[string]ValidatorNode
-			var peers map[string]GossipPeer
-
-			nodes, peers, err = parseNodesAndPeers(value)
+			nodes, err = parseNodes(value)
 			cfg.SetGenesisValidatorNodes(nodes)
+			continue
+		}
+
+		if key == "federation-nodes" {
+			var peers map[string]GossipPeer
+			peers, err = parsePeers(value)
 			cfg.SetGossipPeers(peers)
 			continue
 		}
