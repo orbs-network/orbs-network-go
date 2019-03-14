@@ -98,3 +98,9 @@ func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, fed
 	}
 	return cfg
 }
+
+func ForNativeProcessorTests(id primitives.VirtualChainId) NativeProcessorConfig {
+	cfg := emptyConfig()
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(id))
+	return cfg
+}

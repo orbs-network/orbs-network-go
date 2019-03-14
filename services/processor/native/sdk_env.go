@@ -43,3 +43,7 @@ func (s *service) SdkEnvGetBlockTimestamp(executionContextId sdkContext.ContextI
 	}
 	return output.OutputArguments[0].Uint64Value()
 }
+
+func (s *service) SdkEnvGetVirtualChainId(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) uint32 {
+	return uint32(s.config.VirtualChainId())
+}

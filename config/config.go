@@ -187,6 +187,7 @@ type EthereumCrosschainConnectorConfig interface {
 
 type NativeProcessorConfig interface {
 	ProcessorSanitizeDeployedContracts() bool
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type LeanHelixConsensusConfig interface {
