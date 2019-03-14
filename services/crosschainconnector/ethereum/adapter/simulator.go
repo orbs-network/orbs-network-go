@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"math/big"
 	"sync"
 )
@@ -73,4 +74,7 @@ func (es *EthereumSimulator) Commit() {
 
 func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	return nil, nil
+}
+
+func (c *EthereumSimulator) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger) {
 }
