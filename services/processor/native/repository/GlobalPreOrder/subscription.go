@@ -64,7 +64,7 @@ func refreshSubscription(ethContractAddress string) {
 		_writeSubscriptionContract(ethContractAddress)
 	}
 
-	myVirtualChainId := primitives.VirtualChainId(42) //TODO get actual virtual chain id
+	myVirtualChainId := primitives.VirtualChainId(env.GetVirtualChainId())
 
 	subscription := _readSubscriptionDataFromEthereum(myVirtualChainId, ethContractAddress)
 	if err := subscription.validate(myVirtualChainId, time.Unix(0, int64(env.GetBlockTimestamp()))); err == nil {
