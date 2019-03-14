@@ -66,6 +66,24 @@ func sum(txCommaSeparatedList string) uint64 {
 
 `
 
+func moveToRealtimeInGanache(t *testing.T, c *rpc.Client, ethC *ethclient.Client, ctx context.Context, buffer int) {
+	latestBlockInGanache, err := ethC.HeaderByNumber(ctx, nil)
+	require.NoError(t, err, "failed to get latest block in ganache")
+
+	now := time.Now().Unix()
+	gap := now - latestBlockInGanache.Time.Int64() - int64(buffer)
+	require.True(t, gap >= 0, "ganache must be set up back enough to the past so finality test would pass in this flow, it was rolled too close to realtime, gap was %d", gap)
+	t.Logf("moving %d blocks into the future to get to now - %d seconds", gap, buffer)
+	moveBlocksInGanache(t, c, int(gap), 1)
+}
+
+func moveBlocksInGanache(t *testing.T, c *rpc.Client, count int, blockGapInSeconds int) {
+	for i := 0; i < count; i++ {
+		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed evm_increaseTime")
+		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed evm_mine")
+	}
+}
+
 func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 	privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY")
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT")
@@ -106,17 +124,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 
 		txHashes := sendEthTransactions(t, loggerContract, auth, 25)
 
-		ethBlockNumber := int64(0)
-		latestBlockTime := time.Unix(0, 0)
-		now := time.Now()
-		for ethBlockNumber < 100 || latestBlockTime.Before(now) {
-			ethBlock, err := ethereumRpc.HeaderByNumber(ctx, nil)
-			require.NoError(t, err, "failed getting Ethereum block number")
-			require.NoError(t, ethRpc.CallContext(ctx, struct{}{}, "evm_mine"), "failed mining block")
-			require.NoError(t, ethRpc.CallContext(ctx, struct{}{}, "evm_increaseTime", 10), "failed increasing time")
-			ethBlockNumber = ethBlock.Number.Int64()
-			latestBlockTime = time.Unix(ethBlock.Time.Int64(), 0)
-		}
+		moveToRealtimeInGanache(t, ethRpc, ethereumRpc, ctx, 0)
 
 		queryRes, err := h.runQuery(contractOwner.PublicKey, "LogCalculator", "sum", strings.Join(txHashes, ","))
 		require.NoError(t, err, "failed reading log")
