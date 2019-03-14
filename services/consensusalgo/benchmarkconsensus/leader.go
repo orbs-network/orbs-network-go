@@ -60,7 +60,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 			logger.Error("leader failed to save block to storage", log.Error(err))
 			return err
 		}
-
+		s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 		err = s.setLastCommittedBlock(proposedBlock, lastCommittedBlock)
 		if err != nil {
 			return err

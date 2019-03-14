@@ -71,6 +71,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
+			s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 			s.metrics.committedBlocks.Inc()
 			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}

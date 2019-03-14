@@ -55,6 +55,7 @@ type metrics struct {
 	failedConsensusTicksRate   *metric.Rate
 	timedOutConsensusTicksRate *metric.Rate
 	votingTime                 *metric.Histogram
+	lastCommittedTime          *metric.Gauge
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTimeout time.Duration) *metrics {
@@ -63,6 +64,7 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTi
 		votingTime:                 m.NewLatency("ConsensusAlgo.Benchmark.Voting.Millis", collectVotesTimeout),
 		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicks.PerSecond"),
 		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicks.PerSecond"),
+		lastCommittedTime:          m.NewGauge("ConsensusAlgo.Benchmark.LastCommitted.TimeNano"),
 	}
 }
 

@@ -40,6 +40,9 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		e.blockHeight = blockHeight
 		e.Stop()
 		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
+		if e.view > 2 {
+			e.logger.Info("Started election trigger", log.Uint64("block-height", uint64(e.blockHeight)), log.Uint64("lh-view", uint64(e.view)), log.String("lh-election-timeout", timeout.String()))
+		}
 	}
 	e.electionHandler = electionHandler
 }
