@@ -168,7 +168,7 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 			continue
 		}
 
-		if key == "federation-nodes" {
+		if key == "federation-nodes" || key == "topology-nodes" { // note: "federation-nodes" is deprecated but kept for backwards-compatibility
 			var peers map[string]GossipPeer
 			peers, err = parsePeers(value)
 			cfg.SetGossipPeers(peers)
