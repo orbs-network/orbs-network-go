@@ -2,7 +2,7 @@
 This file explains non-trivial implementation details in the Consensus Context.
 
 ## Committees
-A *committee* is a subset of federation nodes, with size between some minimum (currently set at 4) and all of federation nodes.
+A *committee* is a subset of validator nodes, with size between some minimum (currently set at 4) and all of validator nodes.
 The committee nodes' purpose is to participate in a consensus round, that is to reach consensus for a specific block height.
 
 After consensus is reached, a new committee is chosen.
