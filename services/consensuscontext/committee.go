@@ -87,6 +87,11 @@ func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64, nodes
 		return grades[i].grade > grades[j].grade
 	})
 
+	// even if the number of nodes is below minimum, we don't want to crash here and let our caller deal with this
+	if uint32(len(nodes)) < committeeSize {
+		committeeSize = uint32(len(nodes))
+	}
+
 	indices := make([]uint32, committeeSize)
 	for i := 0; i < int(committeeSize); i++ {
 		indices[i] = grades[i].index

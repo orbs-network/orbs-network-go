@@ -61,6 +61,17 @@ func TestChooseRandomCommitteeIndices(t *testing.T) {
 		require.Equal(t, input.MaxCommitteeSize, uniqueIndicesLen, "Expected to receive %d unique indices but got %d", input.MaxCommitteeSize, uniqueIndicesLen)
 	})
 
+	t.Run("Receive below number of indices requested", func(t *testing.T) {
+		nodeSubset := nodeAddresses[:3]
+		indices, err := chooseRandomCommitteeIndices(input.MaxCommitteeSize, input.RandomSeed, nodeSubset)
+		if err != nil {
+			t.Error(err)
+		}
+		indicesLen := uint32(len(indices))
+		require.EqualValues(t, len(nodeSubset), indicesLen, "Expected to receive %d indices but got %d", len(nodeSubset), indicesLen)
+		require.True(t, indicesLen < input.MaxCommitteeSize, "Received %d indices that should be below %d", indicesLen, input.MaxCommitteeSize)
+	})
+
 }
 
 func unique(input []uint32) []uint32 {
