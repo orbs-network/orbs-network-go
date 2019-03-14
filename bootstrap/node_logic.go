@@ -79,6 +79,8 @@ func NewNodeLogic(
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.PeriodicallyReport(ctx, logger)
 
+	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger)
+
 	logger.Info("Node started")
 
 	return &nodeLogic{
