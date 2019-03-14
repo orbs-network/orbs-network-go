@@ -37,6 +37,7 @@ func (s *service) SendTransactionAsync(parentCtx context.Context, input *service
 func (s *service) sendTransaction(ctx context.Context, request *client.SendTransactionRequest, asyncMode bool) (*txOutput, error) {
 	s.metrics.totalTransactionsFromClients.Inc()
 	if request == nil {
+		s.metrics.totalTransactionsFromClientsErrNilRequest.Inc()
 		err := errors.Errorf("client request is nil")
 		s.logger.Info("send transaction received missing input", log.Error(err))
 		return nil, err
@@ -47,6 +48,7 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
+		s.metrics.totalTransactionsFromClientsErrInvalidRequest.Inc()
 		logger.Info("send transaction received input failed", log.Error(err))
 		return &txOutput{transactionStatus: txStatus}, err
 	}
@@ -59,12 +61,14 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 		SignedTransaction: request.SignedTransaction(),
 	})
 	if err != nil {
+		s.metrics.totalTransactionsFromClientsErrAddingToTxPool.Inc()
 		s.waiter.deleteByChannel(waitResult)
 		logger.Info("adding transaction to TransactionPool failed", log.Error(err))
 		return addOutputToTxOutput(addResp), err
 	}
 
 	if addResp.TransactionStatus == protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED {
+		s.metrics.totalTransactionsFromClientsErrDuplicate.Inc()
 		s.waiter.deleteByChannel(waitResult)
 		return addOutputToTxOutput(addResp), nil
 	}
