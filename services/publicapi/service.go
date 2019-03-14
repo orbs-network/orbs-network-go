@@ -27,26 +27,26 @@ type service struct {
 }
 
 type metrics struct {
-	sendTransactionTime                           *metric.Histogram
-	getTransactionStatusTime                      *metric.Histogram
-	runQueryTime                                  *metric.Histogram
-	totalTransactionsFromClients                  *metric.Gauge
-	totalTransactionsFromClientsErrNilRequest     *metric.Gauge
-	totalTransactionsFromClientsErrInvalidRequest *metric.Gauge
-	totalTransactionsFromClientsErrAddingToTxPool *metric.Gauge
-	totalTransactionsFromClientsErrDuplicate      *metric.Gauge
+	sendTransactionTime                *metric.Histogram
+	getTransactionStatusTime           *metric.Histogram
+	runQueryTime                       *metric.Histogram
+	totalTransactionsFromClients       *metric.Gauge
+	totalTransactionsErrNilRequest     *metric.Gauge
+	totalTransactionsErrInvalidRequest *metric.Gauge
+	totalTransactionsErrAddingToTxPool *metric.Gauge
+	totalTransactionsErrDuplicate      *metric.Gauge
 }
 
 func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, getTransactionStatusTimeout time.Duration, runQueryTimeout time.Duration) *metrics {
 	return &metrics{
-		sendTransactionTime:                           factory.NewLatency("PublicApi.SendTransactionProcessingTime.Millis", sendTransactionTimeout),
-		getTransactionStatusTime:                      factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime.Millis", getTransactionStatusTimeout),
-		runQueryTime:                                  factory.NewLatency("PublicApi.RunQueryProcessingTime.Millis", runQueryTimeout),
-		totalTransactionsFromClients:                  factory.NewGauge("PublicApi.TotalTransactionsFromClients.Count"),
-		totalTransactionsFromClientsErrNilRequest:     factory.NewGauge("PublicApi.TotalTransactionsErrNilRequest.Count"),
-		totalTransactionsFromClientsErrInvalidRequest: factory.NewGauge("PublicApi.TotalTransactionsErrInvalidRequest.Count"),
-		totalTransactionsFromClientsErrAddingToTxPool: factory.NewGauge("PublicApi.TotalTransactionsErrAddingToTxPool.Count"),
-		totalTransactionsFromClientsErrDuplicate:      factory.NewGauge("PublicApi.TotalTransactionsErrDuplicate.Count"),
+		sendTransactionTime:                factory.NewLatency("PublicApi.SendTransactionProcessingTime.Millis", sendTransactionTimeout),
+		getTransactionStatusTime:           factory.NewLatency("PublicApi.GetTransactionStatusProcessingTime.Millis", getTransactionStatusTimeout),
+		runQueryTime:                       factory.NewLatency("PublicApi.RunQueryProcessingTime.Millis", runQueryTimeout),
+		totalTransactionsFromClients:       factory.NewGauge("PublicApi.TotalTransactionsFromClients.Count"),
+		totalTransactionsErrNilRequest:     factory.NewGauge("PublicApi.TotalTransactionsErrNilRequest.Count"),
+		totalTransactionsErrInvalidRequest: factory.NewGauge("PublicApi.TotalTransactionsErrInvalidRequest.Count"),
+		totalTransactionsErrAddingToTxPool: factory.NewGauge("PublicApi.TotalTransactionsErrAddingToTxPool.Count"),
+		totalTransactionsErrDuplicate:      factory.NewGauge("PublicApi.TotalTransactionsErrDuplicate.Count"),
 	}
 }
 
