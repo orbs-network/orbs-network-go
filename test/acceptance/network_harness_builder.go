@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"math/rand"
@@ -20,6 +21,7 @@ const TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infini
 const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
+const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
 
 type networkHarnessBuilder struct {
 	numNodes                 int
@@ -32,6 +34,7 @@ type networkHarnessBuilder struct {
 	numOfNodesToStart        int
 	requiredQuorumPercentage uint32
 	blockChain               []*protocol.BlockPairContainer
+	virtualChainId           primitives.VirtualChainId
 }
 
 func newHarness() *networkHarnessBuilder {
@@ -53,6 +56,7 @@ func newHarness() *networkHarnessBuilder {
 		WithTestId(callerFuncName).
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
+		WithVirtualChainId(DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID).
 		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
 
 	return harness
@@ -125,7 +129,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId)
 
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
@@ -188,6 +192,11 @@ func (b *networkHarnessBuilder) WithRequiredQuorumPercentage(percentage int) *ne
 
 func (b *networkHarnessBuilder) WithInitialBlocks(blocks []*protocol.BlockPairContainer) *networkHarnessBuilder {
 	b.blockChain = blocks
+	return b
+}
+
+func (b *networkHarnessBuilder) WithVirtualChainId(id primitives.VirtualChainId) *networkHarnessBuilder {
+	b.virtualChainId = id
 	return b
 }
 
