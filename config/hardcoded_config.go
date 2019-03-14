@@ -43,6 +43,7 @@ const (
 
 	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
 	LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE"
+	LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE"
 	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
 
 	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH      = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
@@ -341,6 +342,10 @@ func (c *config) BenchmarkConsensusRequiredQuorumPercentage() uint32 {
 
 func (c *config) LeanHelixConsensusMinimumCommitteeSize() uint32 {
 	return c.kv[LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
+}
+
+func (c *config) LeanHelixConsensusMaximumCommitteeSize() uint32 {
+	return c.kv[LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE].Uint32Value
 }
 
 func (c *config) EthereumEndpoint() string {

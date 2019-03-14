@@ -25,6 +25,7 @@ type NodeConfig interface {
 	// Lean Helix consensus
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	LeanHelixConsensusMinimumCommitteeSize() uint32
+	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
 
 	// benchmark consensus
@@ -192,8 +193,8 @@ type NativeProcessorConfig interface {
 type LeanHelixConsensusConfig interface {
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	FederationNodes(asOfBlock uint64) map[string]FederationNode
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
+	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId

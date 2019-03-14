@@ -20,6 +20,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
 
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
+	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE, 22)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 
 	// if above round time, we'll have leader changes when no traffic
