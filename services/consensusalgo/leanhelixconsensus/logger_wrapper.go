@@ -30,13 +30,13 @@ func (l *loggerWrapper) Debug(format string, args ...interface{}) {
 	}
 	str := strings.Join([]string{LH_PREFIX, format}, "")
 	finalStr := fmt.Sprintf(str, args...)
-	l.log.Info(finalStr)
+	l.log.Info(finalStr, log.String("lhlib", "true"))
 }
 
 func (l *loggerWrapper) Info(format string, args ...interface{}) {
-	l.log.Info(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...))
+	l.log.Info(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...), log.String("lhlib", "true"))
 }
 
 func (l *loggerWrapper) Error(format string, args ...interface{}) {
-	l.log.Error(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...))
+	l.log.Error(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...), log.String("lhlib", "true"))
 }
