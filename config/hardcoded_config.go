@@ -200,7 +200,7 @@ func (c *config) NetworkType() protocol.SignerNetworkType {
 	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
 }
 
-func (c *config) GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode {
+func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
 	return c.genesisValidatorNodes
 }
 

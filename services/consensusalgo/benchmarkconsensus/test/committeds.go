@@ -37,7 +37,7 @@ func multipleCommittedMessages() *committed {
 }
 
 func (c *committed) WithCountBelowQuorum(cfg benchmarkconsensus.Config) *committed {
-	networkSize := len(cfg.GenesisValidatorNodes(0))
+	networkSize := len(cfg.GenesisValidatorNodes())
 	if networkSize != 5 || cfg.BenchmarkConsensusRequiredQuorumPercentage() != 66 {
 		panic("tests assumes 5 nodes with quorum percentage of 66, quorum is 4/5 = 3 other nodes")
 	}
@@ -46,7 +46,7 @@ func (c *committed) WithCountBelowQuorum(cfg benchmarkconsensus.Config) *committ
 }
 
 func (c *committed) WithCountAboveQuorum(cfg benchmarkconsensus.Config) *committed {
-	networkSize := len(cfg.GenesisValidatorNodes(0))
+	networkSize := len(cfg.GenesisValidatorNodes())
 	if networkSize != 5 || cfg.BenchmarkConsensusRequiredQuorumPercentage() != 66 {
 		panic("tests assumes 5 nodes with quorum percentage of 66, quorum is 4/5 = 3 other nodes")
 	}

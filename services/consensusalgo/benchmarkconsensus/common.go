@@ -39,7 +39,7 @@ func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, 
 }
 
 func (s *service) requiredQuorumSize() int {
-	networkSize := len(s.config.GenesisValidatorNodes(0))
+	networkSize := len(s.config.GenesisValidatorNodes())
 	return int(math.Ceil(float64(networkSize) * float64(s.config.BenchmarkConsensusRequiredQuorumPercentage()) / 100))
 }
 

@@ -14,7 +14,7 @@ type NodeConfig interface {
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode
+	GenesisValidatorNodes() map[string]ValidatorNode
 	GossipPeers(asOfBlock uint64) map[string]GossipPeer
 	TransactionExpirationWindow() time.Duration
 
@@ -146,7 +146,7 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	GenesisValidatorNodes(asOfBlock uint64) map[string]ValidatorNode
+	GenesisValidatorNodes() map[string]ValidatorNode
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 }

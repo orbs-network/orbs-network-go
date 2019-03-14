@@ -18,7 +18,7 @@ const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
 func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	lastCommittedBlockHeight := currentBlockHeight - 1
 
-	genesisValidatorNodes := s.config.GenesisValidatorNodes(uint64(lastCommittedBlockHeight))
+	genesisValidatorNodes := s.config.GenesisValidatorNodes()
 	genesisValidatorNodesAddresses := toNodeAddresses(genesisValidatorNodes)
 
 	// genesis

@@ -18,7 +18,7 @@ func TestLeaderQuorum(t *testing.T) {
 	cfg := config.ForProduction("")
 	cfg.SetGenesisValidatorNodes(nodes)
 
-	require.NotZero(t, len(cfg.GenesisValidatorNodes(0)))
+	require.NotZero(t, len(cfg.GenesisValidatorNodes()))
 
 	s := &service{
 		config: cfg,

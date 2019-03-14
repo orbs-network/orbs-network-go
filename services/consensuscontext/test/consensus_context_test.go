@@ -11,7 +11,7 @@ import (
 func TestRequestOrderingCommittee(t *testing.T) {
 	h := newHarness(t)
 	blockHeight := primitives.BlockHeight(1)
-	genesisValidatorsSize := len(h.config.GenesisValidatorNodes(uint64(blockHeight)))
+	genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
 
 	t.Run("if MaxCommitteeSize <= genesisValidatorsSize, then return MaxCommitteeSize members", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{

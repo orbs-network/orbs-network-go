@@ -97,7 +97,7 @@ func TestSetGenesisValidatorNodes(t *testing.T) {
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes(0)))
+	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes()))
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
@@ -105,7 +105,7 @@ func TestSetGenesisValidatorNodes(t *testing.T) {
 		nodeAddress: keyPair.NodeAddress(),
 	}
 
-	require.EqualValues(t, node1, cfg.GenesisValidatorNodes(0)[keyPair.NodeAddress().KeyForMap()])
+	require.EqualValues(t, node1, cfg.GenesisValidatorNodes()[keyPair.NodeAddress().KeyForMap()])
 }
 
 func TestSetGossipPeers(t *testing.T) {
@@ -155,7 +155,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 		keyPair.NodeAddress(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100)
 
-	require.EqualValues(t, 0, len(cfg.GenesisValidatorNodes(0)))
+	require.EqualValues(t, 0, len(cfg.GenesisValidatorNodes()))
 
 	cfg.MergeWithFileConfig(`
 {
@@ -178,7 +178,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	newKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
-	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes(0)))
+	require.EqualValues(t, 3, len(cfg.GenesisValidatorNodes()))
 	require.EqualValues(t, true, cfg.LeanHelixShowDebug())
 	require.EqualValues(t, true, cfg.Profiling())
 	require.EqualValues(t, newKeyPair.NodeAddress(), cfg.NodeAddress())
