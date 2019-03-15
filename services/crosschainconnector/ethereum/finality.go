@@ -26,7 +26,14 @@ func getFinalitySafeBlockNumber(ctx context.Context, referenceTimestamp primitiv
 
 	// regard finality blocks component
 	finalityBlocks := big.NewInt(int64(config.EthereumFinalityBlocksComponent()))
-	return new(big.Int).Sub(blockNumber, finalityBlocks), nil
+	result := new(big.Int).Sub(blockNumber, finalityBlocks)
+
+	// make sure result is not below 1 (the first block)
+	if result.Cmp(big.NewInt(1)) < 0 {
+		return nil, errors.Errorf("there are not enough blocks to reach a finality safe block, finality safe block is %v", result)
+	}
+
+	return result, nil
 }
 
 func verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano, timestampFinder timestampfinder.TimestampFinder, config config.EthereumCrosschainConnectorConfig) error {

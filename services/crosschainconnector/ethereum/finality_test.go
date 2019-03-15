@@ -59,6 +59,20 @@ func TestFinality_GetSafeBlockWithTimeLimit(t *testing.T) {
 	})
 }
 
+func TestFinality_GetSafeBlockWithBlockLimit_WhenNotEnoughBlocks(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		cfg := &finalityConfig{0, 2 * timestampfinder.FAKE_CLIENT_NUMBER_OF_BLOCKS}
+
+		btg := timestampfinder.NewFakeBlockTimeGetter(logger)
+		finder := timestampfinder.NewTimestampFinder(btg, logger)
+
+		safeBlockNumber, err := getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP, finder, cfg)
+		t.Log("safe block number is", safeBlockNumber)
+		require.Error(t, err, "should fail because not enough blocks")
+	})
+}
+
 func TestFinality_VerifySafeBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
