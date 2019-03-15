@@ -3,6 +3,7 @@ package timestampfinder
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"math/big"
@@ -12,7 +13,7 @@ import (
 const TIMESTAMP_FINDER_PROBABLE_RANGE_EFFICIENT = 1000
 const TIMESTAMP_FINDER_PROBABLE_RANGE_INEFFICIENT = 10000
 const TIMESTAMP_FINDER_MAX_STEPS = 1000
-const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 4
+const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 10
 
 type TimestampFinder interface {
 	FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error)
@@ -33,6 +34,11 @@ func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger) *finder {
 }
 
 func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error) {
+	// TODO: find a better way to handle this, the simulator has no concept of block number
+	if f.isEthereumSimulator() {
+		return nil, nil
+	}
+
 	var err error
 	below, above := f.getLastResultCache()
 
@@ -116,4 +122,13 @@ func (f *finder) setLastResultCache(below BlockNumberAndTime, above BlockNumberA
 	defer f.lastResultCache.Unlock()
 	f.lastResultCache.below = &BlockNumberAndTime{BlockNumber: below.BlockNumber, BlockTimeNano: below.BlockTimeNano}
 	f.lastResultCache.above = &BlockNumberAndTime{BlockNumber: above.BlockNumber, BlockTimeNano: above.BlockTimeNano}
+}
+
+func (f *finder) isEthereumSimulator() bool {
+	if ethBasedBlockTimeGetter, ok := f.btg.(*EthereumBasedBlockTimeGetter); ok {
+		if _, ok := ethBasedBlockTimeGetter.ethereum.(*adapter.EthereumSimulator); ok {
+			return true
+		}
+	}
+	return false
 }

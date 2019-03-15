@@ -9,6 +9,7 @@ import (
 )
 
 const FAKE_CLIENT_NUMBER_OF_BLOCKS = 1000000
+const FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS = 1500000000
 const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS = 1506108784
 
 var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS, 0)
@@ -28,7 +29,7 @@ func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
 
 	secondsJitter := int64(1)
 	secondsSpacer := int64(10)
-	timestampStart := int64(1500000000) // 2017/07/14 @ 14:40 - it will always end at 1506108783, or 2017/09/22 @ 19:3303
+	timestampStart := int64(FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS) // 2017/07/14 @ 14:40 - it will always end at 1506108783, or 2017/09/22 @ 19:3303
 	f.data[0] = timestampStart
 	for blockNumber := int64(1); blockNumber <= FAKE_CLIENT_NUMBER_OF_BLOCKS; blockNumber++ {
 		// important that the numbers will be always increasing but always less than spacer
