@@ -38,7 +38,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	}
 
 	// approx always returns a new pointer
-	latest, err := f.btg.GetTimestampForBlockNumber(ctx, nil)
+	latest, err := f.btg.GetTimestampForLatestBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get latest block")
 	}

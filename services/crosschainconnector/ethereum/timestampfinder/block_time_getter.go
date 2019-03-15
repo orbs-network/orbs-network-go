@@ -12,4 +12,5 @@ type BlockNumberAndTime struct {
 
 type BlockTimeGetter interface {
 	GetTimestampForBlockNumber(ctx context.Context, blockNumber *big.Int) (*BlockNumberAndTime, error)
+	GetTimestampForLatestBlock(ctx context.Context) (*BlockNumberAndTime, error)
 }

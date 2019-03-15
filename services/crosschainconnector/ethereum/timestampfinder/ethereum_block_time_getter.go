@@ -30,3 +30,8 @@ func (f *EthereumBasedBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Co
 
 	return &BlockNumberAndTime{TimeSeconds: header.Time.Int64(), BlockNumber: header.Number.Int64()}, nil
 }
+
+func (f *EthereumBasedBlockTimeGetter) GetTimestampForLatestBlock(ctx context.Context) (*BlockNumberAndTime, error) {
+	// ethereum regards nil block number as latest
+	return f.GetTimestampForBlockNumber(ctx, nil)
+}

@@ -17,7 +17,7 @@ func TestFakeBlockHeaderFetcherRawData(t *testing.T) {
 func TestFakeBlockHeaderFetcherOfLatest(t *testing.T) {
 	btg := NewFakeBlockTimeGetter(log.DefaultTestingLogger(t))
 
-	b, err := btg.GetTimestampForBlockNumber(context.Background(), nil)
+	b, err := btg.GetTimestampForLatestBlock(context.Background())
 	require.NoError(t, err, "should not fail getting 'latest' from fake db")
 	require.EqualValues(t, FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, b.TimeSeconds, "expected getter last block to be of specific ts")
 	require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.BlockNumber, "expected last block of constant number")
