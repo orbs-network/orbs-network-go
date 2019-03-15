@@ -77,8 +77,8 @@ func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigF
 	}
 }
 
-func (h *harness) WithFakeTSF() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTSF(h.simAdapter, h.config, h.logger)
+func (h *harness) WithFakeTimeGetter() *harness {
+	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTimeGetter(h.simAdapter, h.config, h.logger)
 	return h
 }
 

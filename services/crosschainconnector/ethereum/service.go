@@ -9,6 +9,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -19,30 +20,30 @@ import (
 var LogTag = log.Service("crosschain-connector")
 
 type service struct {
-	connection       adapter.EthereumConnection
-	logger           log.BasicLogger
-	timestampFetcher TimestampFetcher
-	config           config.EthereumCrosschainConnectorConfig
+	connection      adapter.EthereumConnection
+	logger          log.BasicLogger
+	timestampFinder timestampfinder.TimestampFinder
+	config          config.EthereumCrosschainConnectorConfig
 }
 
 func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
-		connection:       connection,
-		timestampFetcher: NewTimestampFetcher(NewBlockTimestampFetcher(connection), logger),
-		logger:           logger,
-		config:           config,
+		connection:      connection,
+		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewEthereumBasedBlockTimeGetter(connection), logger),
+		logger:          logger,
+		config:          config,
 	}
 	return s
 }
 
-func NewEthereumCrosschainConnectorWithFakeTSF(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
-		connection:       connection,
-		timestampFetcher: NewTimestampFetcher(NewFakeBlockAndTimestampGetter(logger), logger),
-		logger:           logger,
-		config:           config,
+		connection:      connection,
+		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewFakeBlockTimeGetter(logger), logger),
+		logger:          logger,
+		config:          config,
 	}
 	return s
 }
@@ -54,16 +55,16 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 	var err error
 
 	if input.EthereumBlockNumber == 0 { // caller specified the latest block number possible
-		ethereumBlockNumber, err = getFinalitySafeBlockNumber(ctx, input.ReferenceTimestamp, s.timestampFetcher, s.config)
+		ethereumBlockNumber, err = getFinalitySafeBlockNumber(ctx, input.ReferenceTimestamp, s.timestampFinder, s.config)
 	} else { // caller specified a non-zero block number
 		ethereumBlockNumber = new(big.Int).SetUint64(input.EthereumBlockNumber)
-		err = verifyBlockNumberIsFinalitySafe(ctx, input.EthereumBlockNumber, input.ReferenceTimestamp, s.timestampFetcher, s.config)
+		err = verifyBlockNumberIsFinalitySafe(ctx, input.EthereumBlockNumber, input.ReferenceTimestamp, s.timestampFinder, s.config)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	if ethereumBlockNumber != nil { // simulator returns nil from GetBlockByTimestamp
+	if ethereumBlockNumber != nil { // simulator returns nil from FindBlockByTimestamp
 		logger.Info("calling contract from ethereum",
 			log.String("address", input.EthereumContractAddress),
 			log.Uint64("requested-block", input.EthereumBlockNumber),
@@ -128,7 +129,7 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 		return nil, errors.Errorf("Ethereum txhash %s is under contract %s and not %s", input.EthereumTxhash, hexutil.Encode(ethereumContractAddressResult), input.EthereumContractAddress)
 	}
 
-	err = verifyBlockNumberIsFinalitySafe(ctx, ethereumBlockNumberResult, input.ReferenceTimestamp, s.timestampFetcher, s.config)
+	err = verifyBlockNumberIsFinalitySafe(ctx, ethereumBlockNumberResult, input.ReferenceTimestamp, s.timestampFinder, s.config)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +150,7 @@ func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.Et
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("getting current safe Ethereum block number")
 
-	ethereumBlockNumber, err := getFinalitySafeBlockNumber(ctx, input.ReferenceTimestamp, s.timestampFetcher, s.config)
+	ethereumBlockNumber, err := getFinalitySafeBlockNumber(ctx, input.ReferenceTimestamp, s.timestampFinder, s.config)
 	if err != nil {
 		return nil, err
 	}

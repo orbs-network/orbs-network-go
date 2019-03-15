@@ -11,7 +11,7 @@ import (
 
 func TestEthereumGetBlockNumber(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newSimulatedEthereumConnectorHarness(t).WithFakeTSF()
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
 		in := &services.EthereumGetBlockNumberInput{
 			ReferenceTimestamp: primitives.TimestampNano(1505735343000000000), // should return block number 938874
 		}

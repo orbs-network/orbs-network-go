@@ -1,4 +1,4 @@
-package ethereum
+package timestampfinder
 
 import (
 	"context"
@@ -13,22 +13,22 @@ const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED = 1506108784
 
 var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, 0)
 
-type FakeBlockAndTimestampGetter struct {
+type FakeBlockTimeGetter struct {
 	data        map[int64]int64 // block number -> timestamp in seconds
 	logger      log.BasicLogger
 	TimesCalled int
 }
 
-func (f *FakeBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Context, blockNumber *big.Int) (*BlockHeightAndTime, error) {
+func (f *FakeBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Context, blockNumber *big.Int) (*BlockNumberAndTime, error) {
 	if blockNumber == nil {
-		return &BlockHeightAndTime{
-			Number:      FAKE_CLIENT_NUMBER_OF_BLOCKS,
+		return &BlockNumberAndTime{
+			BlockNumber: FAKE_CLIENT_NUMBER_OF_BLOCKS,
 			TimeSeconds: f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS],
 		}, nil
 	}
 
-	h := &BlockHeightAndTime{
-		Number:      blockNumber.Int64(),
+	h := &BlockNumberAndTime{
+		BlockNumber: blockNumber.Int64(),
 		TimeSeconds: f.data[blockNumber.Int64()],
 	}
 
@@ -41,8 +41,8 @@ func (f *FakeBlockAndTimestampGetter) ApproximateBlockAt(ctx context.Context, bl
 	return h, nil
 }
 
-func NewFakeBlockAndTimestampGetter(logger log.BasicLogger) *FakeBlockAndTimestampGetter {
-	f := &FakeBlockAndTimestampGetter{
+func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
+	f := &FakeBlockTimeGetter{
 		data: make(map[int64]int64),
 	}
 
