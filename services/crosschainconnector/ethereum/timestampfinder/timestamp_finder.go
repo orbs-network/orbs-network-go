@@ -12,7 +12,7 @@ import (
 const TIMESTAMP_FINDER_PROBABLE_RANGE_EFFICIENT = 1000
 const TIMESTAMP_FINDER_PROBABLE_RANGE_INEFFICIENT = 10000
 const TIMESTAMP_FINDER_MAX_STEPS = 1000
-const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 2
+const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 4
 
 type TimestampFinder interface {
 	FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error)
@@ -35,6 +35,8 @@ func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger) *finder {
 func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error) {
 	var err error
 	below, above := f.getLastResultCache()
+
+	f.logger.Info("ethereum timestamp finder starting", log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("below-cache-number", below.BlockNumber), log.Stringable("below-cache-timestamp", below.BlockTimeNano), log.Int64("above-cache-number", above.BlockNumber), log.Stringable("above-cache-timestamp", above.BlockTimeNano))
 
 	// attempt to return the last result immediately without any queries (for efficiency)
 	if algoDidReachResult(referenceTimestampNano, below, above) {
@@ -83,7 +85,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 		// make sure we are converging
 		if distAfter >= distBefore {
-			return nil, errors.Errorf("ethereum timestamp finder did not reduce range successfully, reference timestamp %v, step %d, new below %v, new above %v", referenceTimestampNano, steps, below, above)
+			f.logger.Error("ethereum timestamp finder is not converging (did not reduce range)", log.Int("step", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("new-below-number", below.BlockNumber), log.Stringable("new-below-timestamp", below.BlockTimeNano), log.Int64("new-above-number", above.BlockNumber), log.Stringable("new-above-timestamp", above.BlockTimeNano))
 		}
 	}
 

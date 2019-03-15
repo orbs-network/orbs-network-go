@@ -29,19 +29,18 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 
 		// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
 		_, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1944035343000000000))
-		require.EqualError(t, err, "requested future block at time 2031-08-09 09:49:03 +0000 UTC, latest block time is 2017-09-22 19:33:04 +0000 UTC", "expecting an error when trying to go to the future")
+		require.Error(t, err, "expecting an error when trying to go to the future")
 	})
 }
 
-func TestGetEthBlockByTimestampOfExactlyLatestBlockSucceeds(t *testing.T) {
+func TestGetEthBlockByTimestampOfExactlyLatestBlockFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
 		btg := NewFakeBlockTimeGetter(logger)
 		finder := NewTimestampFinder(btg, logger)
 
-		b, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS*time.Second))
-		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
-		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.Int64(), "expecting block number to be of last value in fake db")
+		_, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS*time.Second))
+		require.Error(t, err, "expecting error when trying to get exactly the latest time")
 	})
 }
 
@@ -74,7 +73,7 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 		blockBI, err = finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1500198628000000000))
 		block = blockBI.Int64()
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of an older block")
-		require.EqualValues(t, 32599, block, "expected ts 1500198628 to return a specific block")
+		require.EqualValues(t, 32600, block, "expected ts 1500198628 to return a specific block")
 
 		callsBefore := btg.TimesCalled
 		// "realtime" - 200 seconds

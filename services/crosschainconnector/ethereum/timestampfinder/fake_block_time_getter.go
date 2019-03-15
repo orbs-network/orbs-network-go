@@ -46,7 +46,7 @@ func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
 		}
 	}
 
-	f.logger.Info("finished initializing 'ethdb'", log.Int64("last-ts", f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS-1]))
+	f.logger.Info("finished initializing 'ethdb'", log.Int64("last-ts", f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS]))
 
 	return f
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
+	"math"
 	"math/big"
 	"time"
 )
@@ -126,7 +127,9 @@ func algoGetCursorWithHeuristics(referenceTimestampNano primitives.TimestampNano
 		// not supposed to happen according to algoVerifyResultInsideRange
 		return above.BlockNumber - 1
 	}
-	res := below.BlockNumber + distInBlocks*int64(referenceTimestampNano-below.BlockTimeNano)/int64(distInNano)
+	distToReference := referenceTimestampNano - below.BlockTimeNano
+	fraction := float64(distToReference) / float64(distInNano)
+	res := below.BlockNumber + int64(math.Round(fraction*float64(distInBlocks)))
 	if res <= below.BlockNumber {
 		return below.BlockNumber + 1
 	}
