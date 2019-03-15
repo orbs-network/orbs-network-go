@@ -39,7 +39,7 @@ func TestGetEthBlockByTimestampOfExactlyLatestBlockSucceeds(t *testing.T) {
 		btg := NewFakeBlockTimeGetter(logger)
 		finder := NewTimestampFinder(btg, logger)
 
-		b, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED*time.Second))
+		b, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS*time.Second))
 		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
 		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.Int64(), "expecting block number to be of last value in fake db")
 	})
@@ -51,7 +51,7 @@ func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
 		btg := NewFakeBlockTimeGetter(logger)
 		finder := NewTimestampFinder(btg, logger)
 
-		b, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano((FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED-1)*time.Second))
+		b, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano((FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS-1)*time.Second))
 		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
 		// why -1 below? because the algorithm locks us to a block with time stamp **less** than what we requested, so it finds the latest but it is greater (ts-wise) so it will return -1
 		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS-1, b.Int64(), "expecting block number to be of last value in fake db")

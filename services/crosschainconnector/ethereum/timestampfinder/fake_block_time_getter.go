@@ -9,9 +9,9 @@ import (
 )
 
 const FAKE_CLIENT_NUMBER_OF_BLOCKS = 1000000
-const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED = 1506108784
+const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS = 1506108784
 
-var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED, 0)
+var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS, 0)
 
 type FakeBlockTimeGetter struct {
 	data        map[int64]int64 // block number -> timestamp in seconds
@@ -57,11 +57,11 @@ func (f *FakeBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Context, bl
 	}
 
 	h := &BlockNumberAndTime{
-		BlockNumber: blockNumber.Int64(),
-		TimeSeconds: f.data[blockNumber.Int64()],
+		BlockNumber:   blockNumber.Int64(),
+		BlockTimeNano: secondsToNano(f.data[blockNumber.Int64()]),
 	}
 
-	if h.TimeSeconds == 0 {
+	if h.BlockTimeNano == 0 {
 		return nil, errors.Errorf("search was done out of range, number: %d", blockNumber.Int64())
 	}
 
@@ -72,7 +72,7 @@ func (f *FakeBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Context, bl
 
 func (f *FakeBlockTimeGetter) GetTimestampForLatestBlock(ctx context.Context) (*BlockNumberAndTime, error) {
 	return &BlockNumberAndTime{
-		BlockNumber: FAKE_CLIENT_NUMBER_OF_BLOCKS,
-		TimeSeconds: f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS],
+		BlockNumber:   FAKE_CLIENT_NUMBER_OF_BLOCKS,
+		BlockTimeNano: secondsToNano(f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS]),
 	}, nil
 }

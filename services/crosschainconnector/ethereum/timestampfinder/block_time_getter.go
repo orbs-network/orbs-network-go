@@ -2,12 +2,13 @@ package timestampfinder
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 )
 
 type BlockNumberAndTime struct {
-	BlockNumber int64
-	TimeSeconds int64
+	BlockNumber   int64
+	BlockTimeNano primitives.TimestampNano
 }
 
 type BlockTimeGetter interface {

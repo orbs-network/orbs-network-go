@@ -2,113 +2,116 @@ package timestampfinder
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
-	"math"
 	"math/big"
-	"time"
+	"sync"
 )
+
+const TIMESTAMP_FINDER_PROBABLE_RANGE_EFFICIENT = 1000
+const TIMESTAMP_FINDER_PROBABLE_RANGE_INEFFICIENT = 10000
+const TIMESTAMP_FINDER_MAX_STEPS = 1000
+const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 2
 
 type TimestampFinder interface {
 	FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error)
 }
 
 type finder struct {
-	logger    log.BasicLogger
-	btg       BlockTimeGetter
-	lastKnown *BlockNumberAndTime
+	logger          log.BasicLogger
+	btg             BlockTimeGetter
+	lastResultCache struct {
+		sync.RWMutex
+		below *BlockNumberAndTime
+		above *BlockNumberAndTime
+	}
 }
 
 func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger) *finder {
-	f := &finder{
-		btg:    btg,
-		logger: logger,
-	}
-
-	return f
+	return &finder{btg: btg, logger: logger}
 }
 
 func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error) {
-	timestampInSeconds := int64(referenceTimestampNano) / int64(time.Second)
-	// ethereum started around 2015/07/31
-	if timestampInSeconds < 1438300800 {
-		return nil, errors.New("cannot query before ethereum genesis")
+	var err error
+	below, above := f.getLastResultCache()
+
+	// attempt to return the last result immediately without any queries (for efficiency)
+	if algoDidReachResult(referenceTimestampNano, below, above) {
+		return f.returnConfirmedResult(referenceTimestampNano, below, above, 0)
 	}
 
-	// approx always returns a new pointer
-	latest, err := f.btg.GetTimestampForLatestBlock(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get latest block")
-	}
-
-	if latest == nil { // simulator always returns nil block number
-		return nil, nil
-	}
-
-	f.lastKnown = latest
-
-	requestedTime := time.Unix(0, int64(referenceTimestampNano))
-	latestTime := time.Unix(0, latest.TimeSeconds*int64(time.Second))
-	truncatedRequestedTime := requestedTime.Add(time.Duration(-requestedTime.Nanosecond()))
-	if latestTime.Before(truncatedRequestedTime) {
-		return nil, errors.Errorf("requested future block at time %s, latest block time is %s", requestedTime.UTC(), latestTime.UTC())
-	}
-
-	if latest.TimeSeconds == truncatedRequestedTime.Unix() {
-		return big.NewInt(latest.BlockNumber), nil
-	}
-
-	latestNum := latest.BlockNumber - 10000
-	// this was added to support simulations and tests, should not be relevant for real eth as there are more than 10k blocks there
-	if latestNum < 0 {
-		latestNum = 0
-	}
-	back10k, err := f.btg.GetTimestampForBlockNumber(ctx, big.NewInt(latestNum))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get past reference block")
-	}
-
-	theBlock, err := f.findBlockByTimeStamp(ctx, timestampInSeconds, back10k, latest)
-	return theBlock, err
-}
-
-func (f *finder) findBlockByTimeStamp(ctx context.Context, targetTimestamp int64, current, prev *BlockNumberAndTime) (*big.Int, error) {
-	f.logger.Info("searching for block in ethereum",
-		log.Int64("target-timestamp", targetTimestamp),
-		log.Int64("current-block-number", current.BlockNumber),
-		log.Int64("current-timestamp", current.TimeSeconds),
-		log.Int64("prev-block-number", prev.BlockNumber),
-		log.Int64("prev-timestamp", prev.TimeSeconds))
-	blockNumberDiff := current.BlockNumber - prev.BlockNumber
-
-	// we stop when the range we are in-between is 1 or 0 (same block), it means we found a block with the exact timestamp or closest from below
-	if blockNumberDiff == 1 || blockNumberDiff == 0 {
-		// if the block we are returning has a ts > target, it means we want one block before (so our ts is always bigger than block ts)
-		if current.TimeSeconds > targetTimestamp {
-			return big.NewInt(current.BlockNumber - 1), nil
-		} else {
-			return big.NewInt(current.BlockNumber), nil
+	// extend above if needed
+	if !(referenceTimestampNano < above.BlockTimeNano) {
+		above, err = algoExtendAbove(ctx, referenceTimestampNano, f.btg)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	timeDiff := current.TimeSeconds - prev.TimeSeconds
-	secondsPerBlock := int64(math.Ceil(float64(timeDiff) / float64(blockNumberDiff)))
-	distanceToTargetFromCurrent := current.TimeSeconds - targetTimestamp
-	blocksToJump := distanceToTargetFromCurrent / secondsPerBlock
-	f.logger.Info("eth block search delta", log.Int64("jump-backwards", blocksToJump))
-	guessBlockNumber := current.BlockNumber - blocksToJump
-
-	// this will handle the case where we 'went' too far due to uneven distribution of time differences between blocks
-	if guessBlockNumber > f.lastKnown.BlockNumber {
-		return f.findBlockByTimeStamp(ctx, targetTimestamp, f.lastKnown, current)
+	// extend below if needed
+	if !(1 <= below.BlockNumber && below.BlockTimeNano <= referenceTimestampNano) {
+		below, err = algoExtendBelow(ctx, referenceTimestampNano, below.BlockNumber, above.BlockNumber, f.btg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	guess, err := f.btg.GetTimestampForBlockNumber(ctx, big.NewInt(guessBlockNumber))
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to get header by block number %d", guessBlockNumber))
+	// try reducing further and further until finding the result
+	for steps := 1; steps < TIMESTAMP_FINDER_MAX_STEPS; steps++ {
+
+		f.logger.Info("ethereum timestamp finder step", log.Int("step", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("below-number", below.BlockNumber), log.Stringable("below-timestamp", below.BlockTimeNano), log.Int64("above-number", above.BlockNumber), log.Stringable("above-timestamp", above.BlockTimeNano))
+
+		// did we finally reach the result?
+		if algoDidReachResult(referenceTimestampNano, below, above) {
+			return f.returnConfirmedResult(referenceTimestampNano, below, above, steps)
+		}
+
+		// make sure for sanity the result is still inside the range
+		err = algoVerifyResultInsideRange(referenceTimestampNano, below, above)
+		if err != nil {
+			return nil, err
+		}
+
+		// make the range smaller
+		distBefore := above.BlockNumber - below.BlockNumber
+		below, above, err = algoReduceRange(ctx, referenceTimestampNano, below, above, f.btg, steps)
+		if err != nil {
+			return nil, err
+		}
+		distAfter := above.BlockNumber - below.BlockNumber
+
+		// make sure we are converging
+		if distAfter >= distBefore {
+			return nil, errors.Errorf("ethereum timestamp finder did not reduce range successfully, reference timestamp %v, step %d, new below %v, new above %v", referenceTimestampNano, steps, below, above)
+		}
 	}
 
-	return f.findBlockByTimeStamp(ctx, targetTimestamp, guess, current)
+	return nil, errors.Errorf("ethereum timestamp finder went over maximum steps %d, reference timestamp %v", TIMESTAMP_FINDER_MAX_STEPS, referenceTimestampNano)
+}
+
+func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, steps int) (*big.Int, error) {
+	f.setLastResultCache(below, above)
+	// the block below is the one we actually return as result
+	f.logger.Info("ethereum timestamp finder found result", log.Int("steps", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("result-number", below.BlockNumber), log.Stringable("result-timestamp", below.BlockTimeNano))
+	return big.NewInt(below.BlockNumber), nil
+}
+
+func (f *finder) getLastResultCache() (below BlockNumberAndTime, above BlockNumberAndTime) {
+	f.lastResultCache.RLock()
+	defer f.lastResultCache.RUnlock()
+	if f.lastResultCache.below != nil {
+		below = *f.lastResultCache.below
+	}
+	if f.lastResultCache.above != nil {
+		above = *f.lastResultCache.above
+	}
+	return
+}
+
+func (f *finder) setLastResultCache(below BlockNumberAndTime, above BlockNumberAndTime) {
+	f.lastResultCache.Lock()
+	defer f.lastResultCache.Unlock()
+	f.lastResultCache.below = &BlockNumberAndTime{BlockNumber: below.BlockNumber, BlockTimeNano: below.BlockTimeNano}
+	f.lastResultCache.above = &BlockNumberAndTime{BlockNumber: above.BlockNumber, BlockTimeNano: above.BlockTimeNano}
 }
