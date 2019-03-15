@@ -168,6 +168,13 @@ func TestGetEthBlockByTimestampWhenSmallNumOfBlocks(t *testing.T) {
 			expectedNum:   1,
 		},
 		{
+			name:          "JustIdenticalBlocks",
+			referenceTs:   1000,
+			btg:           newBlockTimeGetterStub([]BlockNumberAndTime{{1, 1000}, {2, 1000}, {3, 1000}}),
+			expectedError: true,
+			expectedNum:   0,
+		},
+		{
 			name:          "SeveralIdenticalBlocks_Middle",
 			referenceTs:   1500,
 			btg:           newBlockTimeGetterStub([]BlockNumberAndTime{{1, 1000}, {2, 1000}, {3, 1000}, {4, 2000}}),
