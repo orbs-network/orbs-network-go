@@ -21,6 +21,7 @@ func (c *contractClient) DeployNativeCounterContract(ctx context.Context, nodeIn
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_Deployments", "deployService").
 		WithArgs(
 			fmt.Sprintf("CounterFrom%d", counterStart),
@@ -37,6 +38,7 @@ func (c *contractClient) CounterAdd(ctx context.Context, nodeIndex int, amount u
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "add").
 		WithArgs(amount).
 		Builder()
@@ -48,6 +50,7 @@ func (c *contractClient) CounterGet(ctx context.Context, nodeIndex int) uint64 {
 	counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
 	query := builders.Query().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod(primitives.ContractName(fmt.Sprintf("CounterFrom%d", counterStart)), "get").
 		WithArgs().
 		Builder()

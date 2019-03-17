@@ -2,7 +2,7 @@ package virtualmachine
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_GlobalPreOrder"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"

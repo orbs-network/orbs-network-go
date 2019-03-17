@@ -15,6 +15,7 @@ type DeploymentsClient interface {
 
 func (c *contractClient) LockNativeDeployment(ctx context.Context, nodeIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_Deployments", "lockNativeDeployment").
 		WithArgs().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(toAddressIndex)).
@@ -25,6 +26,7 @@ func (c *contractClient) LockNativeDeployment(ctx context.Context, nodeIndex int
 
 func (c *contractClient) UnlockNativeDeployment(ctx context.Context, nodeIndex int, fromAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_Deployments", "unlockNativeDeployment").
 		WithArgs().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(fromAddressIndex)).

@@ -25,6 +25,7 @@ func (c *contractClient) UnsafeTests_SetElectedValidators(ctx context.Context, n
 	}
 
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_Elections", "unsafetests_setElectedValidators").
 		WithArgs(joinedElectedValidatorAddresses).
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(0)).

@@ -163,6 +163,7 @@ func ForAcceptanceTestNetwork(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	maxTxPerBlock uint32,
 	requiredQuorumPercentage uint32,
+	virtualChainId primitives.VirtualChainId,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
@@ -183,6 +184,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 0*time.Millisecond)
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)

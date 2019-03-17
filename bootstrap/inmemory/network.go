@@ -28,9 +28,10 @@ import (
 
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
-	Nodes     []*Node
-	Logger    log.BasicLogger
-	Transport adapter.Transport
+	Nodes          []*Node
+	Logger         log.BasicLogger
+	Transport      adapter.Transport
+	VirtualChainId primitives.VirtualChainId
 }
 
 type NodeDependencies struct {
@@ -54,8 +55,9 @@ func NewNetworkWithNumOfNodes(
 ) *Network {
 
 	network := &Network{
-		Logger:    parent,
-		Transport: transport,
+		Logger:         parent,
+		Transport:      transport,
+		VirtualChainId: cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 	parent.Info(configToStr(cfgTemplate))
@@ -303,4 +305,8 @@ func (n *Network) Destroy() {
 
 func (n *Network) MetricRegistry(nodeIndex int) metric.Registry {
 	return n.Nodes[nodeIndex].metricRegistry
+}
+
+func (n *Network) GetVirtualChainId() primitives.VirtualChainId {
+	return n.VirtualChainId
 }

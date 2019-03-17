@@ -18,8 +18,12 @@ type BenchmarkTokenClient interface {
 	GetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64
 }
 
+func (c *contractClient) ATransferTransaction() *builders.TransactionBuilder {
+	return builders.TransferTransaction().WithVirtualChainId(c.API.GetVirtualChainId())
+}
+
 func (c *contractClient) Transfer(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
-	tx := builders.TransferTransaction().
+	tx := c.ATransferTransaction().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(fromAddressIndex)).
 		WithAmountAndTargetAddress(amount, builders.ClientAddressForEd25519SignerForTests(toAddressIndex)).
 		Builder()
@@ -31,9 +35,10 @@ func (c *contractClient) Transfer(ctx context.Context, nodeIndex int, amount uin
 func (c *contractClient) TransferInBackground(ctx context.Context, nodeIndex int, amount uint64, fromAddressIndex int, toAddressIndex int) primitives.Sha256 {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.ClientAddressForEd25519SignerForTests(toAddressIndex)
-	tx := builders.TransferTransaction().
+	tx := c.ATransferTransaction().
 		WithEd25519Signer(signerKeyPair).
 		WithAmountAndTargetAddress(amount, targetAddress).
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		Builder()
 	builtTx := tx.Build()
 
@@ -46,7 +51,7 @@ func (c *contractClient) TransferInBackground(ctx context.Context, nodeIndex int
 func (c *contractClient) InvalidTransfer(ctx context.Context, nodeIndex int, fromAddressIndex int, toAddressIndex int) *client.SendTransactionResponse {
 	signerKeyPair := keys.Ed25519KeyPairForTests(fromAddressIndex)
 	targetAddress := builders.ClientAddressForEd25519SignerForTests(toAddressIndex)
-	tx := builders.TransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder()
+	tx := c.ATransferTransaction().WithEd25519Signer(signerKeyPair).WithInvalidAmount(targetAddress).Builder()
 
 	out, _ := c.API.SendTransaction(ctx, tx, nodeIndex)
 	return out
@@ -54,6 +59,7 @@ func (c *contractClient) InvalidTransfer(ctx context.Context, nodeIndex int, fro
 
 func (c *contractClient) GetBalance(ctx context.Context, nodeIndex int, forAddressIndex int) uint64 {
 	query := builders.GetBalanceQuery().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(forAddressIndex)).
 		WithTargetAddress(builders.ClientAddressForEd25519SignerForTests(forAddressIndex)).
 		Builder()

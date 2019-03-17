@@ -1,0 +1,1 @@
+[{"constant":true,"inputs":[{"name":"_id","type":"bytes32"}],"name":"getSubscriptionData","outputs":[{"name":"id","type":"bytes32"},{"name":"profile","type":"string"},{"name":"startTime","type":"uint256"},{"name":"tokens","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}]

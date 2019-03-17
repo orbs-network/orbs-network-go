@@ -47,13 +47,14 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	ctx, cancel := context.WithCancel(context.Background())
 	supervised.Recover(logger, func() {
 		defer cancel()
-		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE)
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID)
 		network.CreateAndStartNodes(ctx, 2)
 		f(ctx, network)
 	})
 }
 
-func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer, numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32) *NetworkHarness {
+func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId) *NetworkHarness {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
@@ -76,6 +77,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 		consensusAlgo,
 		maxTxPerBlock,
 		requiredQuorumPercentage,
+		vcid,
 	)
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))

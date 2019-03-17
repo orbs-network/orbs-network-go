@@ -89,3 +89,8 @@ func (q *QueryBuilder) WithAmountAndTargetAddress(amount uint64, targetAddress [
 func (q *QueryBuilder) WithTargetAddress(targetAddress []byte) *QueryBuilder {
 	return q.WithArgs(targetAddress)
 }
+
+func (q *QueryBuilder) WithVirtualChainId(virtualChainId primitives.VirtualChainId) *QueryBuilder {
+	q.builder.Query.VirtualChainId = virtualChainId
+	return q
+}

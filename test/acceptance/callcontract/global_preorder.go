@@ -15,6 +15,7 @@ type GlobalPreOrderClient interface {
 
 func (c *contractClient) UnsafeTests_SetSubscriptionOk(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_GlobalPreOrder", "unsafetests_setSubscriptionOk").
 		WithArgs().
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(0)).
@@ -25,8 +26,20 @@ func (c *contractClient) UnsafeTests_SetSubscriptionOk(ctx context.Context, node
 
 func (c *contractClient) UnsafeTests_SetSubscriptionProblem(ctx context.Context, nodeIndex int) (*client.SendTransactionResponse, primitives.Sha256) {
 	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
 		WithMethod("_GlobalPreOrder", "unsafetests_setSubscriptionProblem").
 		WithArgs().
+		WithEd25519Signer(keys.Ed25519KeyPairForTests(0)).
+		Builder()
+
+	return c.API.SendTransaction(ctx, tx, nodeIndex)
+}
+
+func (c *contractClient) RefreshSubscription(ctx context.Context, nodeIndex int, ethContractAddress string) (*client.SendTransactionResponse, primitives.Sha256) {
+	tx := builders.Transaction().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
+		WithMethod("_GlobalPreOrder", "refreshSubscription").
+		WithArgs(ethContractAddress).
 		WithEd25519Signer(keys.Ed25519KeyPairForTests(0)).
 		Builder()
 
