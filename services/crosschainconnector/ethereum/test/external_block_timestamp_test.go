@@ -43,10 +43,11 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		t.Logf("block at deploy: %d | %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64(), time.Now().Unix())
 
 		t.Logf("finality is %f seconds", h.config.finalityTimeComponent.Seconds())
-		time.Sleep(h.config.finalityTimeComponent) // finality time
-
-		h.moveBlocksInGanache(t, 1, 0) // finality block
-		time.Sleep(time.Second)        // so the time.Now() will include this block
+		time.Sleep(time.Second)                                  // buffer
+		h.moveBlocksInGanache(t, 1, 0)                           // finality block
+		time.Sleep(time.Second)                                  // buffer
+		h.moveBlocksInGanache(t, 1, 0)                           // block we will request below of because of the finder algo
+		time.Sleep(h.config.finalityTimeComponent - time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
 
 		methodToCall := "getValues"
 		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
@@ -63,6 +64,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 			WithPackedArguments(ethCallData).
 			Build()
 
+		t.Logf("going to request from ethereum at time %d, rounded to secs %d", input.ReferenceTimestamp, time.Unix(0, int64(input.ReferenceTimestamp.KeyForMap())).Unix())
 		output, err := h.connector.EthereumCallContract(ctx, input)
 		require.NoError(t, err, "expecting call to succeed")
 		require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")

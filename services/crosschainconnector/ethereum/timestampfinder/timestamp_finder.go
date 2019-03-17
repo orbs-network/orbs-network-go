@@ -42,7 +42,12 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	var err error
 	below, above := f.getLastResultCache()
 
-	f.logger.Info("ethereum timestamp finder starting", log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("below-cache-number", below.BlockNumber), log.Stringable("below-cache-timestamp", below.BlockTimeNano), log.Int64("above-cache-number", above.BlockNumber), log.Stringable("above-cache-timestamp", above.BlockTimeNano))
+	f.logger.Info("ethereum timestamp finder starting",
+		log.Uint64("reference-timestamp", referenceTimestampNano.KeyForMap()),
+		log.Int64("below-cache-number", below.BlockNumber),
+		log.Uint64("below-cache-timestamp", below.BlockTimeNano.KeyForMap()),
+		log.Int64("above-cache-number", above.BlockNumber),
+		log.Uint64("above-cache-timestamp", above.BlockTimeNano.KeyForMap()))
 
 	// attempt to return the last result immediately without any queries (for efficiency)
 	if algoDidReachResult(referenceTimestampNano, below, above) {
@@ -68,7 +73,13 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	// try reducing further and further until finding the result
 	for steps := 1; steps < TIMESTAMP_FINDER_MAX_STEPS; steps++ {
 
-		f.logger.Info("ethereum timestamp finder step", log.Int("step", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("below-number", below.BlockNumber), log.Stringable("below-timestamp", below.BlockTimeNano), log.Int64("above-number", above.BlockNumber), log.Stringable("above-timestamp", above.BlockTimeNano))
+		f.logger.Info("ethereum timestamp finder step",
+			log.Int("step", steps),
+			log.Uint64("reference-timestamp", referenceTimestampNano.KeyForMap()),
+			log.Int64("below-number", below.BlockNumber),
+			log.Uint64("below-timestamp", below.BlockTimeNano.KeyForMap()),
+			log.Int64("above-number", above.BlockNumber),
+			log.Uint64("above-timestamp", above.BlockTimeNano.KeyForMap()))
 
 		// did we finally reach the result?
 		if algoDidReachResult(referenceTimestampNano, below, above) {
@@ -91,17 +102,27 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 		// make sure we are converging
 		if distAfter >= distBefore {
-			f.logger.Error("ethereum timestamp finder is not converging (did not reduce range)", log.Int("step", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("new-below-number", below.BlockNumber), log.Stringable("new-below-timestamp", below.BlockTimeNano), log.Int64("new-above-number", above.BlockNumber), log.Stringable("new-above-timestamp", above.BlockTimeNano))
+			f.logger.Error("ethereum timestamp finder is not converging (did not reduce range)",
+				log.Int("step", steps),
+				log.Uint64("reference-timestamp", referenceTimestampNano.KeyForMap()),
+				log.Int64("new-below-number", below.BlockNumber),
+				log.Uint64("new-below-timestamp", below.BlockTimeNano.KeyForMap()),
+				log.Int64("new-above-number", above.BlockNumber),
+				log.Uint64("new-above-timestamp", above.BlockTimeNano.KeyForMap()))
 		}
 	}
 
-	return nil, errors.Errorf("ethereum timestamp finder went over maximum steps %d, reference timestamp %v", TIMESTAMP_FINDER_MAX_STEPS, referenceTimestampNano)
+	return nil, errors.Errorf("ethereum timestamp finder went over maximum steps %d, reference timestamp %d", TIMESTAMP_FINDER_MAX_STEPS, referenceTimestampNano)
 }
 
 func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, steps int) (*big.Int, error) {
 	f.setLastResultCache(below, above)
 	// the block below is the one we actually return as result
-	f.logger.Info("ethereum timestamp finder found result", log.Int("steps", steps), log.Stringable("reference-timestamp", referenceTimestampNano), log.Int64("result-number", below.BlockNumber), log.Stringable("result-timestamp", below.BlockTimeNano))
+	f.logger.Info("ethereum timestamp finder found result",
+		log.Int("steps", steps),
+		log.Uint64("reference-timestamp", referenceTimestampNano.KeyForMap()),
+		log.Int64("result-number", below.BlockNumber),
+		log.Uint64("result-timestamp", below.BlockTimeNano.KeyForMap()))
 	return big.NewInt(below.BlockNumber), nil
 }
 
