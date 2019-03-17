@@ -126,6 +126,20 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
+// TODO remove Eventually loop once node can handle requests at block height 0
+func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes []byte) {
+	var dcExResult codec.ExecutionResult
+	var dcTxStatus codec.TransactionStatus
+	var dcErr error
+	require.True(t, test.Eventually(20*time.Second, func() bool {
+		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes)
+		return dcErr == nil &&
+			dcTxStatus == codec.TRANSACTION_STATUS_COMMITTED &&
+			dcExResult == codec.EXECUTION_RESULT_SUCCESS
+	}), "expected contract to deploy successfully within 20 seconds, got error=%s, status=%s, execution result=%s", dcErr, dcTxStatus, dcExResult)
+
+}
+
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 	require.True(t, test.Eventually(3*time.Second, func() bool { // 3 seconds to avoid jitter but it really shouldn't take that long
 		m := h.getMetrics()
@@ -174,15 +188,15 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		virtualChainId,
-		shouldBootstrap,
-		baseUrl,
-		StressTestConfig{
-			stressTestEnabled,
-			stressTestNumberOfTransactions,
-			stressTestFailureRate,
-			stressTestTargetTPS,
+		virtualChainId: virtualChainId,
+		bootstrap:      shouldBootstrap,
+		baseUrl:        baseUrl,
+		stressTest: StressTestConfig{
+			enabled:               stressTestEnabled,
+			numberOfTransactions:  stressTestNumberOfTransactions,
+			acceptableFailureRate: stressTestFailureRate,
+			targetTPS:             stressTestTargetTPS,
 		},
-		ethereumEndpoint,
+		ethereumEndpoint: ethereumEndpoint,
 	}
 }

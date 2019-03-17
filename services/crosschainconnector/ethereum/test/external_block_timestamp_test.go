@@ -26,34 +26,45 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
-		latestBlockInGanache, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+
+		// create first block in case we are running only this test (clean ganache, but no real hard in actual)
+		h.moveBlocksInGanache(t, 1, 0)
+		blockAtStart, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 		require.NoError(t, err, "failed to get latest block in ganache")
 
-		timeBeforeContractWasDeployed := time.Unix(latestBlockInGanache.Time.Int64(), 0)
-		h.moveBlocksInGanache(t, 2, 1) // this is only to advance blocks
+		time.Sleep(time.Second)
 
 		expectedTextFromEthereum := "test3"
-		contractAddress3, err := h.deployRpcStorageContract(expectedTextFromEthereum)
-		require.NoError(t, err, "failed deploying contract3 to Ethereum")
+		contractAddress, err := h.deployRpcStorageContract(expectedTextFromEthereum)
+		require.NoError(t, err, "failed deploying contract to Ethereum")
 
-		h.moveBlocksInGanache(t, 11, 1) // this is only to advance blocks
+		blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+		require.NoError(t, err, "failed to get latest block in ganache")
+		t.Logf("block at deploy: %d | %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64(), time.Now().Unix())
+
+		t.Logf("finality is %f seconds", h.config.finalityTimeComponent.Seconds())
+		time.Sleep(time.Second)                                  // buffer
+		h.moveBlocksInGanache(t, 1, 0)                           // finality block
+		time.Sleep(time.Second)                                  // buffer
+		h.moveBlocksInGanache(t, 1, 0)                           // block we will request below of because of the finder algo
+		time.Sleep(h.config.finalityTimeComponent - time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
 
 		methodToCall := "getValues"
-
 		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
 		require.NoError(t, err, "abi parse failed for simple storage contract")
 
 		ethCallData, err := ethereum.ABIPackFunctionInputArguments(parsedABI, methodToCall, nil)
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
+		// request at time now, which should be (with finality) after the contract was deployed
 		input := builders.EthereumCallContractInput().
-			WithTimestamp(timeBeforeContractWasDeployed.Add(14 * time.Second)).
-			WithContractAddress(contractAddress3).
+			WithContractAddress(contractAddress).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
 			WithPackedArguments(ethCallData).
 			Build()
 
+		t.Logf("going to request from ethereum at time %d, rounded to secs %d", input.ReferenceTimestamp, time.Unix(0, int64(input.ReferenceTimestamp.KeyForMap())).Unix())
 		output, err := h.connector.EthereumCallContract(ctx, input)
 		require.NoError(t, err, "expecting call to succeed")
 		require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")
@@ -65,9 +76,10 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		ethereum.ABIUnpackFunctionOutputArguments(parsedABI, ret, methodToCall, output.EthereumAbiPackedOutput)
 		require.Equal(t, expectedTextFromEthereum, ret.StringValue, "text part from eth")
 
+		timeAtStart := time.Unix(blockAtStart.Time.Int64(), 0)
 		input = builders.EthereumCallContractInput().
-			WithTimestamp(timeBeforeContractWasDeployed).
-			WithContractAddress(contractAddress3).
+			WithTimestamp(timeAtStart).
+			WithContractAddress(contractAddress).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
 			WithPackedArguments(ethCallData).

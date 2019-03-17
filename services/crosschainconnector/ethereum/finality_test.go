@@ -92,6 +92,19 @@ func TestFinality_VerifySafeBlock(t *testing.T) {
 	})
 }
 
+func TestFinality_GetSafeBlockNeverReturnsNegative(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		cfg := &finalityConfig{2 * time.Minute, 90}
+
+		btg := timestampfinder.NewFakeBlockTimeGetter(logger)
+		finder := timestampfinder.NewTimestampFinder(btg, logger)
+
+		_, err := getFinalitySafeBlockNumber(ctx, primitives.TimestampNano(timestampfinder.FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS*time.Second+3*time.Minute), finder, cfg)
+		require.Error(t, err, "should fail due to negative block number")
+	})
+}
+
 type finalityConfig struct {
 	finalityTimeComponent   time.Duration
 	finalityBlocksComponent uint32

@@ -31,10 +31,10 @@ func algoVerifyResultInsideRange(referenceTimestampNano primitives.TimestampNano
 		return errors.Errorf("ethereum timestamp finder range corrupt, below %d is too close to above %d", below.BlockNumber, above.BlockNumber)
 	}
 	if referenceTimestampNano < below.BlockTimeNano {
-		return errors.Errorf("ethereum timestamp finder range corrupt, below timestamp %s is above reference %s", below.BlockTimeNano, referenceTimestampNano)
+		return errors.Errorf("ethereum timestamp finder range corrupt, below timestamp %d is above reference %d", below.BlockTimeNano, referenceTimestampNano)
 	}
 	if above.BlockTimeNano <= referenceTimestampNano {
-		return errors.Errorf("ethereum timestamp finder range corrupt, above timestamp %s is below reference %s", above.BlockTimeNano, referenceTimestampNano)
+		return errors.Errorf("ethereum timestamp finder range corrupt, above timestamp %d is below reference %d", above.BlockTimeNano, referenceTimestampNano)
 	}
 	return nil
 }
@@ -47,8 +47,8 @@ func algoExtendAbove(ctx context.Context, referenceTimestampNano primitives.Time
 	if latest == nil {
 		return BlockNumberAndTime{}, errors.New("ethereum timestamp finder received nil as latest block from getter")
 	}
-	if !(referenceTimestampNano < latest.BlockTimeNano) {
-		return BlockNumberAndTime{}, errors.Errorf("the latest ethereum block %d at %v is not newer than the reference timestamp %v, must wait for newer blocks to be mined", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano)
+	if referenceTimestampNano >= latest.BlockTimeNano {
+		return BlockNumberAndTime{}, errors.Errorf("the latest ethereum block %d at %d is not newer than the reference timestamp %d", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano)
 	}
 	return *latest, nil
 }
@@ -79,14 +79,16 @@ func algoExtendBelow(ctx context.Context, referenceTimestampNano primitives.Time
 				return *cursor, nil
 			}
 			if cursor.BlockNumber == 1 {
-				return BlockNumberAndTime{}, errors.Errorf("the first ethereum block %d at %v is newer than the reference timestamp %v", cursor.BlockNumber, cursor.BlockTimeNano, referenceTimestampNano)
+				return BlockNumberAndTime{}, errors.Errorf("the first ethereum block %d at %d is newer than the reference timestamp %d",
+					cursor.BlockNumber, cursor.BlockTimeNano, referenceTimestampNano)
 			}
 
 		}
 	}
 
 	// not supposed to be able to get here
-	return BlockNumberAndTime{}, errors.Errorf("unable to extend below, reference timestamp is %v, above is %d, below is %d", referenceTimestampNano, aboveBlockNumber, belowBlockNumber)
+	return BlockNumberAndTime{}, errors.Errorf("unable to extend below, reference timestamp is %d, above is %d, below is %d",
+		referenceTimestampNano, aboveBlockNumber, belowBlockNumber)
 }
 
 func algoReduceRange(ctx context.Context, referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, btg BlockTimeGetter, step int) (BlockNumberAndTime, BlockNumberAndTime, error) {
