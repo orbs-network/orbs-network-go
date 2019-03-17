@@ -53,7 +53,7 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 		cfg.privateKeyHex = privateKey
 	}
 
-	cfg.finalityTimeComponent = 10 * time.Second
+	cfg.finalityTimeComponent = 1 * time.Second
 	cfg.finalityBlocksComponent = 1
 
 	return &cfg
