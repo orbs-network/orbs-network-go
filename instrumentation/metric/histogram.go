@@ -47,6 +47,12 @@ func (h *Histogram) RecordSince(t time.Time) {
 	}
 }
 
+func (h *Histogram) Record(measurement int64) {
+	if err := h.histo.Current.RecordValue(measurement); err != nil {
+		atomic.AddInt64(&h.overflowCount, 1)
+	}
+}
+
 func (h *Histogram) String() string {
 	var errorRate float64
 	histo := h.histo.Current

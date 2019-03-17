@@ -80,31 +80,20 @@ func (q *transportQueue) Enable() {
 }
 
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
-	dataBytes := totalBytesInData(data)
-
 	q.protected.Lock()
 	defer q.protected.Unlock()
 
-	if dataBytes > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
+	if data.TotalSize() > q.protected.bytesLeft {
+		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", data.TotalSize(), q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
-	q.protected.bytesLeft -= dataBytes
+	q.protected.bytesLeft -= data.TotalSize()
 	return nil
 }
 
 func (q *transportQueue) releaseBytes(data *adapter.TransportData) {
-	dataBytes := totalBytesInData(data)
-
 	q.protected.Lock()
 	defer q.protected.Unlock()
 
-	q.protected.bytesLeft += dataBytes
-}
-
-func totalBytesInData(data *adapter.TransportData) (res int) {
-	for _, payload := range data.Payloads {
-		res += len(payload)
-	}
-	return
+	q.protected.bytesLeft += data.TotalSize()
 }

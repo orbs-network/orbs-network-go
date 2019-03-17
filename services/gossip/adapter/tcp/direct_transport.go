@@ -31,6 +31,8 @@ type metrics struct {
 
 	activeIncomingConnections *metric.Gauge
 	activeOutgoingConnections *metric.Gauge
+
+	outgoingMessageSize *metric.Histogram
 }
 
 type directTransport struct {
@@ -54,8 +56,10 @@ func getMetrics(registry metric.Registry) *metrics {
 		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
 		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors.Count"),
 		outgoingConnectionKeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors.Count"),
+		outgoingConnectionSendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors.Count"),
 		activeIncomingConnections:         registry.NewGauge("Gossip.IncomingConnection.Active.Count"),
 		activeOutgoingConnections:         registry.NewGauge("Gossip.OutgoingConnection.Active.Count"),
+		outgoingMessageSize:               registry.NewHistogram("Gossip.OutgoingConnection.MessageSize.Bytes", MAX_PAYLOAD_SIZE_BYTES),
 	}
 }
 

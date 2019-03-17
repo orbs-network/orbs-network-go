@@ -90,6 +90,7 @@ func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData
 		t.metrics.outgoingConnectionSendQueueErrors.Inc()
 		t.logger.Info("direct transport send queue error", log.Error(err), log.String("peer", outgoingQueue.networkAddress))
 	}
+	t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 }
 
 func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
