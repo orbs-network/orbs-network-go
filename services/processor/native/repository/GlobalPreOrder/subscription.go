@@ -19,7 +19,9 @@ func approve() {
 	}
 }
 
-var plans = map[string]int{
+var satoshiFactor = big.NewInt(1000000000000000000)
+
+var planCostsInOrbs = map[string]int64{
 	"B0": 450,
 	"B1": 850,
 	"B2": 1650,
@@ -29,10 +31,10 @@ var plans = map[string]int{
 }
 
 type subscriptionData struct {
-	id         primitives.VirtualChainId
-	plan       string
-	startTime  time.Time
-	tokensPaid *big.Int
+	id               primitives.VirtualChainId
+	plan             string
+	startTime        time.Time
+	tokensPaidInOrbs int64
 }
 
 func (s *subscriptionData) validate(virtualChainId primitives.VirtualChainId, blockTime time.Time) error {
@@ -44,10 +46,10 @@ func (s *subscriptionData) validate(virtualChainId primitives.VirtualChainId, bl
 		return errors.Errorf("subscription isn't valid because it only starts at %s", s.startTime)
 	}
 
-	if planCostInTokens, ok := plans[s.plan]; !ok {
+	if planCostInTokens, ok := planCostsInOrbs[s.plan]; !ok {
 		return errors.Errorf("plan with name %s is not recognized", s.plan)
-	} else if big.NewInt(int64(planCostInTokens)).Cmp(s.tokensPaid) > 0 {
-		return errors.Errorf("plan with name %s costs %d tokens but subscription only paid %s tokens", s.plan, planCostInTokens, s.tokensPaid)
+	} else if s.tokensPaidInOrbs < planCostInTokens {
+		return errors.Errorf("plan with name %s costs %d tokens but subscription only paid %d tokens", s.plan, planCostInTokens, s.tokensPaidInOrbs)
 	}
 
 	return nil
@@ -76,7 +78,6 @@ func refreshSubscription(ethContractAddress string) {
 
 func _readSubscriptionDataFromEthereum(virtualChainId primitives.VirtualChainId, ethContractAddress string) *subscriptionData {
 	jsonAbi := `[{"constant":true,"inputs":[{"name":"_id","type":"bytes32"}],"name":"getSubscriptionData","outputs":[{"name":"id","type":"bytes32"},{"name":"profile","type":"string"},{"name":"startTime","type":"uint256"},{"name":"tokens","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}]`
-
 	plan := ""
 	id := [32]byte{}
 	startTime := big.NewInt(0)
@@ -92,12 +93,16 @@ func _readSubscriptionDataFromEthereum(virtualChainId primitives.VirtualChainId,
 	binary.BigEndian.PutUint32(vcid[28:], uint32(virtualChainId))
 	ethereum.CallMethod(ethContractAddress, jsonAbi, "getSubscriptionData", &output, vcid)
 	subscription := &subscriptionData{
-		id:         primitives.VirtualChainId(binary.BigEndian.Uint32(id[28:])),
-		plan:       plan,
-		startTime:  time.Unix(startTime.Int64(), 0),
-		tokensPaid: tokens,
+		id:               primitives.VirtualChainId(binary.BigEndian.Uint32(id[28:])),
+		plan:             plan,
+		startTime:        time.Unix(startTime.Int64(), 0),
+		tokensPaidInOrbs: _satoshiToOrbs(tokens),
 	}
 	return subscription
+}
+
+func _satoshiToOrbs(tokens *big.Int) int64 {
+	return tokens.Div(tokens, satoshiFactor).Int64()
 }
 
 func _readSubscriptionProblem() string {

@@ -19,7 +19,7 @@ func TestSubscriptionData_Validate_FailsOnUnrecognizedPlan(t *testing.T) {
 
 func TestSubscriptionData_Validate_FailsOnUnderfundedPlan(t *testing.T) {
 	planName := "B0"
-	s := &subscriptionData{id: 17, plan: planName, startTime: time.Now().Add(-1 * time.Hour), tokensPaid: big.NewInt(int64(plans[planName] - 1))}
+	s := &subscriptionData{id: 17, plan: planName, startTime: time.Now().Add(-1 * time.Hour), tokensPaidInOrbs: planCostsInOrbs[planName] - 1}
 	require.Error(t, s.validate(17, time.Now()), "validate did not fail on underfunded plan")
 }
 
@@ -30,7 +30,12 @@ func TestSubscriptionData_Validate_FailsOnFutureStartTime(t *testing.T) {
 
 func TestSubscriptionData_Validate_SucceedsOnValidSubscription(t *testing.T) {
 	planName := "B0"
-	s := &subscriptionData{id: 17, plan: planName, startTime: time.Now().Add(-1 * time.Hour), tokensPaid: big.NewInt(int64(plans[planName]))}
+	s := &subscriptionData{id: 17, plan: planName, startTime: time.Now().Add(-1 * time.Hour), tokensPaidInOrbs: planCostsInOrbs[planName]}
 
 	require.NoError(t, s.validate(17, time.Now()), "validate failed on a valid subscription")
+}
+
+func TestSatoshiToOrbs(t *testing.T) {
+	t.Log(satoshiFactor)
+	require.EqualValues(t, 17, _satoshiToOrbs(new(big.Int).Mul(big.NewInt(17), big.NewInt(1000000000000000000))))
 }
