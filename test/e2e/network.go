@@ -40,13 +40,13 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 
 func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 	gossipPortByNodeIndex := []int{}
-	federationNodes := make(map[string]config.FederationNode)
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
 
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
 	}
 
@@ -79,7 +79,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		cfg := config.
 			ForE2E(
 				processorArtifactPath,
-				federationNodes,
+				genesisValidatorNodes,
 				gossipPeers,
 				leaderKeyPair.NodeAddress(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,

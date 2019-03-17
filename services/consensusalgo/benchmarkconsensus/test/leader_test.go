@@ -116,13 +116,13 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 	})
 }
 
-func TestLeaderIgnoresNonFederationSigners(t *testing.T) {
+func TestLeaderIgnoresNonValidatorSigners(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
 
-		t.Log("Non federation nodes confirmed height 0 (genesis), commit height 0 again")
+		t.Log("Non validator nodes confirmed height 0 (genesis), commit height 0 again")
 
-		c0 := multipleCommittedMessages().WithHeight(0).FromNonFederationMembers().WithCountAboveQuorum(h.config).Build()
+		c0 := multipleCommittedMessages().WithHeight(0).FromNonGenesisValidators().WithCountAboveQuorum(h.config).Build()
 		h.expectNewBlockProposalNotRequested()
 		h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 

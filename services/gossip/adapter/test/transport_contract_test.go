@@ -84,14 +84,14 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
-	federationNodes := make(map[string]config.FederationNode)
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for _, address := range res.nodeAddresses {
-		federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(primitives.NodeAddress(address))
+		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 	}
 
 	logger := log.DefaultTestingLogger(tb).WithTags(log.String("adapter", "transport"))
 
-	transport := memory.NewTransport(ctx, logger, federationNodes)
+	transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*testkit.MockTransportListener{
 		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),

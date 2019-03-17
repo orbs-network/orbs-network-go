@@ -41,7 +41,7 @@ type metrics struct {
 	timeSinceLastElectionMillis *metric.Histogram
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
-	votingTime                  *metric.Histogram
+	lastCommittedTime           *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
@@ -50,6 +50,7 @@ func newMetrics(m metric.Factory) *metrics {
 		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis", 30*time.Minute),
 		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Value"),
 		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Value"),
+		lastCommittedTime:           m.NewGauge("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano"),
 	}
 }
 
@@ -67,10 +68,9 @@ func NewLeanHelixConsensusAlgo(
 
 	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
 
-	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("Node-address", config.NodeAddress().String()))
+	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
-	committeeSize := uint32(len(config.FederationNodes(0)))
-	membership := NewMembership(logger, config.NodeAddress(), consensusContext, committeeSize)
+	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
 	mgr := NewKeyManager(logger, config.NodePrivateKey())
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
@@ -89,7 +89,7 @@ func NewLeanHelixConsensusAlgo(
 
 	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
 	electionTrigger := NewExponentialBackoffElectionTrigger(logger, config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
-	logger.Info("Election trigger set", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
+	logger.Info("Election trigger set the first time", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
 
 	leanHelixConfig := &lh.Config{
 		InstanceId:      instanceId,
@@ -201,6 +201,7 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 		logger.Info("onCommit - saving block to storage error: ", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 	now := time.Now()
+	s.metrics.lastCommittedTime.Update(now.UnixNano())
 	s.metrics.timeSinceLastCommitMillis.RecordSince(s.lastCommitTime)
 	s.lastCommitTime = now
 }

@@ -48,8 +48,8 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	logger.Info("committing blocks from sync",
 		log.Int("block-count", numBlocks),
 		log.Stringable("sender", s.blocks.Sender),
-		log.Stringable("first-block-height", firstBlockHeight),
-		log.Stringable("last-block-height", lastBlockHeight))
+		log.Uint64("first-block-height", uint64(firstBlockHeight)),
+		log.Uint64("last-block-height", uint64(lastBlockHeight)))
 
 	s.metrics.blocksRate.Measure(int64(numBlocks))
 	for _, blockPair := range s.blocks.BlockPairs {
@@ -71,6 +71,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
+			s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 			s.metrics.committedBlocks.Inc()
 			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}

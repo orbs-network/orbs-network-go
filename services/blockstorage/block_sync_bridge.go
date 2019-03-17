@@ -31,6 +31,8 @@ func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 	if err != nil {
 		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
 		return
+	} else {
+		s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", log.BlockHeight(blockHeight))
 	}
 }
 
