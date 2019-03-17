@@ -36,6 +36,10 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
 		_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
 
+		// this is required because GlobalPreOrder contract relies on state (Approve method), and if state storage is too far behind, GlobalPreOrder will fail on gap
+		require.NoError(t, network.stateBlockHeightTrackers[0].WaitForBlock(ctx, topBlockHeight))
+		require.NoError(t, network.stateBlockHeightTrackers[1].WaitForBlock(ctx, topBlockHeight))
+
 		// Resend an already committed transaction to Leader
 		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
