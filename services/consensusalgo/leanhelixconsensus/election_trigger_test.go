@@ -53,7 +53,7 @@ func TestCallbackTriggerOnce(t *testing.T) {
 		}
 		et.RegisterOnElection(ctx, 10, 0, cb)
 
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 
 		require.Exactly(t, 1, callCount, "Trigger callback called more than once")
 	})
