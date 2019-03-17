@@ -20,14 +20,16 @@ import (
 var LogTag = log.Service("state-storage")
 
 type metrics struct {
-	readKeys  *metric.Rate
-	writeKeys *metric.Rate
+	readKeys    *metric.Rate
+	writeKeys   *metric.Rate
+	blockHeight *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		readKeys:  m.NewRate("StateStorage.ReadRequestedKeys.PerSecond"),
-		writeKeys: m.NewRate("StateStorage.WriteRequestedKeys.PerSecond"),
+		readKeys:    m.NewRate("StateStorage.ReadRequestedKeys.PerSecond"),
+		writeKeys:   m.NewRate("StateStorage.WriteRequestedKeys.PerSecond"),
+		blockHeight: m.NewGauge("StateStorage.BlockHeight"),
 	}
 }
 
@@ -91,6 +93,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	s.blockTracker.IncrementTo(commitBlockHeight)
 	s.heightReporter.IncrementTo(commitBlockHeight)
+	s.metrics.blockHeight.Update(int64(commitBlockHeight))
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
