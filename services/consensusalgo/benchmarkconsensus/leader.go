@@ -60,7 +60,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 			logger.Error("leader failed to save block to storage", log.Error(err))
 			return err
 		}
-
+		s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 		err = s.setLastCommittedBlock(proposedBlock, lastCommittedBlock)
 		if err != nil {
 			return err
@@ -76,7 +76,8 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 		return err
 	}
 
-	if s.config.NetworkSize(0) == 1 {
+	networkSize := len(s.config.GenesisValidatorNodes())
+	if networkSize == 1 {
 		s.successfullyVotedBlocks <- lastCommittedBlockHeight
 	}
 
@@ -232,8 +233,8 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// approved signer
-	if _, found := s.config.FederationNodes(0)[sender.SenderNodeAddress().KeyForMap()]; !found {
-		return errors.Errorf("signer with public key %s is not a valid federation member", sender.SenderNodeAddress())
+	if _, found := s.config.GenesisValidatorNodes()[sender.SenderNodeAddress().KeyForMap()]; !found {
+		return errors.Errorf("signer with public key %s is not a valid validator", sender.SenderNodeAddress())
 	}
 
 	// signature

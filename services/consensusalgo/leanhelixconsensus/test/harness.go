@@ -47,12 +47,7 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	logger := log.GetLogger().WithOutput(logOutput)
 	registry := metric.NewRegistry()
 
-	federationNodes := make(map[string]config.FederationNode)
-	for i := 0; i < NETWORK_SIZE; i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
-	}
-	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), federationNodes)
+	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0))
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, logger, cfg, registry)

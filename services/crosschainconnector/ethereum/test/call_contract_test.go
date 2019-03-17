@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestCallContractWithoutArgs(t *testing.T) {
 		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
 		input := builders.EthereumCallContractInput().
-			WithTimestamp(ethereum.LastTimestampInFake.Add(-24 * time.Hour)).
+			WithTimestamp(timestampfinder.LastTimestampInFake.Add(-24 * time.Hour)).
 			WithContractAddress(h.getAddress()).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).

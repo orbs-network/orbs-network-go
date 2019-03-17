@@ -6,7 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
 )
@@ -19,6 +21,7 @@ type EthereumConnection interface {
 	CallContract(ctx context.Context, contractAddress []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
 	GetTransactionLogs(ctx context.Context, txHash primitives.Uint256, eventSignature []byte) ([]*TransactionLog, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger)
 }
 
 type connectorCommon struct {
@@ -63,4 +66,17 @@ func (c *connectorCommon) Receipt(txHash common.Hash) (*types.Receipt, error) {
 	}
 
 	return client.TransactionReceipt(context.TODO(), txHash)
+}
+
+func (c *connectorCommon) SyncProgress() (*ethereum.SyncProgress, error) {
+	client, err := c.getContractCaller()
+	if err != nil {
+		return nil, err
+	}
+
+	if ethClient, ok := client.(*ethclient.Client); ok {
+		return ethClient.SyncProgress(context.TODO())
+	}
+
+	return nil, nil
 }

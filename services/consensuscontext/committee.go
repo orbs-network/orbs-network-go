@@ -41,20 +41,15 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	return res, nil
 }
 
-func calculateCommitteeSize(requestedCommitteeSize uint32, minimumCommitteeSize uint32, federationSize uint32) uint32 {
-
-	if federationSize < minimumCommitteeSize {
-		panic(fmt.Sprintf("config error: federation size %d cannot be less than minimum committee size %d", federationSize, minimumCommitteeSize)) //TODO(v1): move to config guard
-	}
-
-	if requestedCommitteeSize < minimumCommitteeSize {
+func calculateCommitteeSize(maximumCommitteeSize uint32, minimumCommitteeSize uint32, totalValidatorsSize uint32) uint32 {
+	if maximumCommitteeSize < minimumCommitteeSize {
 		return minimumCommitteeSize
 	}
 
-	if requestedCommitteeSize > federationSize {
-		return federationSize
+	if maximumCommitteeSize > totalValidatorsSize {
+		return totalValidatorsSize
 	}
-	return requestedCommitteeSize
+	return maximumCommitteeSize
 }
 
 // See https://github.com/orbs-network/orbs-spec/issues/111
@@ -91,6 +86,11 @@ func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64, nodes
 	sort.Slice(grades, func(i, j int) bool {
 		return grades[i].grade > grades[j].grade
 	})
+
+	// even if the number of nodes is below minimum, we don't want to crash here and let our caller deal with this
+	if uint32(len(nodes)) < committeeSize {
+		committeeSize = uint32(len(nodes))
+	}
 
 	indices := make([]uint32, committeeSize)
 	for i := 0; i < int(committeeSize); i++ {

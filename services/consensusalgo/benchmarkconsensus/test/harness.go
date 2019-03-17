@@ -43,10 +43,10 @@ func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
 
 func newHarness(tb testing.TB, isLeader bool) *harness {
 
-	federationNodes := make(map[string]config.FederationNode)
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for i := 0; i < NETWORK_SIZE; i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 	}
 
 	nodeKeyPair := leaderKeyPair()
@@ -56,7 +56,7 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	//TODO(v1) don't use acceptance tests config! use a per-service config
 	cfg := config.ForAcceptanceTestNetwork(
-		federationNodes,
+		genesisValidatorNodes,
 		leaderKeyPair().NodeAddress(),
 		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
 		1,

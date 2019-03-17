@@ -61,18 +61,18 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 
 	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
-	federationNodes := map[string]config.FederationNode{}
+	genesisValidatorNodes := map[string]config.ValidatorNode{}
 	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
 	var nodeOrder []primitives.NodeAddress
 	for i := 0; i < int(numNodes); i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		federationNodes[nodeAddress.KeyForMap()] = config.NewHardCodedFederationNode(nodeAddress)
+		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
 		nodeOrder = append(nodeOrder, nodeAddress)
 	}
 
 	cfgTemplate := config.ForAcceptanceTestNetwork(
-		federationNodes,
+		genesisValidatorNodes,
 		leaderKeyPair.NodeAddress(),
 		consensusAlgo,
 		maxTxPerBlock,
@@ -80,7 +80,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 		vcid,
 	)
 
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, federationNodes))
+	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
 
@@ -112,7 +112,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 	}
 
 	harness := &NetworkHarness{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(federationNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
 		tamperingTransport:                 sharedTamperingTransport,
 		ethereumConnection:                 sharedEthereumSimulator,
 		fakeCompiler:                       sharedCompiler,

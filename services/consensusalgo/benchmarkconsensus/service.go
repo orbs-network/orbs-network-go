@@ -24,8 +24,7 @@ var LogTag = log.Service("consensus-algo-benchmark")
 type Config interface {
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	NetworkSize(asOfBlock uint64) uint32
-	FederationNodes(asOfBlock uint64) map[string]config.FederationNode
+	GenesisValidatorNodes() map[string]config.ValidatorNode
 	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -56,6 +55,7 @@ type metrics struct {
 	failedConsensusTicksRate   *metric.Rate
 	timedOutConsensusTicksRate *metric.Rate
 	votingTime                 *metric.Histogram
+	lastCommittedTime          *metric.Gauge
 }
 
 func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTimeout time.Duration) *metrics {
@@ -64,6 +64,7 @@ func newMetrics(m metric.Factory, consensusTimeout time.Duration, collectVotesTi
 		votingTime:                 m.NewLatency("ConsensusAlgo.Benchmark.Voting.Millis", collectVotesTimeout),
 		failedConsensusTicksRate:   m.NewRate("ConsensusAlgo.Benchmark.FailedTicks.PerSecond"),
 		timedOutConsensusTicksRate: m.NewRate("ConsensusAlgo.Benchmark.TimedOutTicks.PerSecond"),
+		lastCommittedTime:          m.NewGauge("ConsensusAlgo.Benchmark.LastCommitted.TimeNano"),
 	}
 }
 

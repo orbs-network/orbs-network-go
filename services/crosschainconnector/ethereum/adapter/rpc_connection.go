@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 )
@@ -60,5 +61,15 @@ func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *bi
 		return nil, err
 	}
 
-	return client.HeaderByNumber(ctx, number)
+	header, err := client.HeaderByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+
+	// not supposed to happen since client.HeaderByNumber does not return nil, nil
+	if header == nil {
+		return nil, errors.New("ethereum returned nil header without error")
+	}
+
+	return header, nil
 }

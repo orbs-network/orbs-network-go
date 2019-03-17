@@ -89,10 +89,10 @@ func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	})
 }
 
-func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.FederationNode {
-	federationNodes := make(map[string]config.FederationNode)
+func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.ValidatorNode {
+	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for _, address := range addresses {
-		federationNodes[address.KeyForMap()] = config.NewHardCodedFederationNode(address)
+		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(address)
 	}
-	return federationNodes
+	return genesisValidatorNodes
 }

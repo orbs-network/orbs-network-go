@@ -29,7 +29,7 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress, gossipListenPort 
 	return cfg
 }
 
-func ForConsensusContextTests(federationNodes map[string]FederationNode) ConsensusContextConfig {
+func ForConsensusContextTests(genesisValidatorNodes map[string]ValidatorNode) ConsensusContextConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
@@ -38,8 +38,8 @@ func ForConsensusContextTests(federationNodes map[string]FederationNode) Consens
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
-	if federationNodes != nil {
-		cfg.SetFederationNodes(federationNodes)
+	if genesisValidatorNodes != nil {
+		cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	}
 	return cfg
 }
@@ -82,20 +82,18 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	return cfg
 }
 
-func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, federationNodes map[string]FederationNode) LeanHelixConsensusConfig {
+func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) LeanHelixConsensusConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 1*time.Hour)
+	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE, 22)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
 
-	if federationNodes != nil {
-		cfg.SetFederationNodes(federationNodes)
-	}
 	return cfg
 }
 

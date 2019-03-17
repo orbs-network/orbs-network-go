@@ -43,7 +43,7 @@ func (c *config) Clone() mutableNodeConfig {
 	return &config{
 		activeConsensusAlgo:     c.activeConsensusAlgo,
 		constantConsensusLeader: c.constantConsensusLeader,
-		federationNodes:         c.federationNodes,
+		genesisValidatorNodes:   c.genesisValidatorNodes,
 		gossipPeers:             c.gossipPeers,
 		nodePrivateKey:          c.nodePrivateKey,
 		nodeAddress:             c.nodeAddress,
