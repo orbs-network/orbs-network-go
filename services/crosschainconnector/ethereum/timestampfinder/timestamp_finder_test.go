@@ -312,6 +312,9 @@ func BenchmarkFullCycleWithCache(b *testing.B) {
 	h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 	for i := 0; i < b.N; i++ {
 		// start searching in a random manner to avoid cache
-		h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+		_, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
