@@ -13,6 +13,7 @@ const REPORT_INTERVAL = 30 * time.Second
 const AGGREGATION_SPAN = 10 * time.Minute
 
 type Factory interface {
+	NewHistogram(name string, maxValue int64) *Histogram
 	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
@@ -75,6 +76,12 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 
 func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
 	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/REPORT_INTERVAL))
+	r.register(h)
+	return h
+}
+
+func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) *Histogram {
+	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/REPORT_INTERVAL))
 	r.register(h)
 	return h
 }
