@@ -11,8 +11,7 @@ import (
 
 type metrics struct {
 	syncStatus              *metric.Text
-	lastBlockHex            *metric.Text
-	lastBlock               *metric.Text
+	lastBlock               *metric.Gauge
 	receiptsRetrievalStatus *metric.Text
 }
 
@@ -20,14 +19,12 @@ const STATUS_FAILED = "failed"
 const STATUS_SUCCESS = "success"
 const STATUS_IN_PROGRESS = "in-progress"
 
-const DEFAULT_BLOCK_NUMBER = "0"
-
 const ARBITRARY_TXHASH = "0xb41e0591756bd1331de35eac3e3da460c9b3503d10e7bf08b84f057f489cd189"
 
 func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger) {
 	metrics := &metrics{
 		syncStatus:              registry.NewText("Ethereum.Node.Sync.Status", STATUS_FAILED),
-		lastBlock:               registry.NewText("Ethereum.Node.LastBlock", DEFAULT_BLOCK_NUMBER),
+		lastBlock:               registry.NewGauge("Ethereum.Node.LastBlock"),
 		receiptsRetrievalStatus: registry.NewText("Ethereum.Node.TransactionReceipts.Status", STATUS_FAILED),
 	}
 
@@ -52,9 +49,9 @@ func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, regi
 
 		if header, err := c.HeaderByNumber(ctx, nil); err != nil {
 			logger.Info("ethereum rpc connection status check failed", log.Error(err))
-			metrics.lastBlock.Update(DEFAULT_BLOCK_NUMBER)
+			metrics.lastBlock.Update(0)
 		} else {
-			metrics.lastBlock.Update(header.Number.String())
+			metrics.lastBlock.Update(header.Number.Int64())
 		}
 	}, nil)
 }
