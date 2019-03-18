@@ -289,6 +289,19 @@ func TestTimestampFinderTerminatesOnContextCancel(t *testing.T) {
 	require.EqualError(t, err, "aborting search - context canceled")
 }
 
+func TestRunMultipleSearchesOnFakeGetter(t *testing.T) {
+	h := NewTestHarness(t)
+	test.WithContext(func(ctx context.Context) {
+		searchRange := FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS - FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS
+		for i := 0; i < 500; i++ {
+			// start searching in a random manner to avoid cache
+			randBlockTime := rand.Intn(searchRange)
+			_, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(time.Duration(FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS+randBlockTime)*time.Second))
+			require.NoError(t, err)
+		}
+	})
+}
+
 func BenchmarkFullCycle(b *testing.B) {
 	h := NewTestHarness(b)
 	ctx := context.Background()
