@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 )
@@ -268,4 +269,32 @@ func TestTimestampFinderTerminatesOnContextCancel(t *testing.T) {
 
 	<-latch
 	require.EqualError(t, err, "aborting search - context canceled")
+}
+
+func BenchmarkFullCycle(b *testing.B) {
+	logger := log.DefaultTestingLogger(b)
+	btg := NewFakeBlockTimeGetter(logger)
+	finder := NewTimestampFinder(btg, logger)
+	ctx := context.Background()
+	// spin it
+	finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+	searchRange := FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS - FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS
+	for i := 0; i < b.N; i++ {
+		// start searching in a random manner to avoid cache
+		randBlockTime := rand.Intn(searchRange)
+		finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(time.Duration(FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS+randBlockTime)*time.Second))
+	}
+}
+
+func BenchmarkFullCycleWithCache(b *testing.B) {
+	logger := log.DefaultTestingLogger(b)
+	btg := NewFakeBlockTimeGetter(logger)
+	finder := NewTimestampFinder(btg, logger)
+	ctx := context.Background()
+	// spin it
+	finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+	for i := 0; i < b.N; i++ {
+		// start searching in a random manner to avoid cache
+		finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+	}
 }
