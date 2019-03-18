@@ -37,3 +37,10 @@ type ErrTransportFailed struct {
 func (e *ErrTransportFailed) Error() string {
 	return fmt.Sprintf("transport failed to send: %v", e.Data)
 }
+
+func (d *TransportData) TotalSize() (res int) {
+	for _, payload := range d.Payloads {
+		res += len(payload)
+	}
+	return
+}

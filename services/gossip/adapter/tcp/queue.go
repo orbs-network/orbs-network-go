@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/pkg/errors"
 	"sync"
@@ -18,15 +19,19 @@ type transportQueue struct {
 		sync.Mutex
 		bytesLeft int
 	}
+	usagePercentageMetric *metric.Gauge
 }
 
-func NewTransportQueue(maxSizeBytes int, maxSizeMessages int) *transportQueue {
+func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory) *transportQueue {
 	q := &transportQueue{
 		channel:     make(chan *adapter.TransportData, maxSizeMessages),
 		maxBytes:    maxSizeBytes,
 		maxMessages: maxSizeMessages,
 	}
 	q.protected.bytesLeft = maxSizeBytes
+
+	q.usagePercentageMetric = metricFactory.NewGauge("Gossip.OutgoingConnection.Queue.Usage.Percent")
+
 	return q
 }
 
@@ -80,31 +85,28 @@ func (q *transportQueue) Enable() {
 }
 
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
-	dataBytes := totalBytesInData(data)
-
 	q.protected.Lock()
 	defer q.protected.Unlock()
 
-	if dataBytes > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataBytes, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
+	dataSize := data.TotalSize()
+	if dataSize > q.protected.bytesLeft {
+		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataSize, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
-	q.protected.bytesLeft -= dataBytes
+	q.protected.bytesLeft -= dataSize
+	q.updateUsageMetric()
 	return nil
 }
 
 func (q *transportQueue) releaseBytes(data *adapter.TransportData) {
-	dataBytes := totalBytesInData(data)
-
 	q.protected.Lock()
 	defer q.protected.Unlock()
 
-	q.protected.bytesLeft += dataBytes
+	q.protected.bytesLeft += data.TotalSize()
+	q.updateUsageMetric()
 }
 
-func totalBytesInData(data *adapter.TransportData) (res int) {
-	for _, payload := range data.Payloads {
-		res += len(payload)
-	}
-	return
+func (q *transportQueue) updateUsageMetric() {
+	bytesUsed := q.maxBytes - q.protected.bytesLeft
+	q.usagePercentageMetric.Update(int64(bytesUsed * 100 / q.maxBytes))
 }
