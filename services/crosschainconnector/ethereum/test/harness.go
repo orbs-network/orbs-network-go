@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
@@ -73,12 +74,12 @@ func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigF
 		config:     cfg,
 		rpcAdapter: a,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger, metric.NewRegistry()),
 	}
 }
 
 func (h *harness) WithFakeTimeGetter() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTimeGetter(h.simAdapter, h.config, h.logger)
+	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTimeGetter(h.simAdapter, h.config, h.logger, metric.NewRegistry())
 	return h
 }
 
@@ -91,7 +92,7 @@ func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
 		config:     cfg,
 		simAdapter: conn,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger),
+		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger, metric.NewRegistry()),
 	}
 }
 

@@ -3,11 +3,14 @@ package timestampfinder
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"math/big"
+	"strconv"
 	"sync"
+	"time"
 )
 
 const TIMESTAMP_FINDER_PROBABLE_RANGE_EFFICIENT = 1000
@@ -22,6 +25,7 @@ type TimestampFinder interface {
 type finder struct {
 	logger          log.BasicLogger
 	btg             BlockTimeGetter
+	metrics         *timestampBlockFinderMetrics
 	lastResultCache struct {
 		sync.RWMutex
 		below *BlockNumberAndTime
@@ -29,11 +33,36 @@ type finder struct {
 	}
 }
 
-func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger) *finder {
-	return &finder{btg: btg, logger: logger}
+type timestampBlockFinderMetrics struct {
+	timeToFindBlock    *metric.Histogram
+	stepsRequired      *metric.Rate
+	totalTimesCalled   *metric.Gauge
+	cacheHits          *metric.Gauge
+	lastBlockKnown     *metric.Text
+	lastBlockFound     *metric.Text
+	lastBlockTimeStamp *metric.Text
+}
+
+func newTimestampFinderMetrics(factory metric.Factory) *timestampBlockFinderMetrics {
+	return &timestampBlockFinderMetrics{
+		totalTimesCalled:   factory.NewGauge("EthereumTimestampBlockFinder.TotalTimesCalled.Count"),
+		stepsRequired:      factory.NewRate("EthereumTimestampBlockFinder.StepsRequired.Rate"),
+		cacheHits:          factory.NewGauge("EthereumTimestampBlockFinder.CacheHits.Count"),
+		lastBlockFound:     factory.NewText("EthereumTimestampBlockFinder.LastBlockFoundNumber.Text"),
+		lastBlockTimeStamp: factory.NewText("EthereumTimestampBlockFinder.LastBlockFoundTimeStamp.Text"),
+		lastBlockKnown:     factory.NewText("EthereumTimestampBlockFinder.LastBlockKnown.Text"),
+		timeToFindBlock:    factory.NewLatency("EthereumTimestampBlockFinder.TimeToFindBlock.Duration.Millis", 30*time.Second),
+	}
+}
+
+func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger, metrics metric.Factory) *finder {
+	return &finder{btg: btg, logger: logger, metrics: newTimestampFinderMetrics(metrics)}
 }
 
 func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error) {
+	start := time.Now()
+	f.metrics.totalTimesCalled.Inc()
+
 	// TODO: find a better way to handle this, the simulator has no concept of block number
 	if f.isEthereumSimulator() {
 		return nil, nil
@@ -51,6 +80,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 	// attempt to return the last result immediately without any queries (for efficiency)
 	if algoDidReachResult(referenceTimestampNano, below, above) {
+		f.metrics.cacheHits.Inc()
 		return f.returnConfirmedResult(referenceTimestampNano, below, above, 0)
 	}
 
@@ -60,6 +90,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 		if err != nil {
 			return nil, err
 		}
+		f.metrics.lastBlockKnown.Update(strconv.FormatInt(above.BlockNumber, 10))
 	}
 
 	// extend below if needed
@@ -86,6 +117,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 		// did we finally reach the result?
 		if algoDidReachResult(referenceTimestampNano, below, above) {
+			f.metrics.timeToFindBlock.RecordSince(start)
 			return f.returnConfirmedResult(referenceTimestampNano, below, above, steps)
 		}
 
@@ -120,6 +152,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, steps int) (*big.Int, error) {
 	f.setLastResultCache(below, above)
+	f.metrics.stepsRequired.Measure(int64(steps))
 	// the block below is the one we actually return as result
 	f.logger.Info("ethereum timestamp finder found result",
 		log.Int("steps", steps),
@@ -146,6 +179,8 @@ func (f *finder) setLastResultCache(below BlockNumberAndTime, above BlockNumberA
 	defer f.lastResultCache.Unlock()
 	f.lastResultCache.below = &BlockNumberAndTime{BlockNumber: below.BlockNumber, BlockTimeNano: below.BlockTimeNano}
 	f.lastResultCache.above = &BlockNumberAndTime{BlockNumber: above.BlockNumber, BlockTimeNano: above.BlockTimeNano}
+	f.metrics.lastBlockFound.Update(strconv.FormatInt(below.BlockNumber, 10))
+	f.metrics.lastBlockTimeStamp.Update(strconv.FormatInt(int64(below.BlockTimeNano), 10))
 }
 
 func (f *finder) isEthereumSimulator() bool {

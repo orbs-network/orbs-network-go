@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
@@ -26,22 +27,22 @@ type service struct {
 	config          config.EthereumCrosschainConnectorConfig
 }
 
-func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger, metrics metric.Factory) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:      connection,
-		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewEthereumBasedBlockTimeGetter(connection), logger),
+		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewEthereumBasedBlockTimeGetter(connection), logger, metrics),
 		logger:          logger,
 		config:          config,
 	}
 	return s
 }
 
-func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger) services.CrosschainConnector {
+func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger, metrics metric.Factory) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:      connection,
-		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewFakeBlockTimeGetter(logger), logger),
+		timestampFinder: timestampfinder.NewTimestampFinder(timestampfinder.NewFakeBlockTimeGetter(logger), logger, metrics),
 		logger:          logger,
 		config:          config,
 	}
