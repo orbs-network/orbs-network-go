@@ -18,11 +18,13 @@ type FakeBlockTimeGetter struct {
 	data        map[int64]int64 // block number -> timestamp in seconds
 	logger      log.BasicLogger
 	TimesCalled int
+	Latency     time.Duration
 }
 
 func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
 	f := &FakeBlockTimeGetter{
-		data: make(map[int64]int64),
+		data:    make(map[int64]int64),
+		Latency: 0,
 	}
 
 	f.logger = logger.WithTags(log.String("adapter", "ethereum-fake"))
@@ -52,6 +54,11 @@ func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
 	return f
 }
 
+func (f *FakeBlockTimeGetter) WithLatency(d time.Duration) *FakeBlockTimeGetter {
+	f.Latency = d
+	return f
+}
+
 func (f *FakeBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Context, blockNumber *big.Int) (*BlockNumberAndTime, error) {
 	if blockNumber == nil {
 		panic("requested nil block number which is not allowed")
@@ -67,6 +74,9 @@ func (f *FakeBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Context, bl
 	}
 
 	f.TimesCalled++
+	if f.Latency > 0 {
+		time.Sleep(f.Latency)
+	}
 
 	return h, nil
 }

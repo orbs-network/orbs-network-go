@@ -235,3 +235,22 @@ func TestGetEthBlockByTimestampWhenSmallNumOfBlocks(t *testing.T) {
 		})
 	}
 }
+
+func TestTimestampFinderTerminatesOnContextCancel(t *testing.T) {
+	var err error
+	latch := make(chan struct{})
+	test.WithContext(func(ctx context.Context) {
+		logger := log.DefaultTestingLogger(t)
+		btg := NewFakeBlockTimeGetter(logger).WithLatency(20 * time.Millisecond)
+		finder := NewTimestampFinder(btg, logger)
+
+		go func() {
+			// should return block 938874, but we are going to cancel the context
+			_, err = finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+			latch <- struct{}{}
+		}()
+	})
+
+	<-latch
+	require.EqualError(t, err, "aborting search - context canceled")
+}

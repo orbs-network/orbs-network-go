@@ -72,6 +72,9 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 
 	// try reducing further and further until finding the result
 	for steps := 1; steps < TIMESTAMP_FINDER_MAX_STEPS; steps++ {
+		if ctx.Err() == context.Canceled {
+			return nil, errors.New("aborting search - context canceled")
+		}
 
 		f.logger.Info("ethereum timestamp finder step",
 			log.Int("step", steps),
