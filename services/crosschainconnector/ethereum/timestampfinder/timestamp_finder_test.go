@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
+	"math/big"
 	"testing"
 	"time"
 )
@@ -87,23 +88,37 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T) {
+	// this test relies on the context cancellation - without cache this will return an error
+	var (
+		externalErr   error
+		externalBlock *big.Int
+	)
+
+	latch := make(chan struct{})
 	test.WithContext(func(ctx context.Context) {
 		logger := log.DefaultTestingLogger(t)
 		btg := NewFakeBlockTimeGetter(logger)
 		finder := NewTimestampFinder(btg, logger)
 
 		// complex request
-		blockBI, err := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+		blockBI, internalErr := finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		block := blockBI.Int64()
-		require.NoError(t, err, "something went wrong while getting the block by timestamp of a recent block")
+		require.NoError(t, internalErr, "something went wrong while getting the block by timestamp of a recent block")
 		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 
-		// same exact request again
-		blockBI, err = finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-		block = blockBI.Int64()
-		require.NoError(t, err, "something went wrong while getting the block by timestamp of a recent block")
-		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
+		// same exact request again, async so we can check if it works when context was canceled, latency ensures we cannot really search before context will be done
+		btg.Latency = 200 * time.Millisecond
+		go func() {
+			externalBlock, externalErr = finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+			latch <- struct{}{}
+		}()
 	})
+
+	<-latch
+
+	block := externalBlock.Int64()
+	require.NoError(t, externalErr, "expected cache to hit even though context is done already")
+	require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 }
 
 func TestGetEthBlockByTimestampWorksWithDifferentRequestsFromCache(t *testing.T) {
