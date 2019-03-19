@@ -3,9 +3,7 @@ package test
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
-	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -19,18 +17,17 @@ import (
 
 func TestContractCallBadNodeConfig(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.DefaultTestingLogger(t)
 		config := &ethereumConnectorConfigForTests{
-			endpoint:      "all your base",
+			endpoint:      "invalid_endpoint",
 			privateKeyHex: "",
 		}
-		conn := adapter.NewEthereumRpcConnection(config, logger)
-		connector := ethereum.NewEthereumCrosschainConnector(conn, config, logger)
+		h := newRpcEthereumConnectorHarness(t, config)
+
 		input := builders.EthereumCallContractInput().Build() // don't care about specifics
 
-		_, err := connector.EthereumCallContract(ctx, input)
+		_, err := h.connector.EthereumCallContract(ctx, input)
 		require.Error(t, err, "expected call to fail")
-		require.Contains(t, err.Error(), "dial unix all your base: connect: no such file or directory", "expected invalid node in config")
+		require.Contains(t, err.Error(), "dial unix invalid_endpoint: connect: no such file or directory", "expected invalid node in config")
 	})
 }
 

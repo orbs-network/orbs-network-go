@@ -6,9 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
-	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -24,13 +22,10 @@ import (
 
 func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.DefaultTestingLogger(t)
-		simulator := adapter.NewEthereumSimulatorConnection(logger)
-		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
+		h := newSimulatedEthereumConnectorHarness(t)
 
-		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
-		simulator.Commit()
+		contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), contract.EmitEventAbi, contract.EmitEventBin)
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		amount := big.NewInt(42)
@@ -38,11 +33,11 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 		ethAddress := common.BigToAddress(big.NewInt(42000000000))
 		orbsAddress := anOrbsAddress()
 
-		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
-		simulator.Commit()
+		tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "transferOut", tuid, ethAddress, orbsAddress, amount)
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed emitting event")
 
-		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
+		out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: contractAddress.Hex(),
 			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "TransferredOut",
@@ -68,10 +63,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 
 func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.DefaultTestingLogger(t)
-		simulator := adapter.NewEthereumSimulatorConnection(logger)
-		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
+		h := newSimulatedEthereumConnectorHarness(t)
 
 		contractABI, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.abi")
 		require.NoError(t, err, "failed reading contract ABI")
@@ -79,17 +71,17 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		contractBin, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.bin")
 		require.NoError(t, err, "failed reading contract binary")
 
-		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, string(contractABI), string(contractBin))
-		simulator.Commit()
+		contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), string(contractABI), string(contractBin))
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}, {0x7, 0x8}, {0x9}}
 
-		tx, err := deployedContract.Transact(auth, "fire", addresses)
-		simulator.Commit()
+		tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "fire", addresses)
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed emitting event")
 
-		out, err := connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
+		out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: contractAddress.Hex(),
 			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "Vote",
@@ -114,13 +106,10 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 
 func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		logger := log.DefaultTestingLogger(t)
-		simulator := adapter.NewEthereumSimulatorConnection(logger)
-		auth := simulator.GetAuth()
-		connector := ethereum.NewEthereumCrosschainConnector(simulator, ConfigForSimulatorConnection(), logger)
+		h := newSimulatedEthereumConnectorHarness(t)
 
-		contractAddress, deployedContract, err := simulator.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
-		simulator.Commit()
+		contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), contract.EmitEventAbi, contract.EmitEventBin)
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed deploying contract to Ethereum")
 
 		amount := big.NewInt(42)
@@ -128,14 +117,14 @@ func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T)
 		ethAddress := common.BigToAddress(big.NewInt(42000000000))
 		orbsAddress := anOrbsAddress()
 
-		tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
-		simulator.Commit()
+		tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "transferOut", tuid, ethAddress, orbsAddress, amount)
+		h.simAdapter.Commit()
 		require.NoError(t, err, "failed emitting event")
 
 		incorrectContractAddress := "0x6C94224Eb459535C752D2684F3654a0D71e32516" // taken from somewhere else
 		require.NotEqual(t, incorrectContractAddress, contractAddress.Hex(), "contract should not accidentally match the one we use as incorrect")
 
-		_, err = connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
+		_, err = h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 			EthereumContractAddress: incorrectContractAddress,
 			EthereumTxhash:          tx.Hash().Hex(),
 			EthereumEventName:       "TransferredOut",

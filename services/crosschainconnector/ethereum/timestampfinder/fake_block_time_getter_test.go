@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/stretchr/testify/require"
+	"math/big"
 	"testing"
+	"time"
 )
 
 // this test exists to make sure that the fake timestamp/block pairs remain constant, as other tests in the system (such as header_by_timestamp_finder_test.go) rely on these constant numbers
@@ -21,4 +23,14 @@ func TestFakeBlockHeaderFetcherOfLatest(t *testing.T) {
 	require.NoError(t, err, "should not fail getting 'latest' from fake db")
 	require.EqualValues(t, secondsToNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS), b.BlockTimeNano, "expected getter last block to be of specific ts")
 	require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS, b.BlockNumber, "expected last block of constant number")
+}
+
+func TestFakeBlockLatency(t *testing.T) {
+	btg := NewFakeBlockTimeGetter(log.DefaultTestingLogger(t)).WithLatency(10 * time.Millisecond)
+	start := time.Now()
+
+	btg.GetTimestampForBlockNumber(context.Background(), big.NewInt(15))
+
+	d := time.Since(start)
+	require.True(t, d > 10*time.Millisecond, "expected some latency when getting the block")
 }
