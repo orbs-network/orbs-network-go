@@ -48,8 +48,8 @@ func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
 		timeSinceLastCommitMillis:   m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis", 30*time.Minute),
 		timeSinceLastElectionMillis: m.NewLatency("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis", 30*time.Minute),
-		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Value"),
-		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Value"),
+		currentElectionCount:        m.NewGauge("ConsensusAlgo.LeanHelix.CurrentElection.Number"),
+		currentLeaderMemberId:       m.NewText("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Number"),
 		lastCommittedTime:           m.NewGauge("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano"),
 	}
 }
