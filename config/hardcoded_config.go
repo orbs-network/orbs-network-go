@@ -204,7 +204,7 @@ func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
 	return c.genesisValidatorNodes
 }
 
-func (c *config) GossipPeers(asOfBlock uint64) map[string]GossipPeer {
+func (c *config) GossipPeers() map[string]GossipPeer {
 	return c.gossipPeers
 }
 

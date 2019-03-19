@@ -145,7 +145,7 @@ func (h *directHarness) nodeAddressForPeer(index int) primitives.NodeAddress {
 
 func (h *directHarness) portForPeer(index int) int {
 	peerPublicKey := h.nodeAddressForPeer(index)
-	return h.config.GossipPeers(0)[peerPublicKey.KeyForMap()].GossipPort()
+	return h.config.GossipPeers()[peerPublicKey.KeyForMap()].GossipPort()
 }
 
 func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
