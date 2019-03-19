@@ -32,9 +32,10 @@ func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipme
 
 func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:         gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
-		BlockSync:     gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
-		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		Topic:          gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:      gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
+		RecipientMode:  gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		VirtualChainId: s.config.VirtualChainId(),
 	}).Build()
 	payloads, err := codec.EncodeBlockAvailabilityRequest(header, input.Message)
 	if err != nil {
@@ -70,6 +71,7 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 		BlockSync:              gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
 		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		VirtualChainId:         s.config.VirtualChainId(),
 	}).Build()
 	payloads, err := codec.EncodeBlockAvailabilityResponse(header, input.Message)
 	if err != nil {
@@ -107,6 +109,7 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 		BlockSync:              gossipmessages.BLOCK_SYNC_REQUEST,
 		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		VirtualChainId:         s.config.VirtualChainId(),
 	}).Build()
 	payloads, err := codec.EncodeBlockSyncRequest(header, input.Message)
 	if err != nil {
@@ -144,6 +147,7 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 		BlockSync:              gossipmessages.BLOCK_SYNC_RESPONSE,
 		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		VirtualChainId:         s.config.VirtualChainId(),
 	}).Build()
 	payloads, err := codec.EncodeBlockSyncResponse(header, input.Message)
 	if err != nil {

@@ -16,6 +16,7 @@ var LogTag = log.Service("gossip")
 
 type Config interface {
 	NodeAddress() primitives.NodeAddress
+	VirtualChainId() primitives.VirtualChainId
 }
 
 type gossipListeners struct {
@@ -27,18 +28,20 @@ type gossipListeners struct {
 }
 
 type service struct {
-	config    Config
-	logger    log.BasicLogger
-	transport adapter.Transport
-	handlers  gossipListeners
+	config          Config
+	logger          log.BasicLogger
+	transport       adapter.Transport
+	handlers        gossipListeners
+	headerValidator *headerValidator
 }
 
 func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogger) services.Gossip {
 	s := &service{
-		transport: transport,
-		config:    config,
-		logger:    logger.WithTags(LogTag),
-		handlers:  gossipListeners{},
+		transport:       transport,
+		config:          config,
+		logger:          logger.WithTags(LogTag),
+		handlers:        gossipListeners{},
+		headerValidator: newHeaderValidator(config, logger),
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
 	return s
@@ -55,6 +58,12 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
 		return
 	}
+
+	if err := s.headerValidator.validateMessageHeader(header); err != nil {
+		logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
+		return
+	}
+
 	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
