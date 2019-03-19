@@ -20,11 +20,33 @@ func NewValidator(logger log.BasicLogger) *validator {
 func (v *validator) Validate(cfg NodeConfig) {
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be greater than benchmark consensus timeout")
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be greater than lean helix round timeout")
+	v.requireNonEmpty(cfg.NodeAddress(), "node address must not be empty")
+	v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
+	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
+	v.requireNonEmptyPeerMap(cfg.GossipPeers(), "gossip peer list must not be empty")
 }
 
 func (v *validator) requireGT(d1 func() time.Duration, d2 func() time.Duration, msg string) {
 	if d1() < d2() {
 		panic(fmt.Sprintf("%s; %s=%s is greater than %s=%s", msg, funcName(d1), d1(), funcName(d2), d2()))
+	}
+}
+
+func (v *validator) requireNonEmpty(bytes []byte, msg string) {
+	if len(bytes) == 0 {
+		panic(msg)
+	}
+}
+
+func (v *validator) requireNonEmptyValidatorMap(nodes map[string]ValidatorNode, msg string) {
+	if len(nodes) == 0 {
+		panic(msg)
+	}
+}
+
+func (v *validator) requireNonEmptyPeerMap(gossipPeers map[string]GossipPeer, msg string) {
+	if len(gossipPeers) == 0 {
+		panic(msg)
 	}
 }
 
