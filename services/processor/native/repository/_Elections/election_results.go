@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
-
+  
 /*****
  * Election results
  */
