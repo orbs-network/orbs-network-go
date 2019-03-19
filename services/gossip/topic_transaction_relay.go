@@ -35,6 +35,7 @@ func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
 		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
 		RecipientMode:    gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		VirtualChainId:   s.config.VirtualChainId(),
 	}).Build()
 
 	payloads, err := codec.EncodeForwardedTransactions(header, input.Message)

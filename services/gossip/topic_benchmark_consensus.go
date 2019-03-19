@@ -34,6 +34,7 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 		Topic:              gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: consensus.BENCHMARK_CONSENSUS_COMMIT,
 		RecipientMode:      gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		VirtualChainId:     s.config.VirtualChainId(),
 	}).Build()
 
 	payloads, err := codec.EncodeBenchmarkConsensusCommitMessage(header, input.Message)
@@ -73,6 +74,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 		BenchmarkConsensus:     consensus.BENCHMARK_CONSENSUS_COMMITTED,
 		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 		RecipientNodeAddresses: []primitives.NodeAddress{input.RecipientNodeAddress},
+		VirtualChainId:         s.config.VirtualChainId(),
 	}).Build()
 	payloads, err := codec.EncodeBenchmarkConsensusCommittedMessage(header, input.Message)
 	if err != nil {

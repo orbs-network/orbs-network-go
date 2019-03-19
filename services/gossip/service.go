@@ -60,7 +60,7 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 	}
 
 	if err := s.headerValidator.validateMessageHeader(header); err != nil {
-		logger.Error("dropping a received message that isn't valid", log.Error(err))
+		logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
 		return
 	}
 
