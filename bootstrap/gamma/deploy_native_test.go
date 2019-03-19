@@ -17,7 +17,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t))
+		network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), "")
 		contract := callcontract.NewContractClient(network)
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM

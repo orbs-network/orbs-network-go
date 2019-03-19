@@ -16,7 +16,7 @@ type GammaServer struct {
 	Logger       log.BasicLogger
 }
 
-func StartGammaServer(serverAddress string, profiling bool, blocking bool) *GammaServer {
+func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string, blocking bool) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rootLogger := log.GetLogger().
@@ -29,7 +29,7 @@ func StartGammaServer(serverAddress string, profiling bool, blocking bool) *Gamm
 			log.IgnoreMessagesMatching("no responses received"),
 		)
 
-	network := NewDevelopmentNetwork(ctx, rootLogger)
+	network := NewDevelopmentNetwork(ctx, rootLogger, overrideConfigJson)
 	rootLogger.Info("finished creating development network")
 
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(serverAddress, profiling),
