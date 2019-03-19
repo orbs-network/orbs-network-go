@@ -127,7 +127,7 @@ func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T)
 		blockBI, internalErr = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		block = blockBI.Int64()
 		require.EqualValues(t, 1, h.finder.metrics.cacheHits.Value(), "expected a cache hit from the metric")
-		require.NoError(t, internalErr, "expected cache to hit even though context is done already")
+		require.NoError(t, internalErr, "expected cache to hit to not throw an error")
 		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 	})
 }
