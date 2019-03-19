@@ -124,7 +124,7 @@ func TestSetGossipPeers(t *testing.T) {
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
-	require.EqualValues(t, 3, len(cfg.GossipPeers(0)))
+	require.EqualValues(t, 3, len(cfg.GossipPeers()))
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
@@ -133,7 +133,7 @@ func TestSetGossipPeers(t *testing.T) {
 		gossipPort:     4400,
 	}
 
-	require.EqualValues(t, node1, cfg.GossipPeers(0)[keyPair.NodeAddress().KeyForMap()])
+	require.EqualValues(t, node1, cfg.GossipPeers()[keyPair.NodeAddress().KeyForMap()])
 }
 
 func TestSetEthereumFinalityBlocksComponent(t *testing.T) {

@@ -75,7 +75,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// client channels (not under mutex, before all goroutines)
-	for peerNodeAddress := range t.config.GossipPeers(0) {
+	for peerNodeAddress := range t.config.GossipPeers() {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, registry)
 			t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
@@ -88,7 +88,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	})
 
 	// client goroutines
-	for peerNodeAddress, peer := range t.config.GossipPeers(0) {
+	for peerNodeAddress, peer := range t.config.GossipPeers() {
 		if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 			peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 			closureSafePeerNodeKey := peerNodeAddress

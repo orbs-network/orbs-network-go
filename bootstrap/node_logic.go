@@ -50,8 +50,7 @@ func NewNodeLogic(
 	ethereumConnection ethereumAdapter.EthereumConnection,
 ) NodeLogic {
 
-	configValidator := config.NewValidator(logger)
-	configValidator.Validate(nodeConfig) // this will panic if config does not pass validation
+	config.NewValidator(logger).ValidateNodeLogic(nodeConfig)
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, nodeConfig, logger, metricRegistry)

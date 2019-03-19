@@ -15,7 +15,7 @@ type NodeConfig interface {
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	GenesisValidatorNodes() map[string]ValidatorNode
-	GossipPeers(asOfBlock uint64) map[string]GossipPeer
+	GossipPeers() map[string]GossipPeer
 	TransactionExpirationWindow() time.Duration
 
 	// consensus
@@ -135,7 +135,7 @@ type FilesystemBlockPersistenceConfig interface {
 
 type GossipTransportConfig interface {
 	NodeAddress() primitives.NodeAddress
-	GossipPeers(asOfBlock uint64) map[string]GossipPeer
+	GossipPeers() map[string]GossipPeer
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
