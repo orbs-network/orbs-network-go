@@ -7,7 +7,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
-	"math/big"
 	"math/rand"
 	"testing"
 	"time"
@@ -115,35 +114,22 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T) {
-	// this test relies on the context cancellation - without cache this will return an error
-	var (
-		externalErr   error
-		externalBlock *big.Int
-	)
-
-	latch := make(chan struct{})
 	test.WithContext(func(ctx context.Context) {
 		h := NewTestHarness(t)
 
 		// complex request
 		blockBI, internalErr := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		block := blockBI.Int64()
+		require.EqualValues(t, 0, h.finder.metrics.cacheHits.Value(), "shouldn't be a cache hit yet")
 		require.NoError(t, internalErr, "something went wrong while getting the block by timestamp of a recent block")
 		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 
-		// same exact request again, async so we can check if it works when context was canceled, latency ensures we cannot really search before context will be done
-		h.GetBtgAsFake().Latency = 200 * time.Millisecond
-		go func() {
-			externalBlock, externalErr = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-			latch <- struct{}{}
-		}()
+		blockBI, internalErr = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+		block = blockBI.Int64()
+		require.EqualValues(t, 1, h.finder.metrics.cacheHits.Value(), "expected a cache hit from the metric")
+		require.NoError(t, internalErr, "expected cache to hit even though context is done already")
+		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 	})
-
-	<-latch
-
-	block := externalBlock.Int64()
-	require.NoError(t, externalErr, "expected cache to hit even though context is done already")
-	require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
 }
 
 func TestGetEthBlockByTimestampWorksWithDifferentRequestsFromCache(t *testing.T) {
@@ -156,8 +142,6 @@ func TestGetEthBlockByTimestampWorksWithDifferentRequestsFromCache(t *testing.T)
 
 			_, err := h.finder.FindBlockByTimestamp(ctx, secondsToNano(int64(seconds)))
 			require.NoError(t, err)
-			t.Log("")
-
 		}
 	})
 }
@@ -273,20 +257,12 @@ func TestGetEthBlockByTimestampWhenSmallNumOfBlocks(t *testing.T) {
 }
 
 func TestTimestampFinderTerminatesOnContextCancel(t *testing.T) {
-	var err error
-	latch := make(chan struct{})
-	test.WithContext(func(ctx context.Context) {
-		h := NewTestHarness(t)
-
-		go func() {
-			// should return block 938874, but we are going to cancel the context
-			_, err = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-			latch <- struct{}{}
-		}()
-	})
-
-	<-latch
-	require.EqualError(t, err, "aborting search - context canceled")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	h := NewTestHarness(t)
+	// should return block 938874, but we are going to cancel the context
+	_, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
+	require.EqualError(t, err, "aborting search: context canceled")
 }
 
 func TestRunMultipleSearchesOnFakeGetter(t *testing.T) {

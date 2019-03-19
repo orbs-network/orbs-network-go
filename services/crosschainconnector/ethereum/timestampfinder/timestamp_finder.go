@@ -8,7 +8,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -34,24 +33,24 @@ type finder struct {
 }
 
 type timestampBlockFinderMetrics struct {
-	timeToFindBlock    *metric.Histogram
-	stepsRequired      *metric.Rate
-	totalTimesCalled   *metric.Gauge
-	cacheHits          *metric.Gauge
-	lastBlockKnown     *metric.Text
-	lastBlockFound     *metric.Text
-	lastBlockTimeStamp *metric.Text
+	timeToFindBlock     *metric.Histogram
+	stepsRequired       *metric.Rate
+	totalTimesCalled    *metric.Gauge
+	cacheHits           *metric.Gauge
+	lastBlockInEthereum *metric.Gauge
+	lastBlockFound      *metric.Gauge
+	lastBlockTimeStamp  *metric.Gauge
 }
 
 func newTimestampFinderMetrics(factory metric.Factory) *timestampBlockFinderMetrics {
 	return &timestampBlockFinderMetrics{
-		totalTimesCalled:   factory.NewGauge("EthereumTimestampBlockFinder.TotalTimesCalled.Count"),
-		stepsRequired:      factory.NewRate("EthereumTimestampBlockFinder.StepsRequired.Rate"),
-		cacheHits:          factory.NewGauge("EthereumTimestampBlockFinder.CacheHits.Count"),
-		lastBlockFound:     factory.NewText("EthereumTimestampBlockFinder.LastBlockFoundNumber.Text"),
-		lastBlockTimeStamp: factory.NewText("EthereumTimestampBlockFinder.LastBlockFoundTimeStamp.Text"),
-		lastBlockKnown:     factory.NewText("EthereumTimestampBlockFinder.LastBlockKnown.Text"),
-		timeToFindBlock:    factory.NewLatency("EthereumTimestampBlockFinder.TimeToFindBlock.Duration.Millis", 30*time.Second),
+		totalTimesCalled:    factory.NewGauge("EthereumTimestampBlockFinder.TotalTimesCalled.Count"),
+		stepsRequired:       factory.NewRate("EthereumTimestampBlockFinder.StepsRequired.Rate"),
+		cacheHits:           factory.NewGauge("EthereumTimestampBlockFinder.CacheHits.Count"),
+		lastBlockFound:      factory.NewGauge("EthereumTimestampBlockFinder.LastBlockFound.Number"),
+		lastBlockTimeStamp:  factory.NewGauge("EthereumTimestampBlockFinder.LastBlockFound.TimeStamp.UnixEpoch"),
+		lastBlockInEthereum: factory.NewGauge("EthereumTimestampBlockFinder.LastBlockInEthereum.Number"),
+		timeToFindBlock:     factory.NewLatency("EthereumTimestampBlockFinder.TimeToFindBlock.Duration.Millis", 30*time.Second),
 	}
 }
 
@@ -90,7 +89,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 		if err != nil {
 			return nil, err
 		}
-		f.metrics.lastBlockKnown.Update(strconv.FormatInt(above.BlockNumber, 10))
+		f.metrics.lastBlockInEthereum.Update(above.BlockNumber)
 	}
 
 	// extend below if needed
@@ -104,7 +103,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	// try reducing further and further until finding the result
 	for steps := 1; steps < TIMESTAMP_FINDER_MAX_STEPS; steps++ {
 		if ctx.Err() == context.Canceled {
-			return nil, errors.New("aborting search - context canceled")
+			return nil, errors.Wrap(ctx.Err(), "aborting search")
 		}
 
 		f.logger.Info("ethereum timestamp finder step",
@@ -179,8 +178,8 @@ func (f *finder) setLastResultCache(below BlockNumberAndTime, above BlockNumberA
 	defer f.lastResultCache.Unlock()
 	f.lastResultCache.below = &BlockNumberAndTime{BlockNumber: below.BlockNumber, BlockTimeNano: below.BlockTimeNano}
 	f.lastResultCache.above = &BlockNumberAndTime{BlockNumber: above.BlockNumber, BlockTimeNano: above.BlockTimeNano}
-	f.metrics.lastBlockFound.Update(strconv.FormatInt(below.BlockNumber, 10))
-	f.metrics.lastBlockTimeStamp.Update(strconv.FormatInt(int64(below.BlockTimeNano), 10))
+	f.metrics.lastBlockFound.Update(below.BlockNumber)
+	f.metrics.lastBlockTimeStamp.Update(int64(time.Duration(below.BlockTimeNano) / time.Second))
 }
 
 func (f *finder) isEthereumSimulator() bool {
