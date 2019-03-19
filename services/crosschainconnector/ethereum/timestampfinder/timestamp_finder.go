@@ -44,13 +44,13 @@ type timestampBlockFinderMetrics struct {
 
 func newTimestampFinderMetrics(factory metric.Factory) *timestampBlockFinderMetrics {
 	return &timestampBlockFinderMetrics{
-		totalTimesCalled:    factory.NewGauge("EthereumTimestampBlockFinder.TotalTimesCalled.Count"),
-		stepsRequired:       factory.NewRate("EthereumTimestampBlockFinder.StepsRequired.Rate"),
-		cacheHits:           factory.NewGauge("EthereumTimestampBlockFinder.CacheHits.Count"),
-		lastBlockFound:      factory.NewGauge("EthereumTimestampBlockFinder.LastBlockFound.Number"),
-		lastBlockTimeStamp:  factory.NewGauge("EthereumTimestampBlockFinder.LastBlockFound.TimeStamp.UnixEpoch"),
-		lastBlockInEthereum: factory.NewGauge("EthereumTimestampBlockFinder.LastBlockInEthereum.Number"),
-		timeToFindBlock:     factory.NewLatency("EthereumTimestampBlockFinder.TimeToFindBlock.Duration.Millis", 30*time.Second),
+		totalTimesCalled:    factory.NewGauge("Ethereum.TimestampBlockFinder.TotalTimesCalled.Count"),
+		stepsRequired:       factory.NewRate("Ethereum.TimestampBlockFinder.StepsRequired.Rate"),
+		cacheHits:           factory.NewGauge("Ethereum.TimestampBlockFinder.CacheHits.Count"),
+		lastBlockFound:      factory.NewGauge("Ethereum.TimestampBlockFinder.LastBlockFound.Number"),
+		lastBlockTimeStamp:  factory.NewGauge("Ethereum.TimestampBlockFinder.LastBlockFound.TimeStamp.UnixEpoch"),
+		lastBlockInEthereum: factory.NewGauge("Ethereum.TimestampBlockFinder.LastBlockInEthereum.Number"),
+		timeToFindBlock:     factory.NewLatency("Ethereum.TimestampBlockFinder.TimeToFindBlock.Duration.Millis", 30*time.Second),
 	}
 }
 
