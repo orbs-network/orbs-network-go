@@ -17,12 +17,15 @@ func NewValidator(logger log.BasicLogger) *validator {
 	return &validator{logger: logger}
 }
 
-func (v *validator) Validate(cfg NodeConfig) {
+func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be greater than benchmark consensus timeout")
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be greater than lean helix round timeout")
 	v.requireNonEmpty(cfg.NodeAddress(), "node address must not be empty")
 	v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
 	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
+}
+
+func (v *validator) ValidateMainNode(cfg NodeConfig) {
 	v.requireNonEmptyPeerMap(cfg.GossipPeers(), "gossip peer list must not be empty")
 }
 
