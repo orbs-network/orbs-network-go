@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemory.Network {
+func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, overrideConfigJson string) *inmemory.Network {
 	numNodes := 2
 	logger.Info("creating development network")
 
@@ -30,7 +30,16 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger) *inmemor
 		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
 	)
 
-	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, cfgTemplate, sharedTransport, nil)
+	if overrideConfigJson == "" {
+		overrideConfigJson = "{}"
+	}
+
+	configWithOverrides, err := cfgTemplate.MergeWithFileConfig(overrideConfigJson)
+	if err != nil {
+		panic(err)
+	}
+
+	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }

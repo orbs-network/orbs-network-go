@@ -12,7 +12,7 @@ import (
 
 func TestSimpleTransfer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t))
+		network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), "")
 		contract := callcontract.NewContractClient(network)
 
 		t.Log("doing a simple transfer")
