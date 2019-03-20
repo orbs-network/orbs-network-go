@@ -147,6 +147,8 @@ func ForE2E(
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
+
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
@@ -185,6 +187,8 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 0*time.Millisecond)
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
+
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
