@@ -15,5 +15,6 @@
     {"address":"c056dfc0d1fbc7479db11e61d1b0b57612bf7f17","ip":"192.168.199.5","port":4400}
   ],
   "ethereum-endpoint": "http://192.168.199.6:8545",
-  "logger-full-log": true
+  "logger-full-log": true,
+  "processor-sanitize-deployed-contracts": false
 }
