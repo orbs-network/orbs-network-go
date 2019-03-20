@@ -72,11 +72,11 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 
-	// 2 minutes + 90 blocks is about 25 minutes which is final enough
-	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 2*time.Minute)
-	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 90)
+	// 10 minutes + 60 blocks is about 25 minutes
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Minute)
+	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 60)
 
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false) // TODO(v1): change to true
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
@@ -147,6 +147,8 @@ func ForE2E(
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
+
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
@@ -186,6 +188,8 @@ func ForAcceptanceTestNetwork(
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
+
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
@@ -213,8 +217,9 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 20*time.Minute)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
-	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ropsten and ganache
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ganache
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
