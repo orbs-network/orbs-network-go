@@ -21,10 +21,10 @@ var ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT = uint64(4)
 
 func _getValidatorsStake() (validatorsStake map[[20]byte]uint64) {
 	validatorsStake = make(map[[20]byte]uint64)
-	numOfValidators := _getNumberOfValidValidaors()
+	numOfValidators := _getNumberOfValidators()
 	for i := 0; i < numOfValidators; i++ {
-		validator := _getValidValidatorEthereumAddressAtIndex(i)
-		stake := getValidValidatorStake(validator[:])
+		validator := _getValidatorEthereumAddressAtIndex(i)
+		stake := getValidatorStake(validator[:])
 		validatorsStake[validator] = stake
 		fmt.Printf("elections %10d rewards: validator %x, stake %d\n", _getCurrentElectionBlockNumber(), validator, stake)
 	}

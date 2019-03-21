@@ -47,7 +47,7 @@ func TestOrbsElectionResultsContract_updateElectionResults(t *testing.T) {
 		setPastElection(currIndex, currBlockNumber, currentBlockHeight, currElected, currOrbsElected)
 		_setNumberOfElections(currIndex)
 		_setCurrentElectionBlockNumber(newBlockNumber)
-		_setValidValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
+		_setValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
 
 		// call
 		_setElectedValidators(newElected)
@@ -72,7 +72,7 @@ func TestOrbsElectionResultsContract_updateElectionResults_Empty(t *testing.T) {
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 		_setCurrentElectionBlockNumber(newBlockNumber)
-		_setValidValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
+		_setValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
 
 		// call
 		_setElectedValidators(newElected)
@@ -178,7 +178,6 @@ func setPastElection(index uint32, blockNumber uint64, blockHeight uint64, elect
 }
 
 func TestOrbsVotingContract_initCurrentElectionBlockNumber(t *testing.T) {
-	t.Skip() // TODO v1 fix the fake sdk
 	tests := []struct {
 		name                     string
 		expectCurrentBlockNumber uint64
