@@ -65,3 +65,33 @@ func TestOrbsVotingContract_guardians_setTwiceWithEmptyList(t *testing.T) {
 		}
 	})
 }
+
+func TestOrbsVotingContract_processVote_clearGuardians(t *testing.T) {
+	h := newHarness()
+	h.electionBlock = uint64(60000)
+
+	var g1 = h.addGuardian(100)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+
+		// prepare
+		h.setupOrbsStateBeforeProcess()
+		_setCandidates(g1.address[:], [][20]byte{{0xdd}})
+		_setGuardianStake(g1.address[:], 100)
+		_setGuardianVoteBlockNumber(g1.address[:], h.electionBlock)
+		_setCurrentElectionBlockNumber(h.electionBlock)
+
+		// call
+		_clearGuardians()
+		guardians := _getGuardians()
+
+		// assert
+		m.VerifyMocks()
+		require.EqualValues(t, 0, _getNumberOfGuardians())
+		require.EqualValues(t, 0, getGuardianStake(g1.address[:]))
+		require.EqualValues(t, 0, _getGuardianVoteBlockNumber(g1.address[:]))
+		require.EqualValues(t, 0, len(guardians))
+		require.EqualValues(t, [][20]byte{}, _getCandidates(g1.address[:]))
+	})
+}

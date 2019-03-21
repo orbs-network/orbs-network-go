@@ -30,10 +30,15 @@ func _setGuardians(guardians [][20]byte) {
 func _clearGuardians() {
 	numOfGuardians := _getNumberOfGuardians()
 	for i := 0; i < numOfGuardians; i++ {
-		guardian := _getGuardianAtIndex(i)
-		state.Clear(_formatGuardian(guardian[:]))
+		g := _getGuardianAtIndex(i)
+		guardian := g[:]
+		state.Clear(_formatGuardian(guardian))
 		state.Clear(_formatGuardianIterator(i))
+		state.Clear(_formatGuardianCandidateKey(guardian))
+		state.Clear(_formatGuardianStakeKey(guardian))
+		state.Clear(_formatGuardianVoteBlockNumberKey(guardian))
 	}
+	_setNumberOfGuardians(0)
 }
 
 func _isGuardian(guardian [20]byte) bool {
@@ -71,8 +76,51 @@ func _formatGuardian(guardian []byte) []byte {
 	return []byte(fmt.Sprintf("Guardian_%s", hex.EncodeToString(guardian)))
 }
 
+func _formatGuardianStakeKey(guardian []byte) []byte {
+	return []byte(fmt.Sprintf("Guardian_%s_Stake", hex.EncodeToString(guardian)))
+}
+
 func getGuardianStake(guardian []byte) uint64 {
-	return state.ReadUint64(_formatVoterStakeKey(guardian))
+	return state.ReadUint64(_formatGuardianStakeKey(guardian))
+}
+
+func _setGuardianStake(guardian []byte, stake uint64) {
+	state.WriteUint64(_formatGuardianStakeKey(guardian), stake)
+}
+
+func _formatGuardianVoteBlockNumberKey(guardian []byte) []byte {
+	return []byte(fmt.Sprintf("Guardian_%s_VoteAt", hex.EncodeToString(guardian)))
+}
+
+func _getGuardianVoteBlockNumber(guardian []byte) uint64 {
+	return state.ReadUint64(_formatGuardianVoteBlockNumberKey(guardian))
+}
+
+func _setGuardianVoteBlockNumber(guardian []byte, blockNumber uint64) {
+	state.WriteUint64(_formatGuardianVoteBlockNumberKey(guardian), blockNumber)
+}
+
+func _formatGuardianCandidateKey(guardian []byte) []byte {
+	return []byte(fmt.Sprintf("Guardian_%s_Candidates", hex.EncodeToString(guardian)))
+}
+
+func _getCandidates(guardian []byte) [][20]byte {
+	candidates := state.ReadBytes(_formatGuardianCandidateKey(guardian))
+	numCandidate := len(candidates) / 20
+	candidatesList := make([][20]byte, numCandidate)
+	for i := 0; i < numCandidate; i++ {
+		copy(candidatesList[i][:], candidates[i*20:i*20+20])
+	}
+	return candidatesList
+}
+
+func _setCandidates(guardian []byte, candidateList [][20]byte) {
+	candidates := make([]byte, 0, len(candidateList)*20)
+	for _, v := range candidateList {
+		candidates = append(candidates, v[:]...)
+	}
+
+	state.WriteBytes(_formatGuardianCandidateKey(guardian), candidates)
 }
 
 func _formatGuardianVoteWeightKey(guardian []byte) []byte {

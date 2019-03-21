@@ -187,22 +187,32 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants_LargeNumbe
 }
 
 func TestOrbsVotingContract_processRewards_processRewardsValidators(t *testing.T) {
-	p1, p2, p3, p4, p5 := [20]byte{0xa0}, [20]byte{0xb1}, [20]byte{0xc1}, [20]byte{0xd1}, [20]byte{0xe1}
+	p1, p2, p3, p4, p5 := [20]byte{0xa1}, [20]byte{0xb1}, [20]byte{0xc1}, [20]byte{0xd1}, [20]byte{0xe1}
 	validatorStakes := map[[20]byte]uint64{p1: 1000, p2: 500, p3: 0, p4: 100, p5: 400}
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
+		_setNumberOfValidators(len(validatorStakes))
+		_setValidatorEthereumAddressAtIndex(0, p1[:])
+		_setValidatorStake(p1[:], uint64(1000))
+		_setValidatorEthereumAddressAtIndex(1, p2[:])
+		_setValidatorStake(p2[:], uint64(500))
+		_setValidatorEthereumAddressAtIndex(2, p3[:])
+		_setValidatorStake(p3[:], uint64(0))
+		_setValidatorEthereumAddressAtIndex(3, p4[:])
+		_setValidatorStake(p4[:], uint64(100))
+		_setValidatorEthereumAddressAtIndex(4, p5[:])
+		_setValidatorStake(p5[:], uint64(400))
 
 		// call
-		_processRewardsValidators(validatorStakes)
+		_processRewardsValidators([][20]byte{p1, p2, p3, p4})
 
 		// assert
 		require.EqualValues(t, ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD+40, getCumulativeValidatorReward(p1[:]))
 		require.EqualValues(t, ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD+20, getCumulativeValidatorReward(p2[:]))
 		require.EqualValues(t, ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD+0, getCumulativeValidatorReward(p3[:]))
 		require.EqualValues(t, ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD+4, getCumulativeValidatorReward(p4[:]))
-		require.EqualValues(t, ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD+16, getCumulativeValidatorReward(p5[:]))
+		require.EqualValues(t, 0, getCumulativeValidatorReward(p5[:]))
 	})
 }
 
