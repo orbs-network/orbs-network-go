@@ -3,7 +3,6 @@ package elections_systemcontract
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
 )
 
 /***
@@ -15,8 +14,8 @@ func _addressSliceToArray(a []byte) [20]byte {
 	return array
 }
 
-func _isAfterElectionMirroring(BlockNumber uint64) bool {
-	return BlockNumber > safeuint64.Add(_getCurrentElectionBlockNumber(), VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS)
+func _isAfterElectionMirroring(blockNumber uint64) bool {
+	return blockNumber > getMirroringEndBlockNumber()
 }
 
 func _mirrorPeriodValidator() {

@@ -9,7 +9,7 @@ import (
 
 func TestOrbsVotingContract_mirrorVote(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}, {0x04}}
 	blockNumber := 100
 	txIndex := 10
@@ -21,10 +21,10 @@ func TestOrbsVotingContract_mirrorVote(t *testing.T) {
 		// prepare
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, txIndex, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, true)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, true)
 
 		// call
 		mirrorVote(txHex)
@@ -36,15 +36,15 @@ func TestOrbsVotingContract_mirrorVote(t *testing.T) {
 			candidates = append(candidates, v[:]...)
 		}
 
-		require.EqualValues(t, candidates, state.ReadBytes(_formatGuardianCandidateKey(guardianAddr[:])))
-		require.EqualValues(t, blockNumber, state.ReadUint64(_formatGuardianBlockNumberKey(guardianAddr[:])))
-		require.EqualValues(t, txIndex, state.ReadUint32(_formatGuardianBlockTxIndexKey(guardianAddr[:])))
+		require.EqualValues(t, candidates, state.ReadBytes(_formatVoterCandidateKey(voterAddr[:])))
+		require.EqualValues(t, blockNumber, state.ReadUint64(_formatVoterBlockNumberKey(voterAddr[:])))
+		require.EqualValues(t, txIndex, state.ReadUint32(_formatVoterBlockTxIndexKey(voterAddr[:])))
 	})
 }
 
 func TestOrbsVotingContract_mirrorVoteLessThanMaximum(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}}
 	blockNumber := 100
 	txIndex := 10
@@ -56,10 +56,10 @@ func TestOrbsVotingContract_mirrorVoteLessThanMaximum(t *testing.T) {
 		// prepare
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, txIndex, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, true)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, true)
 
 		// call
 		mirrorVote(txHex)
@@ -71,15 +71,15 @@ func TestOrbsVotingContract_mirrorVoteLessThanMaximum(t *testing.T) {
 			candidates = append(candidates, v[:]...)
 		}
 
-		require.EqualValues(t, candidates, state.ReadBytes(_formatGuardianCandidateKey(guardianAddr[:])))
-		require.EqualValues(t, blockNumber, state.ReadUint64(_formatGuardianBlockNumberKey(guardianAddr[:])))
-		require.EqualValues(t, txIndex, state.ReadUint32(_formatGuardianBlockTxIndexKey(guardianAddr[:])))
+		require.EqualValues(t, candidates, state.ReadBytes(_formatVoterCandidateKey(voterAddr[:])))
+		require.EqualValues(t, blockNumber, state.ReadUint64(_formatVoterBlockNumberKey(voterAddr[:])))
+		require.EqualValues(t, txIndex, state.ReadUint32(_formatVoterBlockTxIndexKey(voterAddr[:])))
 	})
 }
 
 func TestOrbsVotingContract_mirrorVote_NotGuardian(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}, {0x04}}
 	blockNumber := 100
 	txIndex := 10
@@ -91,10 +91,10 @@ func TestOrbsVotingContract_mirrorVote_NotGuardian(t *testing.T) {
 		// prepare
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, txIndex, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, false)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, false)
 
 		require.Panics(t, func() {
 			mirrorVote(txHex)
@@ -104,7 +104,7 @@ func TestOrbsVotingContract_mirrorVote_NotGuardian(t *testing.T) {
 
 func TestOrbsVotingContract_mirrorVote_NoCandidates(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := make([][20]byte, 0)
 	blockNumber := 100
 	txIndex := 10
@@ -116,10 +116,10 @@ func TestOrbsVotingContract_mirrorVote_NoCandidates(t *testing.T) {
 		// prepare
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, txIndex, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, true)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, true)
 
 		mirrorVote(txHex)
 
@@ -130,15 +130,15 @@ func TestOrbsVotingContract_mirrorVote_NoCandidates(t *testing.T) {
 			candidates = append(candidates, v[:]...)
 		}
 
-		require.EqualValues(t, candidates, state.ReadBytes(_formatGuardianCandidateKey(guardianAddr[:])))
-		require.EqualValues(t, blockNumber, state.ReadUint64(_formatGuardianBlockNumberKey(guardianAddr[:])))
-		require.EqualValues(t, txIndex, state.ReadUint32(_formatGuardianBlockTxIndexKey(guardianAddr[:])))
+		require.EqualValues(t, candidates, state.ReadBytes(_formatVoterCandidateKey(voterAddr[:])))
+		require.EqualValues(t, blockNumber, state.ReadUint64(_formatVoterBlockNumberKey(voterAddr[:])))
+		require.EqualValues(t, txIndex, state.ReadUint32(_formatVoterBlockTxIndexKey(voterAddr[:])))
 	})
 }
 
 func TestOrbsVotingContract_mirrorVote_TooManyCandidates(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}, {0x04}, {0x05}}
 	blockNumber := 100
 	txIndex := 10
@@ -150,7 +150,7 @@ func TestOrbsVotingContract_mirrorVote_TooManyCandidates(t *testing.T) {
 		// prepare
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, txIndex, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
 
@@ -162,7 +162,7 @@ func TestOrbsVotingContract_mirrorVote_TooManyCandidates(t *testing.T) {
 
 func TestOrbsVotingContract_mirrorVote_AlreadyHaveNewerEventBlockNumber(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}, {0x04}}
 	blockNumber := 100
 
@@ -171,13 +171,13 @@ func TestOrbsVotingContract_mirrorVote_AlreadyHaveNewerEventBlockNumber(t *testi
 		setTimingInMirror(m)
 
 		// prepare
-		state.WriteUint64(_formatGuardianBlockNumberKey(guardianAddr[:]), 101)
+		state.WriteUint64(_formatVoterBlockNumberKey(voterAddr[:]), 101)
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, 10, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, true)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, true)
 
 		require.Panics(t, func() {
 			mirrorVote(txHex)
@@ -187,7 +187,7 @@ func TestOrbsVotingContract_mirrorVote_AlreadyHaveNewerEventBlockNumber(t *testi
 
 func TestOrbsVotingContract_mirrorVote_AlreadyHaveNewerEventBlockTxIndex(t *testing.T) {
 	txHex := "0xabcd"
-	guardianAddr := [20]byte{0x01}
+	voterAddr := [20]byte{0x01}
 	candidateAddrs := [][20]byte{{0x02}, {0x03}, {0x04}}
 	blockNumber := 100
 
@@ -196,14 +196,14 @@ func TestOrbsVotingContract_mirrorVote_AlreadyHaveNewerEventBlockTxIndex(t *test
 		setTimingInMirror(m)
 
 		// prepare
-		state.WriteUint64(_formatGuardianBlockNumberKey(guardianAddr[:]), uint64(blockNumber))
-		state.WriteUint64(_formatGuardianBlockTxIndexKey(guardianAddr[:]), 50)
+		state.WriteUint64(_formatVoterBlockNumberKey(voterAddr[:]), uint64(blockNumber))
+		state.WriteUint64(_formatVoterBlockTxIndexKey(voterAddr[:]), 50)
 		m.MockEthereumLog(getVotingEthereumContractAddress(), getVotingAbi(), txHex, VOTE_OUT_NAME, blockNumber, 10, func(out interface{}) {
 			v := out.(*VoteOut)
-			v.Voter = guardianAddr
+			v.Voter = voterAddr
 			v.Validators = candidateAddrs
 		})
-		mockGuardianInEthereum(m, uint64(blockNumber), guardianAddr, true)
+		mockGuardianInEthereum(m, uint64(blockNumber), voterAddr, true)
 
 		require.Panics(t, func() {
 			mirrorVote(txHex)

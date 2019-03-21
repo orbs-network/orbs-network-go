@@ -17,12 +17,12 @@ func TestOrbsVotingContract_processRewards_getValidatorStakes(t *testing.T) {
 
 		// prepare
 		_setCurrentElectionBlockNumber(5000)
-		_setNumberOfValidValidaors(len(validators))
+		_setNumberOfValidators(len(validators))
 		for i := 0; i < len(validators); i++ {
-			_setValidValidatorEthereumAddressAtIndex(i, validators[i][:])
+			_setValidatorEthereumAddressAtIndex(i, validators[i][:])
 		}
 		for i := 0; i < len(stakes); i++ {
-			_setValidValidatorStake(validators[i][:], stakes[i])
+			_setValidatorStake(validators[i][:], stakes[i])
 		}
 
 		// call
@@ -30,9 +30,9 @@ func TestOrbsVotingContract_processRewards_getValidatorStakes(t *testing.T) {
 
 		// assert
 		require.EqualValues(t, len(validators), len(vtoS))
-		for i := 0; i < _getNumberOfValidValidaors(); i++ {
-			require.EqualValues(t, validators[i], _getValidValidatorEthereumAddressAtIndex(i))
-			require.EqualValues(t, stakesReal[i], getValidValidatorStake(validators[i][:]))
+		for i := 0; i < _getNumberOfValidators(); i++ {
+			require.EqualValues(t, validators[i], _getValidatorEthereumAddressAtIndex(i))
+			require.EqualValues(t, stakesReal[i], getValidatorStake(validators[i][:]))
 		}
 	})
 }

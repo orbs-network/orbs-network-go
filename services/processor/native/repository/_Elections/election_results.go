@@ -7,7 +7,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
-  
+
 /*****
  * Election results
  */
@@ -73,7 +73,7 @@ func _concatElectedEthereumAddresses(elected [][20]byte) []byte {
 func _translateElectedAddressesToOrbsAddressesAndConcat(elected [][20]byte) []byte {
 	electedForSave := make([]byte, 0, len(elected)*20)
 	for i := range elected {
-		electedOrbsAddress := _getValidValidatorOrbsAddress(elected[i][:])
+		electedOrbsAddress := _getValidatorOrbsAddress(elected[i][:])
 		fmt.Printf("elections %10d: translate %x to %x\n", _getCurrentElectionBlockNumber(), elected[i][:], electedOrbsAddress)
 		electedForSave = append(electedForSave, electedOrbsAddress[:]...)
 	}
@@ -189,9 +189,9 @@ func getCurrentEthereumBlockNumber() uint64 {
 }
 
 func getProcessingStartBlockNumber() uint64 {
-	return getCurrentElectionBlockNumber() + VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS
+	return safeuint64.Add(getCurrentElectionBlockNumber(), VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS)
 }
 
 func getMirroringEndBlockNumber() uint64 {
-	return getCurrentElectionBlockNumber() + VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS
+	return safeuint64.Add(getCurrentElectionBlockNumber(), VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS)
 }

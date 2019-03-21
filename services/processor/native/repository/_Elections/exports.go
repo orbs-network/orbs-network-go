@@ -14,6 +14,6 @@ var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumCon
 	getElectedValidatorsOrbsAddress, getElectedValidatorsEthereumAddress, getElectedValidatorsEthereumAddressByBlockNumber, getElectedValidatorsOrbsAddressByBlockHeight,
 	getElectedValidatorsOrbsAddressByIndex, getElectedValidatorsEthereumAddressByIndex, getElectedValidatorsBlockNumberByIndex, getElectedValidatorsBlockHeightByIndex,
 	getCumulativeParticipationReward, getCumulativeGuardianExcellenceReward, getCumulativeValidatorReward,
-	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidValidatorStake, getValidValidatorVote, getExcellenceProgramGuardians,
+	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidatorStake, getValidatorVote, getExcellenceProgramGuardians,
 )
 var SYSTEM = sdk.Export(_init)

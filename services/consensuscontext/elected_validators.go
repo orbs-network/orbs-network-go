@@ -85,16 +85,16 @@ func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight p
 		return nil, err
 	}
 	if output.CallResult != protocol.EXECUTION_RESULT_SUCCESS {
-		return nil, errors.Errorf("_Elections.getElectedValidators call result is %s", output.CallResult)
+		return nil, errors.Errorf("%s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
 	}
 
 	argIterator := output.OutputArgumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
-		return nil, errors.Errorf("call system _Elections.getElectedValidators returned corrupt output value")
+		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
 	}
 	arg0 := argIterator.NextArguments()
 	if !arg0.IsTypeBytesValue() {
-		return nil, errors.Errorf("call system _Elections.getElectedValidators returned corrupt output value")
+		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
 	}
 	joinedAddresses := arg0.BytesValue()
 
