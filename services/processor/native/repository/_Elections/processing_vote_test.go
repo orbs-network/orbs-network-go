@@ -2,6 +2,7 @@ package elections_systemcontract
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/stretchr/testify/require"
@@ -165,13 +166,11 @@ func TestOrbsVotingContract_processVote_CalulateStakes_DelegatorIsGuardian(t *te
 
 		// prepare
 		h.setupEthereumValidatorsBeforeProcess(m)
-		mockValidGuardiansInEthereum(m, h.electionBlock, h.guardians)
-		mockStakeInEthereum(m, h.electionBlock, g1.address, g1.stake)
-		mockStakeInEthereum(m, h.electionBlock, g2.address, g2.stake)
-		mockStakeInEthereum(m, h.electionBlock, g3.address, g3.stake)
-		mockStakeInEthereum(m, h.electionBlock, g4.address, g4.stake)
+		mockGuardiansInEthereum(m, h.electionBlock, h.guardians)
+		h.setupEthereumGuardiansDataBeforeProcess(m)
 		mockStakeInEthereum(m, h.electionBlock, realD2.address, realD2.stake)
 		mockStakeInEthereum(m, h.electionBlock, realD3.address, realD3.stake)
+		//		h.setupEthereumStateBeforeProcess(m)
 		h.setupOrbsStateBeforeProcess()
 
 		// call
@@ -265,8 +264,9 @@ func TestOrbsVotingContract_processVote_readGuardiansFromEthereum(t *testing.T) 
 		_init()
 
 		// prepare
-		h.setupEthereumStateBeforeProcess(m)
+		mockGuardiansInEthereum(m, h.electionBlock, h.guardians)
 		_setCurrentElectionBlockNumber(h.electionBlock)
+		_setGuardianStake(_formatGuardianStakeKey(g1.address[:]), 500)
 
 		// call
 		_readGuardiansFromEthereumToState()
@@ -284,7 +284,6 @@ func TestOrbsVotingContract_processVote_readGuardiansFromEthereum(t *testing.T) 
 }
 
 func TestOrbsVotingContract_processVote_readGuardiansFromEthereumWithPaging(t *testing.T) {
-	// TODO
 	h := newHarness()
 	h.electionBlock = uint64(60000)
 
@@ -296,7 +295,7 @@ func TestOrbsVotingContract_processVote_readGuardiansFromEthereumWithPaging(t *t
 		_init()
 
 		// prepare
-		h.setupEthereumStateBeforeProcess(m)
+		mockGuardiansInEthereum(m, h.electionBlock, h.guardians)
 		_setCurrentElectionBlockNumber(h.electionBlock)
 
 		// call
@@ -310,29 +309,30 @@ func TestOrbsVotingContract_processVote_readGuardiansFromEthereumWithPaging(t *t
 	})
 }
 
-func TestOrbsVotingContract_processVote_collectOneVoterStakeFromEthereum_NoStateAddr_DoesntFail(t *testing.T) {
+func TestOrbsVotingContract_processVote_collectOneGuardianStakeFromEthereum_NoStateAddr_DoesntFail(t *testing.T) {
 	h := newHarness()
 	h.electionBlock = uint64(60000)
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 		h.setupOrbsStateBeforeProcess()
+		mockGuardianVoteInEthereum(m, h.electionBlock, [20]byte{}, [][20]byte{}, 0)
 
 		// call
-		_collectOneVoterStakeFromEthereum(0)
+		_collectOneGuardianDataFromEthereum(0)
 
 		// assert
 		m.VerifyMocks()
 	})
 }
 
-func TestOrbsVotingContract_processVote_collectVotersStakeFromEthereum(t *testing.T) {
+func TestOrbsVotingContract_processVote_collectGuardiansStakeFromEthereum(t *testing.T) {
 	h := newHarness()
 	h.electionBlock = uint64(60000)
 	aRecentVoteBlock := h.electionBlock - 1
 
 	var v1 = h.addValidator()
-	var g1, g2 = h.addGuardian(100), h.addGuardian(200)
+	var g1, g2 = h.addGuardian(400), h.addGuardian(600)
 
 	g1.vote(aRecentVoteBlock, v1)
 	g2.vote(aRecentVoteBlock, v1)
@@ -342,25 +342,26 @@ func TestOrbsVotingContract_processVote_collectVotersStakeFromEthereum(t *testin
 
 		// prepare
 		h.setupOrbsStateBeforeProcess()
-		mockStakeInEthereum(m, h.electionBlock, g1.address, 400)
-		mockStakeInEthereum(m, h.electionBlock, g2.address, 600)
+		h.setupEthereumGuardiansDataBeforeProcess(m)
 		_setVotingProcessItem(0)
 
 		// call
 		i := 0
 		for ; i < 2; i++ {
-			_collectNextVoterStakeFromEthereum()
+			_collectNextGuardiansDataFromEthereum()
 		}
 
 		// assert
 		m.VerifyMocks()
 		require.EqualValues(t, i, _getVotingProcessItem())
-		require.EqualValues(t, 400, state.ReadUint64(_formatVoterStakeKey(g1.address[:])))
-		require.EqualValues(t, 600, state.ReadUint64(_formatVoterStakeKey(g2.address[:])))
+		require.EqualValues(t, 400, state.ReadUint64(_formatGuardianStakeKey(g1.address[:])))
+		require.ElementsMatch(t, [][20]byte{v1.address}, _getCandidates(g1.address[:]))
+		require.EqualValues(t, 600, state.ReadUint64(_formatGuardianStakeKey(g2.address[:])))
+		require.ElementsMatch(t, [][20]byte{v1.address}, _getCandidates(g2.address[:]))
 	})
 }
 
-func TestOrbsVotingContract_processVote_collectVotersStakeFromEthereum_AncientVoterStakeIs0(t *testing.T) {
+func TestOrbsVotingContract_processVote_collectGuardiansDataFromEthereum_AncientVoterStakeIs0(t *testing.T) {
 	h := newHarness()
 	h.electionBlock = uint64(60000)
 	anAncientVoteBlock := h.electionBlock - 2*VOTE_VALID_PERIOD_LENGTH_IN_BLOCKS - 2
@@ -376,48 +377,24 @@ func TestOrbsVotingContract_processVote_collectVotersStakeFromEthereum_AncientVo
 
 		// prepare
 		h.setupOrbsStateBeforeProcess()
+		h.setupEthereumGuardiansDataBeforeProcess(m)
+
 		_setVotingProcessItem(0)
 
 		// call
 		i := 0
 		for ; i < 2; i++ {
-			_collectNextVoterStakeFromEthereum()
+			_collectNextGuardiansDataFromEthereum()
 		}
 
 		// assert
 		m.VerifyMocks()
-		require.EqualValues(t, g3.address, _getVoterAtIndex(0))
-		require.EqualValues(t, 0, state.ReadUint64(_formatVoterStakeKey(g3.address[:])))
-		require.EqualValues(t, g4.address, _getVoterAtIndex(1))
-		require.EqualValues(t, 0, state.ReadUint64(_formatVoterStakeKey(g4.address[:])))
-	})
-}
-
-func TestOrbsVotingContract_processVote_collectVotersStakeFromEthereum_NotVoterStakeIs0(t *testing.T) {
-	h := newHarness()
-	h.electionBlock = uint64(60000)
-	aRecentVoteBlock := h.electionBlock - 1
-
-	var v1 = h.addValidator()
-	var g1 = h.addGuardian(100).withIsGuardian(false)
-
-	g1.vote(aRecentVoteBlock, v1)
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-
-		// prepare
-		h.setupOrbsStateBeforeProcess()
-
-		_setVotingProcessItem(0)
-
-		// call
-		_collectNextVoterStakeFromEthereum()
-
-		// assert
-		m.VerifyMocks()
-		require.EqualValues(t, 0, state.ReadUint64(_formatVoterStakeKey(g1.address[:])))
-		require.EqualValues(t, g1.address, _getVoterAtIndex(0))
+		require.EqualValues(t, g3.address, _getGuardianAtIndex(0))
+		require.EqualValues(t, 0, state.ReadUint64(_formatGuardianStakeKey(g3.address[:])))
+		require.ElementsMatch(t, [][20]byte{{}}, _getCandidates(g3.address[:]))
+		require.EqualValues(t, g4.address, _getGuardianAtIndex(1))
+		require.EqualValues(t, 0, state.ReadUint64(_formatGuardianStakeKey(g4.address[:])))
+		require.ElementsMatch(t, [][20]byte{{}}, _getCandidates(g4.address[:]))
 	})
 }
 
@@ -487,7 +464,7 @@ func TestOrbsVotingContract_processVote_collectGuardiansStake_OnlyNumOfGuardians
 
 		// prepare
 		h.setupOrbsStateBeforeProcess()
-		_setNumberOfVoters(10)
+		_setNumberOfGuardians(10)
 
 		// call
 		guardians := _getGuardians()
@@ -506,7 +483,7 @@ func TestOrbsVotingContract_processVote_collectGuardiansStake_GuardiansWithAncie
 	anAncientVoteBlock := h.electionBlock - 2*VOTE_VALID_PERIOD_LENGTH_IN_BLOCKS - 2
 
 	var v1 = h.addValidator()
-	var g1, g2, g3, g4 = h.addGuardian(100), h.addGuardian(200), h.addGuardian(100), h.addGuardian(100)
+	var g1, g2, g3, g4 = h.addGuardian(100), h.addGuardian(200), h.addGuardian(300), h.addGuardian(400)
 
 	g1.vote(aRecentVoteBlock, v1)
 	g2.vote(aRecentVoteBlock, v1)
@@ -762,43 +739,6 @@ func (g *guardian) vote(asOfBlock uint64, validators ...*validator) {
 	g.votedValidators = getValidatorAddresses(validators)
 }
 
-func (f *harness) setupEthereumStateBeforeProcess(m Mockery) {
-	f.setupEthereumValidatorsBeforeProcess(m)
-
-	mockValidGuardiansInEthereum(m, f.electionBlock, f.guardians)
-	for _, a := range f.guardians {
-		if a.voteBlock > f.electionBlock-VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS {
-			if a.isGuardian {
-				mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
-			}
-		}
-	}
-
-	for _, d := range f.delegators {
-		mockStakeInEthereum(m, f.electionBlock, d.address, d.stake)
-	}
-}
-
-func (f *harness) setupEthereumValidatorsBeforeProcess(m Mockery) {
-	if len(f.validators) != 0 {
-		validatorAddresses := make([][20]byte, len(f.validators))
-		for i, a := range f.validators {
-			validatorAddresses[i] = a.address
-			mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
-			mockValidatorOrbsAddressInEthereum(m, f.electionBlock, a.address, a.orbsAddress)
-		}
-		mockValidatorsInEthereum(m, f.electionBlock, validatorAddresses)
-	}
-}
-
-func (f *harness) setupOrbsStateBeforeProcess() {
-	_setCurrentElectionBlockNumber(f.electionBlock)
-	f.mockDelegationsInOrbsBeforeProcess()
-	f.mockGuardianInOrbsBeforeProcess()
-	f.mockGuardianVotesInOrbsBeforeProcess()
-	f.mockValidatorsInOrbsBeforeProcess()
-}
-
 func newHarness() *harness {
 	ETHEREUM_STAKE_FACTOR = big.NewInt(int64(10000))
 	VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS = 3
@@ -823,6 +763,25 @@ func (f *harness) addDelegator(stake int, delegate [20]byte) *delegator {
 	return d
 }
 
+func (f *harness) addValidator() *validator {
+	return f.addValidatorWithStake(0)
+}
+func (f *harness) addValidatorWithStake(stake int) *validator {
+	v := &validator{actor: actor{stake: stake, address: [20]byte{f.nextValidatorAddress}}, orbsAddress: [20]byte{f.nextValidatorOrbsAddress}}
+	f.nextValidatorAddress++
+	f.nextValidatorOrbsAddress++
+	f.validators = append(f.validators, v)
+	return v
+}
+
+func (f *harness) setupOrbsStateBeforeProcess() {
+	_setCurrentElectionBlockNumber(f.electionBlock)
+	f.mockDelegationsInOrbsBeforeProcess()
+	f.mockGuardianInOrbsBeforeProcess()
+	f.mockGuardianVotesInOrbsBeforeProcess()
+	f.mockValidatorsInOrbsBeforeProcess()
+}
+
 func (f *harness) mockGuardianInOrbsBeforeProcess() {
 	addresses := make([][20]byte, 0, len(f.guardians))
 	for _, g := range f.guardians {
@@ -834,12 +793,14 @@ func (f *harness) mockGuardianInOrbsBeforeProcess() {
 }
 
 func (f *harness) mockGuardianVotesInOrbsBeforeProcess() {
-	_setNumberOfVoters(len(f.guardians))
+	_setNumberOfGuardians(len(f.guardians))
 	for i, guardian := range f.guardians {
 		_setCandidates(guardian.address[:], guardian.votedValidators)
-		state.WriteUint64(_formatVoterBlockNumberKey(guardian.address[:]), guardian.voteBlock)
-		state.WriteUint64(_formatVoterStakeKey(guardian.address[:]), 12)
-		state.WriteBytes(_formatVoterIterator(i), guardian.address[:])
+		if guardian.voteBlock != 0 && safeuint64.Add(guardian.voteBlock, VOTE_VALID_PERIOD_LENGTH_IN_BLOCKS) > f.electionBlock {
+			_setGuardianVoteBlockNumber(guardian.address[:], guardian.voteBlock)
+		}
+		_setGuardianStake(guardian.address[:], uint64(guardian.stake))
+		_setGuardianAtIndex(i, guardian.address[:])
 	}
 }
 
@@ -854,19 +815,8 @@ func (f *harness) mockDelegationsInOrbsBeforeProcess() {
 func (f *harness) mockValidatorsInOrbsBeforeProcess() {
 	_setNumberOfValidators(len(f.validators))
 	for i, v := range f.validators {
-		state.WriteBytes(_formatValidValidaorIterator(i), v.address[:])
+		state.WriteBytes(_formatValidaorIterator(i), v.address[:])
 	}
-}
-
-func (f *harness) addValidator() *validator {
-	return f.addValidatorWithStake(0)
-}
-func (f *harness) addValidatorWithStake(stake int) *validator {
-	v := &validator{actor: actor{stake: stake, address: [20]byte{f.nextValidatorAddress}}, orbsAddress: [20]byte{f.nextValidatorOrbsAddress}}
-	f.nextValidatorAddress++
-	f.nextValidatorOrbsAddress++
-	f.validators = append(f.validators, v)
-	return v
 }
 
 func (f *harness) runProcessVoteNtimes(maxNumberOfRuns int) ([][20]byte, int) {
@@ -881,6 +831,40 @@ func (f *harness) runProcessVoteNtimes(maxNumberOfRuns int) ([][20]byte, int) {
 	return elected, i
 }
 
+func (f *harness) setupEthereumStateBeforeProcess(m Mockery) {
+	f.setupEthereumValidatorsBeforeProcess(m)
+
+	mockGuardiansInEthereum(m, f.electionBlock, f.guardians)
+	f.setupEthereumGuardiansDataBeforeProcess(m)
+
+	for _, d := range f.delegators {
+		mockStakeInEthereum(m, f.electionBlock, d.address, d.stake)
+	}
+}
+
+func (f *harness) setupEthereumGuardiansDataBeforeProcess(m Mockery) {
+	for _, a := range f.guardians {
+		if a.isGuardian {
+			mockGuardianVoteInEthereum(m, f.electionBlock, a.address, a.votedValidators, a.voteBlock)
+			if a.voteBlock > f.electionBlock-VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS {
+				mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
+			}
+		}
+	}
+}
+
+func (f *harness) setupEthereumValidatorsBeforeProcess(m Mockery) {
+	if len(f.validators) != 0 {
+		validatorAddresses := make([][20]byte, len(f.validators))
+		for i, a := range f.validators {
+			validatorAddresses[i] = a.address
+			mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
+			mockValidatorOrbsAddressInEthereum(m, f.electionBlock, a.address, a.orbsAddress)
+		}
+		mockValidatorsInEthereum(m, f.electionBlock, validatorAddresses)
+	}
+}
+
 func mockGuardianInEthereum(m Mockery, blockNumber uint64, address [20]byte, isGuardian bool) {
 	m.MockEthereumCallMethodAtBlock(blockNumber, getGuardiansEthereumContractAddress(), getGuardiansAbi(), "isGuardian", func(out interface{}) {
 		i, ok := out.(*bool)
@@ -892,18 +876,22 @@ func mockGuardianInEthereum(m Mockery, blockNumber uint64, address [20]byte, isG
 	}, address)
 }
 
-func mockValidatorsInEthereum(m Mockery, blockNumber uint64, addresses [][20]byte) {
-	m.MockEthereumCallMethodAtBlock(blockNumber, getValidatorsEthereumContractAddress(), getValidatorsAbi(), "getValidatorsBytes20", func(out interface{}) {
-		ethAddresses, ok := out.(*[][20]byte)
+func mockGuardianVoteInEthereum(m Mockery, blockNumber uint64, address [20]byte, candidates [][20]byte, voteBlockNumber uint64) {
+	vote := Vote{
+		ValidatorsBytes20: candidates,
+		BlockNumber:       big.NewInt(int64(voteBlockNumber)),
+	}
+	m.MockEthereumCallMethodAtBlock(blockNumber, getVotingEthereumContractAddress(), getVotingAbi(), "getCurrentVoteBytes20", func(out interface{}) {
+		i, ok := out.(*Vote)
 		if ok {
-			*ethAddresses = addresses
+			*i = vote
 		} else {
-			panic(fmt.Sprintf("wrong type %s", out))
+			panic(fmt.Sprintf("wrong something %s", out))
 		}
-	})
+	}, address)
 }
 
-func mockValidGuardiansInEthereum(m Mockery, blockNumber uint64, guardians []*guardian) {
+func mockGuardiansInEthereum(m Mockery, blockNumber uint64, guardians []*guardian) {
 	addresses := make([][20]byte, 0, len(guardians))
 	for _, g := range guardians {
 		if g.isGuardian {
@@ -934,6 +922,17 @@ func mockValidGuardiansInEthereum(m Mockery, blockNumber uint64, guardians []*gu
 	}
 }
 
+func mockValidatorsInEthereum(m Mockery, blockNumber uint64, addresses [][20]byte) {
+	m.MockEthereumCallMethodAtBlock(blockNumber, getValidatorsEthereumContractAddress(), getValidatorsAbi(), "getValidatorsBytes20", func(out interface{}) {
+		ethAddresses, ok := out.(*[][20]byte)
+		if ok {
+			*ethAddresses = addresses
+		} else {
+			panic(fmt.Sprintf("wrong type %s", out))
+		}
+	})
+}
+
 func mockValidatorOrbsAddressInEthereum(m Mockery, blockNumber uint64, validatorAddress [20]byte, orbsValidatorAddress [20]byte) {
 	m.MockEthereumCallMethodAtBlock(blockNumber, getValidatorsRegistryEthereumContractAddress(), getValidatorsRegistryAbi(),
 		"getOrbsAddress", func(out interface{}) {
@@ -946,10 +945,10 @@ func mockValidatorOrbsAddressInEthereum(m Mockery, blockNumber uint64, validator
 		}, validatorAddress)
 }
 
-func mockStakeInEthereum(m Mockery, BlockNumber uint64, address [20]byte, stake int) {
+func mockStakeInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int) {
 	stakeValue := big.NewInt(int64(stake))
 	stakeValue = stakeValue.Mul(stakeValue, ETHEREUM_STAKE_FACTOR)
-	m.MockEthereumCallMethodAtBlock(BlockNumber, getTokenEthereumContractAddress(), getTokenAbi(), "balanceOf", func(out interface{}) {
+	m.MockEthereumCallMethodAtBlock(blockNumber, getTokenEthereumContractAddress(), getTokenAbi(), "balanceOf", func(out interface{}) {
 		i, ok := out.(**big.Int)
 		if ok {
 			*i = stakeValue
