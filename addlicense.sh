@@ -5,4 +5,4 @@ if [ -z "$(which addlicense)" ]; then
 fi
 
 find . -type f -name '*.go' ! -path './vendor/*' ! -path './.idea/*' ! -path './.git/*' \
-    -exec addlicense -c "ORBS Ltd." -l mit {} \;
+    -exec addlicense -f LICENSE-HEADER {} \;
