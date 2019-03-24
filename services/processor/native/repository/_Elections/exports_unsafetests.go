@@ -1,9 +1,3 @@
-// Copyright 2019 the orbs-network-go authors
-// This file is part of the orbs-network-go library in the Orbs project.
-//
-// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
-// The above notice should be included in all copies or substantial portions of the software.
-
 // +build unsafetests
 
 package elections_systemcontract
@@ -31,8 +25,9 @@ var SYSTEM = sdk.Export(_init)
 /***
  * unsafetests functions
  */
-func unsafetests_setVariables(stakeFactor uint64, voteMirrorPeriod uint64, voteValidPeriod uint64, electionPeriod uint64, maxElectedValidators uint32, minElectedValidators uint32) {
+func unsafetests_setVariables(stakeFactor uint64, transferValue uint32, voteMirrorPeriod uint64, voteValidPeriod uint64, electionPeriod uint64, maxElectedValidators uint32, minElectedValidators uint32) {
 	ETHEREUM_STAKE_FACTOR = big.NewInt(int64(stakeFactor))
+	DELEGATION_BY_TRANSFER_VALUE = big.NewInt(int64(transferValue))
 	VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS = voteMirrorPeriod
 	VOTE_VALID_PERIOD_LENGTH_IN_BLOCKS = voteValidPeriod
 	ELECTION_PERIOD_LENGTH_IN_BLOCKS = electionPeriod
