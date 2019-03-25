@@ -4,7 +4,6 @@ package elections_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
-	"math/big"
 )
 
 var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumContractAddress, getVotingEthereumContractAddress, getValidatorsEthereumContractAddress, getValidatorsRegistryEthereumContractAddress,
@@ -25,9 +24,7 @@ var SYSTEM = sdk.Export(_init)
 /***
  * unsafetests functions
  */
-func unsafetests_setVariables(stakeFactor uint64, transferValue uint32, voteMirrorPeriod uint64, voteValidPeriod uint64, electionPeriod uint64, maxElectedValidators uint32, minElectedValidators uint32) {
-	ETHEREUM_STAKE_FACTOR = big.NewInt(int64(stakeFactor))
-	DELEGATION_BY_TRANSFER_VALUE = big.NewInt(int64(transferValue))
+func unsafetests_setVariables(voteMirrorPeriod uint64, voteValidPeriod uint64, electionPeriod uint64, maxElectedValidators uint32, minElectedValidators uint32) {
 	VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS = voteMirrorPeriod
 	VOTE_VALID_PERIOD_LENGTH_IN_BLOCKS = voteValidPeriod
 	ELECTION_PERIOD_LENGTH_IN_BLOCKS = electionPeriod

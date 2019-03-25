@@ -642,7 +642,6 @@ func TestOrbsVotingContract_processVote_guardiansCastVotes(t *testing.T) {
 		for i := range tests {
 			cTest := tests[i]
 			candidatesVotes, total, _, _ := _guardiansCastVotes(cTest.guardianStake, relationship, delegatorStakes)
-			// TODO v1 Noam ... check this ?
 			require.EqualValues(t, cTest.expectedTotal, total)
 			for validator, vote := range cTest.expect {
 				require.EqualValues(t, vote, candidatesVotes[validator])
