@@ -1,3 +1,9 @@
+// Copyright 2019 the orbs-ethereum-contracts authors
+// This file is part of the orbs-ethereum-contracts library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
 package elections_systemcontract
 
 import (
@@ -11,12 +17,12 @@ import (
 /***
  * Rewards
  */
-var ELECTION_PARTICIPATION_MAX_REWARD = uint64(493150) // 60M / number of elections per year
+var ELECTION_PARTICIPATION_MAX_REWARD = uint64(505328) // 60M / number of elections per year
 var ELECTION_PARTICIPATION_MAX_STAKE_REWARD_PERCENT = uint64(8)
-var ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD = uint64(328767) // 40M / number of elections per year
+var ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD = uint64(336885) // 40M / number of elections per year
 var ELECTION_GUARDIAN_EXCELLENCE_MAX_STAKE_REWARD_PERCENT = uint64(10)
 var ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER = 10
-var ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD = uint64(8220) // 1M / number of elections per year
+var ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD = uint64(8423) // 1M / number of elections per year
 var ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT = uint64(4)
 
 func _processRewards(totalVotes uint64, elected [][20]byte, participantStakes map[[20]byte]uint64, guardiansAccumulatedStake map[[20]byte]uint64) {
