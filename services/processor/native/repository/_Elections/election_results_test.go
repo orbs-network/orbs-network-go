@@ -191,8 +191,8 @@ func TestOrbsVotingContract_initCurrentElectionBlockNumber(t *testing.T) {
 	}{
 		{"before is 0", FIRST_ELECTION_BLOCK, 0},
 		{"before is a small number", FIRST_ELECTION_BLOCK, 5000000},
-		{"before is after first but before second", FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS, 7480969},
-		{"before is after second", FIRST_ELECTION_BLOCK + 2*ELECTION_PERIOD_LENGTH_IN_BLOCKS, 7495969},
+		{"before is after first but before second", FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS, FIRST_ELECTION_BLOCK + 5000},
+		{"before is after second", FIRST_ELECTION_BLOCK + 2*ELECTION_PERIOD_LENGTH_IN_BLOCKS, FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS + 5000},
 	}
 	for i := range tests {
 		cTest := tests[i]
