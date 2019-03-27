@@ -1,5 +1,5 @@
-// Copyright 2019 the orbs-network-go authors
-// This file is part of the orbs-network-go library in the Orbs project.
+// Copyright 2019 the orbs-ethereum-contracts authors
+// This file is part of the orbs-ethereum-contracts library in the Orbs project.
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
@@ -648,7 +648,6 @@ func TestOrbsVotingContract_processVote_guardiansCastVotes(t *testing.T) {
 		for i := range tests {
 			cTest := tests[i]
 			candidatesVotes, total, _, _ := _guardiansCastVotes(cTest.guardianStake, relationship, delegatorStakes)
-			// TODO v1 Noam ... check this ?
 			require.EqualValues(t, cTest.expectedTotal, total)
 			for validator, vote := range cTest.expect {
 				require.EqualValues(t, vote, candidatesVotes[validator])

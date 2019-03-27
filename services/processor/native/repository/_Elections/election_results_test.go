@@ -1,5 +1,5 @@
-// Copyright 2019 the orbs-network-go authors
-// This file is part of the orbs-network-go library in the Orbs project.
+// Copyright 2019 the orbs-ethereum-contracts authors
+// This file is part of the orbs-ethereum-contracts library in the Orbs project.
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
@@ -191,8 +191,8 @@ func TestOrbsVotingContract_initCurrentElectionBlockNumber(t *testing.T) {
 	}{
 		{"before is 0", FIRST_ELECTION_BLOCK, 0},
 		{"before is a small number", FIRST_ELECTION_BLOCK, 5000000},
-		{"before is after first but before second", FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS, 7480969},
-		{"before is after second", FIRST_ELECTION_BLOCK + 2*ELECTION_PERIOD_LENGTH_IN_BLOCKS, 7495969},
+		{"before is after first but before second", FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS, FIRST_ELECTION_BLOCK + 5000},
+		{"before is after second", FIRST_ELECTION_BLOCK + 2*ELECTION_PERIOD_LENGTH_IN_BLOCKS, FIRST_ELECTION_BLOCK + ELECTION_PERIOD_LENGTH_IN_BLOCKS + 5000},
 	}
 	for i := range tests {
 		cTest := tests[i]
