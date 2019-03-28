@@ -145,7 +145,7 @@ func (s *service) notifyConsensusAlgos(
 		}
 	}
 
-	if verifyMode && verifiedCount == 0 {
+	if verifyMode && verifiedCount == 0 && ctx.Err() == nil { // only log errors if system is not shutting down
 		for _, err := range verifyErrors {
 			s.logger.Error("consensus algo refused to validate block", log.Error(err))
 		}
