@@ -134,7 +134,7 @@ func (s *service) notifyConsensusAlgos(
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
 
-	var latestErr error
+	var verifyErrors []error
 	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, latestErr := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
@@ -144,18 +144,16 @@ func (s *service) notifyConsensusAlgos(
 			PrevCommittedBlockPair: prevBlockPair, // TODO (v1) rename to HandleBlockConsensusInput.PrevCommittedBlockPair to PrevBlockPair
 		})
 
-		if latestErr != nil {
-			s.logger.Info("notifyConsensusAlgos(): failed HandleBlockConsensus()", log.Error(latestErr))
-		}
-
 		if verifyMode && latestErr == nil {
 			verifiedCount++
+		} else {
+			verifyErrors = append(verifyErrors, latestErr)
 		}
 	}
 
 	if verifyMode && verifiedCount == 0 {
-		if latestErr != nil {
-			s.logger.Info("notifyConsensusAlgos() error", log.Error(latestErr))
+		for _, err := range verifyErrors {
+			s.logger.Error("consensus algo refused to validate block", log.Error(err))
 		}
 		return errors.Errorf("all consensus %d algos refused to validate the block", len(s.consensusBlocksHandlers.handlers))
 	}
