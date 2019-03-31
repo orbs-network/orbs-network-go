@@ -26,12 +26,10 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
-		harness.start(ctx)
 
 		updateConsensusAlgoHeight := make(chan struct{})
 
 		targetBlockHeight := primitives.BlockHeight(100)
-		startFakeSingleThreadedConsensusAlgo(t, ctx, harness, targetBlockHeight, updateConsensusAlgoHeight)
 
 		var topReportedHeight primitives.BlockHeight
 		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
@@ -43,7 +41,10 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 			return nil, nil
 		}).AtLeast(0)
 
-		require.Truef(t, test.Eventually(15*time.Second, func() bool { // TODO V1 reduce timeout period once cpunoiser is killed
+		harness.start(ctx)
+		startFakeSingleThreadedConsensusAlgo(t, ctx, harness, targetBlockHeight, updateConsensusAlgoHeight)
+
+		require.Truef(t, test.Eventually(15*time.Second, func() bool {
 			return topReportedHeight == targetBlockHeight
 		}), "expected blocks to be produced without deadlock, but only %d were closed", topReportedHeight)
 	})
