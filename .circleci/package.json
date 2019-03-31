@@ -1,0 +1,12 @@
+{
+  "name": "orbs-network-go-circleci",
+  "version": "1.0.0",
+  "description": "",
+  "main": "check-testnet-deployment.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.3.0"
+  }
+}

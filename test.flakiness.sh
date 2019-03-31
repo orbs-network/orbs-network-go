@@ -18,6 +18,10 @@ if [[ "${LAST_COMMIT_MESSAGE}" == *"#extraflaky"* ]]; then
 fi
 
 if [[ $1 == "NIGHTLY" ]]; then
+    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+    export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v11.2 && nvm use v11.2
+    npm install junit-xml-stats -g
+
     NIGHTLY=1
     echo "performing nightly build (count 1000/2000 , no failfast)"
     FAILFAST=""
