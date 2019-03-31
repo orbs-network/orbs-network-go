@@ -106,7 +106,8 @@ jobs:
       - run: echo 'Success'
 
   deploy_testnet:
-    machine: true
+    docker:
+      - image: circleci/node:11.2.0
     steps:
       - checkout
       - run: ./.circleci/set-aws-credentials.sh

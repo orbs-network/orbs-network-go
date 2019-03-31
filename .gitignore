@@ -13,6 +13,10 @@ _tmp
 *.so
 *.dylib
 
+.circleci/node_modules
+
+/config.json
+
 ### Go dep ###
 vendor
 
