@@ -1,6 +1,6 @@
 # Orbs Network
 
-[![Jepsen](https://circleci.com/gh/orbs-network/jepsen/tree/master.svg?style=svg)](https://circleci.com/gh/orbs-network/jepsen/tree/master)
+[![CI](https://circleci.com/gh/orbs-network/orbs-network-go/tree/master.svg?style=svg)](https://circleci.com/gh/orbs-network/orbs-network-go/tree/master)
 
 Orbs is a public blockchain infrastructure built for the needs of decentralized apps with millions of users. For more information, please check https://orbs.com and read the [white papers](https://orbs.com/white-papers).
 

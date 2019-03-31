@@ -170,12 +170,12 @@ workflows:
             branches:
               only:
                 - master
-      - e2e_testnet_benchmark:
-          requires:
-            - deploy_testnet
-      - e2e_testnet_leanhelix:
-          requires:
-            - deploy_testnet
+      # - e2e_testnet_benchmark:
+      #     requires:
+      #       - deploy_testnet
+      # - e2e_testnet_leanhelix:
+      #     requires:
+      #       - deploy_testnet
       - release_gamma:
           requires:
             - tests
