@@ -49,11 +49,18 @@ func MatchField(f *Field) Filter {
 }
 
 func IgnoreMessagesMatching(pattern string) Filter {
-	return &messageRegexp{pattern: pattern}
+	compiledPattern, _ := regexp.Compile(pattern)
+	return &messageRegexp{
+		pattern:         pattern,
+		compiledPattern: compiledPattern,
+	}
 }
 
 func IgnoreErrorsMatching(pattern string) Filter {
-	return &errorRegexp{pattern: pattern}
+	compiledPattern, _ := regexp.Compile(pattern)
+	return &errorRegexp{pattern: pattern,
+		compiledPattern: compiledPattern,
+	}
 }
 
 func DiscardAll() Filter {
@@ -65,14 +72,17 @@ func OnlyMetrics() Filter {
 }
 
 type errorRegexp struct {
-	pattern string
+	pattern         string
+	compiledPattern *regexp.Regexp
 }
 
 func (f *errorRegexp) Allows(level string, message string, fields []*Field) bool {
 	for _, field := range fields {
 		if field.Type == ErrorType {
-
-			if match, _ := regexp.MatchString(f.pattern, field.Error.Error()); match {
+			if f.compiledPattern == nil {
+				return false
+			}
+			if f.compiledPattern.MatchString(field.Error.Error()) {
 				return false
 			}
 		}
@@ -82,12 +92,15 @@ func (f *errorRegexp) Allows(level string, message string, fields []*Field) bool
 }
 
 type messageRegexp struct {
-	pattern string
+	pattern         string
+	compiledPattern *regexp.Regexp
 }
 
 func (f *messageRegexp) Allows(level string, message string, fields []*Field) bool {
-	match, _ := regexp.MatchString(f.pattern, message)
-	return !match
+	if f.compiledPattern == nil {
+		return false
+	}
+	return !f.compiledPattern.MatchString(message)
 }
 
 type onlyErrors struct {
