@@ -148,12 +148,25 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	return res
 }
 
+// Continuously retry to send a message and verify mock listeners.
+// When Transport.Send() is called we get no guarantee for delivery.
+// the returned error is not intended to reflect success in neither sending or
+// queuing of the message. error is returned only for internal configuration
+// conflicts, namely, trying to send to an unknown recipient.
+//
+// Send() will not return an error if the connection is closed, not yet connected,
+// if the buffer is overflowed, or for any other networking issue.
+//
+// For this reason we must re-Send() on every iteration of the verification loop.
+// It is also the reason why the mock verification conditions must be
+// tolerant to receiving the message more than once as it is likely
+// some listeners will receive multiple transmissings of data
 func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, sender adapter.Transport, data *adapter.TransportData) bool {
 	cfg := config.ForGossipAdapterTests(nil, 0, nil)
 	return test.Eventually(2*cfg.GossipNetworkTimeout(), func() bool {
 
-		err := sender.Send(ctx, data)
-		if err != nil {
+		err := sender.Send(ctx, data) // try to resend
+		if err != nil {               // does not indicate a failure to send, only on config issues
 			return false
 		}
 

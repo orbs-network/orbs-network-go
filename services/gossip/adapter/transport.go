@@ -22,7 +22,7 @@ type TransportData struct {
 
 type Transport interface {
 	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
-	Send(ctx context.Context, data *TransportData) error
+	Send(ctx context.Context, data *TransportData) error // TODO don't return error. misleading meaning. use panics instead
 }
 
 type TransportListener interface {
