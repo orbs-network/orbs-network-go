@@ -19,8 +19,8 @@ const REPORT_INTERVAL = 30 * time.Second
 const AGGREGATION_SPAN = 10 * time.Minute
 
 type Factory interface {
-	NewHistogram(name string, maxValue int64) *Histogram
-	NewLatency(name string, maxDuration time.Duration) *Histogram
+	NewHistogram(name string, maxValue int64) Histogram
+	NewLatency(name string, maxDuration time.Duration) Histogram
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
 	NewText(name string, defaultValue ...string) *Text
@@ -80,13 +80,13 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 	return g
 }
 
-func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
+func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) Histogram {
 	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/REPORT_INTERVAL))
 	r.register(h)
 	return h
 }
 
-func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) *Histogram {
+func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) Histogram {
 	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/REPORT_INTERVAL))
 	r.register(h)
 	return h
@@ -139,8 +139,8 @@ func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Ba
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {
 			switch m.(type) {
-			case *Histogram:
-				m.(*Histogram).Rotate()
+			case *histogram:
+				m.(*histogram).Rotate()
 			}
 		}
 	}, func() {

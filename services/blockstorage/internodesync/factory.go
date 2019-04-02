@@ -163,32 +163,32 @@ type stateMetrics struct {
 }
 
 type idleStateMetrics struct {
-	timeSpentInState *metric.Histogram
+	timeSpentInState metric.Histogram
 	timesReset       *metric.Gauge
 	timesExpired     *metric.Gauge
 }
 
 type collectingStateMetrics struct {
-	timeSpentInState                         *metric.Histogram
+	timeSpentInState                         metric.Histogram
 	timesSucceededSendingAvailabilityRequest *metric.Gauge
 	timesFailedSendingAvailabilityRequest    *metric.Gauge
 }
 
 type finishedCollectingStateMetrics struct {
-	timeSpentInState               *metric.Histogram
+	timeSpentInState               metric.Histogram
 	finishedWithNoResponsesCount   *metric.Gauge
 	finishedWithSomeResponsesCount *metric.Gauge
 }
 
 type waitingStateMetrics struct {
-	timeSpentInState *metric.Histogram
+	timeSpentInState metric.Histogram
 	timesTimeout     *metric.Gauge
 	timesSuccessful  *metric.Gauge
 	timesByzantine   *metric.Gauge
 }
 
 type processingStateMetrics struct {
-	timeSpentInState       *metric.Histogram
+	timeSpentInState       metric.Histogram
 	blocksRate             *metric.Rate
 	committedBlocks        *metric.Gauge
 	failedCommitBlocks     *metric.Gauge

@@ -43,8 +43,8 @@ type service struct {
 }
 
 type metrics struct {
-	timeSinceLastCommitMillis   *metric.Histogram
-	timeSinceLastElectionMillis *metric.Histogram
+	timeSinceLastCommitMillis   metric.Histogram
+	timeSinceLastElectionMillis metric.Histogram
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
 	lastCommittedTime           *metric.Gauge

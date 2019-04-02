@@ -14,10 +14,39 @@ import (
 	"time"
 )
 
-type Histogram struct {
+const ENABLE_HISTOGRAMS = false
+
+type Histogram interface {
+	metric
+	RecordSince(t time.Time)
+	Record(measurement int64)
+}
+
+type histogram struct {
 	namedMetric
 	histo         *hdrhistogram.WindowedHistogram
 	overflowCount int64
+}
+
+type noopHistorgram struct {
+}
+
+func (noopHistorgram) String() string {
+	return ""
+}
+
+func (noopHistorgram) Name() string {
+	return ""
+}
+
+func (noopHistorgram) Export() exportedMetric {
+	return &histogramExport{}
+}
+
+func (noopHistorgram) RecordSince(t time.Time) {
+}
+
+func (noopHistorgram) Record(measurement int64) {
 }
 
 type histogramExport struct {
@@ -39,27 +68,31 @@ func floatToMillis(nanoseconds float64) float64 {
 	return nanoseconds / 1e+6
 }
 
-func newHistogram(name string, max int64, n int) *Histogram {
-	return &Histogram{
-		namedMetric: namedMetric{name: name},
-		histo:       hdrhistogram.NewWindowed(n, 0, max, 1),
+func newHistogram(name string, max int64, n int) Histogram {
+	if ENABLE_HISTOGRAMS {
+		return &histogram{
+			namedMetric: namedMetric{name: name},
+			histo:       hdrhistogram.NewWindowed(n, 0, max, 1),
+		}
+	} else {
+		return &noopHistorgram{}
 	}
 }
 
-func (h *Histogram) RecordSince(t time.Time) {
+func (h *histogram) RecordSince(t time.Time) {
 	d := time.Since(t).Nanoseconds()
 	if err := h.histo.Current.RecordValue(int64(d)); err != nil {
 		atomic.AddInt64(&h.overflowCount, 1)
 	}
 }
 
-func (h *Histogram) Record(measurement int64) {
+func (h *histogram) Record(measurement int64) {
 	if err := h.histo.Current.RecordValue(measurement); err != nil {
 		atomic.AddInt64(&h.overflowCount, 1)
 	}
 }
 
-func (h *Histogram) String() string {
+func (h *histogram) String() string {
 	var errorRate float64
 	histo := h.histo.Current
 
@@ -82,7 +115,7 @@ func (h *Histogram) String() string {
 		errorRate)
 }
 
-func (h *Histogram) Export() exportedMetric {
+func (h *histogram) Export() exportedMetric {
 	histo := h.histo.Merge()
 
 	return &histogramExport{
@@ -97,7 +130,7 @@ func (h *Histogram) Export() exportedMetric {
 	}
 }
 
-func (h *Histogram) Rotate() {
+func (h *histogram) Rotate() {
 	h.histo.Rotate()
 }
 

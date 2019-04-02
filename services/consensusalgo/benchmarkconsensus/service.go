@@ -57,10 +57,10 @@ type service struct {
 }
 
 type metrics struct {
-	consensusRoundTickTime     *metric.Histogram
+	consensusRoundTickTime     metric.Histogram
 	failedConsensusTicksRate   *metric.Rate
 	timedOutConsensusTicksRate *metric.Rate
-	votingTime                 *metric.Histogram
+	votingTime                 metric.Histogram
 	lastCommittedTime          *metric.Gauge
 }
 

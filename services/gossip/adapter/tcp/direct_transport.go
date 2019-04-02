@@ -38,7 +38,7 @@ type metrics struct {
 	activeIncomingConnections *metric.Gauge
 	activeOutgoingConnections *metric.Gauge
 
-	outgoingMessageSize *metric.Histogram
+	outgoingMessageSize metric.Histogram
 }
 
 type directTransport struct {

@@ -21,9 +21,9 @@ import (
 var LogTag = log.Service("consensus-context")
 
 type metrics struct {
-	createTxBlockTime                         *metric.Histogram
-	createResultsBlockTime                    *metric.Histogram
-	processTransactionsSeInCreateResultsBlock *metric.Histogram
+	createTxBlockTime                         metric.Histogram
+	createResultsBlockTime                    metric.Histogram
+	processTransactionsSeInCreateResultsBlock metric.Histogram
 	transactionsRate                          *metric.Rate
 }
 

@@ -44,8 +44,8 @@ type service struct {
 
 type metrics struct {
 	deployedContracts       *metric.Gauge
-	processCallTime         *metric.Histogram
-	contractCompilationTime *metric.Histogram
+	processCallTime         metric.Histogram
+	contractCompilationTime metric.Histogram
 }
 
 func getMetrics(m metric.Factory) *metrics {
