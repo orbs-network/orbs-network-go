@@ -138,7 +138,7 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 	lastRequestedBlock := input.Message.SignedChunkRange.LastBlockHeight()
 	require.Conditionf(t, func() (success bool) {
 		return lastRequestedBlock >= firstRequestedBlock && lastRequestedBlock <= availableBlocks
-	}, "request is not consistent with my BlockAvailabilityResponse, last requested block must be between first and total (%d) but was %d", availableBlocks, lastRequestedBlock)
+	}, "request is not consistent with my BlockAvailabilityResponse, last requested block must be between first (%d) and total (%d) but was %d", firstRequestedBlock, availableBlocks, lastRequestedBlock)
 }
 
 func respondToBroadcastAvailabilityRequest(t *testing.T, ctx context.Context, harness *harness, requestInput *gossiptopics.BlockAvailabilityRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
