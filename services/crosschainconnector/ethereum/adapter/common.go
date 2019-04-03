@@ -17,6 +17,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"math/big"
+	"time"
 )
 
 type ethereumAdapterConfig interface {
@@ -27,7 +28,7 @@ type EthereumConnection interface {
 	CallContract(ctx context.Context, contractAddress []byte, packedInput []byte, blockNumber *big.Int) (packedOutput []byte, err error)
 	GetTransactionLogs(ctx context.Context, txHash primitives.Uint256, eventSignature []byte) ([]*TransactionLog, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-	ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger)
+	ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger, frequency time.Duration)
 }
 
 type connectorCommon struct {
