@@ -19,6 +19,7 @@ type metrics struct {
 	syncStatus              *metric.Text
 	lastBlock               *metric.Gauge
 	receiptsRetrievalStatus *metric.Text
+	endpoint                *metric.Text
 }
 
 const STATUS_FAILED = "failed"
@@ -32,6 +33,7 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 		syncStatus:              registry.NewText("Ethereum.Node.Sync.Status", STATUS_FAILED),
 		lastBlock:               registry.NewGauge("Ethereum.Node.LastBlock"),
 		receiptsRetrievalStatus: registry.NewText("Ethereum.Node.TransactionReceipts.Status", STATUS_FAILED),
+		endpoint:                registry.NewText("Ethereum.Node.Endpoint.Address", ""),
 	}
 
 	return statusMetrics
@@ -39,6 +41,7 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 
 func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger, frequency time.Duration) {
 	statusMetrics := createConnectionStatusMetrics(registry)
+	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
 	synchronization.NewPeriodicalTrigger(ctx, frequency, logger, func() {
 		if err := c.updateConnectionStatus(ctx, statusMetrics); err != nil {
