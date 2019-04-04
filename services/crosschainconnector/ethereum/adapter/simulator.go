@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"math/big"
 	"sync"
+	"time"
 )
 
 type EthereumSimulator struct {
@@ -82,5 +83,5 @@ func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int
 	return nil, nil
 }
 
-func (c *EthereumSimulator) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger) {
+func (c *EthereumSimulator) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger, frequency time.Duration) {
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"time"
 )
 
 type NodeLogic interface {
@@ -84,7 +85,7 @@ func NewNodeLogic(
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.PeriodicallyReport(ctx, logger)
 
-	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger)
+	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
