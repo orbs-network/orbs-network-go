@@ -11,12 +11,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io"
 	"os"
@@ -46,12 +47,12 @@ type FilesystemBlockPersistence struct {
 	bhIndex      *blockHeightIndex
 	metrics      *metrics
 	blockTracker *synchronization.BlockTracker
-	logger       log.BasicLogger
+	logger       log.Logger
 	blockWriter  *blockWriter
 	codec        blockCodec
 }
 
-func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.BasicLogger, metricFactory metric.Factory) (adapter.BlockPersistence, error) {
+func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (adapter.BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
 	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
@@ -86,7 +87,7 @@ func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersist
 	return adapter, nil
 }
 
-func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (*os.File, int64, error) {
+func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (*os.File, int64, error) {
 	dir := conf.BlockStorageFileSystemDataDir()
 	filename := blocksFileName(conf)
 	err := os.MkdirAll(dir, os.ModePerm)
@@ -115,7 +116,7 @@ func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceC
 	return file, firstBlockOffset, nil
 }
 
-func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.BasicLogger) (int64, error) {
+func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (int64, error) {
 
 	info, err := file.Stat()
 	if err != nil {
@@ -167,7 +168,7 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 	return offset, nil
 }
 
-func closeOnContextDone(ctx context.Context, file *os.File, logger log.BasicLogger) {
+func closeOnContextDone(ctx context.Context, file *os.File, logger log.Logger) {
 	go func() {
 		<-ctx.Done()
 		err := file.Close()
@@ -197,16 +198,16 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 	return result, nil
 }
 
-func buildIndex(r io.Reader, firstBlockOffset int64, logger log.BasicLogger, c blockCodec) (*blockHeightIndex, error) {
+func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec) (*blockHeightIndex, error) {
 	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
 	offset := int64(firstBlockOffset)
 	for {
 		aBlock, blockSize, err := c.decode(r)
 		if err != nil {
 			if err == io.EOF {
-				logger.Info("built index", log.Int64("valid-block-bytes", offset), log.BlockHeight(bhIndex.topBlockHeight))
+				logger.Info("built index", log.Int64("valid-block-bytes", offset), logfields.BlockHeight(bhIndex.topBlockHeight))
 			} else {
-				logger.Error("built index, found and ignoring invalid block records", log.Int64("valid-block-bytes", offset), log.Error(err), log.BlockHeight(bhIndex.topBlockHeight))
+				logger.Error("built index, found and ignoring invalid block records", log.Int64("valid-block-bytes", offset), log.Error(err), logfields.BlockHeight(bhIndex.topBlockHeight))
 			}
 			break // index up to EOF or first invalid record.
 		}
@@ -369,7 +370,7 @@ func blocksFileName(config config.FilesystemBlockPersistenceConfig) string {
 	return filepath.Join(config.BlockStorageFileSystemDataDir(), blocksFilename)
 }
 
-func closeSilently(file *os.File, logger log.BasicLogger) {
+func closeSilently(file *os.File, logger log.Logger) {
 	err := file.Close()
 	if err != nil {
 		logger.Error("failed to close file", log.Error(err), log.String("filename", file.Name()))

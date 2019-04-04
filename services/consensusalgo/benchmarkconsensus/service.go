@@ -9,7 +9,6 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,6 +17,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"math"
 	"sync"
 	"time"
@@ -41,7 +41,7 @@ type service struct {
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	logger           log.BasicLogger
+	logger           log.Logger
 	config           Config
 
 	isLeader                bool
@@ -79,7 +79,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	parentLogger log.BasicLogger,
+	parentLogger log.Logger,
 	config Config,
 	metricFactory metric.Factory,
 ) services.ConsensusAlgoBenchmark {

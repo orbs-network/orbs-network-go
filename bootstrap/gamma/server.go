@@ -9,7 +9,7 @@ package gamma
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"os"
 	"sync"
 	"time"
@@ -19,7 +19,7 @@ type GammaServer struct {
 	httpServer   httpserver.HttpServer
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
-	Logger       log.BasicLogger
+	Logger       log.Logger
 }
 
 func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string, blocking bool) *GammaServer {

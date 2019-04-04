@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
@@ -17,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
@@ -31,7 +31,7 @@ import (
 
 const blocksFilename = "blocks"
 
-func NewFilesystemAdapterDriver(logger log.BasicLogger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
+func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
 	ctx, cancelCtx := context.WithCancel(context.Background())
 
 	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())

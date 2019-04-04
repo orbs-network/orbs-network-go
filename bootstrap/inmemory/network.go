@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
@@ -27,6 +26,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math"
 	"sync"
@@ -35,7 +35,7 @@ import (
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
 	Nodes          []*Node
-	Logger         log.BasicLogger
+	Logger         log.Logger
 	Transport      adapter.Transport
 	VirtualChainId primitives.VirtualChainId
 }
@@ -48,13 +48,13 @@ type NodeDependencies struct {
 	StateBlockHeightReporter           stateStorageAdapter.BlockHeightReporter
 	TransactionPoolBlockHeightReporter *synchronization.BlockTracker
 }
-type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *NodeDependencies
+type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.Logger, metricRegistry metric.Registry) *NodeDependencies
 
 func NewNetworkWithNumOfNodes(
 	validators map[string]config.ValidatorNode,
 	nodeOrder []primitives.NodeAddress,
 	privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey,
-	parent log.BasicLogger,
+	parent log.Logger,
 	cfgTemplate config.OverridableConfig,
 	transport adapter.Transport,
 	provider nodeDependencyProvider,
@@ -109,7 +109,7 @@ func configToStr(cfgTemplate config.OverridableConfig) string {
 	return configStr
 }
 
-func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *NodeDependencies, metricRegistry metric.Registry, logger log.BasicLogger) {
+func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *NodeDependencies, metricRegistry metric.Registry, logger log.Logger) {
 
 	node := &Node{}
 	node.index = len(n.Nodes)

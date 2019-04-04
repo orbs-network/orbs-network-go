@@ -8,10 +8,10 @@ package httpserver
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"net/http"

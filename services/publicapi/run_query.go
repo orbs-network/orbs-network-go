@@ -9,11 +9,12 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -29,7 +30,7 @@ func (s *service) RunQuery(parentCtx context.Context, input *services.RunQueryIn
 
 	query := input.ClientRequest.SignedQuery().Query()
 	queryHash := digest.CalcQueryHash(query)
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Query(queryHash), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), logfields.Query(queryHash), log.String("flow", "checkpoint"))
 
 	if _, err := validateRequest(s.config, query.ProtocolVersion(), query.VirtualChainId()); err != nil {
 		logger.Info("run query received input failed", log.Error(err))

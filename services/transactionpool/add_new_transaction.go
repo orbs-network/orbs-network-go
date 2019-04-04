@@ -9,11 +9,12 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -25,13 +26,13 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 
 	txHash := digest.CalcTxHash(input.SignedTransaction.Transaction())
 
-	logger := s.logger.WithTags(log.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
+	logger := s.logger.WithTags(logfields.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
 
 	currentTime := time.Now()
 	lastCommittedBlockHeight, lastCommittedBlockTimestamp := s.lastCommittedBlockHeightAndTime()
 
 	if err := s.validationContext.ValidateAddedTransaction(input.SignedTransaction, currentTime, lastCommittedBlockTimestamp); err != nil {
-		logger.LogFailedExpectation("transaction is invalid", err.Expected, err.Actual, log.Error(err), log.BlockHeight(lastCommittedBlockHeight), log.TimestampNano("last-committed", lastCommittedBlockTimestamp))
+		logger.Info("transaction is invalid", log.Error(err), logfields.BlockHeight(lastCommittedBlockHeight), logfields.TimestampNano("last-committed", lastCommittedBlockTimestamp))
 		return s.addTransactionOutputFor(nil, err.TransactionStatus), err
 	}
 
@@ -59,7 +60,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
-func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.BasicLogger) (*services.AddNewTransactionOutput, error) {
+func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.Logger) (*services.AddNewTransactionOutput, error) {
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
 	s.addCommitLock.RLock()
 	defer s.addCommitLock.RUnlock()

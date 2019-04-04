@@ -9,7 +9,6 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
@@ -19,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
@@ -36,7 +36,7 @@ type service struct {
 
 	config config.BlockStorageConfig
 
-	logger                  log.BasicLogger
+	logger                  log.Logger
 	consensusBlocksHandlers struct {
 		sync.RWMutex
 		handlers []handlers.ConsensusBlocksHandler
@@ -60,7 +60,7 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
-	parentLogger log.BasicLogger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) services.BlockStorage {
+	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) services.BlockStorage {
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &service{

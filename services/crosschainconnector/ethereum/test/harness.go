@@ -11,12 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -27,7 +27,7 @@ type harness struct {
 	simAdapter *adapter.EthereumSimulator
 	rpcAdapter adapter.DeployingEthereumConnection
 	connector  services.CrosschainConnector
-	logger     log.BasicLogger
+	logger     log.Logger
 	address    string
 	config     *ethereumConnectorConfigForTests
 }

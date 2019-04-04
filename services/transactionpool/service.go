@@ -8,13 +8,13 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
@@ -29,7 +29,7 @@ type service struct {
 	virtualMachine             services.VirtualMachine
 	blockHeightReporter        BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
 	transactionResultsHandlers []handlers.TransactionResultsHandler
-	logger                     log.BasicLogger
+	logger                     log.Logger
 	config                     config.TransactionPoolConfig
 
 	lastCommitted struct {

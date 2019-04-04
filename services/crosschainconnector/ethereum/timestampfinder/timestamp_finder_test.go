@@ -8,10 +8,10 @@ package timestampfinder
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
@@ -20,7 +20,7 @@ import (
 
 type harness struct {
 	btg     BlockTimeGetter
-	logger  log.BasicLogger
+	logger  log.Logger
 	metrics metric.Factory
 	finder  *finder
 }

@@ -13,7 +13,7 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -23,6 +23,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -34,7 +35,7 @@ type service struct {
 	membership       *membership
 	com              *communication
 	blockProvider    *blockProvider
-	logger           log.BasicLogger
+	logger           log.Logger
 	config           config.LeanHelixConsensusConfig
 	metrics          *metrics
 	leanHelix        *leanhelix.LeanHelix
@@ -65,7 +66,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	parentLogger log.BasicLogger,
+	parentLogger log.Logger,
 	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
 
@@ -156,7 +157,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			lhBlock, lhBlockProof = s.blockProvider.GenerateGenesisBlockProposal(ctx)
 			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with GenesisBlock", log.Stringable("mode", input.Mode))
 		} else { // we should have a lhBlock proof
-			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			s.logger.Info("HandleBlockConsensus(): Calling UpdateState in LeanHelix with block", log.Stringable("mode", input.Mode), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			var err error
 			lhBlockProof, err = ExtractBlockProof(blockPair)
 			if err != nil {
@@ -194,7 +195,7 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 
 func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", log.BlockHeight(primitives.BlockHeight(block.Height())))
+	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", logfields.BlockHeight(primitives.BlockHeight(block.Height())))
 	blockPairWrapper := block.(*BlockPairWrapper)
 	blockPair := blockPairWrapper.blockPair
 
@@ -204,7 +205,7 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
-		logger.Info("onCommit - saving block to storage error: ", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+		logger.Info("onCommit - saving block to storage error: ", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 	now := time.Now()
 	s.metrics.lastCommittedTime.Update(now.UnixNano())
@@ -244,7 +245,7 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 		return errors.Errorf("saveToBlockStorage with block height 0 - genesis is not supported")
 	}
 	hash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
-	logger.Info("saving block to storage", log.Stringable("block-hash", hash), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("saving block to storage", log.Stringable("block-hash", hash), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 	_, err := s.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 		BlockPair: blockPair,
 	})

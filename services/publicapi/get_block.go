@@ -8,12 +8,13 @@ package publicapi
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -26,7 +27,7 @@ func (s *service) GetBlock(parentCtx context.Context, input *services.GetBlockIn
 		return nil, err
 	}
 
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.BlockHeight(input.ClientRequest.BlockHeight()), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), logfields.BlockHeight(input.ClientRequest.BlockHeight()), log.String("flow", "checkpoint"))
 
 	if _, err := validateRequest(s.config, input.ClientRequest.ProtocolVersion(), input.ClientRequest.VirtualChainId()); err != nil {
 		logger.Info("get block received input failed", log.Error(err))
@@ -48,7 +49,7 @@ func (s *service) GetBlock(parentCtx context.Context, input *services.GetBlockIn
 		return toGetBlockErrOutput(protocol.REQUEST_STATUS_SYSTEM_ERROR, 0, 0), err
 	}
 	if bpc.BlockPair == nil {
-		logger.Info("get block failed to get requested block height", log.BlockHeight(input.ClientRequest.BlockHeight()))
+		logger.Info("get block failed to get requested block height", logfields.BlockHeight(input.ClientRequest.BlockHeight()))
 		return s.toGetBlockErrOutputAddHeight(ctx, logger, protocol.REQUEST_STATUS_NOT_FOUND)
 	}
 
@@ -88,7 +89,7 @@ func toGetBlockOutput(bpc *protocol.BlockPairContainer) *services.GetBlockOutput
 	return &services.GetBlockOutput{ClientResponse: response.Build()}
 }
 
-func (s *service) toGetBlockErrOutputAddHeight(ctx context.Context, logger log.BasicLogger, status protocol.RequestStatus) (*services.GetBlockOutput, error) {
+func (s *service) toGetBlockErrOutputAddHeight(ctx context.Context, logger log.Logger, status protocol.RequestStatus) (*services.GetBlockOutput, error) {
 	bk, err := s.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		logger.Info("block storage failed while getting last block", log.Error(err))

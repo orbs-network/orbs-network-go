@@ -12,15 +12,16 @@ import (
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
 type validateBlockProposalContext struct {
-	logger                    log.BasicLogger
+	logger                    log.Logger
 	validateTransactionsBlock func(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error)
 	validateResultsBlock      func(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error)
 	validateBlockHash         func(blockHash primitives.Sha256, tx *protocol.TransactionsBlockContainer, rx *protocol.ResultsBlockContainer) error
@@ -83,7 +84,7 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 	if err != nil {
 		return errors.Wrapf(err, "ValidateBlockProposal blockHash mismatch, expectedBlockHash=%s", blockHash)
 	}
-	vctx.logger.Info("ValidateBlockProposal passed", log.BlockHeight(newBlockHeight))
+	vctx.logger.Info("ValidateBlockProposal passed", logfields.BlockHeight(newBlockHeight))
 	return nil
 }
 

@@ -8,8 +8,8 @@
 
 package adapter
 
-import "github.com/orbs-network/orbs-network-go/instrumentation/log"
+import "github.com/orbs-network/scribe/log"
 
-func NewNativeCompiler(config Config, logger log.BasicLogger) Compiler {
+func NewNativeCompiler(config Config, logger log.Logger) Compiler {
 	return nil
 }

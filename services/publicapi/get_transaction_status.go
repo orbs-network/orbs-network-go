@@ -9,12 +9,13 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -30,7 +31,7 @@ func (s *service) GetTransactionStatus(parentCtx context.Context, input *service
 
 	tx := input.ClientRequest.TransactionRef()
 	txHash := tx.Txhash()
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), logfields.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("get transaction status received input failed", log.Error(err))
@@ -63,7 +64,7 @@ func (s *service) getFromTxPool(ctx context.Context, txHash primitives.Sha256, t
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction txStatus failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
+		s.logger.Info("get transaction txStatus failed in transactionPool", log.Error(err), log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 		return poolOutputToTxOutput(txReceipt), err, true
 	}
 	if txReceipt.TransactionStatus == protocol.TRANSACTION_STATUS_PENDING || txReceipt.TransactionStatus == protocol.TRANSACTION_STATUS_COMMITTED {
@@ -87,7 +88,7 @@ func (s *service) getFromBlockStorage(ctx context.Context, txHash primitives.Sha
 		TransactionTimestamp: timestamp,
 	})
 	if err != nil {
-		s.logger.Info("get transaction txStatus failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
+		s.logger.Info("get transaction txStatus failed in blockStorage", log.Error(err), log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 		return nil, err
 	}
 	return blockOutputToTxOutput(txReceipt), nil

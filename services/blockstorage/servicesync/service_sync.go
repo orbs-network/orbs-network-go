@@ -9,13 +9,14 @@ package servicesync
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 )
 
 type BlockPairCommitter interface {
@@ -29,7 +30,7 @@ type blockSource interface {
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
-func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.BasicLogger) (primitives.BlockHeight, error) {
+func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.Logger) (primitives.BlockHeight, error) {
 	topBlock, err := source.GetLastBlock()
 	if err != nil {
 		return 0, err
@@ -55,10 +56,10 @@ func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPair
 	return committedHeight, nil
 }
 
-func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, committer BlockPairCommitter, logger log.BasicLogger) primitives.BlockHeight {
+func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, committer BlockPairCommitter, logger log.Logger) primitives.BlockHeight {
 	h := block.ResultsBlock.Header.BlockHeight()
 
-	logger.Info("service sync", log.BlockHeight(h))
+	logger.Info("service sync", logfields.BlockHeight(h))
 
 	// notify the receiving service of a new block
 	requestedHeight, err := committer.commitBlockPair(ctx, block)
@@ -68,12 +69,12 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	// if receiving service keep requesting the current height we are stuck
 	if h == requestedHeight {
 		// TODO (https://github.com/orbs-network/orbs-network-go/issues/617)
-		logger.Error("committer requested same block height in response to commit", log.BlockHeight(h))
+		logger.Error("committer requested same block height in response to commit", logfields.BlockHeight(h))
 	}
 	return requestedHeight
 }
 
-func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blockSource, committer BlockPairCommitter) {
+func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) {
 	ctx = trace.NewContext(ctx, committer.getServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
@@ -83,7 +84,7 @@ func NewServiceBlockSync(ctx context.Context, logger log.BasicLogger, source blo
 		for err == nil {
 			err = source.GetBlockTracker().WaitForBlock(ctx, height+1)
 			if err != nil {
-				logger.Info("service block sync failed waiting for block", log.Error(err), log.BlockHeight(primitives.BlockHeight(height)))
+				logger.Info("service block sync failed waiting for block", log.Error(err), logfields.BlockHeight(primitives.BlockHeight(height)))
 				return
 			}
 			height, err = syncToTopBlock(ctx, source, committer, logger)

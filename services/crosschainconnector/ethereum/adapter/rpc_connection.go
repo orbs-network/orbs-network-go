@@ -10,7 +10,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -27,7 +27,7 @@ type EthereumRpcConnection struct {
 	}
 }
 
-func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.BasicLogger) *EthereumRpcConnection {
+func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.Logger) *EthereumRpcConnection {
 	rpc := &EthereumRpcConnection{
 		config: config,
 	}
