@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/codahale/hdrhistogram"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -116,5 +117,15 @@ func (h *histogramExport) LogRow() []*log.Field {
 		log.Float64("max", h.Max),
 		log.Float64("avg", h.Avg),
 		log.Int64("samples", h.Samples),
+	}
+}
+
+func (h *histogramExport) PrometheusRow() []*PrometheusRow {
+	return []*PrometheusRow{
+		{h.Name, 0.01, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{h.Name, 0.5, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{h.Name, 0.95, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{h.Name, 0.99, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{h.Name, 0.999, strconv.FormatFloat(h.Min, 'f', -1, 64)},
 	}
 }

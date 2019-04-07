@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,10 +32,12 @@ type Registry interface {
 	String() string
 	ExportAll() map[string]exportedMetric
 	PeriodicallyReport(ctx context.Context, logger log.BasicLogger)
+	ExportPrometheus() string
 }
 
 type exportedMetric interface {
 	LogRow() []*log.Field
+	PrometheusRow() []*PrometheusRow
 }
 
 type metric interface {
@@ -146,4 +149,17 @@ func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Ba
 	}, func() {
 		r.report(logger)
 	})
+}
+
+func (r *inMemoryRegistry) ExportPrometheus() string {
+	metrics := r.ExportAll()
+	var rows []string
+
+	for _, v := range metrics {
+		for _, r := range v.PrometheusRow() {
+			rows = append(rows, r.String())
+		}
+	}
+
+	return strings.Join(rows, "\n")
 }

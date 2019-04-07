@@ -9,6 +9,7 @@ package metric
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"strconv"
 	"sync/atomic"
 )
 
@@ -70,5 +71,11 @@ func (g gaugeExport) LogRow() []*log.Field {
 		log.String("metric", g.Name),
 		log.String("metric-type", "gauge"),
 		log.Int64("gauge", g.Value),
+	}
+}
+
+func (g gaugeExport) PrometheusRow() []*PrometheusRow {
+	return []*PrometheusRow{
+		{g.Name, -1, strconv.FormatInt(g.Value, 10)},
 	}
 }

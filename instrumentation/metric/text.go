@@ -59,3 +59,7 @@ func (t textExport) LogRow() []*log.Field {
 		log.String("text", t.Value),
 	}
 }
+
+func (t textExport) PrometheusRow() []*PrometheusRow {
+	return nil
+}

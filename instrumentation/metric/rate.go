@@ -97,3 +97,7 @@ func (r rateExport) LogRow() []*log.Field {
 		log.Float64("interval", r.Interval),
 	}
 }
+
+func (r rateExport) PrometheusRow() []*PrometheusRow {
+	return nil
+}
