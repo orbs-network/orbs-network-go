@@ -25,7 +25,7 @@ import (
 
 const NETWORK_SIZE = 3
 const TEST_KEEP_ALIVE_INTERVAL = 20 * time.Millisecond
-const TEST_NETWORK_TIMEOUT = 20 * time.Millisecond
+const TEST_NETWORK_TIMEOUT = 1 * time.Second
 
 const HARNESS_PEER_READ_TIMEOUT = 1 * time.Second
 const HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT = 3 * time.Second
