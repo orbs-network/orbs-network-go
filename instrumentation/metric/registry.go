@@ -32,7 +32,7 @@ type Registry interface {
 	String() string
 	ExportAll() map[string]exportedMetric
 	PeriodicallyReport(ctx context.Context, logger log.BasicLogger)
-	ExportPrometheus() string
+	ExportPrometheus(...PrometheusKeyValuePair) string
 }
 
 type exportedMetric interface {
@@ -151,13 +151,13 @@ func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Ba
 	})
 }
 
-func (r *inMemoryRegistry) ExportPrometheus() string {
+func (r *inMemoryRegistry) ExportPrometheus(params ...PrometheusKeyValuePair) string {
 	metrics := r.ExportAll()
 	var rows []string
 
 	for _, v := range metrics {
 		for _, r := range v.PrometheusRow() {
-			rows = append(rows, r.String())
+			rows = append(rows, r.String(params...))
 		}
 	}
 

@@ -11,23 +11,29 @@ type PrometheusRow struct {
 	Value    string
 }
 
+type PrometheusKeyValuePair struct {
+	Name  string
+	Value string
+}
+
 func (r *PrometheusRow) name() string {
 	return strings.ReplaceAll(r.Name, ".", "_")
 }
 
 func (r *PrometheusRow) quantiles() []string {
-	if r.Quantile > 0 {
-		return []string{`quantile="` + strconv.FormatFloat(r.Quantile, 'f', -1, 64) + `"`}
-	}
 
 	return nil
 }
 
-func (r *PrometheusRow) wrapParams() string {
+func (r *PrometheusRow) wrapParams(pairs ...PrometheusKeyValuePair) string {
 	var params []string
 
-	for _, q := range r.quantiles() {
-		params = append(params, q)
+	for _, p := range pairs {
+		params = append(params, p.Name+`="`+p.Value+`"`)
+	}
+
+	if r.Quantile > 0 {
+		params = append(params, `quantile="`+strconv.FormatFloat(r.Quantile, 'f', -1, 64)+`"`)
 	}
 
 	if len(params) > 0 {
@@ -37,6 +43,6 @@ func (r *PrometheusRow) wrapParams() string {
 	return ""
 }
 
-func (r *PrometheusRow) String() string {
-	return r.name() + r.wrapParams() + " " + r.Value
+func (r *PrometheusRow) String(pairs ...PrometheusKeyValuePair) string {
+	return r.name() + r.wrapParams(pairs...) + " " + r.Value
 }
