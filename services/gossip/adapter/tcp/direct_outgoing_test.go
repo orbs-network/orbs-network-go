@@ -109,15 +109,9 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      h.config.NodeAddress(),
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
-			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
-		})
-		require.NoError(t, err, "adapter Send should not fail")
-
-		h.peersListenersConnections[1].Close() // break the pipe during Send
+		// simulate some network issue supposedly leading to a closed connection
+		err := h.peersListenersConnections[1].Close()
+		require.NoError(t, err, "expected the connection to successfully close")
 
 		h.peersListenersConnections[1], err = h.peersListeners[1].Accept()
 		require.NoError(t, err, "test peer server did not accept new connection from local transport")
