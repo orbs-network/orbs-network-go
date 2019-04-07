@@ -6,7 +6,9 @@
 
 package httpserver
 
-import "github.com/orbs-network/orbs-network-go/config"
+import (
+	"github.com/orbs-network/orbs-network-go/config"
+)
 
 type ServerConfig struct {
 	httpAddress string

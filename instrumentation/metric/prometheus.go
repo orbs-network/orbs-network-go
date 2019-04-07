@@ -17,7 +17,7 @@ type PrometheusKeyValuePair struct {
 }
 
 func (r *PrometheusRow) name() string {
-	return strings.ReplaceAll(r.Name, ".", "_")
+	return strings.Replace(r.Name, ".", "_", -1)
 }
 
 func (r *PrometheusRow) quantiles() []string {
