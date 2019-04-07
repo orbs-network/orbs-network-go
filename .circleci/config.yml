@@ -56,6 +56,9 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: go get -u github.com/orbs-network/go-junit-report
+      - run: curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+      - run: export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v11.2 && nvm use v11.2
+      - run: npm install junit-xml-stats -g
       - run:
           command: ./test.flakiness.sh NIGHTLY
           no_output_timeout: 300m
