@@ -19,6 +19,7 @@ type metrics struct {
 	syncStatus              *metric.Text
 	lastBlock               *metric.Gauge
 	receiptsRetrievalStatus *metric.Text
+	endpoint                *metric.Text
 }
 
 const STATUS_FAILED = "failed"
@@ -27,37 +28,55 @@ const STATUS_IN_PROGRESS = "in-progress"
 
 const ARBITRARY_TXHASH = "0xb41e0591756bd1331de35eac3e3da460c9b3503d10e7bf08b84f057f489cd189"
 
-func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger) {
-	metrics := &metrics{
+func createConnectionStatusMetrics(registry metric.Registry) *metrics {
+	statusMetrics := &metrics{
 		syncStatus:              registry.NewText("Ethereum.Node.Sync.Status", STATUS_FAILED),
 		lastBlock:               registry.NewGauge("Ethereum.Node.LastBlock"),
 		receiptsRetrievalStatus: registry.NewText("Ethereum.Node.TransactionReceipts.Status", STATUS_FAILED),
+		endpoint:                registry.NewText("Ethereum.Node.Endpoint.Address", ""),
 	}
 
-	synchronization.NewPeriodicalTrigger(ctx, 30*time.Second, logger, func() {
-		if receipt, err := c.Receipt(common.HexToHash(ARBITRARY_TXHASH)); err != nil {
-			logger.Info("ethereum rpc connection status check failed", log.Error(err))
-			metrics.receiptsRetrievalStatus.Update(STATUS_FAILED)
-		} else if len(receipt.Logs) > 0 {
-			metrics.receiptsRetrievalStatus.Update(STATUS_SUCCESS)
-		} else {
-			metrics.receiptsRetrievalStatus.Update(STATUS_FAILED)
-		}
+	return statusMetrics
+}
 
-		if syncStatus, err := c.SyncProgress(); err != nil {
-			logger.Info("ethereum rpc connection status check failed", log.Error(err))
-			metrics.syncStatus.Update(STATUS_FAILED)
-		} else if syncStatus == nil {
-			metrics.syncStatus.Update(STATUS_SUCCESS)
-		} else {
-			metrics.syncStatus.Update(STATUS_IN_PROGRESS)
-		}
+func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger, frequency time.Duration) {
+	statusMetrics := createConnectionStatusMetrics(registry)
+	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
-		if header, err := c.HeaderByNumber(ctx, nil); err != nil {
+	synchronization.NewPeriodicalTrigger(ctx, frequency, logger, func() {
+		if err := c.updateConnectionStatus(ctx, statusMetrics); err != nil {
 			logger.Info("ethereum rpc connection status check failed", log.Error(err))
-			metrics.lastBlock.Update(0)
-		} else {
-			metrics.lastBlock.Update(header.Number.Int64())
 		}
 	}, nil)
+}
+
+func (c *EthereumRpcConnection) updateConnectionStatus(ctx context.Context, m *metrics) error {
+	// we always run all checks, and return an error in any of them - its the metrics that matter
+	var ethError error
+	if receipt, err := c.Receipt(common.HexToHash(ARBITRARY_TXHASH)); err != nil {
+		ethError = err
+		m.receiptsRetrievalStatus.Update(STATUS_FAILED)
+	} else if len(receipt.Logs) > 0 {
+		m.receiptsRetrievalStatus.Update(STATUS_SUCCESS)
+	} else {
+		m.receiptsRetrievalStatus.Update(STATUS_FAILED)
+	}
+
+	if syncStatus, err := c.SyncProgress(); err != nil {
+		ethError = err
+		m.syncStatus.Update(STATUS_FAILED)
+	} else if syncStatus == nil {
+		m.syncStatus.Update(STATUS_SUCCESS)
+	} else {
+		m.syncStatus.Update(STATUS_IN_PROGRESS)
+	}
+
+	if header, err := c.HeaderByNumber(ctx, nil); err != nil {
+		ethError = err
+		m.lastBlock.Update(0)
+	} else {
+		m.lastBlock.Update(header.Number.Int64())
+	}
+
+	return ethError
 }

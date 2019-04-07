@@ -27,22 +27,23 @@ func NewTestOutput(tb TLog, formatter LogFormatter) *TestOutput {
 }
 
 type TestOutput struct {
-	formatter      LogFormatter
-	tb             TLog
-	stopLogging    bool
-	allowedErrors  []string
-	hasErrors      bool
-	testTerminated bool
+	formatter            LogFormatter
+	tb                   TLog
+	stopLogging          bool
+	allowedErrors        []string
+	allowedErrorPatterns []*regexp.Regexp
+	hasErrors            bool
+	testTerminated       bool
 }
 
 func (o *TestOutput) allowed(message string, fields []*Field) bool {
-	for _, allowedMessage := range o.allowedErrors {
-		if matched, _ := regexp.MatchString(allowedMessage, message); matched {
+	for _, allowedPattern := range o.allowedErrorPatterns {
+		if allowedPattern.MatchString(message) {
 			return true
 		}
 		for _, f := range fields {
 			if f.Key == "error" {
-				if matched, _ := regexp.MatchString(allowedMessage, f.String()); matched {
+				if allowedPattern.MatchString(f.String()) {
 					return true
 				}
 			}
@@ -53,7 +54,9 @@ func (o *TestOutput) allowed(message string, fields []*Field) bool {
 }
 
 func (o *TestOutput) AllowErrorsMatching(pattern string) {
+	compiledPattern, _ := regexp.Compile(pattern)
 	o.allowedErrors = append(o.allowedErrors, pattern)
+	o.allowedErrorPatterns = append(o.allowedErrorPatterns, compiledPattern)
 }
 
 func (o *TestOutput) HasErrors() bool {

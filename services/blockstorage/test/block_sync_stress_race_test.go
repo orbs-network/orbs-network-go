@@ -58,7 +58,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 
 		harness.start(ctx)
 
-		passed := test.Eventually(10*time.Second, func() bool { // wait for sync flow to complete successfully:
+		passed := test.Eventually(25*time.Second, func() bool { // wait for sync flow to complete successfully:
 			return done
 		})
 		require.True(t, passed, "timed out waiting for passing conditions")
