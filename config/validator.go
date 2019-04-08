@@ -8,7 +8,7 @@ package config
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -16,10 +16,10 @@ import (
 )
 
 type validator struct {
-	logger log.BasicLogger
+	logger log.Logger
 }
 
-func NewValidator(logger log.BasicLogger) *validator {
+func NewValidator(logger log.Logger) *validator {
 	return &validator{logger: logger}
 }
 

@@ -10,11 +10,12 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -41,7 +42,7 @@ type service struct {
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
 	config          config.ConsensusContextConfig
-	logger          log.BasicLogger
+	logger          log.Logger
 
 	metrics *metrics
 }
@@ -51,7 +52,7 @@ func NewConsensusContext(
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
 	config config.ConsensusContextConfig,
-	logger log.BasicLogger,
+	logger log.Logger,
 	metricFactory metric.Factory,
 ) services.ConsensusContext {
 
@@ -67,7 +68,7 @@ func NewConsensusContext(
 
 func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("starting to create transactions block", log.BlockHeight(input.CurrentBlockHeight))
+	logger.Info("starting to create transactions block", logfields.BlockHeight(input.CurrentBlockHeight))
 	txBlock, err := s.createTransactionsBlock(ctx, input)
 	if err != nil {
 		logger.Info("failed to create transactions block", log.Error(err))
@@ -75,17 +76,17 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 	}
 
 	s.metrics.transactionsRate.Measure(int64(len(txBlock.SignedTransactions)))
-	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
+	logger.Info("created Transactions block", log.Int("num-transactions", len(txBlock.SignedTransactions)), logfields.BlockHeight(input.CurrentBlockHeight))
 	s.printTxHash(logger, txBlock)
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
 }
 
-func (s *service) printTxHash(logger log.BasicLogger, txBlock *protocol.TransactionsBlockContainer) {
+func (s *service) printTxHash(logger log.Logger, txBlock *protocol.TransactionsBlockContainer) {
 	for _, tx := range txBlock.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), log.Transaction(txHash), log.BlockHeight(txBlock.Header.BlockHeight()))
+		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), logfields.Transaction(txHash), logfields.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 }
 
@@ -97,7 +98,7 @@ func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.Re
 		return nil, err
 	}
 
-	logger.Info("created Results block", log.Int("num-receipts", len(rxBlock.TransactionReceipts)), log.BlockHeight(input.CurrentBlockHeight))
+	logger.Info("created Results block", log.Int("num-receipts", len(rxBlock.TransactionReceipts)), logfields.BlockHeight(input.CurrentBlockHeight))
 
 	return &services.RequestNewResultsBlockOutput{
 		ResultsBlock: rxBlock,

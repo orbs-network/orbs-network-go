@@ -10,13 +10,13 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.BasicLogger, overrideConfigJson string) *inmemory.Network {
+func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, overrideConfigJson string) *inmemory.Network {
 	numNodes := 2
 	logger.Info("creating development network")
 

@@ -8,8 +8,8 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/scribe/log"
 	"golang.org/x/time/rate"
 	"sync"
 	"testing"

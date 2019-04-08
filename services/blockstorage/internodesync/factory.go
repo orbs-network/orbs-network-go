@@ -7,12 +7,12 @@
 package internodesync
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -24,7 +24,7 @@ type stateFactory struct {
 	createCollectTimeoutTimer       func() *synchronization.Timer
 	createNoCommitTimeoutTimer      func() *synchronization.Timer
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer
-	logger                          log.BasicLogger
+	logger                          log.Logger
 	metrics                         *stateMetrics
 }
 
@@ -33,7 +33,7 @@ func NewStateFactory(
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
 	conduit blockSyncConduit,
-	logger log.BasicLogger,
+	logger log.Logger,
 	factory metric.Factory,
 ) *stateFactory {
 	return NewStateFactoryWithTimers(
@@ -56,7 +56,7 @@ func NewStateFactoryWithTimers(
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
-	logger log.BasicLogger,
+	logger log.Logger,
 	factory metric.Factory,
 ) *stateFactory {
 

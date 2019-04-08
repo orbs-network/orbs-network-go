@@ -9,7 +9,7 @@ package e2e
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -57,7 +57,7 @@ func cleanBlockStorage() {
 	_ = os.RemoveAll(blockStorageDataDirPrefix)
 }
 
-func deployBlockStorageFiles(targetDir string, logger log.BasicLogger) {
+func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 	err := os.MkdirAll(targetDir, os.ModePerm)
 	if err != nil {
 		panic(fmt.Sprintf("could not create directory %s: %e", targetDir, err))

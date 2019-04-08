@@ -9,9 +9,9 @@ package metric
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,7 +33,7 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	PeriodicallyReport(ctx context.Context, logger log.BasicLogger)
+	PeriodicallyReport(ctx context.Context, logger log.Logger)
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 }
@@ -129,7 +129,7 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) report(logger log.BasicLogger) {
+func (r *inMemoryRegistry) report(logger log.Logger) {
 	for _, value := range r.ExportAll() {
 		if logRow := value.LogRow(); logRow != nil {
 			logger.Metric(logRow...)
@@ -137,7 +137,7 @@ func (r *inMemoryRegistry) report(logger log.BasicLogger) {
 	}
 }
 
-func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.BasicLogger) {
+func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Logger) {
 	synchronization.NewPeriodicalTrigger(ctx, REPORT_INTERVAL, logger, func() {
 		r.report(logger)
 

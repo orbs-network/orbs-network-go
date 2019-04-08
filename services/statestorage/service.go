@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -43,14 +44,14 @@ type service struct {
 	config         config.StateStorageConfig
 	blockTracker   *synchronization.BlockTracker
 	heightReporter adapter.BlockHeightReporter
-	logger         log.BasicLogger
+	logger         log.Logger
 	metrics        *metrics
 
 	mutex     sync.RWMutex
 	revisions *rollingRevisions
 }
 
-func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, heightReporter adapter.BlockHeightReporter, parent log.BasicLogger, metricFactory metric.Factory) services.StateStorage {
+func NewStateStorage(config config.StateStorageConfig, persistence adapter.StatePersistence, heightReporter adapter.BlockHeightReporter, parent log.Logger, metricFactory metric.Factory) services.StateStorage {
 	forest, _ := merkle.NewForest()
 	logger := parent.WithTags(LogTag)
 	if heightReporter == nil {
@@ -81,7 +82,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	logger.Info("trying to commit state diff", log.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
+	logger.Info("trying to commit state diff", logfields.BlockHeight(commitBlockHeight), log.Int("number-of-state-diffs", len(input.ContractStateDiffs)))
 
 	currentHeight := s.revisions.getCurrentHeight()
 	if currentHeight+1 != commitBlockHeight {
@@ -154,7 +155,7 @@ func (s *service) GetStateStorageBlockHeight(ctx context.Context, input *service
 		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
 		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
 	}
-	s.logger.Info("state storage block height requested", log.BlockHeight(result.LastCommittedBlockHeight))
+	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.LastCommittedBlockHeight))
 	return result, nil
 }
 

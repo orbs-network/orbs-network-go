@@ -9,9 +9,10 @@ package leanhelixconsensus
 import (
 	"context"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"strconv"
 	"strings"
 )
@@ -19,11 +20,11 @@ import (
 type membership struct {
 	memberId         primitives.NodeAddress
 	consensusContext services.ConsensusContext
-	logger           log.BasicLogger
+	logger           log.Logger
 	maxCommitteeSize uint32
 }
 
-func NewMembership(logger log.BasicLogger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext, maxCommitteeSize uint32) *membership {
+func NewMembership(logger log.Logger, memberId primitives.NodeAddress, consensusContext services.ConsensusContext, maxCommitteeSize uint32) *membership {
 	if consensusContext == nil {
 		panic("consensusContext cannot be nil")
 	}
@@ -61,7 +62,7 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 	nodeAddresses := toMemberIds(res.NodeAddresses)
 	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
 	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
-	m.logger.Info("Received committee members", log.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
+	m.logger.Info("Received committee members", logfields.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
 	return nodeAddresses, nil
 }

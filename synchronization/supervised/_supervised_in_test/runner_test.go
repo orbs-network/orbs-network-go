@@ -7,9 +7,9 @@
 package _supervised_in_test
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	logLine "github.com/orbs-network/orbs-network-go/synchronization/supervised/test"
+	"github.com/orbs-network/scribe/log"
 	"testing"
 	"time"
 )

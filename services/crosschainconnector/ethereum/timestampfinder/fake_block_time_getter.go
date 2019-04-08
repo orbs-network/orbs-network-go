@@ -8,7 +8,7 @@ package timestampfinder
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
 	"time"
@@ -22,12 +22,12 @@ var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS,
 
 type FakeBlockTimeGetter struct {
 	data        map[int64]int64 // block number -> timestamp in seconds
-	logger      log.BasicLogger
+	logger      log.Logger
 	TimesCalled int
 	Latency     time.Duration
 }
 
-func NewFakeBlockTimeGetter(logger log.BasicLogger) *FakeBlockTimeGetter {
+func NewFakeBlockTimeGetter(logger log.Logger) *FakeBlockTimeGetter {
 	f := &FakeBlockTimeGetter{
 		data:    make(map[int64]int64),
 		Latency: 0,

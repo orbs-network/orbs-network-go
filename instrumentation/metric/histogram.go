@@ -9,7 +9,7 @@ package metric
 import (
 	"fmt"
 	"github.com/codahale/hdrhistogram"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"strconv"
 	"sync/atomic"
 	"time"

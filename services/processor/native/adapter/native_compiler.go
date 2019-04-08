@@ -13,8 +13,8 @@ import (
 	"encoding/hex"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
@@ -30,10 +30,10 @@ var LogTag = log.String("adapter", "processor-native")
 
 type nativeCompiler struct {
 	config Config
-	logger log.BasicLogger
+	logger log.Logger
 }
 
-func NewNativeCompiler(config Config, logger log.BasicLogger) Compiler {
+func NewNativeCompiler(config Config, logger log.Logger) Compiler {
 	c := &nativeCompiler{
 		config: config,
 		logger: logger.WithTags(LogTag),
