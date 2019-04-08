@@ -8,8 +8,8 @@ package metric
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/scribe/log"
 	"runtime"
 	"time"
 )
@@ -32,7 +32,7 @@ type runtimeReporter struct {
 	started time.Time
 }
 
-func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
+func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) interface{} {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
 			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc.Bytes"),
@@ -54,7 +54,7 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.B
 	return r
 }
 
-func (r *runtimeReporter) startReporting(ctx context.Context, logger log.BasicLogger) {
+func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) {
 	synchronization.NewPeriodicalTrigger(ctx, 5*time.Second, logger, func() {
 		r.reportRuntimeMetrics()
 	}, nil)

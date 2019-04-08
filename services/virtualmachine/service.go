@@ -8,13 +8,14 @@ package virtualmachine
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -24,7 +25,7 @@ type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	logger               log.BasicLogger
+	logger               log.Logger
 
 	contexts *executionContextProvider
 }
@@ -33,7 +34,7 @@ func NewVirtualMachine(
 	stateStorage services.StateStorage,
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
-	logger log.BasicLogger,
+	logger log.Logger,
 ) services.VirtualMachine {
 
 	s := &service{
@@ -69,7 +70,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 		}, err
 	}
 
-	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), log.BlockHeight(committedBlockHeight))
+	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
 	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
@@ -90,7 +91,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 func (s *service) ProcessTransactionSet(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), log.BlockHeight(input.CurrentBlockHeight))
+	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), logfields.BlockHeight(input.CurrentBlockHeight))
 	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
@@ -121,9 +122,9 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 
 	if err != nil {
-		logger.Info("performed pre order checks", log.Error(err), log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", log.Error(err), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
-		logger.Info("performed pre order checks", log.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("performed pre order checks", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
 
 	return &services.TransactionSetPreOrderOutput{
@@ -134,7 +135,7 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 func (s *service) CallSystemContract(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.BlockHeight(input.BlockHeight))
+	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), logfields.BlockHeight(input.BlockHeight))
 	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()

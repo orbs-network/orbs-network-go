@@ -9,9 +9,9 @@ package adapter
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -39,7 +39,7 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 	return statusMetrics
 }
 
-func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger, frequency time.Duration) {
+func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) {
 	statusMetrics := createConnectionStatusMetrics(registry)
 	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 

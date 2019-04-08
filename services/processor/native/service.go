@@ -11,7 +11,6 @@ import (
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
@@ -20,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
@@ -27,7 +27,7 @@ import (
 var LogTag = log.Service("processor-native")
 
 type service struct {
-	logger     log.BasicLogger
+	logger     log.Logger
 	config     config.NativeProcessorConfig
 	compiler   adapter.Compiler
 	sdkHandler handlers.ContractSdkCallHandler
@@ -56,7 +56,7 @@ func getMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, logger log.BasicLogger, metricFactory metric.Factory) services.Processor {
+func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, logger log.Logger, metricFactory metric.Factory) services.Processor {
 	s := &service{
 		compiler: compiler,
 		config:   config,

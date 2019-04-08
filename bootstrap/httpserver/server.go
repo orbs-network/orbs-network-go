@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 )
 
 var LogTag = log.String("adapter", "http-server")
@@ -40,7 +40,7 @@ type HttpServer interface {
 
 type server struct {
 	httpServer     *http.Server
-	logger         log.BasicLogger
+	logger         log.Logger
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
 	config         config.HttpServerConfig
@@ -68,7 +68,7 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(cfg config.HttpServerConfig, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
+func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
 		logger:         logger.WithTags(LogTag),
 		publicApi:      publicApi,

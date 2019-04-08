@@ -9,11 +9,12 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -51,7 +52,7 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 
 	tx := request.SignedTransaction().Transaction()
 	txHash := digest.CalcTxHash(tx)
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), logfields.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		s.metrics.totalTransactionsErrInvalidRequest.Inc()

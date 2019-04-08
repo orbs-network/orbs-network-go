@@ -10,8 +10,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/c9s/goprocinfo/linux"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/scribe/log"
 	"os"
 	"time"
 )
@@ -25,7 +25,7 @@ type systemReporter struct {
 	metrics systemMetrics
 }
 
-func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.BasicLogger) interface{} {
+func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Logger) interface{} {
 	r := &systemReporter{
 		metrics: systemMetrics{
 			rssBytes:       metricFactory.NewGauge("OS.Process.Memory.Bytes"),
@@ -37,7 +37,7 @@ func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Ba
 	return r
 }
 
-func (r *systemReporter) startReporting(ctx context.Context, logger log.BasicLogger) {
+func (r *systemReporter) startReporting(ctx context.Context, logger log.Logger) {
 	synchronization.NewPeriodicalTrigger(ctx, 3*time.Second, logger, func() {
 		r.reportSystemMetrics(logger)
 	}, nil)
@@ -45,7 +45,7 @@ func (r *systemReporter) startReporting(ctx context.Context, logger log.BasicLog
 
 const PAGESIZE = 4096
 
-func (r *systemReporter) reportSystemMetrics(logger log.BasicLogger) {
+func (r *systemReporter) reportSystemMetrics(logger log.Logger) {
 	if _, err := os.Stat("/proc"); os.IsNotExist(err) {
 		return
 	}

@@ -10,13 +10,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"testing"
 )
 
@@ -25,7 +25,7 @@ type harness struct {
 	stateStorage         *services.MockStateStorage
 	processors           map[protocol.ProcessorType]*services.MockProcessor
 	crosschainConnectors map[protocol.CrosschainConnectorType]*services.MockCrosschainConnector
-	logger               log.BasicLogger
+	logger               log.Logger
 	service              services.VirtualMachine
 }
 

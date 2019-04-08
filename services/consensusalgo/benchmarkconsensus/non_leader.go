@@ -9,12 +9,13 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -103,7 +104,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 		return errors.New("proof does not have a signer, unclear who to reply to")
 	}
 	recipient := signerIterator.NextNodes().SenderNodeAddress()
-	logger.Info("replying committed with last committed height", log.BlockHeight(lastCommittedBlockHeight), log.Bytes("signed-data", status.Raw()))
+	logger.Info("replying committed with last committed height", logfields.BlockHeight(lastCommittedBlockHeight), log.Bytes("signed-data", status.Raw()))
 	_, err = s.gossip.SendBenchmarkConsensusCommitted(ctx, &gossiptopics.BenchmarkConsensusCommittedInput{
 		RecipientNodeAddress: recipient,
 		Message:              message,

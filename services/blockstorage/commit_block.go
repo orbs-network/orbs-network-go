@@ -8,10 +8,11 @@ package blockstorage
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -29,7 +30,7 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	txBlockHeader := input.BlockPair.TransactionsBlock.Header
 	rsBlockHeader := input.BlockPair.ResultsBlock.Header
 
-	logger.Info("Trying to commit a block", log.BlockHeight(txBlockHeader.BlockHeight()))
+	logger.Info("Trying to commit a block", logfields.BlockHeight(txBlockHeader.BlockHeight()))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		})
 	}
 
-	logger.Info("committed a block", log.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
+	logger.Info("committed a block", logfields.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
 
 	return nil, nil
 }

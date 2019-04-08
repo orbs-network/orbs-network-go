@@ -8,11 +8,11 @@ package internodesync
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -20,7 +20,7 @@ type collectingAvailabilityResponsesState struct {
 	factory     *stateFactory
 	client      *blockSyncClient
 	createTimer func() *synchronization.Timer
-	logger      log.BasicLogger
+	logger      log.Logger
 	conduit     blockSyncConduit
 	metrics     collectingStateMetrics
 }

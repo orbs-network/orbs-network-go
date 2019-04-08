@@ -11,7 +11,7 @@ import (
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"math"
 	"time"
 )
@@ -25,11 +25,11 @@ type exponentialBackoffElectionTrigger struct {
 	blockHeight     primitives.BlockHeight
 	electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))
 	onElectionCB    func(m lhmetrics.ElectionMetrics)
-	logger          log.BasicLogger
+	logger          log.Logger
 	triggerTimer    *time.Timer
 }
 
-func NewExponentialBackoffElectionTrigger(logger log.BasicLogger, minTimeout time.Duration, onElectionCB func(m lhmetrics.ElectionMetrics)) lh.ElectionTrigger {
+func NewExponentialBackoffElectionTrigger(logger log.Logger, minTimeout time.Duration, onElectionCB func(m lhmetrics.ElectionMetrics)) lh.ElectionTrigger {
 
 	return &exponentialBackoffElectionTrigger{
 		electionChannel: make(chan func(ctx context.Context), 1), // buffered so trigger goroutine can terminate regardless of channel reader

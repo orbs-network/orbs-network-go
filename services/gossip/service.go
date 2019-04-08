@@ -8,13 +8,13 @@ package gossip
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
@@ -35,13 +35,13 @@ type gossipListeners struct {
 
 type service struct {
 	config          Config
-	logger          log.BasicLogger
+	logger          log.Logger
 	transport       adapter.Transport
 	handlers        gossipListeners
 	headerValidator *headerValidator
 }
 
-func NewGossip(transport adapter.Transport, config Config, logger log.BasicLogger) services.Gossip {
+func NewGossip(transport adapter.Transport, config Config, logger log.Logger) services.Gossip {
 	s := &service{
 		transport:       transport,
 		config:          config,

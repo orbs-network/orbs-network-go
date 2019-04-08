@@ -8,19 +8,19 @@ package internodesync
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
 type blockSyncClient struct {
 	gossip      gossiptopics.BlockSync
 	storage     BlockSyncStorage
-	logger      log.BasicLogger
+	logger      log.Logger
 	batchSize   func() uint32
 	nodeAddress func() primitives.NodeAddress
 }
@@ -28,7 +28,7 @@ type blockSyncClient struct {
 func newBlockSyncGossipClient(
 	g gossiptopics.BlockSync,
 	s BlockSyncStorage,
-	l log.BasicLogger,
+	l log.Logger,
 	batchSize func() uint32,
 	na func() primitives.NodeAddress) *blockSyncClient {
 

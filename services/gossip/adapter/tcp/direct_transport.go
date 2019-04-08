@@ -10,12 +10,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -43,7 +43,7 @@ type metrics struct {
 
 type directTransport struct {
 	config config.GossipTransportConfig
-	logger log.BasicLogger
+	logger log.Logger
 
 	outgoingPeerQueues map[string]*transportQueue
 
@@ -69,7 +69,7 @@ func getMetrics(registry metric.Registry) *metrics {
 	}
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.BasicLogger, registry metric.Registry) *directTransport {
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *directTransport {
 	t := &directTransport{
 		config: config,
 		logger: logger.WithTags(LogTag),

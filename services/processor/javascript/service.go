@@ -8,25 +8,25 @@ package javascript
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
 var LogTag = log.Service("processor-javascript")
 
 type service struct {
-	logger log.BasicLogger
+	logger log.Logger
 
 	mutex                        *sync.RWMutex
 	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
 	contractsUnderMutex          map[primitives.ContractName]string
 }
 
-func NewJavaScriptProcessor(logger log.BasicLogger) services.Processor {
+func NewJavaScriptProcessor(logger log.Logger) services.Processor {
 	return &service{
 		logger:              logger.WithTags(LogTag),
 		mutex:               &sync.RWMutex{},

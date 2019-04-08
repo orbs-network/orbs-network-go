@@ -8,12 +8,13 @@ package publicapi
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +29,7 @@ func (s *service) GetTransactionReceiptProof(parentCtx context.Context, input *s
 
 	tx := input.ClientRequest.TransactionRef()
 	txHash := tx.Txhash()
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.Transaction(txHash), log.String("flow", "checkpoint"))
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), logfields.Transaction(txHash), log.String("flow", "checkpoint"))
 
 	if txStatus, err := validateRequest(s.config, tx.ProtocolVersion(), tx.VirtualChainId()); err != nil {
 		logger.Info("get transaction receipt proof received input failed", log.Error(err))

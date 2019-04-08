@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
@@ -23,6 +22,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -80,7 +80,7 @@ type harness struct {
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
 	config         config.BlockStorageConfig
-	logger         log.BasicLogger
+	logger         log.Logger
 	logOutput      *log.TestOutput
 }
 

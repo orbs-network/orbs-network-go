@@ -7,9 +7,9 @@
 package gossip
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -20,10 +20,10 @@ type validatorConfig interface {
 
 type headerValidator struct {
 	config validatorConfig
-	logger log.BasicLogger
+	logger log.Logger
 }
 
-func newHeaderValidator(config validatorConfig, logger log.BasicLogger) *headerValidator {
+func newHeaderValidator(config validatorConfig, logger log.Logger) *headerValidator {
 	return &headerValidator{config: config, logger: logger}
 }
 

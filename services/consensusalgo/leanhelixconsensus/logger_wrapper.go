@@ -8,18 +8,18 @@ package leanhelixconsensus
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"strings"
 )
 
 type loggerWrapper struct {
-	log       log.BasicLogger
+	log       log.Logger
 	showDebug bool
 }
 
 const LH_PREFIX = "=LH= "
 
-func NewLoggerWrapper(log log.BasicLogger, showDebug bool) *loggerWrapper {
+func NewLoggerWrapper(log log.Logger, showDebug bool) *loggerWrapper {
 	return &loggerWrapper{
 		log:       log,
 		showDebug: showDebug,
