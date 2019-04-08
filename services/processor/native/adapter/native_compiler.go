@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -24,19 +25,42 @@ import (
 	"plugin"
 	"runtime"
 	"strings"
+	"time"
 )
 
 var LogTag = log.String("adapter", "processor-native")
 
-type nativeCompiler struct {
-	config Config
-	logger log.Logger
+type nativeCompilerMetrics struct {
+	lastWarmUpTimeMs *metric.Gauge
+	totalCompileTime *metric.Histogram
+	writeToDiskTime  *metric.Histogram
+	buildTime        *metric.Histogram
+	loadTime         *metric.Histogram
+	sourceSize       *metric.Histogram
 }
 
-func NewNativeCompiler(config Config, logger log.Logger) Compiler {
+type nativeCompiler struct {
+	config  Config
+	logger  log.Logger
+	metrics *nativeCompilerMetrics
+}
+
+func createNativeCompilerMetrics(factory metric.Factory) *nativeCompilerMetrics {
+	return &nativeCompilerMetrics{
+		buildTime:        factory.NewLatency("Processor.Native.Compiler.Build.Time.Millis", 60*time.Minute),
+		totalCompileTime: factory.NewLatency("Processor.Native.Compiler.Total.Compile.Time.Millis", 60*time.Minute),
+		loadTime:         factory.NewLatency("Processor.Native.Compiler.LoadObject.Time.Millis", 60*time.Minute),
+		lastWarmUpTimeMs: factory.NewGauge("Processor.Native.Compiler.LastWarmUp.Time.Millis"),
+		writeToDiskTime:  factory.NewLatency("Processor.Native.Compiler.WriteToDisk.Time.Millis", 60*time.Minute),
+		sourceSize:       factory.NewHistogram("Processor.Native.Compiler.Source.Size.Bytes", 1024*1024), // megabyte
+	}
+}
+
+func NewNativeCompiler(config Config, logger log.Logger, factory metric.Factory) Compiler {
 	c := &nativeCompiler{
-		config: config,
-		logger: logger.WithTags(LogTag),
+		config:  config,
+		logger:  logger.WithTags(LogTag),
+		metrics: createNativeCompilerMetrics(factory),
 	}
 
 	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
@@ -48,28 +72,43 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 	ctx, cancel := context.WithTimeout(context.Background(), MAX_WARM_UP_COMPILATION_TIME)
 	defer cancel()
 
+	start := time.Now()
 	_, err := c.Compile(ctx, string(contracts.SourceCodeForNop()))
+	c.metrics.lastWarmUpTimeMs.Update(time.Since(start).Nanoseconds() / int64(time.Millisecond))
+
 	if err != nil {
 		c.logger.Error("warm up compilation on init failed", log.Error(err))
 	}
 }
 
 func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
+	c.metrics.sourceSize.Record(int64(len(code)))
+	start := time.Now()
+	defer c.metrics.totalCompileTime.RecordSince(start)
+
 	artifactsPath := c.config.ProcessorArtifactPath()
 	hashOfCode := getHashOfCode(code)
 
+	writeTime := time.Now()
 	sourceCodeFilePath, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
+	c.metrics.writeToDiskTime.RecordSince(writeTime)
 	defer os.Remove(sourceCodeFilePath)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not write source code to disk")
 	}
 
+	buildTime := time.Now()
 	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePath, artifactsPath)
+	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build a shared object")
 	}
 
-	return loadSharedObject(soFilePath)
+	loadSoTime := time.Now()
+	so, err := loadSharedObject(soFilePath)
+	c.metrics.loadTime.RecordSince(loadSoTime)
+
+	return so, err
 }
 
 func getHashOfCode(code string) string {
