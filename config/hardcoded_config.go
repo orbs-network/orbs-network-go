@@ -80,6 +80,7 @@ const (
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
+	GOSSIP_RECONNECT_INTERVAL             = "GOSSIP_RECONNECT_INTERVAL"
 
 	PUBLIC_API_SEND_TRANSACTION_TIMEOUT = "PUBLIC_API_SEND_TRANSACTION_TIMEOUT"
 	PUBLIC_API_NODE_SYNC_WARNING_TIME   = "PUBLIC_API_NODE_SYNC_WARNING_TIME"
@@ -336,6 +337,10 @@ func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
 
 func (c *config) GossipNetworkTimeout() time.Duration {
 	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
+}
+
+func (c *config) GossipReconnectInterval() time.Duration {
+	return c.kv[GOSSIP_RECONNECT_INTERVAL].DurationValue
 }
 
 func (c *config) BenchmarkConsensusRequiredQuorumPercentage() uint32 {

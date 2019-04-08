@@ -26,7 +26,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 
 		if err != nil {
 			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
-			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
+			time.Sleep(t.config.GossipReconnectInterval())
 			continue
 		}
 

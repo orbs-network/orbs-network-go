@@ -24,6 +24,11 @@ import (
 )
 
 const NETWORK_SIZE = 3
+const TEST_KEEP_ALIVE_INTERVAL = 20 * time.Millisecond
+const TEST_NETWORK_TIMEOUT = 1 * time.Second
+
+const HARNESS_PEER_READ_TIMEOUT = 1 * time.Second
+const HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT = 3 * time.Second
 
 type directHarness struct {
 	config    config.GossipTransportConfig
@@ -36,21 +41,23 @@ type directHarness struct {
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	keepAliveInterval := 20 * time.Millisecond
-	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval)
+	keepAliveInterval := TEST_KEEP_ALIVE_INTERVAL
+	networkTimeout := TEST_NETWORK_TIMEOUT
+	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval, networkTimeout)
 }
 
 func newDirectHarnessWithConnectedPeersWithoutKeepAlives(t *testing.T, ctx context.Context) *directHarness {
-	keepAliveInterval := 20 * time.Hour
-	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval)
+	keepAliveInterval := 20 * time.Hour // High value to disable keep alive
+	networkTimeout := TEST_NETWORK_TIMEOUT
+	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval, networkTimeout)
 }
 
-func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Context, keepAliveInterval time.Duration) *directHarness {
+func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Context, keepAliveInterval time.Duration, networkTimeout time.Duration) *directHarness {
 
 	// order matters here
-	gossipPeers, peersListeners := makePeers(t)                           // step 1: create the peer server listeners to reserve random TCP ports
-	cfg := config.ForDirectTransportTests(gossipPeers, keepAliveInterval) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, t, cfg)                               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
+	gossipPeers, peersListeners := makePeers(t)                                           // step 1: create the peer server listeners to reserve random TCP ports
+	cfg := config.ForDirectTransportTests(gossipPeers, keepAliveInterval, networkTimeout) // step 2: create the config given the peer pk/port pairs
+	transport := makeTransport(ctx, t, cfg)                                               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
 	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
@@ -64,6 +71,11 @@ func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Co
 		peersListenersConnections: peersListenersConnections,
 		peersListeners:            peersListeners,
 	}
+
+	// prevents race condition where client loop still did not flip the outgoing queue's `disabled` flag after successfully "dialing" to the harness
+	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
+		return h.allOutgoingQueuesEnabled()
+	}), "expected all outgoing queues to become enabled after successfully connecting to peersListeners")
 
 	return h
 }
@@ -117,13 +129,15 @@ func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]b
 	buffer := make([]byte, totalSize)
 	totalRead := 0
 	for totalRead < totalSize {
-		read, err := h.peersListenersConnections[peerIndex].Read(buffer[totalRead:])
+		conn := h.peersListenersConnections[peerIndex]
+		err := conn.SetReadDeadline(time.Now().Add(HARNESS_PEER_READ_TIMEOUT)) // apply an arbitrary read timeout
+		read, err := conn.Read(buffer[totalRead:])
+		if err != nil {
+			return nil, err
+		}
 		totalRead += read
 		if totalRead == totalSize {
 			break
-		}
-		if err != nil {
-			return nil, err
 		}
 	}
 	return buffer, nil
@@ -170,6 +184,15 @@ func (h *directHarness) expectTransportListenerNotCalled() {
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
 	err := test.ConsistentlyVerify(test.CONSISTENTLY_ADAPTER_TIMEOUT, h.listenerMock)
 	require.NoError(t, err, "transport listener mock should be called as expected")
+}
+
+func (h *directHarness) allOutgoingQueuesEnabled() bool {
+	for _, queue := range h.transport.outgoingPeerQueues {
+		if queue.disabled {
+			return false
+		}
+	}
+	return true
 }
 
 func concatSlices(slices ...[]byte) []byte {
