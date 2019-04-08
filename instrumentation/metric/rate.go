@@ -98,6 +98,14 @@ func (r rateExport) LogRow() []*log.Field {
 	}
 }
 
-func (r rateExport) PrometheusRow() []*PrometheusRow {
+func (r rateExport) PrometheusRow() []*prometheusRow {
 	return nil
+}
+
+func (r rateExport) PrometheusType() string {
+	return ""
+}
+
+func (r rateExport) PrometheusName() string {
+	return ""
 }

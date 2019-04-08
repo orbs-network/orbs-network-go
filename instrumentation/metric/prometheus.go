@@ -5,35 +5,31 @@ import (
 	"strings"
 )
 
-type PrometheusRow struct {
-	Name     string
-	Quantile float64
-	Value    string
+type prometheusRow struct {
+	name     string
+	quantile float64
+	value    string
 }
 
-type PrometheusKeyValuePair struct {
-	Name  string
-	Value string
+type prometheusKeyValuePair struct {
+	name  string
+	value string
 }
 
-func (r *PrometheusRow) name() string {
-	return strings.Replace(r.Name, ".", "_", -1)
+func prometheusName(name string) string {
+	return strings.Replace(name, ".", "_", -1)
 }
 
-func (r *PrometheusRow) quantiles() []string {
-
-	return nil
-}
-
-func (r *PrometheusRow) wrapParams(pairs ...PrometheusKeyValuePair) string {
+func (r *prometheusRow) wrapParams(pairs ...prometheusKeyValuePair) string {
 	var params []string
+	pairsCopy := pairs[:]
 
-	for _, p := range pairs {
-		params = append(params, p.Name+`="`+p.Value+`"`)
+	if r.quantile > 0 {
+		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"quantile", strconv.FormatFloat(r.quantile, 'f', -1, 64)})
 	}
 
-	if r.Quantile > 0 {
-		params = append(params, `quantile="`+strconv.FormatFloat(r.Quantile, 'f', -1, 64)+`"`)
+	for _, p := range pairsCopy {
+		params = append(params, p.name+`="`+p.value+`"`)
 	}
 
 	if len(params) > 0 {
@@ -43,6 +39,6 @@ func (r *PrometheusRow) wrapParams(pairs ...PrometheusKeyValuePair) string {
 	return ""
 }
 
-func (r *PrometheusRow) String(pairs ...PrometheusKeyValuePair) string {
-	return r.name() + r.wrapParams(pairs...) + " " + r.Value
+func (r *prometheusRow) String(pairs ...prometheusKeyValuePair) string {
+	return r.name + r.wrapParams(pairs...) + " " + r.value
 }

@@ -6,12 +6,16 @@ import (
 	"time"
 )
 
+/**
+Format reference: https://prometheus.io/docs/instrumenting/exposition_formats/
+*/
 func Test_PrometheusFormatterForGauge(t *testing.T) {
 	r := NewRegistry()
 	status := r.NewGauge("Ethereum.Node.LastBlock")
 
 	result := r.ExportPrometheus()
 
+	require.Regexp(t, "# TYPE Ethereum_Node_LastBlock gauge", result)
 	require.Regexp(t, "Ethereum_Node_LastBlock 0", result)
 
 	status.Update(5123441)
@@ -34,6 +38,7 @@ func Test_PrometheusFormatterForHistogram(t *testing.T) {
 
 	result := r.ExportPrometheus()
 
+	require.Regexp(t, "# TYPE Some_Latency histogram", result)
 	require.Regexp(t, "Some_Latency{quantile=\"0.01\"} 0", result)
 	require.Regexp(t, "Some_Latency{quantile=\"0.5\"} 0", result)
 	require.Regexp(t, "Some_Latency{quantile=\"0.99\"} 0", result)

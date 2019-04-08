@@ -60,6 +60,14 @@ func (t textExport) LogRow() []*log.Field {
 	}
 }
 
-func (t textExport) PrometheusRow() []*PrometheusRow {
+func (t textExport) PrometheusRow() []*prometheusRow {
 	return nil
+}
+
+func (t textExport) PrometheusType() string {
+	return ""
+}
+
+func (t textExport) PrometheusName() string {
+	return ""
 }

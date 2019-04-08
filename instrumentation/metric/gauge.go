@@ -74,8 +74,16 @@ func (g gaugeExport) LogRow() []*log.Field {
 	}
 }
 
-func (g gaugeExport) PrometheusRow() []*PrometheusRow {
-	return []*PrometheusRow{
-		{g.Name, -1, strconv.FormatInt(g.Value, 10)},
+func (g gaugeExport) PrometheusRow() []*prometheusRow {
+	return []*prometheusRow{
+		{g.PrometheusName(), -1, strconv.FormatInt(g.Value, 10)},
 	}
+}
+
+func (g gaugeExport) PrometheusType() string {
+	return "gauge"
+}
+
+func (g gaugeExport) PrometheusName() string {
+	return prometheusName(g.Name)
 }

@@ -40,7 +40,9 @@ type Registry interface {
 
 type exportedMetric interface {
 	LogRow() []*log.Field
-	PrometheusRow() []*PrometheusRow
+	PrometheusRow() []*prometheusRow
+	PrometheusType() string
+	PrometheusName() string
 }
 
 type metric interface {
@@ -158,16 +160,20 @@ func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Lo
 func (r *inMemoryRegistry) ExportPrometheus() string {
 	metrics := r.ExportAll()
 
-	var params []PrometheusKeyValuePair
+	var params []prometheusKeyValuePair
 	if r.vcid > 0 {
 		vcid := strconv.FormatUint(uint64(r.vcid), 10)
-		params = append(params, PrometheusKeyValuePair{"vcid", vcid})
+		params = append(params, prometheusKeyValuePair{"vcid", vcid})
 	}
 
 	var rows []string
 	for _, v := range metrics {
-		for _, row := range v.PrometheusRow() {
-			rows = append(rows, row.String(params...))
+		if v.PrometheusType() != "" {
+			rows = append(rows, fmt.Sprintf("# TYPE %s %s", v.PrometheusName(), v.PrometheusType()))
+
+			for _, row := range v.PrometheusRow() {
+				rows = append(rows, row.String(params...))
+			}
 		}
 	}
 
