@@ -76,8 +76,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 100*time.Millisecond)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
+	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
-	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 5*time.Second)
 
 	// 10 minutes + 60 blocks is about 25 minutes
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Minute)
