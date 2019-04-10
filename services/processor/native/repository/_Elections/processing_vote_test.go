@@ -88,11 +88,6 @@ func TestOrbsVotingContract_processVote_CalulateStakes(t *testing.T) {
 		require.True(t, actualRuns <= expectedNumOfStateTransitions, "did not finish in correct amount of passes")
 		require.EqualValues(t, "", _getVotingProcessState())
 		require.ElementsMatch(t, [][20]byte{v1.address, v3.address, v4.address, v5.address}, elected)
-		require.EqualValues(t, 40, getCumulativeParticipationReward(d2.address[:]))
-		require.EqualValues(t, 8, getCumulativeParticipationReward(g1.address[:]))
-		require.EqualValues(t, 80, getCumulativeParticipationReward(g4.address[:]))
-		require.EqualValues(t, 16, getCumulativeParticipationReward(g2.address[:]))
-		require.EqualValues(t, 32, getCumulativeParticipationReward(g3.address[:]))
 	})
 }
 
@@ -103,15 +98,15 @@ func TestOrbsVotingContract_processVote_CalulateStakes_GuardianIsNotGuardian(t *
 	aRecentVoteBlock := h.electionBlock - 1
 
 	var v1 = h.addValidator()
-	var g1, g2 = h.addGuardian(1000), h.addGuardian(100).withIsGuardian(false)
+	var g1, g2 = h.addGuardian(100000), h.addGuardian(10000).withIsGuardian(false)
 
 	g1.vote(aRecentVoteBlock, v1)
 	g2.vote(aRecentVoteBlock, v1)
 
-	d1 := h.addDelegator(1000, g1.address)
-	h.addDelegator(1000, g1.address)
-	d3 := h.addDelegator(100, g2.address)
-	h.addDelegator(100, g2.address)
+	d1 := h.addDelegator(100000, g1.address)
+	h.addDelegator(100000, g1.address)
+	d3 := h.addDelegator(10000, g2.address)
+	h.addDelegator(10000, g2.address)
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
@@ -125,7 +120,7 @@ func TestOrbsVotingContract_processVote_CalulateStakes_GuardianIsNotGuardian(t *
 
 		// assert
 		m.VerifyMocks()
-		require.EqualValues(t, 3000, getGuardianVotingWeight(g1.address[:]))
+		require.EqualValues(t, 300000, getGuardianVotingWeight(g1.address[:]))
 		require.True(t, 0 != getCumulativeParticipationReward(d1.address[:]))
 		require.EqualValues(t, 0, getGuardianVotingWeight(g2.address[:]))
 		require.EqualValues(t, 0, getCumulativeParticipationReward(d3.address[:]))

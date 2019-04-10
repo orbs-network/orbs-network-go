@@ -24,6 +24,7 @@ var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumCon
 	getElectedValidatorsOrbsAddressByIndex, getElectedValidatorsEthereumAddressByIndex, getElectedValidatorsBlockNumberByIndex, getElectedValidatorsBlockHeightByIndex,
 	getCumulativeParticipationReward, getCumulativeGuardianExcellenceReward, getCumulativeValidatorReward,
 	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidatorStake, getValidatorVote, getExcellenceProgramGuardians,
+	_firstElectionFixRewards,
 )
 var SYSTEM = sdk.Export(_init)
 
@@ -44,6 +45,7 @@ func unsafetests_setElectedValidators(joinedAddresses []byte) {
 }
 
 func unsafetests_setElectedBlockNumber(blockNumber uint64) {
+	FIRST_ELECTION_BLOCK = blockNumber
 	_setCurrentElectionBlockNumber(blockNumber)
 }
 
