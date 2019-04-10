@@ -49,7 +49,6 @@ func Test_PrometheusFormatterForHistogram(t *testing.T) {
 
 	status.RecordSince(time.Now())
 	updatedResult := r.ExportPrometheus()
-	t.Log(result)
 	require.Regexp(t, "Some_Latency{quantile=\"0.01\"} 0.00", updatedResult)
 	require.Regexp(t, "Some_Latency{quantile=\"0.5\"} 0.00", updatedResult)
 	require.Regexp(t, "Some_Latency{quantile=\"0.99\"} 0.00", updatedResult)
