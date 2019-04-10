@@ -45,7 +45,6 @@ func unsafetests_setElectedValidators(joinedAddresses []byte) {
 }
 
 func unsafetests_setElectedBlockNumber(blockNumber uint64) {
-	FIRST_ELECTION_BLOCK = blockNumber
 	_setCurrentElectionBlockNumber(blockNumber)
 }
 
