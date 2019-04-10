@@ -61,4 +61,21 @@ func TestRecoverEcdsaSecp256K1(t *testing.T) {
 	require.EqualValues(t, kp.PublicKey(), publicKey, "recovered public key should match original")
 }
 
+func TestRecoverEcdsaSecp256K1_NilSig(t *testing.T) {
+	_, err := RecoverEcdsaSecp256K1(someDataToSign_EcdsaSecp256K1, nil)
+	require.Error(t, err, "should return error on nil sig")
+}
+
+func TestRecoverEcdsaSecp256K1_SigLengthIncorrect(t *testing.T) {
+
+	kp := keys.EcdsaSecp256K1KeyPairForTests(1)
+
+	sig, err := SignEcdsaSecp256K1(kp.PrivateKey(), someDataToSign_EcdsaSecp256K1)
+	require.NoError(t, err)
+	shortSig := sig[:ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES-1]
+
+	_, err = RecoverEcdsaSecp256K1(someDataToSign_EcdsaSecp256K1, shortSig)
+	require.Error(t, err, "should return error on incorrect sig length")
+}
+
 // TODO (v1) add benchmarks like in ed25519
