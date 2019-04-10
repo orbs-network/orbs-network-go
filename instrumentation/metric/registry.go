@@ -10,7 +10,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,10 +34,15 @@ type Registry interface {
 	String() string
 	ExportAll() map[string]exportedMetric
 	PeriodicallyReport(ctx context.Context, logger log.Logger)
+	ExportPrometheus() string
+	WithVirtualChainId(id primitives.VirtualChainId) Registry
 }
 
 type exportedMetric interface {
 	LogRow() []*log.Field
+	PrometheusRow() []*prometheusRow
+	PrometheusType() string
+	PrometheusName() string
 }
 
 type metric interface {
@@ -56,7 +64,8 @@ func NewRegistry() Registry {
 }
 
 type inMemoryRegistry struct {
-	mu struct {
+	vcid primitives.VirtualChainId
+	mu   struct {
 		sync.Mutex
 		metrics []metric
 	}
@@ -146,4 +155,32 @@ func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Lo
 	}, func() {
 		r.report(logger)
 	})
+}
+
+func (r *inMemoryRegistry) ExportPrometheus() string {
+	metrics := r.ExportAll()
+
+	var params []prometheusKeyValuePair
+	if r.vcid > 0 {
+		vcid := strconv.FormatUint(uint64(r.vcid), 10)
+		params = append(params, prometheusKeyValuePair{"vcid", vcid})
+	}
+
+	var rows []string
+	for _, v := range metrics {
+		if v.PrometheusType() != "" {
+			rows = append(rows, fmt.Sprintf("# TYPE %s %s", v.PrometheusName(), v.PrometheusType()))
+
+			for _, row := range v.PrometheusRow() {
+				rows = append(rows, row.String(params...))
+			}
+		}
+	}
+
+	return strings.Join(rows, "\n")
+}
+
+func (r *inMemoryRegistry) WithVirtualChainId(id primitives.VirtualChainId) Registry {
+	r.vcid = id
+	return r
 }

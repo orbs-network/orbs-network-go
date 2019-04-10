@@ -40,7 +40,7 @@ type node struct {
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
-	metricRegistry := metric.NewRegistry()
+	metricRegistry := metric.NewRegistry().WithVirtualChainId(nodeConfig.VirtualChainId())
 	version := config.GetVersion()
 
 	metricRegistry.NewText("Version.Semantic", version.Semantic)

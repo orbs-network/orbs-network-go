@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/codahale/hdrhistogram"
 	"github.com/orbs-network/scribe/log"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -101,7 +102,7 @@ func (h *Histogram) Rotate() {
 	h.histo.Rotate()
 }
 
-func (h *histogramExport) LogRow() []*log.Field {
+func (h histogramExport) LogRow() []*log.Field {
 	if h.Samples == 0 {
 		return nil
 	}
@@ -117,4 +118,23 @@ func (h *histogramExport) LogRow() []*log.Field {
 		log.Float64("avg", h.Avg),
 		log.Int64("samples", h.Samples),
 	}
+}
+
+func (h histogramExport) PrometheusRow() []*prometheusRow {
+	name := h.PrometheusName()
+	return []*prometheusRow{
+		{name, 0.01, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0.5, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0.95, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0.99, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0.999, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+	}
+}
+
+func (h histogramExport) PrometheusType() string {
+	return "histogram"
+}
+
+func (h histogramExport) PrometheusName() string {
+	return prometheusName(h.Name)
 }
