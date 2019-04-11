@@ -36,6 +36,7 @@ type Registry interface {
 	PeriodicallyReport(ctx context.Context, logger log.Logger)
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
+	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
 }
 
 type exportedMetric interface {
@@ -64,8 +65,9 @@ func NewRegistry() Registry {
 }
 
 type inMemoryRegistry struct {
-	vcid primitives.VirtualChainId
-	mu   struct {
+	vcid        primitives.VirtualChainId
+	nodeAddress primitives.NodeAddress
+	mu          struct {
 		sync.Mutex
 		metrics []metric
 	}
@@ -166,6 +168,10 @@ func (r *inMemoryRegistry) ExportPrometheus() string {
 		params = append(params, prometheusKeyValuePair{"vcid", vcid})
 	}
 
+	if r.nodeAddress != nil {
+		params = append(params, prometheusKeyValuePair{"node", r.nodeAddress.String()})
+	}
+
 	var rows []string
 	for _, v := range metrics {
 		if v.PrometheusType() != "" {
@@ -182,5 +188,10 @@ func (r *inMemoryRegistry) ExportPrometheus() string {
 
 func (r *inMemoryRegistry) WithVirtualChainId(id primitives.VirtualChainId) Registry {
 	r.vcid = id
+	return r
+}
+
+func (r *inMemoryRegistry) WithNodeAddress(nodeAddress primitives.NodeAddress) Registry {
+	r.nodeAddress = nodeAddress
 	return r
 }
