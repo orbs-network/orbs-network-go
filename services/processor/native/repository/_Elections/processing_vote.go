@@ -71,30 +71,6 @@ func _processVotingStateMachine() [][20]byte {
 	return nil
 }
 
-func _firstElectionFixRewards() {
-	key := []byte("_fix_rewards_first_election_")
-	if state.ReadUint32(key) == 0 {
-		candidateVotes, totalVotes, participantStakes, guardiansAccumulatedStake := _calculateVotes()
-		elected := _processValidatorsSelection(candidateVotes, totalVotes)
-		for participant, _ := range participantStakes {
-			fmt.Printf("elections %10d rewards: clear participant %x\n", getEffectiveElectionBlockNumber(), participant)
-			state.Clear(_formatCumulativeParticipationReward(participant[:]))
-		}
-		for guardian, _ := range guardiansAccumulatedStake {
-			fmt.Printf("elections %10d rewards: clear guardian %x\n", getEffectiveElectionBlockNumber(), guardian)
-			state.Clear(_formatCumulativeGuardianExcellenceReward(guardian[:]))
-		}
-		for _, validator := range elected {
-			fmt.Printf("elections %10d rewards: clear validator %x\n", getEffectiveElectionBlockNumber(), validator)
-			state.Clear(_formatCumulativeValidatorReward(validator[:]))
-		}
-		_processRewards(totalVotes, elected, participantStakes, guardiansAccumulatedStake)
-		state.WriteUint32(key, 1)
-	} else {
-		panic(fmt.Sprintf("cannot fix first election rewards anymore"))
-	}
-}
-
 func _nextProcessVotingState(stage string) {
 	_setVotingProcessItem(0)
 	_setVotingProcessState(stage)
