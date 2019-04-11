@@ -36,6 +36,26 @@ func TestOrbsVotingContract_mirrorDelegationData(t *testing.T) {
 	})
 }
 
+func TestOrbsVotingContract_mirrorDelegationDataTwice(t *testing.T) {
+	delegatorAddr := []byte{0x01}
+	agentAddr := []byte{0x02}
+	eventName := "Txt"
+	eventBlockNumber := uint64(100)
+	eventBlockTxIndex := uint32(10)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		_setCurrentElectionBlockNumber(150)
+
+		// call
+		_mirrorDelegationData(delegatorAddr, agentAddr, eventBlockNumber, eventBlockTxIndex, eventName)
+
+		require.Panics(t, func() {
+			_mirrorDelegationData(delegatorAddr, agentAddr, eventBlockNumber, eventBlockTxIndex, eventName)
+		}, "should panic because same infor twice")
+	})
+}
+
 func TestOrbsVotingContract_mirrorDelegationData_TransferDoesNotReplaceDelegate(t *testing.T) {
 	delegatorAddr := []byte{0x01}
 	agentAddr := []byte{0x02}
