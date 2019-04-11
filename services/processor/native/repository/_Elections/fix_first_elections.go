@@ -22,7 +22,7 @@ func _firstElectionFixRewards() {
 			if reward != 0 {
 				state.Clear(_formatCumulativeGuardianExcellenceReward(guardian[:]))
 				fmt.Printf("elections %10d rewards fix: clear guardian %x, orig reward %d\n", getEffectiveElectionBlockNumber(), guardian, reward)
-				reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 4179)
+				reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 2229)
 				_addCumulativeGuardianExcellenceReward(guardian[:], reward)
 				fmt.Printf("elections %10d rewards fix: guardian %x reward %d\n", getEffectiveElectionBlockNumber(), guardian, reward)
 			}
@@ -30,7 +30,7 @@ func _firstElectionFixRewards() {
 			if reward != 0 {
 				state.Clear(_formatCumulativeParticipationReward(guardian[:]))
 				fmt.Printf("elections %10d rewards fix: clear guardian participant %x orig reward %d\n", getEffectiveElectionBlockNumber(), guardian, reward)
-				reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 2229)
+				reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 4179)
 				_addCumulativeParticipationReward(guardian[:], reward)
 				fmt.Printf("elections %10d rewards fix: guardian participant %x reward %d\n", getEffectiveElectionBlockNumber(), guardian, reward)
 			}
@@ -66,7 +66,7 @@ func _firstElectionFixRewardsDelegator(delegator []byte) {
 		if reward != 0 {
 			state.Clear(_formatCumulativeParticipationReward(delegator))
 			fmt.Printf("elections %10d rewards fix: clear participant %x original %d\n", getEffectiveElectionBlockNumber(), delegator, reward)
-			reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 2229)
+			reward = safeuint64.Div(safeuint64.Mul(reward, 1000), 4179)
 			_addCumulativeParticipationReward(delegator[:], reward)
 			fmt.Printf("elections %10d rewards fix: participant %x reward %d\n", getEffectiveElectionBlockNumber(), delegator, reward)
 		}
