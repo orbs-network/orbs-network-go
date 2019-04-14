@@ -7,6 +7,7 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer/test/usecases"
 	"github.com/stretchr/testify/require"
@@ -19,4 +20,11 @@ func TestCodeWithInvalidImport(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, `native code verification error: import not allowed '"io/ioutil"'`, err.Error())
 	require.Empty(t, output)
+}
+
+func TestCodeWithJsonAndHex(t *testing.T) {
+	source := usecases.Serialization
+	output, err := sanitizer.NewSanitizer(native.SanitizerConfigForProduction()).Process(source)
+	require.NoError(t, err)
+	require.Equal(t, source, output, "valid file content should be altered by sanitizer")
 }

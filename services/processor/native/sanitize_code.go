@@ -17,7 +17,11 @@ func (s *service) sanitizeDeployedSourceCode(code string) (string, error) {
 }
 
 func (s *service) createSanitizer() *sanitizer.Sanitizer {
-	sanitizerConfig := &sanitizer.SanitizerConfig{
+	return sanitizer.NewSanitizer(SanitizerConfigForProduction())
+}
+
+func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
+	return &sanitizer.SanitizerConfig{
 		ImportWhitelist: map[string]bool{
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  true,
@@ -27,7 +31,9 @@ func (s *service) createSanitizer() *sanitizer.Sanitizer {
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    true,
+			`"strings"`:      true,
+			`"json"`:         true,
+			`"encoding/hex"`: true,
 		},
 	}
-	return sanitizer.NewSanitizer(sanitizerConfig)
 }
