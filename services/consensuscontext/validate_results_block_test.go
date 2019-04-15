@@ -266,7 +266,9 @@ func TestResultsBlockValidators(t *testing.T) {
 func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
 		TransactionReceipts: nil,
-		ContractStateDiffs:  nil,
+		ContractStateDiffs: []*protocol.ContractStateDiff{
+			builders.ContractStateDiff().WithContractName("mockContract").WithStringRecord("mockRecord", "mockValue").Build(),
+		},
 	}
 	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err

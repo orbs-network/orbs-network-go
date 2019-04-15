@@ -145,7 +145,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash(): %v", err)
 	}
 	if !bytes.Equal(expectedStateDiffHash, calculatedStateDiffHash) {
-		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expected %v actual %v", expectedStateDiffHash, calculatedStateDiffHash)
+		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expectedStateDiffHash %v calculatedStateDiffHash %v. expected stateDiff: %s. calculated stateDiff: %s", expectedStateDiffHash, calculatedStateDiffHash, vcrx.input.ResultsBlock.StringContractStateDiffs(), processTxsOut.StringContractStateDiffs())
 	}
 
 	return nil
