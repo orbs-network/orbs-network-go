@@ -9,6 +9,7 @@ package consensuscontext
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -145,10 +146,47 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		return errors.Wrapf(validators.ErrCalcStateDiffHash, "ValidateResultsBlock error ProcessTransactionSet calculateStateDiffHash(): %v", err)
 	}
 	if !bytes.Equal(expectedStateDiffHash, calculatedStateDiffHash) {
-		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expectedStateDiffHash %v calculatedStateDiffHash %v. expected stateDiff: %s. calculated stateDiff: %s", expectedStateDiffHash, calculatedStateDiffHash, vcrx.input.ResultsBlock.StringContractStateDiffs(), processTxsOut.StringContractStateDiffs())
+		return errors.Wrapf(validators.ErrMismatchedStateDiffHash, "expectedStateDiffHash %v calculatedStateDiffHash %v. diff: %#v", expectedStateDiffHash, calculatedStateDiffHash, compare(vcrx.input.ResultsBlock.ContractStateDiffs, processTxsOut.ContractStateDiffs))
 	}
 
 	return nil
+}
+
+func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*protocol.ContractStateDiff) map[string]string {
+	diff := map[string]string{}
+
+	expectedMap := map[string]*protocol.StateRecord{}
+	for _, expectedCsd := range expectedDiffs {
+		itr := expectedCsd.StateDiffsIterator()
+		for itr.HasNext() {
+			record := itr.NextStateDiffs()
+			expectedMap[expectedCsd.ContractName().KeyForMap()+"/"+record.StringKey()] = record
+		}
+	}
+
+	for _, calculatedCsd := range calculatedDiffs {
+		itr := calculatedCsd.StateDiffsIterator()
+		for itr.HasNext() {
+			record := itr.NextStateDiffs()
+			contractRecordKey := calculatedCsd.ContractName().KeyForMap() + "/" + record.StringKey()
+			expectedValue, expected := expectedMap[contractRecordKey]
+			if expected {
+				if !bytes.Equal(expectedValue.Raw(), record.Raw()) {
+					diff[contractRecordKey] = fmt.Sprintf("e: %s <==> c: %s", expectedValue.StringValue(), record.StringValue())
+				}
+				delete(expectedMap, contractRecordKey)
+			} else {
+				diff[contractRecordKey] = fmt.Sprintf("e: NA <==> c: %s", record.StringValue())
+			}
+		}
+	}
+
+	for key, record := range expectedMap {
+		diff[key] = fmt.Sprintf("e: %s <==> c: NA", record.StringValue())
+	}
+
+	return diff
+
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
