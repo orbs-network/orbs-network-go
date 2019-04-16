@@ -8,9 +8,10 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func (c *validationContext) validateProtocolVersion(transaction *protocol.Signed
 
 func (c *validationContext) validateTransactionVirtualChainId(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	if !transaction.Transaction().VirtualChainId().Equal(c.virtualChainId) {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, log.VirtualChainId(c.virtualChainId), log.VirtualChainId(transaction.Transaction().VirtualChainId())}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, logfields.VirtualChainId(c.virtualChainId), logfields.VirtualChainId(transaction.Transaction().VirtualChainId())}
 	}
 	return nil
 }
@@ -96,7 +97,7 @@ func (c *validationContext) validateSignatureType(transaction *protocol.SignedTr
 func (c *validationContext) validateNodeIsInSync(currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	threshold := primitives.TimestampNano(currentTime.Add(c.nodeSyncRejectInterval * -1).UnixNano())
 	if lastCommittedBlockTimestamp < threshold {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("last-committed-block-timestamp", lastCommittedBlockTimestamp)}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, logfields.TimestampNano("min-timestamp", threshold), logfields.TimestampNano("last-committed-block-timestamp", lastCommittedBlockTimestamp)}
 	}
 	return nil
 }
@@ -104,7 +105,7 @@ func (c *validationContext) validateNodeIsInSync(currentTime time.Time, lastComm
 func (c *validationContext) validateTransactionNotExpired(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	threshold := proposedBlockTimestamp - primitives.TimestampNano(c.expiryWindow.Nanoseconds())
 	if transaction.Transaction().Timestamp() < threshold {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, log.TimestampNano("min-timestamp", threshold), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED, logfields.TimestampNano("min-timestamp", threshold), logfields.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 	}
 	return nil
 }
@@ -112,7 +113,7 @@ func (c *validationContext) validateTransactionNotExpired(transaction *protocol.
 func (c *validationContext) validateTransactionNotInFuture(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	tsWithGrace := proposedBlockTimestamp + primitives.TimestampNano(c.futureTimestampGrace.Nanoseconds())
 	if transaction.Transaction().Timestamp() > tsWithGrace {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, log.TimestampNano("max-timestamp", tsWithGrace), log.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_AHEAD_OF_NODE_TIME, logfields.TimestampNano("max-timestamp", tsWithGrace), logfields.TimestampNano("tx-timestamp", transaction.Transaction().Timestamp())}
 	}
 	return nil
 }

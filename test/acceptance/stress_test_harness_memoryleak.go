@@ -9,7 +9,7 @@
 package acceptance
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 )
 
 // as we are using a build flag, and we want to avoid logging in the stress test

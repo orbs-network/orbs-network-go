@@ -8,9 +8,9 @@ package httpserver
 
 import (
 	"encoding/json"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"net/http"
 )
 
@@ -54,10 +54,20 @@ func (s *server) filterOff(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("filter off"))
 }
 
-func (s *server) dumpMetrics(w http.ResponseWriter, r *http.Request) {
+func (s *server) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
 	_, err := w.Write(bytes)
+	if err != nil {
+		s.logger.Info("error writing response", log.Error(err))
+	}
+}
+
+func (s *server) dumpMetricsAsPrometheus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	prometheusMetrics := s.metricRegistry.ExportPrometheus()
+
+	_, err := w.Write([]byte(prometheusMetrics))
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
 	}

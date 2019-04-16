@@ -7,8 +7,13 @@
 package config
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -16,10 +21,10 @@ import (
 )
 
 type validator struct {
-	logger log.BasicLogger
+	logger log.Logger
 }
 
-func NewValidator(logger log.BasicLogger) *validator {
+func NewValidator(logger log.Logger) *validator {
 	return &validator{logger: logger}
 }
 
@@ -29,6 +34,7 @@ func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
 	v.requireNonEmpty(cfg.NodeAddress(), "node address must not be empty")
 	v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
 	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
+	v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
 }
 
 func (v *validator) ValidateMainNode(cfg NodeConfig) {
@@ -56,6 +62,31 @@ func (v *validator) requireNonEmptyValidatorMap(nodes map[string]ValidatorNode, 
 func (v *validator) requireNonEmptyPeerMap(gossipPeers map[string]GossipPeer, msg string) {
 	if len(gossipPeers) == 0 {
 		panic(msg)
+	}
+}
+
+func (v *validator) requireCorrectNodeAddressAndPrivateKey(address primitives.NodeAddress, key primitives.EcdsaSecp256K1PrivateKey) {
+	msg := []byte{
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+	}
+
+	sign, err := signature.SignEcdsaSecp256K1(key, msg)
+	if err != nil {
+		panic(fmt.Sprintf("could not create test sign: %s", err))
+	}
+
+	recoveredPublicKey, err := signature.RecoverEcdsaSecp256K1(msg, sign)
+	if err != nil {
+		panic(fmt.Sprintf("could not recover public key from test sign: %s", err))
+	}
+
+	recoveredNodeAddress := digest.CalcNodeAddressFromPublicKey(recoveredPublicKey)
+	if bytes.Compare(address, recoveredNodeAddress) != 0 {
+		panic(fmt.Sprintf("node address %s derived from secret key does not match provided node address %s",
+			hex.EncodeToString(recoveredNodeAddress), hex.EncodeToString(address)))
 	}
 }
 

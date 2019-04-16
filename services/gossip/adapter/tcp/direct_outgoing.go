@@ -10,9 +10,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
 	"time"
@@ -26,7 +26,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 
 		if err != nil {
 			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
-			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
+			time.Sleep(t.config.GossipReconnectInterval())
 			continue
 		}
 

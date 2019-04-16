@@ -11,13 +11,13 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -40,7 +40,7 @@ type harness struct {
 	transactionPool *services.MockTransactionPool
 	virtualMachine  *services.MockVirtualMachine
 	stateStorage    *services.MockStateStorage
-	reporting       log.BasicLogger
+	reporting       log.Logger
 	service         services.ConsensusContext
 	config          config.ConsensusContextConfig
 }

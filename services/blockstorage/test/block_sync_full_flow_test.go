@@ -130,13 +130,15 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 	}
 	require.Contains(t, sourceAddresses, input.RecipientNodeAddress, "request is not consistent with my BlockAvailabilityResponse, the nodes accessed must be in %v", sources)
 
-	require.Condition(t, func() (success bool) {
-		return input.Message.SignedChunkRange.FirstBlockHeight() >= 1 && input.Message.SignedChunkRange.FirstBlockHeight() <= availableBlocks
-	}, "request is not consistent with my BlockAvailabilityResponse, first requested block must be between 1 and total")
+	firstRequestedBlock := input.Message.SignedChunkRange.FirstBlockHeight()
+	require.Conditionf(t, func() (success bool) {
+		return firstRequestedBlock >= 1 && firstRequestedBlock <= availableBlocks
+	}, "request is not consistent with my BlockAvailabilityResponse, first requested block must be between 1 and total (%d) but was %d", availableBlocks, firstRequestedBlock)
 
-	require.Condition(t, func() (success bool) {
-		return input.Message.SignedChunkRange.LastBlockHeight() >= input.Message.SignedChunkRange.FirstBlockHeight() && input.Message.SignedChunkRange.LastBlockHeight() <= availableBlocks
-	}, "request is not consistent with my BlockAvailabilityResponse, last requested block must be between first and total")
+	lastRequestedBlock := input.Message.SignedChunkRange.LastBlockHeight()
+	require.Conditionf(t, func() (success bool) {
+		return lastRequestedBlock >= firstRequestedBlock && lastRequestedBlock <= availableBlocks
+	}, "request is not consistent with my BlockAvailabilityResponse, last requested block must be between first (%d) and total (%d) but was %d", firstRequestedBlock, availableBlocks, lastRequestedBlock)
 }
 
 func respondToBroadcastAvailabilityRequest(t *testing.T, ctx context.Context, harness *harness, requestInput *gossiptopics.BlockAvailabilityRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {

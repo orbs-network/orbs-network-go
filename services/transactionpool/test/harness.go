@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -23,6 +22,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"testing"
 	"time"
 )
@@ -36,7 +36,7 @@ type harness struct {
 	lastBlockTimestamp      primitives.TimestampNano
 	config                  config.TransactionPoolConfig
 	ignoreBlockHeightChecks bool
-	logger                  log.BasicLogger
+	logger                  log.Logger
 	testOutput              *log.TestOutput
 }
 

@@ -13,7 +13,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
+	"net"
 	"testing"
+	"time"
 )
 
 func TestDirectOutgoing_ConnectionsToAllPeersOnInitWhileContextIsLive(t *testing.T) {
@@ -109,21 +111,43 @@ func TestDirectOutgoing_ErrorDuringSendCausesReconnect(t *testing.T) {
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
 
-		err := h.transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      h.config.NodeAddress(),
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
-			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
-		})
-		require.NoError(t, err, "adapter Send should not fail")
-
-		h.peersListenersConnections[1].Close() // break the pipe during Send
+		// simulate some network issue supposedly leading to a momentarily closed connection
+		err := h.peersListenersConnections[1].Close()
+		require.NoError(t, err, "expected the connection to successfully close")
 
 		h.peersListenersConnections[1], err = h.peersListeners[1].Accept()
-		require.NoError(t, err, "test peer server did not accept new connection from local transport")
+		require.NoError(t, err, "client loop did not reconnect immediately after connection closed")
 
 		data, err := h.peerListenerReadTotal(1, 4)
-		require.NoError(t, err, "test peer server could not read keepalive from local transport")
+		require.NoError(t, err, "client loop did not send keep alive message over idle connection as expected")
 		require.Equal(t, exampleWireProtocolEncoding_KeepAlive(), data)
+	})
+}
+
+func TestDirectOutgoing_OutgoingMessageQueueDisabledWhenConnectionClosed(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+
+		h := newDirectHarnessWithConnectedPeers(t, ctx)
+		defer h.cleanupConnectedPeers()
+
+		// remote peer closes connection
+		err := h.peersListeners[1].Close() // suspend listener to control when connection will be recovered
+		require.NoError(t, err, "failed to stop listener")
+		err = h.peersListenersConnections[1].Close() // close connection to simulate network issues
+		require.NoError(t, err, "failed to close connection")
+
+		require.True(t, test.Eventually(3*time.Second, func() bool {
+			return !h.allOutgoingQueuesEnabled()
+		}), "expected one queue to become disabled after successfully closing its outgoing connection")
+
+		// remote peer comes back online
+		h.peersListeners[1], err = net.Listen("tcp", h.peersListeners[1].Addr().String()) // recover listener
+		require.NoError(t, err, "test peer server could not listen")
+		h.peersListenersConnections[1], err = h.peersListeners[1].Accept() // obtain recovered connection
+		require.NoError(t, err, "test peer server did not accept new connection from local transport")
+
+		require.True(t, test.Eventually(3*time.Second, func() bool {
+			return h.allOutgoingQueuesEnabled()
+		}), "expected all queues to return to enabled state once connection is recovered")
 	})
 }

@@ -8,10 +8,10 @@ package testkit
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
@@ -67,10 +67,10 @@ type TamperingTransport struct {
 		ongoingTamperers []OngoingTamper
 	}
 
-	logger log.BasicLogger
+	logger log.Logger
 }
 
-func NewTamperingTransport(logger log.BasicLogger, nested adapter.Transport) *TamperingTransport {
+func NewTamperingTransport(logger log.Logger, nested adapter.Transport) *TamperingTransport {
 	t := &TamperingTransport{
 		logger: logger.WithTags(log.String("adapter", "transport")),
 		nested: nested,

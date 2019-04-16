@@ -8,12 +8,13 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"os"
 	"reflect"
@@ -73,7 +74,7 @@ func aNativeCompiler(t *testing.T) *compilerContractHarness {
 	tmpDir := test.CreateTempDirForTest(t)
 	cfg := &hardcodedConfig{artifactPath: tmpDir}
 	log := log.DefaultTestingLogger(t)
-	compiler := adapter.NewNativeCompiler(cfg, log)
+	compiler := adapter.NewNativeCompiler(cfg, log, metric.NewRegistry())
 	return &compilerContractHarness{
 		compiler: compiler,
 		cleanup: func() {

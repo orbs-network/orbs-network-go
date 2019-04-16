@@ -44,7 +44,8 @@ func VerifyEcdsaSecp256K1(publicKey primitives.EcdsaSecp256K1PublicKey, data []b
 
 func RecoverEcdsaSecp256K1(data []byte, sig primitives.EcdsaSecp256K1Sig) (primitives.EcdsaSecp256K1PublicKey, error) {
 	if len(sig) != ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES {
-		return nil, errors.New("invalid signature size")
+		return nil, errors.Errorf("invalid signature size: sig=%s, len_sig=%d expected_len_sig=%d",
+			sig, len(sig), ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES)
 	}
 	publicKeyWithBytePrefix, err := secp256k1.RecoverPubkey(data, sig)
 	if err != nil {

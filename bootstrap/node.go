@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -19,6 +18,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/scribe/log"
 	"os"
 	"os/signal"
 	"sync"
@@ -36,11 +36,11 @@ type node struct {
 	logic        NodeLogic
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
-	logger       log.BasicLogger
+	logger       log.Logger
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
-	metricRegistry := metric.NewRegistry()
+	metricRegistry := metric.NewRegistry().WithVirtualChainId(nodeConfig.VirtualChainId()).WithNodeAddress(nodeConfig.NodeAddress())
 	version := config.GetVersion()
 
 	metricRegistry.NewText("Version.Semantic", version.Semantic)
@@ -50,7 +50,7 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	return metricRegistry
 }
 
-func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
+func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
@@ -66,7 +66,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.BasicLogger) Node {
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
-	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger)
+	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 

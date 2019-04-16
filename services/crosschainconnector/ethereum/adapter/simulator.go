@@ -14,10 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/scribe/log"
 	"math/big"
 	"sync"
+	"time"
 )
 
 type EthereumSimulator struct {
@@ -30,7 +31,7 @@ type EthereumSimulator struct {
 	}
 }
 
-func NewEthereumSimulatorConnection(logger log.BasicLogger) *EthereumSimulator {
+func NewEthereumSimulatorConnection(logger log.Logger) *EthereumSimulator {
 	// Generate a new random account and a funded simulator
 	key, err := crypto.GenerateKey()
 	if err != nil {
@@ -82,5 +83,5 @@ func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int
 	return nil, nil
 }
 
-func (c *EthereumSimulator) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.BasicLogger) {
+func (c *EthereumSimulator) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) {
 }

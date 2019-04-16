@@ -8,12 +8,12 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -165,7 +165,7 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.BasicLogger, *log.TestOutput) {
+func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.Logger, *log.TestOutput) {
 
 	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
 	for _, pattern := range b.allowedErrors {

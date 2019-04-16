@@ -9,8 +9,8 @@ package leanhelixconsensus
 import (
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )

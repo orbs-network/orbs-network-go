@@ -8,12 +8,13 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
@@ -46,7 +47,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.metrics.commitRate.Measure(int64(transactionReceiptsCount))
 	s.metrics.commitCount.Add(int64(transactionReceiptsCount))
 
-	logger.Info("committed transaction receipts for block height", log.BlockHeight(newBh), log.Int("num-transactions", transactionReceiptsCount))
+	logger.Info("committed transaction receipts for block height", logfields.BlockHeight(newBh), log.Int("num-transactions", transactionReceiptsCount))
 
 	return &services.CommitTransactionReceiptsOutput{
 		NextDesiredBlockHeight:   newBh + 1,
@@ -62,7 +63,7 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
-	s.logger.Info("transaction pool reached block height", log.BlockHeight(header.BlockHeight()))
+	s.logger.Info("transaction pool reached block height", logfields.BlockHeight(header.BlockHeight()))
 
 	return header.BlockHeight(), header.Timestamp()
 }
@@ -79,7 +80,7 @@ type committer struct {
 	adder       adder
 	remover     remover
 	nodeAddress primitives.NodeAddress
-	logger      log.BasicLogger
+	logger      log.Logger
 	blockHeight primitives.BlockHeight
 	blockTime   primitives.TimestampNano
 
@@ -95,7 +96,7 @@ func (c *committer) commit(ctx context.Context, receipts ...*protocol.Transactio
 			c.myReceipts = append(c.myReceipts, receipt)
 		}
 
-		c.logger.Info("transaction receipt committed", log.BlockHeight(c.blockHeight), log.String("flow", "checkpoint"), log.Transaction(receipt.Txhash()))
+		c.logger.Info("transaction receipt committed", logfields.BlockHeight(c.blockHeight), log.String("flow", "checkpoint"), logfields.Transaction(receipt.Txhash()))
 	}
 
 	return

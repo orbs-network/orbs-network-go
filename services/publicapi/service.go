@@ -9,12 +9,13 @@ package publicapi
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -25,7 +26,7 @@ type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	blockStorage    services.BlockStorage
-	logger          log.BasicLogger
+	logger          log.Logger
 
 	waiter *waiter
 
@@ -61,7 +62,7 @@ func NewPublicApi(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	blockStorage services.BlockStorage,
-	logger log.BasicLogger,
+	logger log.Logger,
 	metricFactory metric.Factory,
 ) services.PublicApi {
 	s := &service{
@@ -84,7 +85,7 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
 
 	for _, txReceipt := range input.TransactionReceipts {
-		logger.Info("transaction reported as committed", log.Transaction(txReceipt.Txhash()))
+		logger.Info("transaction reported as committed", logfields.Transaction(txReceipt.Txhash()))
 		s.waiter.complete(txReceipt.Txhash().KeyForMap(),
 			&txOutput{
 				transactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
@@ -99,7 +100,7 @@ func (s *service) HandleTransactionResults(ctx context.Context, input *handlers.
 func (s *service) HandleTransactionError(ctx context.Context, input *handlers.HandleTransactionErrorInput) (*handlers.HandleTransactionErrorOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx), log.String("flow", "checkpoint"))
 
-	logger.Info("transaction reported as erred", log.Transaction(input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
+	logger.Info("transaction reported as erred", logfields.Transaction(input.Txhash), log.Stringable("tx-status", input.TransactionStatus))
 	s.waiter.complete(input.Txhash.KeyForMap(),
 		&txOutput{
 			transactionStatus:  input.TransactionStatus,

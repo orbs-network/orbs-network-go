@@ -13,10 +13,11 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -49,7 +50,7 @@ func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
 }
 
 type blockProvider struct {
-	logger           log.BasicLogger
+	logger           log.Logger
 	leanhelix        leanhelix.LeanHelix
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
@@ -58,7 +59,7 @@ type blockProvider struct {
 }
 
 func NewBlockProvider(
-	logger log.BasicLogger,
+	logger log.Logger,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext) *blockProvider {
 
@@ -119,7 +120,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	blockHash := digest.CalcBlockHash(blockPair.TransactionsBlock, blockPair.ResultsBlock)
 	blockPairWrapper := ToLeanHelixBlock(blockPair)
-	p.logger.Info("RequestNewBlockProposal() created new block", log.BlockHeight(currentBlockHeight), log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)), log.Stringable("block-hash", blockHash))
+	p.logger.Info("RequestNewBlockProposal() created new block", logfields.BlockHeight(currentBlockHeight), log.Int("num-transactions", len(txOutput.TransactionsBlock.SignedTransactions)), log.Int("num-receipts", len(rxOutput.ResultsBlock.TransactionReceipts)), log.Stringable("block-hash", blockHash))
 	return blockPairWrapper, []byte(blockHash)
 
 }

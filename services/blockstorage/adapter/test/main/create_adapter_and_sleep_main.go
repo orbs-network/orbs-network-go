@@ -7,9 +7,9 @@
 package main
 
 import (
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"os"
 	"time"
 )

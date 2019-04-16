@@ -13,12 +13,12 @@ package memory
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
@@ -32,7 +32,7 @@ type message struct {
 type peer struct {
 	socket   chan message
 	listener chan adapter.TransportListener
-	logger   log.BasicLogger
+	logger   log.Logger
 }
 
 type memoryTransport struct {
@@ -40,7 +40,7 @@ type memoryTransport struct {
 	peers map[string]*peer
 }
 
-func NewTransport(ctx context.Context, logger log.BasicLogger, validators map[string]config.ValidatorNode) *memoryTransport {
+func NewTransport(ctx context.Context, logger log.Logger, validators map[string]config.ValidatorNode) *memoryTransport {
 	transport := &memoryTransport{peers: make(map[string]*peer)}
 
 	transport.Lock()
@@ -81,7 +81,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return nil
 }
 
-func newPeer(ctx context.Context, logger log.BasicLogger, totalPeers int) *peer {
+func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 	p := &peer{
 		// channel is buffered on purpose, otherwise the whole network is synced on transport
 		// we also multiply by number of peers because we have one logical "socket" for combined traffic from all peers together

@@ -8,10 +8,11 @@ package blockstorage
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 )
 
 // TODO(v1): this function should return an error
@@ -28,7 +29,7 @@ func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 		blockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 	}
 
-	s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", log.BlockHeight(blockHeight))
+	s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	err = s.notifyConsensusAlgos(
 		ctx,
 		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block
@@ -38,7 +39,7 @@ func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
 		return
 	} else {
-		s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", log.BlockHeight(blockHeight))
+		s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	}
 }
 

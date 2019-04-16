@@ -8,7 +8,7 @@ package metric
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 )
 
 type Text struct {
@@ -58,4 +58,16 @@ func (t textExport) LogRow() []*log.Field {
 		log.String("metric-type", "text"),
 		log.String("text", t.Value),
 	}
+}
+
+func (t textExport) PrometheusRow() []*prometheusRow {
+	return nil
+}
+
+func (t textExport) PrometheusType() string {
+	return ""
+}
+
+func (t textExport) PrometheusName() string {
+	return ""
 }

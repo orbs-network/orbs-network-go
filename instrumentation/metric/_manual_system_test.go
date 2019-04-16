@@ -10,7 +10,7 @@ package metric
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"os"
 	"testing"
