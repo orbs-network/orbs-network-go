@@ -108,7 +108,7 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_SmallNumberOf
 func TestOrbsVotingContract_processRewards_processRewardsGuardians_SmallNumberOfGuardians_LargeTotal(t *testing.T) {
 	totalVotes := uint64(500000000)
 	p1, p2, p3 := [20]byte{0xa0}, [20]byte{0xb1}, [20]byte{0xc1}
-	guardiansAccumulatedStakes := map[[20]byte]uint64{p1: 50000000, p2: 5000000, p3: 0}
+	guardiansAccumulatedStakes := map[[20]byte]uint64{p1: 400000000, p2: 100000000, p3: 0}
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
@@ -119,13 +119,13 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_SmallNumberOf
 
 		// assert
 		max := ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
-		require.EqualValues(t, max/100, getCumulativeGuardianExcellenceReward(p2[:]))
-		require.EqualValues(t, max/10, getCumulativeGuardianExcellenceReward(p1[:]))
+		require.EqualValues(t, max*4/5, getCumulativeGuardianExcellenceReward(p1[:]))
+		require.EqualValues(t, max/5, getCumulativeGuardianExcellenceReward(p2[:]))
 		require.EqualValues(t, 0, getCumulativeParticipationReward(p3[:]))
 	})
 }
 
-func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOfGuardians_SmallTotal(t *testing.T) {
+func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOfGuardians_Exactly10Top__SmallTotal(t *testing.T) {
 	h := newRewardHarness()
 	for i := 0; i < ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER; i++ {
 		h.addStakeActor(100000*i + 200000)
@@ -153,6 +153,42 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOf
 		require.EqualValues(t, 1876, getCumulativeGuardianExcellenceReward(p1.address[:]))
 		require.EqualValues(t, 1023, getCumulativeGuardianExcellenceReward(p2.address[:]))
 		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(p3.address[:]))
+		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(h.getActor(0).address[:]))
+		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(h.getActor(1).address[:]))
+		require.EqualValues(t, 341, getCumulativeGuardianExcellenceReward(h.getActor(2).address[:]))
+	})
+}
+
+func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOfGuardians_MoreThan10Top_SmallTotal(t *testing.T) {
+	h := newRewardHarness()
+	for i := 0; i < ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER; i++ {
+		h.addStakeActor(100000*i + 200000)
+	}
+	p1, p2, p3, p4 := h.addStakeActor(2200000), h.addStakeActor(1200000), h.addStakeActor(100000), h.addStakeActor(400000)
+	calculatedTotal := 0
+	calcualtedTotalRewardFromStake := uint64(0)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		_setCurrentElectionBlockNumber(5000)
+
+		// call
+		_processRewardsGuardians(0, h.getAllStakes())
+
+		// assert
+		for i := 2; i < 12; i++ {
+			calculatedTotal += h.getActor(i).stake
+		}
+		for i := 0; i < h.getNumActors(); i++ {
+			calcualtedTotalRewardFromStake += getCumulativeGuardianExcellenceReward(h.getActor(i).address[:])
+		}
+
+		require.EqualValues(t, 220, len(getExcellenceProgramGuardians()))
+		require.EqualValues(t, 8354, calcualtedTotalRewardFromStake)
+		require.EqualValues(t, 1876, getCumulativeGuardianExcellenceReward(p1.address[:]))
+		require.EqualValues(t, 1023, getCumulativeGuardianExcellenceReward(p2.address[:]))
+		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(p3.address[:]))
+		require.EqualValues(t, 341, getCumulativeGuardianExcellenceReward(p4.address[:]))
 		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(h.getActor(0).address[:]))
 		require.EqualValues(t, 0, getCumulativeGuardianExcellenceReward(h.getActor(1).address[:]))
 		require.EqualValues(t, 341, getCumulativeGuardianExcellenceReward(h.getActor(2).address[:]))
