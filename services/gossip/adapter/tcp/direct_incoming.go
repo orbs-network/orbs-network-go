@@ -101,7 +101,8 @@ func (t *directTransport) serverHandleIncomingConnection(ctx context.Context, co
 
 		// notify if not keepalive
 		if len(payloads) > 0 {
-			t.notifyListener(ctx, payloads)
+			ctxWithPeer := context.WithValue(ctx, "peer-ip", conn.RemoteAddr().String())
+			t.notifyListener(ctxWithPeer, payloads)
 		}
 	}
 }
