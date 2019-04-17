@@ -259,6 +259,7 @@ func TestResultsBlockValidators(t *testing.T) {
 		}
 		err = validateExecution(context.Background(), vcrx)
 		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
+		require.Contains(t, err.Error(), `"BenchmarkToken/616d6f756e74":"e: 0a <==> c: NA"`, "expected error message to include a digest of the state diff comparison")
 	})
 
 }
@@ -283,9 +284,7 @@ func TestCompare(t *testing.T) {
 func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 	someEmptyTxSetThatWeReturnOnlyToPreventErrors := &services.ProcessTransactionSetOutput{
 		TransactionReceipts: nil,
-		ContractStateDiffs: []*protocol.ContractStateDiff{
-			builders.ContractStateDiff().WithContractName("mockContract").WithStringRecord("mockRecord", "mockValue").Build(),
-		},
+		ContractStateDiffs:  nil,
 	}
 	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
