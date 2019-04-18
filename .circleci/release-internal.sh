@@ -7,7 +7,7 @@ docker tag orbs:export $NODE_DOCKER_IMAGE:$(./docker/hash.sh)
 
 docker push $NODE_DOCKER_IMAGE
 
-docker tag orbs:gamma $GAMMA_DOCKER_IMAGE:$(./docker/tag.sh)
-docker tag orbs:gamma $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh)
+docker tag orbs:gamma-server $GAMMA_DOCKER_IMAGE:$(./docker/tag.sh)
+docker tag orbs:gamma-server $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh)
 
 docker push $GAMMA_DOCKER_IMAGE
