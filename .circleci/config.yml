@@ -89,10 +89,7 @@ jobs:
           command: ./docker/test/test.sh
           environment:
             CONSENSUSALGO: leanhelix
-      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
-      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/hash.sh)
-      - run: $(aws ecr get-login --no-include-email --region us-west-2)
-      - run: docker push $DOCKER_IMAGE
+      - run: ./.circleci/release-internal.sh
       - store_artifacts:
           path: _logs
 
@@ -135,13 +132,11 @@ jobs:
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
-  release_gamma:
+  release:
     machine: true
     steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
-      - run: ./.circleci/release-gamma.sh
+    - checkout
+    - run: ./.circleci/release.sh
 
   autonomous_swap:
     machine: true
@@ -156,8 +151,14 @@ workflows:
   version: 2
   build:
     jobs:
-      - tests
-      - e2e
+      - tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - e2e:
+          filters:
+            tags:
+              only: /^v.*/
       - flakiness
       - autonomous_swap
       - success:
@@ -178,7 +179,7 @@ workflows:
       # - e2e_testnet_leanhelix:
       #     requires:
       #       - deploy_testnet
-      - release_gamma:
+      - release:
           requires:
             - tests
             - e2e
@@ -187,6 +188,7 @@ workflows:
               only: /^v.*/
             branches:
               only: master
+
   nightly:
     triggers:
       - schedule:
