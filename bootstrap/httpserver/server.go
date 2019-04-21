@@ -115,6 +115,7 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
+
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
 	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionAsyncHandler)))
 	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
@@ -127,6 +128,8 @@ func (s *server) createRouter() http.Handler {
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 	router.Handle("/debug/logs/filter-on", http.HandlerFunc(s.filterOn))
 	router.Handle("/debug/logs/filter-off", http.HandlerFunc(s.filterOff))
+
+	router.Handle("/", http.HandlerFunc(wrapHandlerWithCORS(s.Index)))
 
 	if s.config.Profiling() {
 		registerPprof(router)
