@@ -16,14 +16,14 @@ import (
 	"time"
 )
 
+const LEAN_HELIX_CONSENSUS_JSON = `{"active-consensus-algo":2}`
+
 func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
 		endpoint := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		gammaServer := StartGammaServer(endpoint, false, configJSON, false)
-		defer gammaServer.GracefulShutdown(10 * time.Second)
-
-		time.Sleep(5 * time.Second) // waiting for txpool to be ready
+		defer gammaServer.GracefulShutdown(1 * time.Second)
 
 		sender, _ := orbsClient.CreateAccount()
 		transferTo, _ := orbsClient.CreateAccount()
@@ -43,6 +43,6 @@ func TestGamma(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	t.Run("Benchmark", testGammaWithJSONConfig("{}"))
-	t.Run("LeanHelix", testGammaWithJSONConfig(`{"active-consensus-algo":2}`))
+	t.Run("Benchmark", testGammaWithJSONConfig(""))
+	t.Run("LeanHelix", testGammaWithJSONConfig(LEAN_HELIX_CONSENSUS_JSON))
 }
