@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const REPORT_INTERVAL = 30 * time.Second
+const ROTATE_INTERVAL = 30 * time.Second
 const AGGREGATION_SPAN = 10 * time.Minute
 
 type Factory interface {
@@ -33,7 +33,7 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	PeriodicallyReport(ctx context.Context, logger log.Logger)
+	PeriodicallyRotate(ctx context.Context, logger log.Logger)
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
@@ -92,13 +92,13 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 }
 
 func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
-	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/REPORT_INTERVAL))
+	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
 
 func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) *Histogram {
-	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/REPORT_INTERVAL))
+	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
@@ -133,30 +133,17 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) report(logger log.Logger) {
-	for _, value := range r.ExportAll() {
-		if logRow := value.LogRow(); logRow != nil {
-			logger.Metric(logRow...)
-		}
-	}
-}
-
-func (r *inMemoryRegistry) PeriodicallyReport(ctx context.Context, logger log.Logger) {
-	synchronization.NewPeriodicalTrigger(ctx, REPORT_INTERVAL, logger, func() {
-		r.report(logger)
-
-		// We only rotate histograms because there is the only type of metric that we're currently rotating
+func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) {
+	synchronization.NewPeriodicalTrigger(ctx, ROTATE_INTERVAL, logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {
 			switch m.(type) {
-			case *Histogram:
+			case *Histogram: // only Histograms currently require rotating
 				m.(*Histogram).Rotate()
 			}
 		}
-	}, func() {
-		r.report(logger)
-	})
+	}, nil)
 }
 
 func (r *inMemoryRegistry) ExportPrometheus() string {
