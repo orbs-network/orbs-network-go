@@ -7,6 +7,7 @@
 package signature
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
@@ -26,7 +27,8 @@ const (
 // the given data must not be controlled by an adversary, it must be a hash over given data
 func SignEcdsaSecp256K1(privateKey primitives.EcdsaSecp256K1PrivateKey, data []byte) (primitives.EcdsaSecp256K1Sig, error) {
 	if len(privateKey) != keys.ECDSA_SECP256K1_PRIVATE_KEY_SIZE_BYTES {
-		return nil, fmt.Errorf("cannot sign with edcsa secp256k1, private key invalid")
+		return nil, fmt.Errorf("cannot sign with edcsa secp256k1, private key has invalid length. expected=%d actual=%d",
+			keys.ECDSA_SECP256K1_PRIVATE_KEY_SIZE_BYTES, len(privateKey))
 	}
 	return secp256k1.Sign(data, []byte(privateKey))
 }
@@ -44,15 +46,18 @@ func VerifyEcdsaSecp256K1(publicKey primitives.EcdsaSecp256K1PublicKey, data []b
 
 func RecoverEcdsaSecp256K1(data []byte, sig primitives.EcdsaSecp256K1Sig) (primitives.EcdsaSecp256K1PublicKey, error) {
 	if len(sig) != ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES {
-		return nil, errors.Errorf("invalid signature size: sig=%s, len_sig=%d expected_len_sig=%d",
-			sig, len(sig), ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES)
+		msg := fmt.Sprintf("invalid signature length: expected=%d actual=%d sig=%s",
+			ECDSA_SECP256K1_SIGNATURE_SIZE_BYTES, len(sig), sig)
+		return nil, errors.New(msg)
 	}
 	publicKeyWithBytePrefix, err := secp256k1.RecoverPubkey(data, sig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "secp256k1.RecoverPubkey() failed")
 	}
-	if len(publicKeyWithBytePrefix) != keys.ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES+1 {
-		return nil, errors.Errorf("secp256k1.RecoverPubkey returned pub key with len %d", len(publicKeyWithBytePrefix))
+	expectedPublicKeyLen := keys.ECDSA_SECP256K1_PUBLIC_KEY_SIZE_BYTES + 1
+	if len(publicKeyWithBytePrefix) != expectedPublicKeyLen {
+		return nil, errors.Errorf("invalid public key length returned by secp256k1.RecoverPubkey(). expected=%d actual=%d publicKeyWithBytePrefix=%s",
+			expectedPublicKeyLen, len(publicKeyWithBytePrefix), hex.EncodeToString(publicKeyWithBytePrefix))
 	}
 	return publicKeyWithBytePrefix[1:], nil
 }
