@@ -19,7 +19,7 @@ import (
 func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 	return func(t *testing.T) {
 		test.WithContext(func(ctx context.Context) {
-			network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), "")
+			network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), jsonConfig)
 			contract := callcontract.NewContractClient(network)
 
 			t.Log("doing a simple transfer")
@@ -38,7 +38,6 @@ func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 }
 
 func TestSimpleTransfer(t *testing.T) {
-
 	t.Run("Benchmark", testSimpleTransfer(""))
 	t.Run("LeanHelix", testSimpleTransfer(LEAN_HELIX_CONSENSUS_JSON))
 
