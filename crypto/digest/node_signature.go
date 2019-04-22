@@ -7,6 +7,7 @@
 package digest
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -19,18 +20,21 @@ func SignAsNode(privateKey primitives.EcdsaSecp256K1PrivateKey, data []byte) (pr
 	return signature.SignEcdsaSecp256K1(privateKey, hashedData)
 }
 
-func VerifyNodeSignature(nodeAddress primitives.NodeAddress, data []byte, sig primitives.EcdsaSecp256K1Sig) error {
-	if len(nodeAddress) != NODE_ADDRESS_SIZE_BYTES {
-		return errors.Errorf("incorrect node address length. Expected=%d Actual=%d", NODE_ADDRESS_SIZE_BYTES, len(nodeAddress))
+func VerifyNodeSignature(actualNodeAddress primitives.NodeAddress, dataToVerify []byte, sig primitives.EcdsaSecp256K1Sig) error {
+	if len(actualNodeAddress) != NODE_ADDRESS_SIZE_BYTES {
+		return errors.Errorf("incorrect actual node address length. ExpectedLen=%d ActualLen=%d", NODE_ADDRESS_SIZE_BYTES, len(actualNodeAddress))
 	}
-	hashedData := hash.CalcSha256(data)
-	publicKey, err := signature.RecoverEcdsaSecp256K1(hashedData, sig)
+	hashedDataToVerify := hash.CalcSha256(dataToVerify)
+	recoveredPublicKey, err := signature.RecoverEcdsaSecp256K1(hashedDataToVerify, sig)
 	if err != nil {
 		return errors.Wrap(err, "RecoverEcdsaSecp256K1() failed")
 	}
-	recoveredNodeAddress := CalcNodeAddressFromPublicKey(publicKey)
-	if !nodeAddress.Equal(recoveredNodeAddress) {
-		return errors.Errorf("mismatched recovered node address. nodeAddress=%v recovered=%v", nodeAddress, recoveredNodeAddress)
+	recoveredNodeAddress := CalcNodeAddressFromPublicKey(recoveredPublicKey)
+	msg := fmt.Sprintf("actualNodeAddress=%v recoveredNodeAddress=%v sig=%s dataToVerify=%v hashedDataToVerify=%v recoveredPublicKey=%v",
+		actualNodeAddress, recoveredNodeAddress, sig, dataToVerify, hashedDataToVerify, recoveredPublicKey)
+
+	if !actualNodeAddress.Equal(recoveredNodeAddress) {
+		return errors.Errorf("mismatched actual and calculated node address: %s", msg)
 	}
 	return nil
 }

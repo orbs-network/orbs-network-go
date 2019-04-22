@@ -77,7 +77,7 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateResultsBlock, newBlockHeight=%d", newBlockHeight)
+		return errors.Wrapf(err, "ValidateBlockProposal failed in ValidateResultsBlock(), newBlockHeight=%d", newBlockHeight)
 	}
 
 	err = vctx.validateBlockHash(primitives.Sha256(blockHash), blockPair.TransactionsBlock, blockPair.ResultsBlock)

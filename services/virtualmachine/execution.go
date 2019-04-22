@@ -43,7 +43,7 @@ func (s *service) runMethod(
 	// get deployment info
 	processor, err := s.getServiceDeployment(ctx, executionContext, transactionOrQuery.ContractName())
 	if err != nil {
-		s.logger.Info("get deployment info for contract failed", log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
+		s.logger.Info("get deployment info for contract failed", logfields.BlockHeight(currentBlockHeight), log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
 		return protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, nil, nil, err
 	}
 
@@ -62,7 +62,7 @@ func (s *service) runMethod(
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})
 	if err != nil {
-		s.logger.Info("transaction execution failed", log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
+		s.logger.Info("transaction execution failed", logfields.BlockHeight(currentBlockHeight), log.Stringable("result", output.CallResult), log.Error(err), log.Stringable("transaction-or-query", transactionOrQuery))
 	}
 
 	if batchTransientState != nil && output.CallResult == protocol.EXECUTION_RESULT_SUCCESS {
