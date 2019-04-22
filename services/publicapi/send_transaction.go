@@ -85,6 +85,7 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 		return addOutputToTxOutput(addResp), nil
 	}
 
+	s.logger.Info("TIMEOUT", log.Stringable("tm", s.config.PublicApiSendTransactionTimeout()))
 	ctx, cancel := context.WithTimeout(ctx, s.config.PublicApiSendTransactionTimeout())
 	defer cancel()
 

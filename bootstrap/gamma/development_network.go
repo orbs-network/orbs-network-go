@@ -45,6 +45,9 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, overrideConfi
 		panic(err)
 	}
 
+	logger.Info("validator nodes", log.StringableSlice("nodes", validatorNodes))
+	logger.Info("node order", log.StringableSlice("order", nodeOrder))
+
 	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
