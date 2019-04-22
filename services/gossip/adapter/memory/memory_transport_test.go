@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -92,6 +93,49 @@ func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 			})
 		}
 
+	})
+}
+
+func TestMemoryTransport_SendBroadcastReceivedByEveryone(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		numNodes := 20
+
+		validatorNodes := map[string]config.ValidatorNode{}
+		privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
+
+		var nodeOrder []primitives.NodeAddress
+		for i := 0; i < numNodes; i++ {
+			nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+			validatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
+			privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
+			nodeOrder = append(nodeOrder, nodeAddress)
+		}
+
+		transport := NewTransport(ctx, log.DefaultTestingLogger(t), validatorNodes)
+
+		var listeners []*testkit.MockTransportListener
+		for i := 0; i < numNodes; i++ {
+			listeners = append(listeners, testkit.ListenTo(transport, nodeOrder[i]))
+		}
+
+		listeners[0].ExpectNotReceive()
+		for _, listener := range listeners[1:] {
+			listener.ExpectReceive([][]byte{{1, 2, 3}})
+		}
+
+		transport.Send(ctx, &adapter.TransportData{
+			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+			SenderNodeAddress: nodeOrder[0],
+			Payloads:          [][]byte{{1, 2, 3}},
+		})
+
+		time.Sleep(10 * time.Millisecond)
+
+		for i, listener := range listeners {
+			ok, err := listener.Verify()
+			require.NoErrorf(t, err, "verification failed for #%d %s", i, nodeOrder[i].String())
+			require.True(t, ok)
+		}
 	})
 }
 
