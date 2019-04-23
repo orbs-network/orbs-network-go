@@ -122,7 +122,7 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 
 	if err != nil {
-		logger.Info("performed pre order checks", log.Error(err), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
+		logger.Info("pre order checks failed", log.Error(err), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
 		logger.Info("performed pre order checks", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	}

@@ -86,6 +86,8 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
 	}
 
+	p.logger.Info("RequestNewBlockProposal() start, calling RequestNewTransactionsBlock()", logfields.BlockHeight(currentBlockHeight))
+
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
 	maxNumOfTransactions := uint32(10000)
 	maxBlockSize := uint32(1000000)
@@ -99,8 +101,11 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		MaxBlockSizeKb:          maxBlockSize,
 	})
 	if err != nil {
+		p.logger.Info("RequestNewBlockProposal() failed in RequestNewTransactionsBlock()", logfields.BlockHeight(currentBlockHeight), log.Error(err))
 		return nil, nil
 	}
+
+	p.logger.Info("RequestNewBlockProposal() returned from RequestNewTransactionsBlock(), calling RequestNewResultsBlock()", logfields.BlockHeight(currentBlockHeight))
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
@@ -110,8 +115,11 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		PrevBlockTimestamp: prevBlockTimestamp,
 	})
 	if err != nil {
+		p.logger.Info("RequestNewBlockProposal() failed in RequestNewResultsBlock()", logfields.BlockHeight(currentBlockHeight), log.Error(err))
 		return nil, nil
 	}
+
+	p.logger.Info("RequestNewBlockProposal() returned from RequestNewResultsBlock()", logfields.BlockHeight(currentBlockHeight))
 
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: txOutput.TransactionsBlock,

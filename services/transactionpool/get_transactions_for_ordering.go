@@ -80,6 +80,20 @@ func newTransactionBatch(logger log.Logger, transactions Transactions) *transact
 	}
 }
 
+func (s *service) runBatch(ctx context.Context, input *services.GetTransactionsForOrderingInput, proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
+	s.logger.Info("runBatch()", logfields.BlockHeight(input.CurrentBlockHeight))
+
+	pov := &vmPreOrderValidator{vm: s.virtualMachine}
+	batch := &transactionBatch{
+		logger:               s.logger,
+		maxNumOfTransactions: input.MaxNumberOfTransactions,
+		sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
+	}
+	batch.fetchUsing(s.pendingPool)
+	batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, proposedBlockTimestamp)
+	return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp)
+}
+
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 
 	//TODO(v1) fail if requested block height is in the past
@@ -102,30 +116,33 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return nil, err
 	}
 
-	pov := &vmPreOrderValidator{vm: s.virtualMachine}
-
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolTimeBetweenEmptyBlocks())
 	defer cancel()
 
-	runBatch := func(proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
-		batch := &transactionBatch{
-			logger:               s.logger,
-			maxNumOfTransactions: input.MaxNumberOfTransactions,
-			sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
-		}
-		batch.fetchUsing(s.pendingPool)
-		batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, proposedBlockTimestamp)
-		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp)
+	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
+	batch, err := s.runBatch(ctx, input, proposedBlockTimestamp)
+
+	if err != nil {
+		s.logger.Error("runBatch() failed", log.Error(err))
 	}
 
-	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
-	batch, err := runBatch(proposedBlockTimestamp)
 	if !batch.hasEnoughTransactions(1) {
+		s.logger.Info("Batch does not have enough transactions, calling waitForIncomingTransaction", log.Stringable("timeout", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
 			// propose a new time since we've been waiting
+			s.logger.Info("returned from waitForIncomingTransaction because a transaction arrived, calling runBatch() again")
 			proposedBlockTimestamp = proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
-			batch, err = runBatch(proposedBlockTimestamp)
+			batch, err = s.runBatch(ctx, input, proposedBlockTimestamp)
+			if err != nil {
+				s.logger.Error("runBatch() (2nd call) failed", log.Error(err))
+			} else {
+				s.logger.Info("runBatch() (2nd call) successful")
+			}
+		} else {
+			s.logger.Info("returned from waitForIncomingTransaction on timeout")
 		}
+	} else {
+		s.logger.Info("Batch has enough transactions")
 	}
 
 	// even on error we want to reject transactions first to their senders before exiting
