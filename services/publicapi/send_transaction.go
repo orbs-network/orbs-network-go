@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"strconv"
 	"time"
 )
 
@@ -60,7 +61,7 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 		return &txOutput{transactionStatus: txStatus}, err
 	}
 
-	logger.Info("send transaction request received")
+	logger.Info("send transaction request received, adding to TransactionPool", log.String("async-mode", strconv.FormatBool(asyncMode)))
 
 	waitResult := s.waiter.add(txHash.KeyForMap())
 
@@ -85,13 +86,12 @@ func (s *service) sendTransaction(ctx context.Context, request *client.SendTrans
 		return addOutputToTxOutput(addResp), nil
 	}
 
-	s.logger.Info("TIMEOUT", log.Stringable("tm", s.config.PublicApiSendTransactionTimeout()))
 	ctx, cancel := context.WithTimeout(ctx, s.config.PublicApiSendTransactionTimeout())
 	defer cancel()
 
 	obj, err := s.waiter.wait(ctx, waitResult)
 	if err != nil {
-		logger.Info("waiting for transaction to be processed failed")
+		logger.Info("waiting for transaction to be processed failed", log.Stringable("timeout", s.config.PublicApiSendTransactionTimeout()), log.Error(err))
 		return addOutputToTxOutput(addResp), err
 	}
 	return obj.(*txOutput), nil
