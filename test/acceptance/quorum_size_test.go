@@ -22,7 +22,6 @@ func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks_BenchmarkConsensus(
 		WithRequiredQuorumPercentage(66).
 		WithLogFilters(
 			log.ExcludeEntryPoint("BlockSync"),
-			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeEntryPoint("LeanHelixConsensus")).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := network.DeployBenchmarkTokenContract(ctx, 5)

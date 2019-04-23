@@ -54,7 +54,7 @@ func getLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 	conditionalFilter := log.NewConditionalFilter(false, nil)
 
 	if !cfg.LoggerFullLog() {
-		conditionalFilter = log.NewConditionalFilter(true, log.Or(log.OnlyErrors(), log.OnlyMetrics()))
+		conditionalFilter = log.NewConditionalFilter(true, log.OnlyErrors())
 	}
 
 	return logger.WithFilters(conditionalFilter)

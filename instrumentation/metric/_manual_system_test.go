@@ -30,7 +30,7 @@ func TestSystemMetrics(t *testing.T) {
 	m := NewRegistry()
 	l := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stderr, log.NewHumanReadableFormatter()))
 	NewSystemReporter(context.Background(), m, l)
-	m.PeriodicallyReport(context.Background(), l)
+	m.PeriodicallyRotate(context.Background(), l)
 
 	<-time.After(1 * time.Minute)
 }
