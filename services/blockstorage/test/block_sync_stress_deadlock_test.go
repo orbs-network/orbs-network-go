@@ -57,13 +57,14 @@ func startFakeSingleThreadedConsensusAlgo(t *testing.T, ctx context.Context, har
 		for {
 			select {
 			case <-ctx.Done():
+				return
 			case <-updateConsensusAlgoHeight:
 			default:
 				if h < targetBlockHeight {
-					time.Sleep(time.Nanosecond)
 					h++
 					_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(h).WithTimestampNow().Build())
 					require.NoError(t, err)
+					time.Sleep(time.Nanosecond)
 				}
 			}
 		}
