@@ -8,6 +8,7 @@ package gamma
 
 import (
 	"fmt"
+	"github.com/orbs-network/boyarin/test/helpers"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -24,6 +25,8 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 		endpoint := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		gammaServer := StartGammaServer(endpoint, false, configJSON, false)
 		defer gammaServer.GracefulShutdown(1 * time.Second)
+
+		helpers.WaitForBlock(t, helpers.GetMetricsForPort(randomPort), 2, 5*time.Second)
 
 		sender, _ := orbsClient.CreateAccount()
 		transferTo, _ := orbsClient.CreateAccount()
