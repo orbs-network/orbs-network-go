@@ -65,7 +65,6 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		log.String("_test", "e2e"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
-		WithFilters(log.IgnoreMessagesMatching("Metric recorded")).
 		WithOutput(console)
 	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
