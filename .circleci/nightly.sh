@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 
 echo "Installing nightly dependencies.."
 go get -u github.com/orbs-network/go-junit-report

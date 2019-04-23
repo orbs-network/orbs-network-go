@@ -156,7 +156,6 @@ workflows:
             tags:
               only: /^v.*/
       - flakiness
-      - nightly
       - autonomous_swap
       - success:
           requires:
