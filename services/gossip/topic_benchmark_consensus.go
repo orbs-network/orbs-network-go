@@ -22,7 +22,6 @@ func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.Benchma
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
-	s.logger.Info("RegisterBenchmarkConsensusHandler()")
 	s.handlers.benchmarkConsensusHandlers = append(s.handlers.benchmarkConsensusHandlers, handler)
 }
 
