@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -23,6 +24,8 @@ import (
 const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
 
 func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	lastCommittedBlockHeight := currentBlockHeight - 1
 
 	genesisValidatorNodes := s.config.GenesisValidatorNodes()
@@ -33,12 +36,12 @@ func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight p
 		return genesisValidatorNodesAddresses, nil
 	}
 
-	s.logger.Info("querying elected validators", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
+	logger.Info("querying elected validators", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
 	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
 	if err != nil {
 		return nil, err
 	}
-	s.logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), logfields.BlockHeight(lastCommittedBlockHeight))
+	logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), logfields.BlockHeight(lastCommittedBlockHeight))
 
 	// elections not active yet
 	if len(electedValidatorsAddresses) == 0 {

@@ -9,6 +9,7 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -17,10 +18,11 @@ import (
 
 // TODO(v1): this function should return an error
 func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	// the source of truth for the last committed block is persistence
 	lastCommittedBlock, err := s.persistence.GetLastBlock()
 	if err != nil {
-		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): GetLastBlock() failed", log.Error(err))
+		logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): GetLastBlock() failed", log.Error(err))
 		return
 	}
 
@@ -29,17 +31,17 @@ func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 		blockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 	}
 
-	s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
+	logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	err = s.notifyConsensusAlgos(
 		ctx,
 		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block
 		lastCommittedBlock, // if lastCommittedBlock is nil, it means this is the Genesis Block
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 	if err != nil {
-		s.logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
+		logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
 		return
 	} else {
-		s.logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
+		logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	}
 }
 
