@@ -188,8 +188,8 @@ func _getStakeAtElection(ethAddr [20]byte) uint64 {
 func _calculateVotes() (candidateVotes map[[20]byte]uint64, totalVotes uint64, participants [][20]byte, participantStakes map[[20]byte]uint64, guardianAccumulatedStakes map[[20]byte]uint64) {
 	guardians := _getGuardians()
 	guardianStakes := _collectGuardiansStake(guardians)
-	delegatorStakes := _collectDelegatorsStake(guardians)
-	guardianToDelegators := _findGuardianDelegators(delegatorStakes)
+	delegators, delegatorStakes := _collectDelegatorsStake(guardians)
+	guardianToDelegators := _findGuardianDelegators(delegators)
 	candidateVotes, totalVotes, participants, participantStakes, guardianAccumulatedStakes = _guardiansCastVotes(guardianStakes, guardianToDelegators, delegatorStakes)
 	return
 }
@@ -211,14 +211,16 @@ func _collectGuardiansStake(guardians map[[20]byte]bool) (guardianStakes map[[20
 	return
 }
 
-func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegatorStakes map[[20]byte]uint64) {
+func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegators [][20]byte, delegatorStakes map[[20]byte]uint64) {
 	delegatorStakes = make(map[[20]byte]uint64)
+	delegators = make([][20]byte, 0, _getNumberOfDelegators())
 	numOfDelegators := _getNumberOfDelegators()
 	for i := 0; i < numOfDelegators; i++ {
 		delegator := _getDelegatorAtIndex(i)
 		if !guardians[delegator] {
 			stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
 			delegatorStakes[delegator] = stake
+			delegators = append(delegators, delegator)
 			fmt.Printf("elections %10d: delegator %x, stake %d\n", getCurrentElectionBlockNumber(), delegator, stake)
 		} else {
 			fmt.Printf("elections %10d: delegator %x ignored as it is also a guardian\n", getCurrentElectionBlockNumber(), delegator)
@@ -227,10 +229,10 @@ func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegatorStakes map[[
 	return
 }
 
-func _findGuardianDelegators(delegatorStakes map[[20]byte]uint64) (guardianToDelegators map[[20]byte][][20]byte) {
+func _findGuardianDelegators(delegators [][20]byte) (guardianToDelegators map[[20]byte][][20]byte) {
 	guardianToDelegators = make(map[[20]byte][][20]byte)
 
-	for delegator := range delegatorStakes {
+	for _, delegator := range delegators {
 		guardian := _getDelegatorGuardian(delegator[:])
 		if !bytes.Equal(guardian[:], delegator[:]) {
 			fmt.Printf("elections %10d: delegator %x, guardian/agent %x\n", getCurrentElectionBlockNumber(), delegator, guardian)

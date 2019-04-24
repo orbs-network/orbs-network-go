@@ -534,10 +534,11 @@ func TestOrbsVotingContract_processVote_collectDelegatorStake_DelegatorIgnoredIf
 		// call
 		guardians := _getGuardians()
 		guardians[d2.address] = true
-		delegatorStakes := _collectDelegatorsStake(guardians)
+		delegators, delegatorStakes := _collectDelegatorsStake(guardians)
 
 		// assert
 		m.VerifyMocks()
+		require.Len(t, delegators, 2)
 		require.Len(t, delegatorStakes, 2)
 		_, ok := delegatorStakes[d2.address]
 		require.False(t, ok, "d2 should not exist as delegator")
@@ -558,8 +559,8 @@ func TestOrbsVotingContract_processVote_findGuardianDelegators_IgnoreSelfDelegat
 
 		// call
 		guardians := _getGuardians()
-		delegatorStakes := _collectDelegatorsStake(guardians)
-		guardianDelegators := _findGuardianDelegators(delegatorStakes)
+		delegators, _ := _collectDelegatorsStake(guardians)
+		guardianDelegators := _findGuardianDelegators(delegators)
 
 		// assert
 		m.VerifyMocks()
@@ -601,7 +602,7 @@ func TestOrbsVotingContract_processVote_calculateOneGuardianVoteRecursive(t *tes
 				require.EqualValues(t, cTest.expectParticipantStake[k], v, "bad values")
 			}
 			require.EqualValues(t, len(cTest.expectParticipantStake), len(participants), "participants length not equal")
-			for p := range participantStakes {
+			for _, p := range participants {
 				_, ok := participantStakes[p]
 				require.True(t, ok, "missing key")
 			}
