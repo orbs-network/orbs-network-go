@@ -24,6 +24,8 @@ import (
 
 const SEND_QUEUE_MAX_MESSAGES = 1000
 
+var LogTag = log.String("adapter", "gossip")
+
 type message struct {
 	payloads     [][]byte
 	traceContext *trace.Context
@@ -47,7 +49,7 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("node", node.NodeAddress())), len(validators))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
 	}
 
 	return transport
