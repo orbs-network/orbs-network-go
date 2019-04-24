@@ -15,13 +15,11 @@ type transactionWaiter struct {
 }
 
 func (w *transactionWaiter) waitForIncomingTransaction(ctx context.Context) bool {
-	for {
-		select {
-		case <-w.incremented:
-			return true
-		case <-ctx.Done():
-			return false
-		}
+	select {
+	case <-w.incremented:
+		return true
+	case <-ctx.Done():
+		return false
 	}
 }
 

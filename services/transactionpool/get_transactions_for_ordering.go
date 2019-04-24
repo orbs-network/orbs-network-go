@@ -120,7 +120,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 	batch, err := runBatch(proposedBlockTimestamp)
-	if !batch.hasEnoughTransactions(1) {
+	for !batch.hasEnoughTransactions(1) && timeoutCtx.Err() == nil {
 		logger.Info("not enough transactions in batch, waiting for more")
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
 			logger.Info("got a new transaction, re-running batch")
