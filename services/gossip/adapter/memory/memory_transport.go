@@ -47,7 +47,7 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("peer-listener", node.NodeAddress())), len(validators))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("node", node.NodeAddress())), len(validators))
 	}
 
 	return transport
@@ -125,6 +125,7 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 
 func (p *peer) acceptUsing(bgCtx context.Context, listener adapter.TransportListener) {
 	for {
+		p.logger.Info("reading a message from socket", log.Int("socket-size", len(p.socket)))
 		select {
 		case message := <-p.socket:
 			receive(bgCtx, listener, message)

@@ -8,8 +8,11 @@
 
 package adapter
 
-import "github.com/orbs-network/scribe/log"
+import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/scribe/log"
+)
 
-func NewNativeCompiler(config Config, logger log.Logger) Compiler {
+func NewNativeCompiler(config Config, logger log.Logger, registry metric.Registry) Compiler {
 	return nil
 }

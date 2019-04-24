@@ -81,9 +81,9 @@ func newTransactionBatch(logger log.Logger, transactions Transactions) *transact
 }
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
-
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	//TODO(v1) fail if requested block height is in the past
-	s.logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
+	logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
 
 	// close first  block immediately without waiting (important for gamma)
 	if input.CurrentBlockHeight == 1 {
@@ -109,7 +109,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	runBatch := func(proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
 		batch := &transactionBatch{
-			logger:               s.logger,
+			logger:               logger,
 			maxNumOfTransactions: input.MaxNumberOfTransactions,
 			sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
 		}
@@ -121,12 +121,15 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 	batch, err := runBatch(proposedBlockTimestamp)
 	if !batch.hasEnoughTransactions(1) {
+		logger.Info("not enough transactions in batch, waiting for more")
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
+			logger.Info("got a new transaction, re-running batch")
 			// propose a new time since we've been waiting
 			proposedBlockTimestamp = proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 			batch, err = runBatch(proposedBlockTimestamp)
 		}
 	}
+	logger.Info("returning a batch", log.Int("batch-size", batch.size()))
 
 	// even on error we want to reject transactions first to their senders before exiting
 	batch.notifyRejections(ctx, s.pendingPool)
@@ -203,10 +206,14 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 }
 
 func (r *transactionBatch) hasEnoughTransactions(numOfTransactions int) bool {
-	return len(r.validTransactions) >= numOfTransactions
+	return r.size() >= numOfTransactions
 }
 
 func (r *transactionBatch) fetchUsing(fetcher batchFetcher) {
 	r.incomingTransactions = fetcher.getBatch(r.maxNumOfTransactions, r.sizeLimit)
 
+}
+
+func (r *transactionBatch) size() int {
+	return len(r.validTransactions)
 }

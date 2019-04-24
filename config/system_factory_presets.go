@@ -174,13 +174,14 @@ func ForAcceptanceTestNetwork(
 	maxTxPerBlock uint32,
 	requiredQuorumPercentage uint32,
 	virtualChainId primitives.VirtualChainId,
+	emptyBlockTime time.Duration,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Millisecond)
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, emptyBlockTime)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 600*time.Millisecond)
