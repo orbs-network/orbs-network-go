@@ -29,16 +29,17 @@ var ELECTION_VALIDATOR_INTRODUCTION_REWARD = uint64(1000000)
 var ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT = uint64(4)
 var ANNUAL_TO_ELECTION_FACTOR = uint64(11723)
 
-func _processRewards(totalVotes uint64, elected [][20]byte, participantStakes map[[20]byte]uint64, guardiansAccumulatedStake map[[20]byte]uint64) {
-	_processRewardsParticipants(totalVotes, participantStakes)
+func _processRewards(totalVotes uint64, elected [][20]byte, participants [][20]byte, participantStakes map[[20]byte]uint64, guardiansAccumulatedStake map[[20]byte]uint64) {
+	_processRewardsParticipants(totalVotes, participants, participantStakes)
 	_processRewardsGuardians(totalVotes, guardiansAccumulatedStake)
 	_processRewardsValidators(elected)
 }
 
-func _processRewardsParticipants(totalVotes uint64, participantStakes map[[20]byte]uint64) {
+func _processRewardsParticipants(totalVotes uint64, participants [][20]byte, participantStakes map[[20]byte]uint64) {
 	totalReward := _maxRewardForGroup(ELECTION_PARTICIPATION_MAX_REWARD, totalVotes, ELECTION_PARTICIPATION_MAX_STAKE_REWARD_PERCENT)
 	fmt.Printf("elections %10d rewards: %d participants total reward is %d \n", getCurrentElectionBlockNumber(), len(participantStakes), totalReward)
-	for participant, stake := range participantStakes {
+	for _, participant := range participants {
+		stake := participantStakes[participant]
 		reward := safeuint64.Div(safeuint64.Mul(stake, totalReward), totalVotes)
 		fmt.Printf("elections %10d rewards: participant %x, stake %d adding %d\n", getCurrentElectionBlockNumber(), participant, stake, reward)
 		_addCumulativeParticipationReward(participant[:], reward)
