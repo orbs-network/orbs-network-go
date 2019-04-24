@@ -45,7 +45,7 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 		startFakeSingleThreadedConsensusAlgo(t, ctx, harness, targetBlockHeight, updateConsensusAlgoHeight)
 
 		require.Truef(t, test.Eventually(15*time.Second, func() bool {
-			return topReportedHeight == targetBlockHeight
+			return topReportedHeight >= targetBlockHeight
 		}), "expected blocks to be produced without deadlock, but only %d were closed", topReportedHeight)
 	})
 }
@@ -57,13 +57,14 @@ func startFakeSingleThreadedConsensusAlgo(t *testing.T, ctx context.Context, har
 		for {
 			select {
 			case <-ctx.Done():
+				return
 			case <-updateConsensusAlgoHeight:
 			default:
 				if h < targetBlockHeight {
-					time.Sleep(time.Nanosecond)
 					h++
 					_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(h).WithTimestampNow().Build())
 					require.NoError(t, err)
+					time.Sleep(time.Nanosecond)
 				}
 			}
 		}
