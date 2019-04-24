@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
@@ -23,13 +24,14 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	electedValidatorsAddresses, err := s.getElectedValidators(ctx, input.CurrentBlockHeight)
 	if err != nil {
 		return nil, err
 	}
 
 	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.LeanHelixConsensusMinimumCommitteeSize(), uint32(len(electedValidatorsAddresses)))
-	s.logger.Info("Calculated committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Uint32("committee-size", committeeSize), log.Int("elected-validators-count", len(electedValidatorsAddresses)), log.Uint32("max-committee-size", input.MaxCommitteeSize))
+	logger.Info("Calculated committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Uint32("committee-size", committeeSize), log.Int("elected-validators-count", len(electedValidatorsAddresses)), log.Uint32("max-committee-size", input.MaxCommitteeSize))
 	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, electedValidatorsAddresses)
 	if err != nil {
 		return nil, err
