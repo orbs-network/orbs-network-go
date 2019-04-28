@@ -21,6 +21,8 @@ import (
 )
 
 const LEAN_HELIX_CONSENSUS_JSON = `{"active-consensus-algo":2}`
+const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
+const GRACEFUL_SHUTDOWN_TIMEOUT = 3 * time.Second
 
 type metrics map[string]map[string]interface{}
 
@@ -50,10 +52,12 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 		randomPort := test.RandomPort()
 		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(serverAddress, false, configJSON, false)
-		defer gammaServer.GracefulShutdown(1 * time.Second)
+		gammaServer := StartGammaServer(GammaServerConfig{
+			serverAddress, false, configJSON, false, true,
+		})
+		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
 
-		require.True(t, test.Eventually(3*time.Second, waitForBlock(endpoint, 1)))
+		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
 
 		sender, _ := orbsClient.CreateAccount()
 		transferTo, _ := orbsClient.CreateAccount()
@@ -65,7 +69,7 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-		require.True(t, test.Eventually(3*time.Second, waitForBlock(endpoint, 2)))
+		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 2)))
 	}
 }
 
@@ -74,10 +78,12 @@ func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 		randomPort := test.RandomPort()
 		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(serverAddress, false, configJSON, false)
-		defer gammaServer.GracefulShutdown(1 * time.Second)
+		gammaServer := StartGammaServer(GammaServerConfig{
+			serverAddress, false, configJSON, false, true,
+		})
+		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
 
-		require.True(t, test.Eventually(3*time.Second, waitForBlock(endpoint, 5)))
+		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
 	}
 }
 
