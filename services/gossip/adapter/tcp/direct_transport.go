@@ -82,11 +82,6 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		metrics: getMetrics(registry),
 	}
 
-	// client channels (not under mutex, before all goroutines)
-	for peerNodeAddress := range t.config.GossipPeers() {
-		t.createOutgoingQueue(peerNodeAddress)
-	}
-
 	// server goroutine
 	supervised.GoForever(ctx, t.logger, func() {
 		t.serverMainLoop(ctx, t.config.GossipListenPort())
@@ -100,15 +95,11 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	return t
 }
 
-func (t *directTransport) createOutgoingQueue(peerNodeAddress string) {
+func (t *directTransport) connect(ctx context.Context, peerNodeAddress string, peer config.GossipPeer) {
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 		t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
 		t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
-	}
-}
 
-func (t *directTransport) connect(ctx context.Context, peerNodeAddress string, peer config.GossipPeer) {
-	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 		peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 		t.outgoingPeerQueues[peerNodeAddress].networkAddress = peerAddress
 
@@ -123,7 +114,6 @@ func (t *directTransport) AddPeer(bgCtx context.Context, address primitives.Node
 	defer t.mutex.Unlock()
 
 	t.config.GossipPeers()[address.KeyForMap()] = peer
-	t.createOutgoingQueue(address.KeyForMap())
 	t.connect(bgCtx, address.KeyForMap(), peer)
 }
 
