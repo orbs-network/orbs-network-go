@@ -21,6 +21,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
@@ -112,37 +113,55 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
-	gossipPortByNodeIndex := []int{}
 	gossipPeers := make(map[string]config.GossipPeer)
 
 	for i := 0; i < 4; i++ {
-		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
 		res.nodeAddresses = append(res.nodeAddresses, nodeAddress)
 	}
 
 	configs := []config.GossipTransportConfig{
-		config.ForGossipAdapterTests(res.nodeAddresses[0], gossipPortByNodeIndex[0], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[1], gossipPortByNodeIndex[1], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[2], gossipPortByNodeIndex[2], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[3], gossipPortByNodeIndex[3], gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[0], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[1], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[2], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[3], 0, gossipPeers),
 	}
 
 	logger := log.DefaultTestingLogger(tb)
 	registry := metric.NewRegistry()
 
-	res.transports = []adapter.Transport{
+	transports := []*tcp.DirectTransport{
 		tcp.NewDirectTransport(ctx, configs[0], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[1], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[2], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[3], logger, registry),
 	}
+
+	test.Eventually(1*time.Second, func() bool {
+		listening := true
+		for _, t := range transports {
+			listening = listening && t.IsServerListening()
+		}
+		return listening
+	})
+
 	res.listeners = []*testkit.MockTransportListener{
-		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),
-		testkit.ListenTo(res.transports[1], res.nodeAddresses[1]),
-		testkit.ListenTo(res.transports[2], res.nodeAddresses[2]),
-		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
+		testkit.ListenTo(transports[0], res.nodeAddresses[0]),
+		testkit.ListenTo(transports[1], res.nodeAddresses[1]),
+		testkit.ListenTo(transports[2], res.nodeAddresses[2]),
+		testkit.ListenTo(transports[3], res.nodeAddresses[3]),
+	}
+
+	for _, t1 := range transports {
+		for i, t2 := range transports {
+			if t1 != t2 {
+				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.Port(), "127.0.0.1"))
+			}
+		}
+	}
+
+	for _, t := range transports {
+		res.transports = append(res.transports, t)
 	}
 
 	return res

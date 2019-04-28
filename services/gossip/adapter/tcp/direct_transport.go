@@ -41,7 +41,7 @@ type metrics struct {
 	outgoingMessageSize *metric.Histogram
 }
 
-type directTransport struct {
+type DirectTransport struct {
 	config config.GossipTransportConfig
 	logger log.Logger
 
@@ -70,8 +70,8 @@ func getMetrics(registry metric.Registry) *metrics {
 	}
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *directTransport {
-	t := &directTransport{
+func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *DirectTransport {
+	t := &DirectTransport{
 		config:         config,
 		logger:         logger.WithTags(LogTag),
 		metricRegistry: registry,
@@ -95,7 +95,9 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	return t
 }
 
-func (t *directTransport) connect(ctx context.Context, peerNodeAddress string, peer config.GossipPeer) {
+// note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
+// the context is done
+func (t *DirectTransport) connect(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 		t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
 		t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
@@ -103,13 +105,13 @@ func (t *directTransport) connect(ctx context.Context, peerNodeAddress string, p
 		peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 		t.outgoingPeerQueues[peerNodeAddress].networkAddress = peerAddress
 
-		supervised.GoForever(ctx, t.logger, func() {
-			t.clientMainLoop(ctx, t.outgoingPeerQueues[peerNodeAddress])
+		supervised.GoForever(bgCtx, t.logger, func() {
+			t.clientMainLoop(bgCtx, t.outgoingPeerQueues[peerNodeAddress])
 		})
 	}
 }
 
-func (t *directTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
+func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -117,7 +119,7 @@ func (t *directTransport) AddPeer(bgCtx context.Context, address primitives.Node
 	t.connect(bgCtx, address.KeyForMap(), peer)
 }
 
-func (t *directTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
+func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -125,7 +127,7 @@ func (t *directTransport) RegisterListener(listener adapter.TransportListener, l
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
-func (t *directTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.outgoingPeerQueues {
@@ -145,6 +147,10 @@ func (t *directTransport) Send(ctx context.Context, data *adapter.TransportData)
 		panic("Not implemented")
 	}
 	return errors.Errorf("unknown recipient mode: %s", data.RecipientMode.String())
+}
+
+func (t *DirectTransport) Port() int {
+	return t.serverPort
 }
 
 func calcPaddingSize(size uint32) uint32 {

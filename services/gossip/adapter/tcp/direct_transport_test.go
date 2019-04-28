@@ -23,7 +23,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		transport := NewDirectTransport(ctx, cfg, log.DefaultTestingLogger(t), metric.NewRegistry())
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-			return transport.isServerListening()
+			return transport.IsServerListening()
 		}), "server did not start")
 	})
 }
@@ -43,7 +43,7 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 		node1.RegisterListener(l2, address2)
 
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-			return node1.isServerListening() && node2.isServerListening()
+			return node1.IsServerListening() && node2.IsServerListening()
 		}), "server did not start")
 
 		node1.AddPeer(ctx, address2, config.NewHardCodedGossipPeer(node2.serverPort, "127.0.0.1"))
