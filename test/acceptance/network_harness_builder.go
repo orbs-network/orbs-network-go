@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -29,6 +30,8 @@ const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
 const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
 
+var DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME = 10 * time.Millisecond
+
 type networkHarnessBuilder struct {
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
@@ -41,6 +44,7 @@ type networkHarnessBuilder struct {
 	requiredQuorumPercentage uint32
 	blockChain               []*protocol.BlockPairContainer
 	virtualChainId           primitives.VirtualChainId
+	emptyBlockTime           time.Duration
 }
 
 func newHarness() *networkHarnessBuilder {
@@ -135,7 +139,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime)
 
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
@@ -178,6 +182,7 @@ func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.Lo
 		WithOutput(testOutput).
 		WithFilters(
 			log.IgnoreMessagesMatching("transport message received"),
+			log.ExcludeField(memory.LogTag),
 		).
 		WithFilters(b.logFilters...)
 	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints()))
@@ -202,6 +207,11 @@ func (b *networkHarnessBuilder) WithInitialBlocks(blocks []*protocol.BlockPairCo
 
 func (b *networkHarnessBuilder) WithVirtualChainId(id primitives.VirtualChainId) *networkHarnessBuilder {
 	b.virtualChainId = id
+	return b
+}
+
+func (b *networkHarnessBuilder) WithEmptyBlockTime(emptyBlockTime time.Duration) *networkHarnessBuilder {
+	b.emptyBlockTime = emptyBlockTime
 	return b
 }
 

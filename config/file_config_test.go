@@ -164,7 +164,7 @@ func TestMergeWithFileConfig(t *testing.T) {
 
 	cfg := ForAcceptanceTestNetwork(nodes,
 		keyPair.NodeAddress(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100, 42)
+		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100, 42, 10*time.Millisecond)
 
 	require.EqualValues(t, 0, len(cfg.GenesisValidatorNodes()))
 

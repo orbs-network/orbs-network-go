@@ -68,6 +68,7 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 		1,
 		100,
 		42,
+		10*time.Millisecond,
 	)
 
 	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
