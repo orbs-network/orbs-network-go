@@ -114,13 +114,13 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
-		randomPort := test.RandomPort()
 
-		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
+		conn, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err, "test peer server could not listen")
 
 		peersListeners[i] = conn
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(randomPort, "127.0.0.1")
+		port := conn.Addr().(*net.TCPAddr).Port
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(port, "127.0.0.1")
 	}
 	return gossipPeers, peersListeners
 }
