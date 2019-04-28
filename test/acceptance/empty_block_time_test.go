@@ -21,6 +21,6 @@ func TestIncomingTransactionTriggersExactlyOneBlock(t *testing.T) {
 
 			heightAfterTx, _ := network.BlockPersistence(0).GetLastBlockHeight()
 
-			require.InDelta(t, uint64(heightAfterTx), uint64(heightBeforeTx), 1.0, "incoming transaction triggered closure of more than one block")
+			require.Equal(t, uint64(heightBeforeTx)+1, uint64(heightAfterTx), "incoming transaction triggered closure of more than one block")
 		})
 }
