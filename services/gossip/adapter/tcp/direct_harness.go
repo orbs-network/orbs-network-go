@@ -32,7 +32,7 @@ const HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT = 3 * time.Second
 
 type directHarness struct {
 	config    config.GossipTransportConfig
-	transport *directTransport
+	transport *DirectTransport
 
 	peersListeners            []net.Listener
 	peersListenersConnections []net.Conn
@@ -80,13 +80,13 @@ func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Co
 	return h
 }
 
-func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *directTransport {
+func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *DirectTransport {
 	log := log.DefaultTestingLogger(tb)
 	registry := metric.NewRegistry()
 	transport := NewDirectTransport(ctx, cfg, log, registry)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		return transport.isServerListening()
+		return transport.IsServerListening()
 	})
 	return transport
 }
@@ -114,13 +114,13 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 	for i := 0; i < NETWORK_SIZE-1; i++ {
 		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
-		randomPort := test.RandomPort()
 
-		conn, err := net.Listen("tcp", fmt.Sprintf("127.0.0.01:%d", randomPort))
+		conn, err := net.Listen("tcp", "127.0.0.1:0")
 		require.NoError(t, err, "test peer server could not listen")
 
 		peersListeners[i] = conn
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(randomPort, "127.0.0.1")
+		port := conn.Addr().(*net.TCPAddr).Port
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(port, "127.0.0.1")
 	}
 	return gossipPeers, peersListeners
 }
