@@ -46,6 +46,7 @@ func TestOrbsVotingContract_processRewards_getValidatorStakes(t *testing.T) {
 func TestOrbsVotingContract_processRewards_processRewardsParticipants(t *testing.T) {
 	totalVotes := uint64(820000)
 	p1, p2, p3, p4, p5 := [20]byte{0xa0}, [20]byte{0xb1}, [20]byte{0xc1}, [20]byte{0xd1}, [20]byte{0xe1}
+	participants := [][20]byte{p1, p2, p3, p4, p5}
 	participantStakes := map[[20]byte]uint64{p1: 100000, p2: 50000, p3: 0, p4: 10000, p5: 40000}
 
 	InServiceScope(nil, nil, func(m Mockery) {
@@ -53,7 +54,7 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants(t *testing
 		_setCurrentElectionBlockNumber(5000)
 
 		// call
-		_processRewardsParticipants(totalVotes, participantStakes)
+		_processRewardsParticipants(totalVotes, participants, participantStakes)
 
 		// assert
 		require.EqualValues(t, 34, getCumulativeParticipationReward(p2[:]))
@@ -68,13 +69,14 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants_TotalAbove
 	totalVotes := uint64(800000000)
 	h := newRewardHarness()
 	p1, p2, p3 := h.addStakeActor(1000000), h.addStakeActor(200000000), h.addStakeActor(0)
+	participants := [][20]byte{p1.address, p2.address, p3.address}
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 		_setCurrentElectionBlockNumber(5000)
 
 		// call
-		_processRewardsParticipants(totalVotes, h.getAllStakes())
+		_processRewardsParticipants(totalVotes, participants, h.getAllStakes())
 
 		// assert
 		max := ELECTION_PARTICIPATION_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
