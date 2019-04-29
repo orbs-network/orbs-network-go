@@ -8,11 +8,39 @@ package httpserver
 
 import (
 	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"net/http"
 )
+
+type IndexResponse struct {
+	Status      string
+	Description string
+	Version     config.Version
+}
+
+// Serves both index and 404 because router is built that way
+func (s *server) Index(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	data, _ := json.MarshalIndent(IndexResponse{
+		Status:      "OK",
+		Description: "ORBS blockchain public API",
+		Version:     config.GetVersion(),
+	}, "", "  ")
+
+	_, err := w.Write(data)
+	if err != nil {
+		s.logger.Info("error writing index.json response", log.Error(err))
+	}
+}
 
 func (s *server) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")

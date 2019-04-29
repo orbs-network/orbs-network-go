@@ -301,3 +301,21 @@ func TestHttpServer_GetBlock_Error(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
 }
+
+func TestHttpServer_Index(t *testing.T) {
+	papiMock := &services.MockPublicApi{}
+	s := makeServer(t, papiMock)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	rec := httptest.NewRecorder()
+	s.(*server).Index(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "should return 200")
+
+	reqNotFound, _ := http.NewRequest("GET", "/does-not-exist", nil)
+	recNotFound := httptest.NewRecorder()
+	s.(*server).Index(recNotFound, reqNotFound)
+
+	require.Equal(t, http.StatusNotFound, recNotFound.Code, "should return 404")
+
+}
