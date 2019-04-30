@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -39,7 +40,7 @@ func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
 			logger.Info("consensus round run loop terminating with context")
 			return
 		case s.lastSuccessfullyVotedBlock = <-s.successfullyVotedBlocks:
-			logger.Info("consensus round waking up after successfully voted block", log.BlockHeight(s.lastSuccessfullyVotedBlock))
+			logger.Info("consensus round waking up after successfully voted block", logfields.BlockHeight(s.lastSuccessfullyVotedBlock))
 			s.metrics.consensusRoundTickTime.RecordSince(start)
 			continue
 		case <-time.After(s.config.BenchmarkConsensusRetryInterval()):
@@ -116,7 +117,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	logger.Info("generating new proposed block", log.BlockHeight(lastCommittedBlockHeight+1))
+	logger.Info("generating new proposed block", logfields.BlockHeight(lastCommittedBlockHeight+1))
 
 	// get tx
 	txOutput, err := s.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
@@ -183,7 +184,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("broadcasting commit block", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("broadcasting commit block", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 
 	// the block pair fields we have may be partial (for example due to being read from persistence storage on init) so don't broadcast it in this case
 	if blockPair == nil || blockPair.TransactionsBlock.BlockProof == nil || blockPair.ResultsBlock.BlockProof == nil {
@@ -221,7 +222,7 @@ func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipm
 	if enoughVotesReceived {
 		select {
 		case s.successfullyVotedBlocks <- lastCommittedBlockHeight:
-			s.logger.Info("Block has reached consensus", log.BlockHeight(lastCommittedBlockHeight), trace.LogFieldFrom(ctx))
+			s.logger.Info("Block has reached consensus", logfields.BlockHeight(lastCommittedBlockHeight), trace.LogFieldFrom(ctx))
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -266,7 +267,7 @@ func (s *service) leaderAddVote(ctx context.Context, sender *gossipmessages.Send
 
 	// count if we have enough votes to move forward
 	existingVotes := len(s.lastCommittedBlockVotersUnderMutex) + 1
-	logger.Info("valid vote arrived", log.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
+	logger.Info("valid vote arrived", logfields.BlockHeight(status.LastCommittedBlockHeight()), log.Int("existing-votes", existingVotes), log.Int("required-votes", s.requiredQuorumSize()))
 	if existingVotes >= s.requiredQuorumSize() && !s.lastCommittedBlockVotersReachedQuorumUnderMutex {
 		s.lastCommittedBlockVotersReachedQuorumUnderMutex = true
 		return true, nil

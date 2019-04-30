@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
@@ -19,8 +18,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestContract_SendBroadcast(t *testing.T) {
@@ -112,48 +113,79 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
-	gossipPortByNodeIndex := []int{}
 	gossipPeers := make(map[string]config.GossipPeer)
 
 	for i := 0; i < 4; i++ {
-		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
 		res.nodeAddresses = append(res.nodeAddresses, nodeAddress)
 	}
 
 	configs := []config.GossipTransportConfig{
-		config.ForGossipAdapterTests(res.nodeAddresses[0], gossipPortByNodeIndex[0], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[1], gossipPortByNodeIndex[1], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[2], gossipPortByNodeIndex[2], gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[3], gossipPortByNodeIndex[3], gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[0], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[1], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[2], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[3], 0, gossipPeers),
 	}
 
 	logger := log.DefaultTestingLogger(tb)
 	registry := metric.NewRegistry()
 
-	res.transports = []adapter.Transport{
+	transports := []*tcp.DirectTransport{
 		tcp.NewDirectTransport(ctx, configs[0], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[1], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[2], logger, registry),
 		tcp.NewDirectTransport(ctx, configs[3], logger, registry),
 	}
+
+	test.Eventually(1*time.Second, func() bool {
+		listening := true
+		for _, t := range transports {
+			listening = listening && t.IsServerListening()
+		}
+		return listening
+	})
+
 	res.listeners = []*testkit.MockTransportListener{
-		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),
-		testkit.ListenTo(res.transports[1], res.nodeAddresses[1]),
-		testkit.ListenTo(res.transports[2], res.nodeAddresses[2]),
-		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
+		testkit.ListenTo(transports[0], res.nodeAddresses[0]),
+		testkit.ListenTo(transports[1], res.nodeAddresses[1]),
+		testkit.ListenTo(transports[2], res.nodeAddresses[2]),
+		testkit.ListenTo(transports[3], res.nodeAddresses[3]),
+	}
+
+	for _, t1 := range transports {
+		for i, t2 := range transports {
+			if t1 != t2 {
+				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.Port(), "127.0.0.1"))
+			}
+		}
+	}
+
+	for _, t := range transports {
+		res.transports = append(res.transports, t)
 	}
 
 	return res
 }
 
+// Continuously retry to send a message and verify mock listeners.
+// When Transport.Send() is called we get no guarantee for delivery.
+// the returned error is not intended to reflect success in neither sending or
+// queuing of the message. error is returned only for internal configuration
+// conflicts, namely, trying to send to an unknown recipient.
+//
+// Send() will not return an error if the connection is closed, not yet connected,
+// if the buffer is overflowed, or for any other networking issue.
+//
+// For this reason we must re-Send() on every iteration of the verification loop.
+// It is also the reason why the mock verification conditions must be
+// tolerant to receiving the message more than once as it is likely
+// some listeners will receive multiple transmissings of data
 func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, sender adapter.Transport, data *adapter.TransportData) bool {
 	cfg := config.ForGossipAdapterTests(nil, 0, nil)
 	return test.Eventually(2*cfg.GossipNetworkTimeout(), func() bool {
 
-		err := sender.Send(ctx, data)
-		if err != nil {
+		err := sender.Send(ctx, data) // try to resend
+		if err != nil {               // does not indicate a failure to send, only on config issues
 			return false
 		}
 

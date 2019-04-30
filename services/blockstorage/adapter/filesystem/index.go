@@ -8,9 +8,9 @@ package filesystem
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
@@ -20,10 +20,10 @@ type blockHeightIndex struct {
 	firstBlockInTsBucket map[uint32]primitives.BlockHeight
 	topBlock             *protocol.BlockPairContainer
 	topBlockHeight       primitives.BlockHeight
-	logger               log.BasicLogger
+	logger               log.Logger
 }
 
-func newBlockHeightIndex(logger log.BasicLogger, firstBlockOffset int64) *blockHeightIndex {
+func newBlockHeightIndex(logger log.Logger, firstBlockOffset int64) *blockHeightIndex {
 	return &blockHeightIndex{
 		logger:               logger,
 		heightOffset:         map[primitives.BlockHeight]int64{1: firstBlockOffset},

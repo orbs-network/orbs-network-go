@@ -9,11 +9,12 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -26,7 +27,7 @@ type rejectedTransaction struct {
 type transactionBatch struct {
 	maxNumOfTransactions uint32
 	sizeLimit            uint32
-	logger               log.BasicLogger
+	logger               log.Logger
 
 	incomingTransactions    Transactions
 	transactionsToReject    []*rejectedTransaction
@@ -72,7 +73,7 @@ func (v *vmPreOrderValidator) preOrderCheck(ctx context.Context, txs Transaction
 	return output.PreOrderResults, nil
 }
 
-func newTransactionBatch(logger log.BasicLogger, transactions Transactions) *transactionBatch {
+func newTransactionBatch(logger log.Logger, transactions Transactions) *transactionBatch {
 	return &transactionBatch{
 		logger:               logger,
 		incomingTransactions: transactions,
@@ -80,9 +81,9 @@ func newTransactionBatch(logger log.BasicLogger, transactions Transactions) *tra
 }
 
 func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
-
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	//TODO(v1) fail if requested block height is in the past
-	s.logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), log.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
+	logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
 
 	// close first  block immediately without waiting (important for gamma)
 	if input.CurrentBlockHeight == 1 {
@@ -108,7 +109,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	runBatch := func(proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
 		batch := &transactionBatch{
-			logger:               s.logger,
+			logger:               logger,
 			maxNumOfTransactions: input.MaxNumberOfTransactions,
 			sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
 		}
@@ -119,13 +120,16 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 
 	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 	batch, err := runBatch(proposedBlockTimestamp)
-	if !batch.hasEnoughTransactions(1) {
+	for !batch.hasEnoughTransactions(1) && timeoutCtx.Err() == nil {
+		logger.Info("not enough transactions in batch, waiting for more")
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
+			logger.Info("got a new transaction, re-running batch")
 			// propose a new time since we've been waiting
 			proposedBlockTimestamp = proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 			batch, err = runBatch(proposedBlockTimestamp)
 		}
 	}
+	logger.Info("returning a batch", log.Int("batch-size", batch.size()))
 
 	// even on error we want to reject transactions first to their senders before exiting
 	batch.notifyRejections(ctx, s.pendingPool)
@@ -145,10 +149,10 @@ func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, valida
 	for _, tx := range r.incomingTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 		if err := validator.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
-			r.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(txHash))
+			r.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 			r.reject(txHash, err.TransactionStatus)
 		} else if committedTransactions.has(txHash) {
-			r.logger.Info("dropping committed transaction", log.String("flow", "checkpoint"), log.Transaction(txHash))
+			r.logger.Info("dropping committed transaction", log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 			r.reject(txHash, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED)
 		} else {
 			r.queueForPreOrderValidation(tx)
@@ -191,7 +195,7 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 			r.accept(tx)
 		} else {
 			txHash := digest.CalcTxHash(tx.Transaction())
-			r.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), log.Transaction(txHash))
+			r.logger.Info("dropping transaction that failed pre-order validation", log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 			r.reject(txHash, preOrderResults[i])
 		}
 	}
@@ -202,10 +206,14 @@ func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator
 }
 
 func (r *transactionBatch) hasEnoughTransactions(numOfTransactions int) bool {
-	return len(r.validTransactions) >= numOfTransactions
+	return r.size() >= numOfTransactions
 }
 
 func (r *transactionBatch) fetchUsing(fetcher batchFetcher) {
 	r.incomingTransactions = fetcher.getBatch(r.maxNumOfTransactions, r.sizeLimit)
 
+}
+
+func (r *transactionBatch) size() int {
+	return len(r.validTransactions)
 }

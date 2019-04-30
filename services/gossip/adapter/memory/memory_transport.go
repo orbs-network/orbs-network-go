@@ -13,16 +13,18 @@ package memory
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 )
 
 const SEND_QUEUE_MAX_MESSAGES = 1000
+
+var LogTag = log.String("adapter", "gossip")
 
 type message struct {
 	payloads     [][]byte
@@ -32,7 +34,7 @@ type message struct {
 type peer struct {
 	socket   chan message
 	listener chan adapter.TransportListener
-	logger   log.BasicLogger
+	logger   log.Logger
 }
 
 type memoryTransport struct {
@@ -40,14 +42,14 @@ type memoryTransport struct {
 	peers map[string]*peer
 }
 
-func NewTransport(ctx context.Context, logger log.BasicLogger, validators map[string]config.ValidatorNode) *memoryTransport {
+func NewTransport(ctx context.Context, logger log.Logger, validators map[string]config.ValidatorNode) *memoryTransport {
 	transport := &memoryTransport{peers: make(map[string]*peer)}
 
 	transport.Lock()
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(log.Stringable("peer-listener", node.NodeAddress())), len(validators))
+		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
 	}
 
 	return transport
@@ -81,7 +83,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return nil
 }
 
-func newPeer(ctx context.Context, logger log.BasicLogger, totalPeers int) *peer {
+func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 	p := &peer{
 		// channel is buffered on purpose, otherwise the whole network is synced on transport
 		// we also multiply by number of peers because we have one logical "socket" for combined traffic from all peers together
@@ -125,6 +127,7 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 
 func (p *peer) acceptUsing(bgCtx context.Context, listener adapter.TransportListener) {
 	for {
+		p.logger.Info("reading a message from socket", log.Int("socket-size", len(p.socket)))
 		select {
 		case message := <-p.socket:
 			receive(bgCtx, listener, message)

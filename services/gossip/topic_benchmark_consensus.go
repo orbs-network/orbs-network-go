@@ -8,7 +8,6 @@ package gossip
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
@@ -16,13 +15,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 )
 
 func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
-	s.logger.Info("RegisterBenchmarkConsensusHandler()")
 	s.handlers.benchmarkConsensusHandlers = append(s.handlers.benchmarkConsensusHandlers, handler)
 }
 

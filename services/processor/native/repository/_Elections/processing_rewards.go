@@ -7,6 +7,7 @@
 package elections_systemcontract
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
@@ -15,15 +16,18 @@ import (
 )
 
 /***
- * Rewards
+ * Rewards.
+ * Rewards constants are annual!!
  */
-var ELECTION_PARTICIPATION_MAX_REWARD = uint64(505328) // 60M / number of elections per year
+
+var ELECTION_PARTICIPATION_MAX_REWARD = uint64(60000000)
 var ELECTION_PARTICIPATION_MAX_STAKE_REWARD_PERCENT = uint64(8)
-var ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD = uint64(336885) // 40M / number of elections per year
+var ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD = uint64(40000000)
 var ELECTION_GUARDIAN_EXCELLENCE_MAX_STAKE_REWARD_PERCENT = uint64(10)
 var ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER = 10
-var ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD = uint64(8423) // 1M / number of elections per year
+var ELECTION_VALIDATOR_INTRODUCTION_REWARD = uint64(1000000)
 var ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT = uint64(4)
+var ANNUAL_TO_ELECTION_FACTOR = uint64(11723)
 
 func _processRewards(totalVotes uint64, elected [][20]byte, participantStakes map[[20]byte]uint64, guardiansAccumulatedStake map[[20]byte]uint64) {
 	_processRewardsParticipants(totalVotes, participantStakes)
@@ -33,7 +37,7 @@ func _processRewards(totalVotes uint64, elected [][20]byte, participantStakes ma
 
 func _processRewardsParticipants(totalVotes uint64, participantStakes map[[20]byte]uint64) {
 	totalReward := _maxRewardForGroup(ELECTION_PARTICIPATION_MAX_REWARD, totalVotes, ELECTION_PARTICIPATION_MAX_STAKE_REWARD_PERCENT)
-	fmt.Printf("elections %10d rewards: participants total reward is %d \n", getCurrentElectionBlockNumber(), totalReward)
+	fmt.Printf("elections %10d rewards: %d participants total reward is %d \n", getCurrentElectionBlockNumber(), len(participantStakes), totalReward)
 	for participant, stake := range participantStakes {
 		reward := safeuint64.Div(safeuint64.Mul(stake, totalReward), totalVotes)
 		fmt.Printf("elections %10d rewards: participant %x, stake %d adding %d\n", getCurrentElectionBlockNumber(), participant, stake, reward)
@@ -42,29 +46,28 @@ func _processRewardsParticipants(totalVotes uint64, participantStakes map[[20]by
 }
 
 func _processRewardsGuardians(totalVotes uint64, guardiansAccumulatedStake map[[20]byte]uint64) {
-	if len(guardiansAccumulatedStake) > ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER {
-		fmt.Printf("elections %10d rewards: there are %d guardians with total reward is %d - choosing %d top guardians\n",
-			getCurrentElectionBlockNumber(), len(guardiansAccumulatedStake), totalVotes, ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER)
-		guardiansAccumulatedStake, totalVotes = _getTopGuardians(guardiansAccumulatedStake)
-		fmt.Printf("elections %10d rewards: top %d guardians with total vote is now %d \n", getCurrentElectionBlockNumber(), len(guardiansAccumulatedStake), totalVotes)
-	}
+	fmt.Printf("elections %10d rewards: there are %d guardians with total reward is %d - choosing %d top guardians\n",
+		getCurrentElectionBlockNumber(), len(guardiansAccumulatedStake), totalVotes, ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER)
+	topGuardians, totalTopVotes := _getTopGuardians(guardiansAccumulatedStake)
+	fmt.Printf("elections %10d rewards: top %d guardians with total vote is now %d \n", getCurrentElectionBlockNumber(), len(topGuardians), totalTopVotes)
 
-	_setExcellenceProgramGuardians(guardiansAccumulatedStake)
-	totalReward := _maxRewardForGroup(ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD, totalVotes, ELECTION_GUARDIAN_EXCELLENCE_MAX_STAKE_REWARD_PERCENT)
+	_setExcellenceProgramGuardians(topGuardians)
+	totalReward := _maxRewardForGroup(ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD, totalTopVotes, ELECTION_GUARDIAN_EXCELLENCE_MAX_STAKE_REWARD_PERCENT)
 	fmt.Printf("elections %10d rewards: guardians total reward is %d \n", getCurrentElectionBlockNumber(), totalReward)
-	for guardian, stake := range guardiansAccumulatedStake {
-		reward := safeuint64.Div(safeuint64.Mul(stake, totalReward), totalVotes)
-		fmt.Printf("elections %10d rewards: guardian %x, stake %d adding %d\n", getCurrentElectionBlockNumber(), guardian, stake, reward)
-		_addCumulativeGuardianExcellenceReward(guardian[:], reward)
+	for _, guardian := range topGuardians {
+		reward := safeuint64.Div(safeuint64.Mul(guardian.vote, totalReward), totalTopVotes)
+		fmt.Printf("elections %10d rewards: guardian %x, stake %d adding %d\n", getCurrentElectionBlockNumber(), guardian.address, guardian.vote, reward)
+		_addCumulativeGuardianExcellenceReward(guardian.address[:], reward)
 	}
 }
 
 func _processRewardsValidators(elected [][20]byte) {
-	fmt.Printf("elections %10d rewards: validadator introduction reward %d\n", getCurrentElectionBlockNumber(), ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD)
+	electionValidatorIntroduction := safeuint64.Div(safeuint64.Mul(ELECTION_VALIDATOR_INTRODUCTION_REWARD, 100), ANNUAL_TO_ELECTION_FACTOR)
 	validatorsStake := _getValidatorsStake()
+	fmt.Printf("elections %10d rewards: %d validadator introduction reward %d\n", getCurrentElectionBlockNumber(), len(validatorsStake), electionValidatorIntroduction)
 	for _, elected := range elected {
 		stake := validatorsStake[elected]
-		reward := safeuint64.Add(ELECTION_VALIDATOR_INTRODUCTION_MAX_REWARD, safeuint64.Div(safeuint64.Mul(stake, ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT), 100))
+		reward := safeuint64.Add(electionValidatorIntroduction, safeuint64.Div(safeuint64.Mul(stake, ELECTION_VALIDATOR_MAX_STAKE_REWARD_PERCENT), ANNUAL_TO_ELECTION_FACTOR))
 		fmt.Printf("elections %10d rewards: validator %x, stake %d adding %d\n", getCurrentElectionBlockNumber(), elected, stake, reward)
 		_addCumulativeValidatorReward(elected[:], reward)
 	}
@@ -83,12 +86,13 @@ func _getValidatorsStake() (validatorsStake map[[20]byte]uint64) {
 }
 
 func _maxRewardForGroup(upperMaximum, totalVotes, percent uint64) uint64 {
-	calcMaximum := safeuint64.Div(safeuint64.Mul(totalVotes, percent), 100)
-	fmt.Printf("elections %10d rewards: uppperMax %d vs. %d = totalVotes %d * percent %d\n", getCurrentElectionBlockNumber(), upperMaximum, calcMaximum, totalVotes, percent)
-	if calcMaximum < upperMaximum {
-		return calcMaximum
+	upperMaximumPerElection := safeuint64.Div(safeuint64.Mul(upperMaximum, 100), ANNUAL_TO_ELECTION_FACTOR)
+	calcMaximumPerElection := safeuint64.Div(safeuint64.Mul(totalVotes, percent), ANNUAL_TO_ELECTION_FACTOR)
+	fmt.Printf("elections %10d rewards: uppperMax %d vs. %d = totalVotes %d * percent %d / number of annual election \n", getCurrentElectionBlockNumber(), upperMaximumPerElection, calcMaximumPerElection, totalVotes, percent)
+	if calcMaximumPerElection < upperMaximumPerElection {
+		return calcMaximumPerElection
 	}
-	return upperMaximum
+	return upperMaximumPerElection
 }
 
 func _formatCumulativeParticipationReward(delegator []byte) []byte {
@@ -140,10 +144,10 @@ func getExcellenceProgramGuardians() []byte {
 	return state.ReadBytes(_formatExcellenceProgramGuardians())
 }
 
-func _setExcellenceProgramGuardians(guardians map[[20]byte]uint64) {
+func _setExcellenceProgramGuardians(guardians guardianArray) {
 	guardiansForSave := make([]byte, 0, len(guardians)*20)
-	for guardianAddr := range guardians {
-		guardiansForSave = append(guardiansForSave, guardianAddr[:]...)
+	for _, guardian := range guardians {
+		guardiansForSave = append(guardiansForSave, guardian.address[:]...)
 	}
 	state.WriteBytes(_formatExcellenceProgramGuardians(), guardiansForSave)
 }
@@ -151,9 +155,8 @@ func _setExcellenceProgramGuardians(guardians map[[20]byte]uint64) {
 /***
  * Rewards: Sort top guardians using sort.Interface
  */
-func _getTopGuardians(guardiansAccumulatedStake map[[20]byte]uint64) (topGuardiansStake map[[20]byte]uint64, totalVotes uint64) {
+func _getTopGuardians(guardiansAccumulatedStake map[[20]byte]uint64) (topGuardiansStake guardianArray, totalVotes uint64) {
 	totalVotes = uint64(0)
-	topGuardiansStake = make(map[[20]byte]uint64)
 
 	guardianList := make(guardianArray, 0, len(guardiansAccumulatedStake))
 	for guardian, vote := range guardiansAccumulatedStake {
@@ -161,17 +164,28 @@ func _getTopGuardians(guardiansAccumulatedStake map[[20]byte]uint64) (topGuardia
 	}
 	sort.Sort(guardianList)
 
-	for i := 0; i < ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER; i++ {
-		fmt.Printf("elections %10d rewards: top guardian %x, has %d votes\n", _getCurrentElectionBlockNumber(), guardianList[i].guardian, guardianList[i].vote)
+	i := 0
+	for i = 0; i < len(guardianList) && i < ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER; i++ {
+		fmt.Printf("elections %10d rewards: top guardian %x, has %d votes\n", _getCurrentElectionBlockNumber(), guardianList[i].address, guardianList[i].vote)
 		totalVotes = safeuint64.Add(totalVotes, guardianList[i].vote)
-		topGuardiansStake[guardianList[i].guardian] = guardianList[i].vote
 	}
-	return
+	for i = ELECTION_GUARDIAN_EXCELLENCE_MAX_NUMBER; i < len(guardianList); i++ {
+		if guardianList[i].vote != guardianList[i-1].vote {
+			break
+		}
+		fmt.Printf("elections %10d rewards: top guardian %x, has %d votes\n", _getCurrentElectionBlockNumber(), guardianList[i].address, guardianList[i].vote)
+		totalVotes = safeuint64.Add(totalVotes, guardianList[i].vote)
+	}
+	if i < len(guardianList) {
+		return guardianList[0:i], totalVotes
+	} else {
+		return guardianList, totalVotes
+	}
 }
 
 type guardianVote struct {
-	guardian [20]byte
-	vote     uint64
+	address [20]byte
+	vote    uint64
 }
 type guardianArray []*guardianVote
 
@@ -184,5 +198,5 @@ func (s guardianArray) Swap(i, j int) {
 }
 
 func (s guardianArray) Less(i, j int) bool {
-	return s[i].vote > s[j].vote
+	return s[i].vote > s[j].vote || (s[i].vote == s[j].vote && bytes.Compare(s[i].address[:], s[j].address[:]) > 0)
 }

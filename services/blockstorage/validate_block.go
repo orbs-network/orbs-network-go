@@ -9,11 +9,12 @@ package blockstorage
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -35,14 +36,14 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", log.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	if err := s.notifyConsensusAlgos(ctx, lastCommittedBlock, input.BlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
 		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
 			logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		}
 		return nil, err
 	} else {
-		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with VERIFY_AND_UPDATE", log.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
@@ -57,28 +58,28 @@ func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *
 	if attemptedBlockHeight < currentBlockHeight {
 		// we can't check for fork because we don't have the tx header of the old block easily accessible
 		errorMessage := "block already in storage, skipping"
-		logger.Info(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		logger.Info(errorMessage, logfields.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	} else if attemptedBlockHeight == currentBlockHeight {
 		// we can check for fork because we do have the tx header of the old block easily accessible
 		if txBlockHeader.Timestamp() != getBlockTimestamp(lastCommittedBlock) {
 			errorMessage := "FORK!! block already in storage, timestamp mismatch"
 			// fork found! this is a major error we must report to logs
-			logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
+			logger.Error(errorMessage, logfields.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		} else if !txBlockHeader.Equal(lastCommittedBlock.TransactionsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 			// fork found! this is a major error we must report to logs
-			logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
+			logger.Error(errorMessage, logfields.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", lastCommittedBlock.TransactionsBlock.Header))
 			return false, errors.New(errorMessage)
 		} else if !rsBlockHeader.Equal(lastCommittedBlock.ResultsBlock.Header) {
 			errorMessage := "FORK!! block already in storage, results block header mismatch"
 			// fork found! this is a major error we must report to logs
-			s.logger.Error(errorMessage, log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", lastCommittedBlock.ResultsBlock.Header))
+			s.logger.Error(errorMessage, logfields.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", lastCommittedBlock.ResultsBlock.Header))
 			return false, errors.New(errorMessage)
 		}
 
-		logger.Info("block already in storage, skipping", log.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
+		logger.Info("block already in storage, skipping", logfields.BlockHeight(currentBlockHeight), log.Stringable("attempted-block-height", attemptedBlockHeight))
 		return false, nil
 	}
 
@@ -109,13 +110,13 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	// TODO(v1) we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
 	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in transactions block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), logfields.BlockHeight(txBlockHeader.BlockHeight()))
 		return fmt.Errorf(errorMessage)
 	}
 
 	if !rsBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
 		errorMessage := "protocol version mismatch in results block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()), log.BlockHeight(txBlockHeader.BlockHeight()))
+		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()), logfields.BlockHeight(txBlockHeader.BlockHeight()))
 		return fmt.Errorf(errorMessage)
 	}
 

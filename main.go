@@ -11,13 +11,14 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 )
 
-func getLogger(path string, silent bool, cfg config.NodeConfig) log.BasicLogger {
+func getLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 	if path == "" {
 		path = "./orbs-network.log"
 	}
@@ -47,13 +48,13 @@ func getLogger(path string, silent bool, cfg config.NodeConfig) log.BasicLogger 
 	}
 
 	logger := log.GetLogger().WithTags(
-		log.VirtualChainId(cfg.VirtualChainId()),
+		logfields.VirtualChainId(cfg.VirtualChainId()),
 	).WithOutput(outputs...)
 
 	conditionalFilter := log.NewConditionalFilter(false, nil)
 
 	if !cfg.LoggerFullLog() {
-		conditionalFilter = log.NewConditionalFilter(true, log.Or(log.OnlyErrors(), log.OnlyMetrics()))
+		conditionalFilter = log.NewConditionalFilter(true, log.OnlyErrors())
 	}
 
 	return logger.WithFilters(conditionalFilter)

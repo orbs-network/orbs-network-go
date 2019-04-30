@@ -9,8 +9,10 @@ package synchronization
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -23,11 +25,11 @@ type BlockTracker struct {
 	mutex         sync.RWMutex
 	currentHeight uint64 // this is not primitives.BlockHeight so as to avoid unnecessary casts
 	latch         chan struct{}
-	logger        log.BasicLogger
+	logger        log.Logger
 	fireOnWait    func() // used by unit test
 }
 
-func NewBlockTracker(parent log.BasicLogger, startingHeight uint64, graceDist uint16) *BlockTracker {
+func NewBlockTracker(parent log.Logger, startingHeight uint64, graceDist uint16) *BlockTracker {
 
 	logger := parent.WithTags(LogTag)
 
@@ -62,6 +64,8 @@ func (t *BlockTracker) readAtomicHeightAndLatch() (uint64, chan struct{}) {
 // waits until we reach a block at the specified height, or until the context is closed
 // to wait until some timeout, pass a child context with a deadline
 func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primitives.BlockHeight) error {
+	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
 
@@ -82,7 +86,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 			return errors.Wrap(ctx.Err(), fmt.Sprintf("aborted while waiting for block at height %d", requestedHeight))
 		case <-currentLatch:
 			currentHeight, currentLatch = t.readAtomicHeightAndLatch()
-			t.logger.Info("WaitForBlock block arrived", log.BlockHeight(primitives.BlockHeight(currentHeight)))
+			logger.Info("WaitForBlock block arrived", logfields.BlockHeight(primitives.BlockHeight(currentHeight)))
 		}
 	}
 	return nil

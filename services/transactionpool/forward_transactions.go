@@ -9,7 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"hash/adler32"
 	"sync"
@@ -50,16 +51,16 @@ func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossip
 
 	for _, tx := range input.Message.SignedTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), log.Transaction(txHash))
+		logger.Info("adding forwarded transaction to the pool", log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 		if _, err := s.pendingPool.add(tx, sender.SenderNodeAddress()); err != nil {
-			logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), log.Transaction(txHash))
+			logger.Error("error adding forwarded transaction to pending pool", log.Error(err), log.Stringable("transaction", tx), logfields.Transaction(txHash))
 		}
 	}
 	return nil, nil
 }
 
 type transactionForwarder struct {
-	logger log.BasicLogger
+	logger log.Logger
 	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
 
@@ -68,7 +69,7 @@ type transactionForwarder struct {
 	transactionAdded  chan uint16
 }
 
-func NewTransactionForwarder(ctx context.Context, logger log.BasicLogger, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+func NewTransactionForwarder(ctx context.Context, logger log.Logger, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
 	f := &transactionForwarder{
 		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
 		config:            config,
@@ -142,9 +143,9 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 
 	for _, hash := range hashes {
 		if err != nil {
-			logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), log.Transaction(hash))
+			logger.Info("failed forwarding transaction via gossip", log.Error(err), log.String("flow", "checkpoint"), logfields.Transaction(hash))
 		} else {
-			logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), log.Transaction(hash))
+			logger.Info("forwarded transaction via gossip", log.String("flow", "checkpoint"), logfields.Transaction(hash))
 		}
 	}
 }

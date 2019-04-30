@@ -12,13 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
 	"strings"
@@ -28,12 +29,12 @@ var LogTag = log.Service("crosschain-connector")
 
 type service struct {
 	connection      adapter.EthereumConnection
-	logger          log.BasicLogger
+	logger          log.Logger
 	timestampFinder timestampfinder.TimestampFinder
 	config          config.EthereumCrosschainConnectorConfig
 }
 
-func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger, metrics metric.Factory) services.CrosschainConnector {
+func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.Logger, metrics metric.Factory) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:      connection,
@@ -44,7 +45,7 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, confi
 	return s
 }
 
-func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.BasicLogger, metrics metric.Factory) services.CrosschainConnector {
+func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.Logger, metrics metric.Factory) services.CrosschainConnector {
 	logger := parent.WithTags(LogTag)
 	s := &service{
 		connection:      connection,
@@ -96,7 +97,7 @@ func (s *service) EthereumCallContract(ctx context.Context, input *services.Ethe
 
 func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *services.EthereumGetTransactionLogsInput) (*services.EthereumGetTransactionLogsOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), log.Transaction(primitives.Sha256(input.EthereumTxhash)))
+	logger.Info("getting transaction logs", log.String("contract-address", input.EthereumContractAddress), log.String("event", input.EthereumEventName), logfields.Transaction(primitives.Sha256(input.EthereumTxhash)))
 
 	ethereumTxHash, err := hexutil.Decode(input.EthereumTxhash)
 	if err != nil {

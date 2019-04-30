@@ -9,16 +9,16 @@ package internodesync
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
 	"math/rand"
 	"time"
 )
 
 type finishedCARState struct {
 	responses []*gossipmessages.BlockAvailabilityResponseMessage
-	logger    log.BasicLogger
+	logger    log.Logger
 	factory   *stateFactory
 	metrics   finishedCollectingStateMetrics
 }

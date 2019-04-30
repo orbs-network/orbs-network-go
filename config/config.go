@@ -72,6 +72,7 @@ type NodeConfig interface {
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
+	GossipReconnectInterval() time.Duration
 
 	// public api
 	PublicApiSendTransactionTimeout() time.Duration
@@ -145,6 +146,7 @@ type GossipTransportConfig interface {
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
+	GossipReconnectInterval() time.Duration
 }
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context

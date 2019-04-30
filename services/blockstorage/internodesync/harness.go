@@ -9,7 +9,6 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -17,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -66,12 +66,12 @@ type blockSyncHarness struct {
 	config        *blockSyncConfigForTests
 	gossip        *gossiptopics.MockBlockSync
 	storage       *blockSyncStorageMock
-	logger        log.BasicLogger
+	logger        log.Logger
 	metricFactory metric.Factory
 }
 
 func newBlockSyncHarnessWithTimers(
-	logger log.BasicLogger,
+	logger log.Logger,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
@@ -94,19 +94,19 @@ func newBlockSyncHarnessWithTimers(
 	}
 }
 
-func newBlockSyncHarness(logger log.BasicLogger) *blockSyncHarness {
+func newBlockSyncHarness(logger log.Logger) *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(logger, nil, nil, nil)
 }
 
-func newBlockSyncHarnessWithCollectResponsesTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+func newBlockSyncHarnessWithCollectResponsesTimer(logger log.Logger, createTimer func() *synchronization.Timer) *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(logger, createTimer, nil, nil)
 }
 
-func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+func newBlockSyncHarnessWithManualNoCommitTimeoutTimer(logger log.Logger, createTimer func() *synchronization.Timer) *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(logger, nil, createTimer, nil)
 }
 
-func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(logger log.BasicLogger, createTimer func() *synchronization.Timer) *blockSyncHarness {
+func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(logger log.Logger, createTimer func() *synchronization.Timer) *blockSyncHarness {
 	return newBlockSyncHarnessWithTimers(logger, nil, nil, createTimer)
 }
 

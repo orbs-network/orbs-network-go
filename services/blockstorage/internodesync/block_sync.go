@@ -8,13 +8,13 @@ package internodesync
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -61,7 +61,7 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 }
 
 type BlockSync struct {
-	logger  log.BasicLogger
+	logger  log.Logger
 	factory *stateFactory
 	gossip  gossiptopics.BlockSync
 	storage BlockSyncStorage
@@ -82,7 +82,7 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.Logger, metricFactory metric.Factory) *BlockSync {
 	metrics := newStateMachineMetrics(metricFactory)
 
 	bs := &BlockSync{
@@ -107,7 +107,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 	return bs
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.BasicLogger, metricFactory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := make(blockSyncConduit)

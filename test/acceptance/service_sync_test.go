@@ -8,13 +8,13 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -84,7 +84,6 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		WithInitialBlocks(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
-			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 

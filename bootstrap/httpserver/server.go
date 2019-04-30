@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 )
 
 var LogTag = log.String("adapter", "http-server")
@@ -40,7 +40,7 @@ type HttpServer interface {
 
 type server struct {
 	httpServer     *http.Server
-	logger         log.BasicLogger
+	logger         log.Logger
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
 	config         config.HttpServerConfig
@@ -68,7 +68,7 @@ func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(cfg config.HttpServerConfig, logger log.BasicLogger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
+func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
 	server := &server{
 		logger:         logger.WithTags(LogTag),
 		publicApi:      publicApi,
@@ -115,16 +115,21 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 
 func (s *server) createRouter() http.Handler {
 	router := http.NewServeMux()
+
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
 	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionAsyncHandler)))
 	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
 	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
 	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
 	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(s.getBlockHandler)))
-	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetrics)))
+	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
+	router.Handle("/metrics.json", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
+	router.Handle("/metrics.prometheus", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsPrometheus)))
 	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
 	router.Handle("/debug/logs/filter-on", http.HandlerFunc(s.filterOn))
 	router.Handle("/debug/logs/filter-off", http.HandlerFunc(s.filterOff))
+
+	router.Handle("/", http.HandlerFunc(wrapHandlerWithCORS(s.Index)))
 
 	if s.config.Profiling() {
 		registerPprof(router)

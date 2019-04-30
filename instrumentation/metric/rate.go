@@ -9,7 +9,7 @@ package metric
 import (
 	"fmt"
 	"github.com/VividCortex/ewma"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
@@ -96,4 +96,16 @@ func (r rateExport) LogRow() []*log.Field {
 		log.Float64("rate", r.Rate),
 		log.Float64("interval", r.Interval),
 	}
+}
+
+func (r rateExport) PrometheusRow() []*prometheusRow {
+	return nil
+}
+
+func (r rateExport) PrometheusType() string {
+	return ""
+}
+
+func (r rateExport) PrometheusName() string {
+	return ""
 }

@@ -9,7 +9,6 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -17,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/orbs-network/scribe/log"
 )
 
 func NewTransactionPool(ctx context.Context,
@@ -24,7 +24,7 @@ func NewTransactionPool(ctx context.Context,
 	virtualMachine services.VirtualMachine,
 	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
-	parent log.BasicLogger,
+	parent log.Logger,
 	metricFactory metric.Factory) services.TransactionPool {
 
 	if blockHeightReporter == nil {

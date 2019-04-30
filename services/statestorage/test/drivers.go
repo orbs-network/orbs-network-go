@@ -11,13 +11,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 )
 
 type Driver struct {

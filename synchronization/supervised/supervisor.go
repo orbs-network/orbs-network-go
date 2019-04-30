@@ -9,7 +9,7 @@ package supervised
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"runtime"
 	"runtime/debug"

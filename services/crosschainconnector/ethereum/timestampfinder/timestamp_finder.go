@@ -8,10 +8,10 @@ package timestampfinder
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -28,7 +28,7 @@ type TimestampFinder interface {
 }
 
 type finder struct {
-	logger          log.BasicLogger
+	logger          log.Logger
 	btg             BlockTimeGetter
 	metrics         *timestampBlockFinderMetrics
 	lastResultCache struct {
@@ -60,7 +60,7 @@ func newTimestampFinderMetrics(factory metric.Factory) *timestampBlockFinderMetr
 	}
 }
 
-func NewTimestampFinder(btg BlockTimeGetter, logger log.BasicLogger, metrics metric.Factory) *finder {
+func NewTimestampFinder(btg BlockTimeGetter, logger log.Logger, metrics metric.Factory) *finder {
 	return &finder{btg: btg, logger: logger, metrics: newTimestampFinderMetrics(metrics)}
 }
 

@@ -10,15 +10,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/membuffers/go"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
 	"time"
 )
 
-func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
+func (t *DirectTransport) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", queue.networkAddress))
 		t.logger.Info("attempting outgoing transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
@@ -26,7 +26,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 
 		if err != nil {
 			t.logger.Info("cannot connect to gossip peer endpoint", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
-			time.Sleep(t.config.GossipConnectionKeepAliveInterval())
+			time.Sleep(t.config.GossipReconnectInterval())
 			continue
 		}
 
@@ -37,7 +37,7 @@ func (t *directTransport) clientMainLoop(parentCtx context.Context, queue *trans
 }
 
 // returns true if should attempt reconnect on error
-func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
+func (t *DirectTransport) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
 	t.logger.Info("successful outgoing gossip transport connection", log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 	t.metrics.activeOutgoingConnections.Inc()
 	defer t.metrics.activeOutgoingConnections.Dec()
@@ -90,7 +90,7 @@ func (t *directTransport) clientHandleOutgoingConnection(ctx context.Context, co
 	}
 }
 
-func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData, outgoingQueue *transportQueue) {
+func (t *DirectTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData, outgoingQueue *transportQueue) {
 	err := outgoingQueue.Push(data)
 	if err != nil {
 		t.metrics.outgoingConnectionSendQueueErrors.Inc()
@@ -99,7 +99,7 @@ func (t *directTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData
 	t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 }
 
-func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
+func (t *DirectTransport) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)
@@ -138,7 +138,7 @@ func (t *directTransport) sendTransportData(ctx context.Context, conn net.Conn, 
 	return nil
 }
 
-func (t *directTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
+func (t *DirectTransport) sendKeepAlive(ctx context.Context, conn net.Conn) error {
 	timeout := t.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 

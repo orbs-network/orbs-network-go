@@ -8,12 +8,13 @@ package memory
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 	"unsafe"
@@ -35,12 +36,12 @@ type InMemoryBlockPersistence struct {
 	}
 
 	tracker *synchronization.BlockTracker
-	Logger  log.BasicLogger
+	Logger  log.Logger
 
 	metrics *memMetrics
 }
 
-func NewBlockPersistence(parent log.BasicLogger, metricFactory metric.Factory, preloadedBlocks ...*protocol.BlockPairContainer) *InMemoryBlockPersistence {
+func NewBlockPersistence(parent log.Logger, metricFactory metric.Factory, preloadedBlocks ...*protocol.BlockPairContainer) *InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &InMemoryBlockPersistence{
 		Logger:     logger,
@@ -100,7 +101,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	}
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
-		bp.Logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), log.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
+		bp.Logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), logfields.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
 		// TODO(v1): since we're skipping the add, byte-compare the block header to make sure we don't have a fork
 		return false, nil
 	}

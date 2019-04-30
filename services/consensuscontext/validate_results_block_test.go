@@ -259,8 +259,26 @@ func TestResultsBlockValidators(t *testing.T) {
 		}
 		err = validateExecution(context.Background(), vcrx)
 		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
+		require.Contains(t, err.Error(), `"BenchmarkToken/616d6f756e74":"e: 0a <==> c: NA"`, "expected error message to include a digest of the state diff comparison")
 	})
 
+}
+
+func TestCompare(t *testing.T) {
+
+	expectedDiffs := []*protocol.ContractStateDiff{
+		builders.ContractStateDiff().WithContractName("m1").WithStringRecord("mr1", "mv1").Build(),
+		builders.ContractStateDiff().WithContractName("m2").WithStringRecord("mr2", "mv2").Build(),
+		builders.ContractStateDiff().WithContractName("mSame").WithStringRecord("mrSame", "mvSame").Build(),
+	}
+
+	calcualtedDiffs := []*protocol.ContractStateDiff{
+		builders.ContractStateDiff().WithContractName("mSame").WithStringRecord("mrSame", "mvSame").Build(),
+		builders.ContractStateDiff().WithContractName("m2").WithStringRecord("mr2", "mv3").Build(),
+		builders.ContractStateDiff().WithContractName("m3").WithStringRecord("mr3", "mv4").Build(),
+	}
+
+	require.EqualValues(t, compare(expectedDiffs, calcualtedDiffs), map[string]string{"m2/6d7232": "e: 6d7632 <==> c: 6d7633", "m3/6d7233": "e: NA <==> c: 6d7634", "m1/6d7231": "e: 6d7631 <==> c: NA"})
 }
 
 func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {

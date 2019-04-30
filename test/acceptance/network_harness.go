@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -31,6 +30,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"math"
 	"testing"
 	"time"
@@ -53,14 +53,14 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	ctx, cancel := context.WithCancel(context.Background())
 	supervised.Recover(logger, func() {
 		defer cancel()
-		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID)
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME)
 		network.CreateAndStartNodes(ctx, 2)
 		f(ctx, network)
 	})
 }
 
-func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId) *NetworkHarness {
+func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration) *NetworkHarness {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
@@ -84,6 +84,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 		maxTxPerBlock,
 		requiredQuorumPercentage,
 		vcid,
+		emptyBlockTime,
 	)
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
@@ -95,7 +96,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.BasicLogger, c
 	var transactionPoolTrackers []*synchronization.BlockTracker
 	var stateTrackers []*synchronization.BlockTracker
 
-	provider := func(idx int, nodeConfig config.NodeConfig, logger log.BasicLogger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
+	provider := func(idx int, nodeConfig config.NodeConfig, logger log.Logger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
 		tamperingBlockPersistence := blockStorageAdapter.NewBlockPersistence(logger, preloadedBlocks, metricRegistry)
 		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
 

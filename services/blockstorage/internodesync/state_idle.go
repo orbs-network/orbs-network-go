@@ -8,9 +8,9 @@ package internodesync
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -18,7 +18,7 @@ type idleResetMessage struct{}
 
 type idleState struct {
 	createTimer func() *synchronization.Timer
-	logger      log.BasicLogger
+	logger      log.Logger
 	factory     *stateFactory
 	conduit     blockSyncConduit
 	metrics     idleStateMetrics

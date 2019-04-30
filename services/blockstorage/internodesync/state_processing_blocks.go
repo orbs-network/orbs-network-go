@@ -9,16 +9,17 @@ package internodesync
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
 type processingBlocksState struct {
 	blocks  *gossipmessages.BlockSyncResponseMessage
-	logger  log.BasicLogger
+	logger  log.Logger
 	storage BlockSyncStorage
 	factory *stateFactory
 	metrics processingStateMetrics
@@ -66,7 +67,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
-			logger.Info("failed to validate block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
+			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
 			break
 		}
 
@@ -74,12 +75,12 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 		if err != nil {
 			s.metrics.failedCommitBlocks.Inc()
-			logger.Error("failed to commit block received via sync", log.Error(err), log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			logger.Error("failed to commit block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 			break
 		} else {
 			s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
 			s.metrics.committedBlocks.Inc()
-			logger.Info("successfully committed block received via sync", log.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			logger.Info("successfully committed block received via sync", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
 	}
 

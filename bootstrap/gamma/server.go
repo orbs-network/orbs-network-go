@@ -9,7 +9,7 @@ package gamma
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
+	"github.com/orbs-network/scribe/log"
 	"os"
 	"sync"
 	"time"
@@ -19,7 +19,7 @@ type GammaServer struct {
 	httpServer   httpserver.HttpServer
 	shutdownCond *sync.Cond
 	ctxCancel    context.CancelFunc
-	Logger       log.BasicLogger
+	Logger       log.Logger
 }
 
 func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string, blocking bool) *GammaServer {
@@ -29,7 +29,6 @@ func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson s
 		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
 		WithFilters(
 			//TODO(https://github.com/orbs-network/orbs-network-go/issues/585) what do we really want to output to the gamma server log? maybe some meaningful data for our users?
-			log.IgnoreMessagesMatching("Metric recorded"),
 			log.IgnoreMessagesMatching("state transitioning"),
 			log.IgnoreMessagesMatching("finished waiting for responses"),
 			log.IgnoreMessagesMatching("no responses received"),

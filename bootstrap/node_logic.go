@@ -9,7 +9,6 @@ package bootstrap
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/log"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -30,6 +29,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 type NodeLogic interface {
@@ -50,7 +51,7 @@ func NewNodeLogic(
 	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
 	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
 	nativeCompiler nativeProcessorAdapter.Compiler,
-	logger log.BasicLogger,
+	logger log.Logger,
 	metricRegistry metric.Registry,
 	nodeConfig config.NodeConfig,
 	ethereumConnection ethereumAdapter.EthereumConnection,
@@ -82,9 +83,9 @@ func NewNodeLogic(
 
 	metric.NewSystemReporter(ctx, metricRegistry, logger)
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metricRegistry.PeriodicallyReport(ctx, logger)
+	metricRegistry.PeriodicallyRotate(ctx, logger)
 
-	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger)
+	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
