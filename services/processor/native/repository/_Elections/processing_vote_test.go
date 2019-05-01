@@ -534,10 +534,11 @@ func TestOrbsVotingContract_processVote_collectDelegatorStake_DelegatorIgnoredIf
 		// call
 		guardians := _getGuardians()
 		guardians[d2.address] = true
-		delegatorStakes := _collectDelegatorsStake(guardians)
+		delegators, delegatorStakes := _collectDelegatorsStake(guardians)
 
 		// assert
 		m.VerifyMocks()
+		require.Len(t, delegators, 2)
 		require.Len(t, delegatorStakes, 2)
 		_, ok := delegatorStakes[d2.address]
 		require.False(t, ok, "d2 should not exist as delegator")
@@ -558,8 +559,8 @@ func TestOrbsVotingContract_processVote_findGuardianDelegators_IgnoreSelfDelegat
 
 		// call
 		guardians := _getGuardians()
-		delegatorStakes := _collectDelegatorsStake(guardians)
-		guardianDelegators := _findGuardianDelegators(delegatorStakes)
+		delegators, _ := _collectDelegatorsStake(guardians)
+		guardianDelegators := _findGuardianDelegators(delegators)
 
 		// assert
 		m.VerifyMocks()
@@ -592,12 +593,18 @@ func TestOrbsVotingContract_processVote_calculateOneGuardianVoteRecursive(t *tes
 	for i := range tests {
 		cTest := tests[i]
 		t.Run(cTest.name, func(t *testing.T) {
-			participant := make(map[[20]byte]uint64)
-			stakes := _calculateOneGuardianVoteRecursive(guardian, cTest.relationship, delegatorStakes, participant)
+			var participants [][20]byte
+			participantStakes := make(map[[20]byte]uint64)
+			stakes := _calculateOneGuardianVoteRecursive(guardian, cTest.relationship, delegatorStakes, &participants, participantStakes)
 			require.EqualValues(t, cTest.expect, stakes, fmt.Sprintf("%s was calculated to %d instead of %d", cTest.name, stakes, cTest.expect))
-			require.EqualValues(t, len(cTest.expectParticipantStake), len(participant), "participants length not equal")
-			for k, v := range participant {
+			require.EqualValues(t, len(cTest.expectParticipantStake), len(participantStakes), "participants stake length not equal")
+			for k, v := range participantStakes {
 				require.EqualValues(t, cTest.expectParticipantStake[k], v, "bad values")
+			}
+			require.EqualValues(t, len(cTest.expectParticipantStake), len(participants), "participants length not equal")
+			for _, p := range participants {
+				_, ok := participantStakes[p]
+				require.True(t, ok, "missing key")
 			}
 		})
 	}
@@ -628,6 +635,11 @@ func TestOrbsVotingContract_processVote_guardiansCastVotes(t *testing.T) {
 		_setCandidates(g2[:], g2Vote)
 		_setCandidates(g3[:], g3Vote)
 		_setCurrentElectionBlockNumber(50000)
+		_setNumberOfGuardians(4)
+		_setGuardianAtIndex(0, g0[:])
+		_setGuardianAtIndex(1, g1[:])
+		_setGuardianAtIndex(2, g2[:])
+		_setGuardianAtIndex(3, g3[:])
 
 		tests := []struct {
 			name          string
@@ -642,7 +654,7 @@ func TestOrbsVotingContract_processVote_guardiansCastVotes(t *testing.T) {
 		}
 		for i := range tests {
 			cTest := tests[i]
-			candidatesVotes, total, _, _ := _guardiansCastVotes(cTest.guardianStake, relationship, delegatorStakes)
+			candidatesVotes, total, _, _, _ := _guardiansCastVotes(cTest.guardianStake, relationship, delegatorStakes)
 			require.EqualValues(t, cTest.expectedTotal, total)
 			for validator, vote := range cTest.expect {
 				require.EqualValues(t, vote, candidatesVotes[validator])
