@@ -84,6 +84,7 @@ func NewNodeLogic(
 	metric.NewSystemReporter(ctx, metricRegistry, logger)
 	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
 	metricRegistry.PeriodicallyRotate(ctx, logger)
+	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 

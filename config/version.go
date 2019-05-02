@@ -6,6 +6,7 @@
 
 package config
 
+// these get written in build-binaries.sh during linking
 var SemanticVersion string
 var CommitVersion string
 
