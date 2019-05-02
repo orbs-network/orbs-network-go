@@ -107,6 +107,21 @@ func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) Lea
 	return cfg
 }
 
+func ForBenchmarkConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, leaderKeyPair *testKeys.TestEcdsaSecp256K1KeyPair, validators map[string]ValidatorNode) NodeConfig {
+	cfg := emptyConfig()
+	cfg.SetGenesisValidatorNodes(validators)
+	cfg.SetBenchmarkConsensusConstantLeader(leaderKeyPair.NodeAddress())
+	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 1)
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
+	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
+	cfg.SetNodeAddress(keyPair.NodeAddress())
+	cfg.SetNodePrivateKey(keyPair.PrivateKey())
+
+	return cfg
+}
+
 func ForNativeProcessorTests(id primitives.VirtualChainId) NativeProcessorConfig {
 	cfg := emptyConfig()
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(id))
