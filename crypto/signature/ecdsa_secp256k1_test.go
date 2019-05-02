@@ -78,4 +78,40 @@ func TestRecoverEcdsaSecp256K1_SigLengthIncorrect(t *testing.T) {
 	require.Error(t, err, "should return error on incorrect sig length")
 }
 
-// TODO (v1) add benchmarks like in ed25519
+func BenchmarkSignEcdsaSecp256K1(b *testing.B) {
+	kp := keys.EcdsaSecp256K1KeyPairForTests(1)
+	for i := 0; i < b.N; i++ {
+		if _, err := SignEcdsaSecp256K1(kp.PrivateKey(), someDataToSign_EcdsaSecp256K1); err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkVerifyEcdsaSecp256K1(b *testing.B) {
+	b.StopTimer()
+	kp := keys.EcdsaSecp256K1KeyPairForTests(1)
+
+	if sig, err := SignEcdsaSecp256K1(kp.PrivateKey(), someDataToSign_EcdsaSecp256K1); err != nil {
+		b.Error(err)
+	} else {
+		b.StartTimer()
+		for i := 0; i < b.N; i++ {
+			if !VerifyEcdsaSecp256K1(kp.PublicKey(), someDataToSign_EcdsaSecp256K1, sig) {
+				b.Error("verification failed")
+			}
+		}
+	}
+}
+
+func BenchmarkSignAndVerifyEcdsaSecp256K1(b *testing.B) {
+	kp := keys.EcdsaSecp256K1KeyPairForTests(1)
+	for i := 0; i < b.N; i++ {
+		if sig, err := SignEcdsaSecp256K1(kp.PrivateKey(), someDataToSign_EcdsaSecp256K1); err != nil {
+			b.Error(err)
+		} else {
+			if !VerifyEcdsaSecp256K1(kp.PublicKey(), someDataToSign_EcdsaSecp256K1, sig) {
+				b.Error("verification failed")
+			}
+		}
+	}
+}
