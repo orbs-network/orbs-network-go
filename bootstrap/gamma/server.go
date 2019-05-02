@@ -8,21 +8,19 @@ package gamma
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
+	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/scribe/log"
 	"os"
-	"sync"
-	"time"
 )
 
 type GammaServer struct {
-	httpServer   httpserver.HttpServer
-	shutdownCond *sync.Cond
-	ctxCancel    context.CancelFunc
-	Logger       log.Logger
+	bootstrap.OrbsProcess
+	network *inmemory.Network
 }
 
-func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string, blocking bool) *GammaServer {
+func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rootLogger := log.GetLogger().
@@ -41,33 +39,13 @@ func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson s
 		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
 
 	s := &GammaServer{
-		ctxCancel:    cancel,
-		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		httpServer:   httpServer,
-		Logger:       rootLogger,
-	}
-
-	if blocking {
-		s.WaitUntilShutdown()
-	} else { // Used primarily in testing
-		go s.WaitUntilShutdown()
+		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
+		network:     network,
 	}
 
 	return s
 }
 
-func (n *GammaServer) GracefulShutdown(timeout time.Duration) {
-	n.ctxCancel()
-	n.httpServer.GracefulShutdown(timeout)
-	n.shutdownCond.Broadcast()
-}
-
-func (n *GammaServer) WaitUntilShutdown() {
-	n.shutdownCond.L.Lock()
-	n.shutdownCond.Wait()
-	n.shutdownCond.L.Unlock()
-}
-
 func (n *GammaServer) Port() int {
-	return n.httpServer.Port()
+	return n.HttpServer.Port()
 }
