@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/rand"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -123,7 +122,6 @@ func (o *pausingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 	for _, message := range o.messages {
 		o.transport.Send(ctx, message)
-		runtime.Gosched() // TODO(v1): this is required or else messages arrive in the opposite order after resume (supposedly fixed now when we moved to channels in transport)
 	}
 }
 
