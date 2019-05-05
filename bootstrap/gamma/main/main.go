@@ -29,7 +29,6 @@ func main() {
 
 	var serverAddress = ":" + strconv.Itoa(*port)
 
-	// TODO(v1) add WaitUntilShutdown so this behaves like the regular main (no blocking flag)
 	gamma.StartGammaServer(gamma.GammaServerConfig{
 		ServerAddress:      serverAddress,
 		Profiling:          *profiling,

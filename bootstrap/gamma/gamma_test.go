@@ -13,6 +13,7 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -20,7 +21,6 @@ import (
 	"time"
 )
 
-const LEAN_HELIX_CONSENSUS_JSON = `{"active-consensus-algo":2}`
 const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
 const GRACEFUL_SHUTDOWN_TIMEOUT = 3 * time.Second
 
@@ -93,7 +93,7 @@ func TestGamma(t *testing.T) {
 	}
 
 	t.Run("Benchmark", testGammaWithJSONConfig(""))
-	t.Run("LeanHelix", testGammaWithJSONConfig(LEAN_HELIX_CONSENSUS_JSON))
+	t.Run("LeanHelix", testGammaWithJSONConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 }
 
 func TestGammaWithEmptyBlocks(t *testing.T) {
@@ -102,5 +102,5 @@ func TestGammaWithEmptyBlocks(t *testing.T) {
 	}
 
 	t.Run("Benchmark", testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`))
-	t.Run("LeanHelix", testGammaWithEmptyBlocks(`{"active-consensus-algo":2,"transaction-pool-time-between-empty-blocks":"200ms"}`))
+	t.Run("LeanHelix", testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 }
