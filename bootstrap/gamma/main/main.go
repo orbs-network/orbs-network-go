@@ -35,5 +35,5 @@ func main() {
 		Profiling:          *profiling,
 		OverrideConfigJson: *overrideConfigJson,
 		Silent:             false,
-	})
+	}).WaitUntilShutdown()
 }
