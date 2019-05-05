@@ -8,6 +8,7 @@ package gamma
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
@@ -17,12 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 )
 
 const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
-const GRACEFUL_SHUTDOWN_TIMEOUT = 3 * time.Second
 
 type metrics map[string]map[string]interface{}
 
@@ -50,12 +51,8 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
-		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, true,
-		})
-		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
+		runMain(t, randomPort, configJSON)
+		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
 
@@ -76,15 +73,18 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
-		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, true,
-		})
-		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
+		runMain(t, randomPort, configJSON)
+		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
 	}
+}
+
+func runMain(t testing.TB, port int, overrideConfig string) {
+	require.NoError(t, flag.Set("override-config", overrideConfig))
+	require.NoError(t, flag.Set("port", strconv.Itoa(port)))
+
+	go Main()
 }
 
 func TestGamma(t *testing.T) {
