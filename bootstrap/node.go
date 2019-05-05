@@ -33,11 +33,6 @@ type node struct {
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	metricRegistry := metric.NewRegistry().WithVirtualChainId(nodeConfig.VirtualChainId()).WithNodeAddress(nodeConfig.NodeAddress())
-	version := config.GetVersion()
-
-	metricRegistry.NewText("Version.Semantic", version.Semantic)
-	metricRegistry.NewText("Version.Commit", version.Commit)
-	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String())
 
 	return metricRegistry
 }
