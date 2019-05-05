@@ -14,12 +14,14 @@ import (
 	"strconv"
 )
 
-func main() {
-	port := flag.Int("port", 8080, "The port to bind the gamma server to")
-	profiling := flag.Bool("profiling", false, "enable profiling")
-	version := flag.Bool("version", false, "returns information about version")
-	overrideConfigJson := flag.String("override-config", "{}", "JSON-formatted config overrides, same format as the file config")
+var (
+	port               = flag.Int("port", 8080, "The port to bind the gamma server to")
+	profiling          = flag.Bool("profiling", false, "enable profiling")
+	version            = flag.Bool("version", false, "returns information about version")
+	overrideConfigJson = flag.String("override-config", "{}", "JSON-formatted config overrides, same format as the file config")
+)
 
+func main() {
 	flag.Parse()
 
 	if *version {

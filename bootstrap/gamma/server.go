@@ -47,6 +47,7 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rootLogger := getLogger(config.Silent)
+	rootLogger.Info("Starting gamma server", log.String("server-address", config.ServerAddress))
 
 	network := NewDevelopmentNetwork(ctx, rootLogger, config.OverrideConfigJson)
 	rootLogger.Info("finished creating development network")

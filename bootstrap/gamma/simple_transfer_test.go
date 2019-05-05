@@ -8,8 +8,10 @@ package gamma
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -39,6 +41,6 @@ func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 
 func TestSimpleTransfer(t *testing.T) {
 	t.Run("Benchmark", testSimpleTransfer(""))
-	t.Run("LeanHelix", testSimpleTransfer(LEAN_HELIX_CONSENSUS_JSON))
+	t.Run("LeanHelix", testSimpleTransfer(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 
 }
