@@ -77,8 +77,8 @@ func NewNetworkWithNumOfNodes(
 		dep := &NodeDependencies{}
 		if provider == nil {
 			dep.BlockPersistence = blockStorageMemoryAdapter.NewBlockPersistence(nodeLogger, metricRegistry)
-			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger, metricRegistry)
-			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
+			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfg, nodeLogger, metricRegistry)
+			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfg, nodeLogger)
 			dep.StatePersistence = stateStorageMemoryAdapter.NewStatePersistence(metricRegistry)
 			dep.StateBlockHeightReporter = synchronization.NopHeightReporter{}
 			dep.TransactionPoolBlockHeightReporter = synchronization.NewBlockTracker(nodeLogger, 0, math.MaxUint16)

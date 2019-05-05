@@ -7,6 +7,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"path/filepath"
 )
@@ -38,6 +39,7 @@ func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitiv
 	cloned := c.Clone()
 	cloned.SetNodeAddress(nodeAddress)
 	cloned.SetNodePrivateKey(privateKey)
+	cloned.SetString(PROCESSOR_ARTIFACT_PATH, fmt.Sprintf("%s/%s", GetProjectSourceTmpPath(), nodeAddress))
 	return cloned
 }
 
