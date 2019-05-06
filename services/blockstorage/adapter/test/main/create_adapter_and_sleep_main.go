@@ -22,7 +22,7 @@ func main() {
 	}
 
 	defer release()
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second) // keep the lock until the second instance tries to lock file
 }
 
 type localConfig struct {
