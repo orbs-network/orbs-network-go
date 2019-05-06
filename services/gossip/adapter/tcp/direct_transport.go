@@ -88,11 +88,11 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	})
 
 	// client goroutines
+	t.mutex.Lock()
 	for peerNodeAddress, peer := range t.config.GossipPeers() {
-		t.mutex.Lock()
 		t.connect(ctx, peerNodeAddress, peer)
-		t.mutex.Unlock()
 	}
+	t.mutex.Unlock()
 
 	return t
 }
