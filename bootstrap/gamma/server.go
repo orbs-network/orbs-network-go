@@ -8,11 +8,15 @@ package gamma
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
 	"os"
+	"strconv"
 )
 
 type GammaServer struct {
@@ -64,4 +68,30 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 
 func (n *GammaServer) Port() int {
 	return n.HttpServer.Port()
+}
+
+var (
+	port               = flag.Int("port", 8080, "The port to bind the gamma server to")
+	profiling          = flag.Bool("profiling", false, "enable profiling")
+	version            = flag.Bool("version", false, "returns information about version")
+	overrideConfigJson = flag.String("override-config", "{}", "JSON-formatted config overrides, same format as the file config")
+)
+
+func Main() {
+
+	flag.Parse()
+
+	if *version {
+		fmt.Println(config.GetVersion())
+		return
+	}
+
+	var serverAddress = ":" + strconv.Itoa(*port)
+
+	StartGammaServer(GammaServerConfig{
+		ServerAddress:      serverAddress,
+		Profiling:          *profiling,
+		OverrideConfigJson: *overrideConfigJson,
+		Silent:             false,
+	}).WaitUntilShutdown()
 }

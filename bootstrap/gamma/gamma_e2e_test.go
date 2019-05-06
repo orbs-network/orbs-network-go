@@ -8,21 +8,22 @@ package gamma
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 )
 
-const LEAN_HELIX_CONSENSUS_JSON = `{"active-consensus-algo":2}`
 const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
-const GRACEFUL_SHUTDOWN_TIMEOUT = 3 * time.Second
 
 type metrics map[string]map[string]interface{}
 
@@ -50,12 +51,8 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
-		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, true,
-		})
-		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
+		runMain(t, randomPort, configJSON)
+		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
 
@@ -76,15 +73,18 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
-		endpoint := fmt.Sprintf("http://%s", serverAddress)
-		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, true,
-		})
-		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
+		runMain(t, randomPort, configJSON)
+		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
 	}
+}
+
+func runMain(t testing.TB, port int, overrideConfig string) {
+	require.NoError(t, flag.Set("override-config", overrideConfig))
+	require.NoError(t, flag.Set("port", strconv.Itoa(port)))
+
+	go Main()
 }
 
 func TestGamma(t *testing.T) {
@@ -93,7 +93,7 @@ func TestGamma(t *testing.T) {
 	}
 
 	t.Run("Benchmark", testGammaWithJSONConfig(""))
-	t.Run("LeanHelix", testGammaWithJSONConfig(LEAN_HELIX_CONSENSUS_JSON))
+	t.Run("LeanHelix", testGammaWithJSONConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 }
 
 func TestGammaWithEmptyBlocks(t *testing.T) {
@@ -102,5 +102,5 @@ func TestGammaWithEmptyBlocks(t *testing.T) {
 	}
 
 	t.Run("Benchmark", testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`))
-	t.Run("LeanHelix", testGammaWithEmptyBlocks(`{"active-consensus-algo":2,"transaction-pool-time-between-empty-blocks":"200ms"}`))
+	t.Run("LeanHelix", testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 }
