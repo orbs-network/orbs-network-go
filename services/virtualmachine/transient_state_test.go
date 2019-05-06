@@ -79,6 +79,16 @@ func TestTransientState_WriteDirtyReadKeys(t *testing.T) {
 	})
 }
 
+func TestTransientState_encodeBatchTransientStateToStateDiffs_OnlyReturnsSingleDiffPerKey(t *testing.T) {
+	s := newTransientState()
+	s.setValue("Contract1", []byte{0x01}, []byte{0x22, 0x33}, true)
+	s.setValue("Contract1", []byte{0x02}, []byte{0x33, 0x44}, true)
+	s.setValue("Contract1", []byte{0x01}, []byte{0x44, 0x55}, true)
+
+	diffs := encodeBatchTransientStateToStateDiffs(s)
+	require.Len(t, diffs, 2)
+}
+
 func TestTransientState_Merge(t *testing.T) {
 	s1 := newTransientState()
 	s1.setValue("Contract1", []byte{0x01}, []byte{0x22, 0x33}, true)
