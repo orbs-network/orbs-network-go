@@ -112,18 +112,25 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 
 // config for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
-	processorArtifactPath string,
-	genesisValidatorNodes map[string]ValidatorNode,
+	httpAddress string,
+	gossipListenPort int,
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
 	gossipPeers map[string]GossipPeer,
+	genesisValidatorNodes map[string]ValidatorNode,
+	blockStorageDataDirPrefix string,
+	processorArtifactPath string,
+	ethereumEndpoint string,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	ethereumEndpoint string,
-) mutableNodeConfig {
+) NodeConfig {
 	cfg := defaultProductionConfig()
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
+	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 
 	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 3*time.Second)
@@ -148,22 +155,27 @@ func ForE2E(
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 100)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
 
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 500*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 4*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 500*time.Millisecond)
-
-	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
-	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
-
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
-
 	cfg.SetGossipPeers(gossipPeers)
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
-	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
-	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
+
+	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
+
+	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
+	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
+
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 	}
+
+	cfg.SetString(HTTP_ADDRESS, httpAddress)
+	cfg.SetNodeAddress(nodeAddress)
+	cfg.SetNodePrivateKey(nodePrivateKey)
+
 	return cfg
 }
 

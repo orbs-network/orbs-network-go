@@ -102,7 +102,6 @@ type NodeConfig interface {
 
 type OverridableConfig interface {
 	NodeConfig
-	OverrideNodeSpecificValues(httpAddress string, gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
