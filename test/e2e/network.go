@@ -83,19 +83,18 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 
 		cfg := config.
 			ForE2E(
-				processorArtifactPath,
-				genesisValidatorNodes,
-				gossipPeers,
-				leaderKeyPair.NodeAddress(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-				ethereumEndpoint).
-			OverrideNodeSpecificValues(
 				fmt.Sprintf(":%d", START_HTTP_PORT+i),
 				gossipPortByNodeIndex[i],
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
-				blockStorageDataDirPrefix)
-
+				gossipPeers,
+				genesisValidatorNodes,
+				blockStorageDataDirPrefix,
+				processorArtifactPath,
+				ethereumEndpoint,
+				leaderKeyPair.NodeAddress(),
+				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+			)
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger)
