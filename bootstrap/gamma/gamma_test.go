@@ -53,7 +53,7 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		endpoint := fmt.Sprintf("http://%s", serverAddress)
 		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, false, true,
+			serverAddress, false, configJSON, true,
 		})
 		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
 
@@ -79,7 +79,7 @@ func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 		serverAddress := fmt.Sprintf("0.0.0.0:%d", randomPort)
 		endpoint := fmt.Sprintf("http://%s", serverAddress)
 		gammaServer := StartGammaServer(GammaServerConfig{
-			serverAddress, false, configJSON, false, true,
+			serverAddress, false, configJSON, true,
 		})
 		defer gammaServer.GracefulShutdown(GRACEFUL_SHUTDOWN_TIMEOUT)
 

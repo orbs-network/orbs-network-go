@@ -9,7 +9,6 @@ package config
 import (
 	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
@@ -159,12 +158,7 @@ func TestSetGossipPort(t *testing.T) {
 }
 
 func TestMergeWithFileConfig(t *testing.T) {
-	nodes := make(map[string]ValidatorNode)
-	keyPair := keys.EcdsaSecp256K1KeyPairForTests(2)
-
-	cfg := ForAcceptanceTestNetwork(nodes,
-		keyPair.NodeAddress(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, 30, 100, 42, 10*time.Millisecond)
+	cfg := ForProduction("/")
 
 	require.EqualValues(t, 0, len(cfg.GenesisValidatorNodes()))
 

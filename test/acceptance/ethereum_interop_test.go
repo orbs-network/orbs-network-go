@@ -66,7 +66,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network *NetworkHarness
 func deployOrbsContractCallingEthereum(parent context.Context, network *NetworkHarness) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
-	ethereumReaderCode := "foo" // TODO (v1) this junk argument is very confusing
+	ethereumReaderCode := "[placeholder for contract code which doesn't matter because native compiler is mocked]"
 	network.MockContract(&sdkContext.ContractInfo{
 		PublicMethods: ethereum_caller_mock.PUBLIC,
 		SystemMethods: ethereum_caller_mock.SYSTEM,

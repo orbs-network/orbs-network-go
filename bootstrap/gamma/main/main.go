@@ -34,7 +34,6 @@ func main() {
 		ServerAddress:      serverAddress,
 		Profiling:          *profiling,
 		OverrideConfigJson: *overrideConfigJson,
-		Blocking:           true,
 		Silent:             false,
-	})
+	}).WaitUntilShutdown()
 }

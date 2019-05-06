@@ -17,12 +17,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 	"time"
 )
 
@@ -32,11 +27,8 @@ type Node interface {
 }
 
 type node struct {
-	httpServer   httpserver.HttpServer
-	logic        NodeLogic
-	shutdownCond *sync.Cond
-	ctxCancel    context.CancelFunc
-	logger       log.Logger
+	OrbsProcess
+	logic NodeLogic
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -66,31 +58,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
 	return &node{
-		logic:        nodeLogic,
-		httpServer:   httpServer,
-		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		ctxCancel:    ctxCancel,
-		logger:       nodeLogger,
+		logic:       nodeLogic,
+		OrbsProcess: NewOrbsProcess(nodeLogger, ctxCancel, httpServer),
 	}
-}
-
-func (n *node) GracefulShutdown(timeout time.Duration) {
-	n.ctxCancel()
-	n.httpServer.GracefulShutdown(timeout)
-	n.shutdownCond.Broadcast()
-}
-
-func (n *node) WaitUntilShutdown() {
-	// if waiting for shutdown, listen for sigint and sigterm
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	supervised.GoOnce(n.logger, func() {
-		<-signalChan
-		n.logger.Info("terminating node gracefully due to os signal received")
-		n.GracefulShutdown(0)
-	})
-
-	n.shutdownCond.L.Lock()
-	n.shutdownCond.Wait()
-	n.shutdownCond.L.Unlock()
 }
