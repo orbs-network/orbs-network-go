@@ -8,6 +8,7 @@ package virtualmachine
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -85,7 +86,13 @@ func TestTransientState_encodeBatchTransientStateToStateDiffs_OnlyReturnsSingleD
 	s.setValue("Contract1", []byte{0x02}, []byte{0x33, 0x44}, true)
 	s.setValue("Contract1", []byte{0x01}, []byte{0x44, 0x55}, true)
 
-	diffs := encodeBatchTransientStateToStateDiffs(s)
+	diffsPerContract := encodeBatchTransientStateToStateDiffs(s)
+
+	var diffs []*protocol.StateRecord
+	for iterator := diffsPerContract[0].StateDiffsIterator(); iterator.HasNext(); {
+		diffs = append(diffs, iterator.NextStateDiffs())
+	}
+
 	require.Len(t, diffs, 2)
 }
 
