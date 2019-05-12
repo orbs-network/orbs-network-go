@@ -143,14 +143,14 @@ func isValidBlockTimestamp(currentBlockTimestamp primitives.TimestampNano, prevB
 	currentBlockTimestampTime := time.Unix(0, int64(currentBlockTimestamp))
 
 	if upperJitterLimitNano < 0 {
-		panic("upperJitterLimitNano cannot be negative")
+		panic("upperJitterLimit cannot be negative")
 	}
 	if lowerJitterLimitNano < 0 {
-		panic("lowerJitterLimitNano cannot be negative")
+		panic("lowerJitterLimit cannot be negative")
 	}
 
 	if prevBlockTimestamp >= currentBlockTimestamp {
-		return errors.Errorf("the previous block's timestamp is later than current block's timestamp: prevBlockTimestamp=%d (%s) currentBlockTimestamp=%d (%s)", prevBlockTimestamp, prevBlockTimestampTime, currentBlockTimestamp, currentBlockTimestampTime)
+		return errors.Errorf("the previous block's timestamp is same or later than current block's timestamp: prevBlockTimestamp=%d (%s) currentBlockTimestamp=%d (%s)", prevBlockTimestamp, prevBlockTimestampTime, currentBlockTimestamp, currentBlockTimestampTime)
 	}
 	if uint64(currentBlockTimestamp) > uint64(upperJitterLimitNano) {
 		return errors.Errorf("current block's timestamp is later than latest timestamp allowed (upper jitter limit): currentBlockTimestamp=%d (%s) upperJitterLimitNano=%d (%s)", uint64(currentBlockTimestamp), currentBlockTimestampTime, uint64(upperJitterLimitNano), upperJitterLimit)
