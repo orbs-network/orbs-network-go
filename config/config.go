@@ -137,6 +137,7 @@ type FilesystemBlockPersistenceConfig interface {
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 type GossipTransportConfig interface {

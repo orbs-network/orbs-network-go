@@ -48,8 +48,9 @@ func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPe
 }
 
 type localConfig struct {
-	dir     string
-	chainId primitives.VirtualChainId
+	dir         string
+	chainId     primitives.VirtualChainId
+	networkType protocol.SignerNetworkType
 }
 
 func newTempFileConfig() *localConfig {
@@ -58,8 +59,9 @@ func newTempFileConfig() *localConfig {
 		panic(err)
 	}
 	return &localConfig{
-		dir:     dirName,
-		chainId: 0xFF,
+		dir:         dirName,
+		chainId:     0xFF,
+		networkType: protocol.NETWORK_TYPE_TEST_NET,
 	}
 }
 func (l *localConfig) BlockStorageFileSystemDataDir() string {
@@ -74,12 +76,20 @@ func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.chainId
 }
 
+func (l *localConfig) NetworkType() protocol.SignerNetworkType {
+	return l.networkType
+}
+
 func (l *localConfig) cleanDir() {
 	_ = os.RemoveAll(l.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 }
 
-func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
-	l.chainId = id
+func (l *localConfig) setVirtualChainId(value primitives.VirtualChainId) {
+	l.chainId = value
+}
+
+func (l *localConfig) setNetworkType(value protocol.SignerNetworkType) {
+	l.networkType = value
 }
 
 func getFileSize(t *testing.T, conf *localConfig) int64 {
