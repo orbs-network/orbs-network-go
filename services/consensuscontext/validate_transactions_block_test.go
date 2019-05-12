@@ -27,7 +27,8 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 
 	input := &services.ValidateTransactionsBlockInput{
 		CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
-		TransactionsBlock:  block.TransactionsBlock, // fill in each test
+		TransactionsBlock:  block.TransactionsBlock,                                        // fill in each test
+		PrevBlockTimestamp: primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano()), // this is intentionally set in the future to fail timestamp tests
 		PrevBlockHash:      prevBlockHashCopy,
 	}
 
@@ -90,6 +91,14 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		err := validateTxTransactionOrdering(context.Background(), vctx)
 		require.Equal(t, ErrFailedTransactionOrdering, errors.Cause(err), "validation should fail on failing tx ordering validation", err)
 	})
+
+	t.Run("should return error for invalid timestamp of block", func(t *testing.T) {
+		vctx := toTxValidatorContext(cfg)
+		err := validateTxTransactionsBlockTimestamp(context.Background(), vctx)
+		t.Log(err)
+		require.Equal(t, ErrInvalidBlockTimestamp, errors.Cause(err), "validation should fail on invalid timestamp of block", err)
+	})
+
 }
 
 func TestIsValidBlockTimestamp(t *testing.T) {
