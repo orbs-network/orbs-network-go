@@ -95,7 +95,6 @@ func TestTransactionsBlockValidators(t *testing.T) {
 	t.Run("should return error for invalid timestamp of block", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
 		err := validateTxTransactionsBlockTimestamp(context.Background(), vctx)
-		t.Log(err)
 		require.Equal(t, ErrInvalidBlockTimestamp, errors.Cause(err), "validation should fail on invalid timestamp of block", err)
 	})
 
