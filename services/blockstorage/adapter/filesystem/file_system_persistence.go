@@ -143,7 +143,7 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 	}
 
 	if header.NetworkType != uint32(conf.NetworkType()) {
-		return 0, fmt.Errorf("blocks file network id mismatch. found netowrk id %d expected %d", header.NetworkType, conf.NetworkType())
+		return 0, fmt.Errorf("blocks file network type mismatch. found netowrk type %d expected %d", header.NetworkType, conf.NetworkType())
 	}
 
 	if header.ChainId != uint32(conf.VirtualChainId()) {
