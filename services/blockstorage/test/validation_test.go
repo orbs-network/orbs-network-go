@@ -30,7 +30,11 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).allowingErrorsMatching("protocol version mismatch in.*").withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			allowingErrorsMatching("protocol version mismatch in.*").
+			withSyncBroadcast(1).
+			withValidateConsensusAlgosAtLeast(0).
+			start(ctx)
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)

@@ -24,7 +24,10 @@ import (
 // TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			withValidateConsensusAlgosAtLeast(0).
+			start(ctx)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -74,7 +77,10 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(3 * time.Millisecond)
+		harness := newBlockStorageHarness(t).
+			withSyncNoCommitTimeout(3 * time.Millisecond).
+			withValidateConsensusAlgosAtLeast(0)
+
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
 
 		harness.start(ctx)

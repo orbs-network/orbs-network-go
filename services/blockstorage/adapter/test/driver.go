@@ -25,10 +25,6 @@ import (
 	"time"
 )
 
-// TODO V1 TBD - do we want to fuss with simulating io errors? (tampering FS)
-// TODO V1 can we detect errors that indicate we need to open a writing file handle?
-// TODO V1 file format includes a file version, vchain id, network id, and if it doesn't match don't run!
-
 const blocksFilename = "blocks"
 
 func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {

@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
@@ -34,8 +33,7 @@ type configForBlockStorageTests struct {
 	syncNoCommit          time.Duration
 	syncCollectResponses  time.Duration
 	syncCollectChunks     time.Duration
-	queryGraceStart       time.Duration
-	queryGraceEnd         time.Duration
+	queryGrace            time.Duration
 	queryExpirationWindow time.Duration
 	blockTrackerGrace     time.Duration
 }
@@ -61,7 +59,7 @@ func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Durati
 }
 
 func (c *configForBlockStorageTests) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
-	return c.queryGraceStart
+	return c.queryGrace
 }
 
 func (c *configForBlockStorageTests) TransactionExpirationWindow() time.Duration {
@@ -79,7 +77,7 @@ type harness struct {
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
-	config         config.BlockStorageConfig
+	config         *configForBlockStorageTests
 	logger         log.Logger
 	logOutput      *log.TestOutput
 }
@@ -102,6 +100,13 @@ func (d *harness) withValidateConsensusAlgos(times int) *harness {
 	out := &handlers.HandleBlockConsensusOutput{}
 
 	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(times)
+	return d
+}
+
+func (d *harness) withValidateConsensusAlgosAtLeast(times int) *harness {
+	out := &handlers.HandleBlockConsensusOutput{}
+
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).AtLeast(times)
 	return d
 }
 
@@ -155,27 +160,37 @@ func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 }
 
 func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
-	d.config.(*configForBlockStorageTests).syncNoCommit = duration
+	d.config.syncNoCommit = duration
 	return d
 }
 
 func (d *harness) withSyncCollectResponsesTimeout(duration time.Duration) *harness {
-	d.config.(*configForBlockStorageTests).syncCollectResponses = duration
+	d.config.syncCollectResponses = duration
 	return d
 }
 
 func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness {
-	d.config.(*configForBlockStorageTests).syncCollectChunks = duration
+	d.config.syncCollectChunks = duration
 	return d
 }
 
 func (d *harness) withBatchSize(size uint32) *harness {
-	d.config.(*configForBlockStorageTests).syncBatchSize = size
+	d.config.syncBatchSize = size
+	return d
+}
+
+func (d *harness) withBlockStorageTransactionReceiptQueryTimestampGrace(value time.Duration) *harness {
+	d.config.queryGrace = value
+	return d
+}
+
+func (d *harness) withTransactionExpirationWindow(value time.Duration) *harness {
+	d.config.queryExpirationWindow = value
 	return d
 }
 
 func (d *harness) withNodeAddress(address primitives.NodeAddress) *harness {
-	d.config.(*configForBlockStorageTests).nodeAddress = address
+	d.config.nodeAddress = address
 	return d
 }
 
@@ -196,14 +211,10 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 		d.storageAdapter.WriteNextBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
 	}
 
-	out := &handlers.HandleBlockConsensusOutput{}
-
-	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).Times(1)
-
 	return now
 }
 
-func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig {
+func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTests {
 	cfg := &configForBlockStorageTests{}
 	cfg.nodeAddress = nodeAddress
 	cfg.syncBatchSize = 2
@@ -211,8 +222,7 @@ func createConfig(nodeAddress primitives.NodeAddress) config.BlockStorageConfig 
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
 
-	cfg.queryGraceStart = 5 * time.Second
-	cfg.queryGraceEnd = 5 * time.Second
+	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
 	cfg.blockTrackerGrace = 1 * time.Hour
 
@@ -232,16 +242,10 @@ func newBlockStorageHarness(tb testing.TB) *harness {
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
-	// TODO(v1): this might create issues with some tests later on, should move it to behavior or some other means of setup
-	// Always expect at least 0 because sometimes it gets triggered because of the timings
-	// HandleBlockConsensus always gets called when we try to start the sync which happens automatically
-	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
-
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
 	d.txPool = &services.MockTransactionPool{}
-	// TODO(v1): this might create issues with some tests later on, should move it to behavior or some other means of setup
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 		return &services.CommitTransactionReceiptsOutput{
 			NextDesiredBlockHeight: input.ResultsBlockHeader.BlockHeight() + 1,

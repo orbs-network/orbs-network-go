@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const MAX_TX_SEARCH_TIME_RANGE_NANO = time.Hour
+
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	b, err := s.persistence.GetLastBlock()
 	if err != nil {
@@ -79,14 +81,12 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 	start := input.TransactionTimestamp - primitives.TimestampNano(graceNano)
 	end := input.TransactionTimestamp + primitives.TimestampNano(graceNano+txExpireNano)
 
-	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
-	if end < start || end-start > primitives.TimestampNano(time.Hour.Nanoseconds()) {
+	if end-start > primitives.TimestampNano(MAX_TX_SEARCH_TIME_RANGE_NANO) {
 		receipt, err := s.createEmptyTransactionReceiptResult(ctx)
 		if err != nil {
 			return nil, err
 		}
-		// TODO((https://github.com/orbs-network/orbs-network-go/issues/448): probably don't fail here
-		return receipt, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
+		return receipt, errors.Errorf("unsupported time range for tx receipt query. requested tx (hash/ts): %s/%s. verify config values satisfy: (2*BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE+TRANSACTION_EXPIRATION_WINDOW) <= %d", input.Txhash, input.TransactionTimestamp, MAX_TX_SEARCH_TIME_RANGE_NANO)
 	}
 
 	blockPair, txIdx, err := s.persistence.GetBlockByTx(input.Txhash, start, end)

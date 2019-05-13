@@ -23,7 +23,10 @@ import (
 
 func TestGenerateProof(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			withValidateConsensusAlgosAtLeast(0).
+			start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -55,7 +58,10 @@ func TestGenerateProof(t *testing.T) {
 
 func TestGenerateProof_WrongTxHash(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			withValidateConsensusAlgosAtLeast(0).
+			start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
