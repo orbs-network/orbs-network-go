@@ -98,6 +98,9 @@ type NodeConfig interface {
 
 	// profiling
 	Profiling() bool
+
+	// NTP Network Time Protocol
+	NTPEndpoint() string
 }
 
 type OverridableConfig interface {
