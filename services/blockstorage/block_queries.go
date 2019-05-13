@@ -13,10 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"time"
 )
-
-const MAX_TX_SEARCH_TIME_RANGE_NANO = time.Hour
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	b, err := s.persistence.GetLastBlock()
@@ -80,14 +77,6 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 
 	start := input.TransactionTimestamp - primitives.TimestampNano(graceNano)
 	end := input.TransactionTimestamp + primitives.TimestampNano(graceNano+txExpireNano)
-
-	if end-start > primitives.TimestampNano(MAX_TX_SEARCH_TIME_RANGE_NANO) {
-		receipt, err := s.createEmptyTransactionReceiptResult(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return receipt, errors.Errorf("unsupported time range for tx receipt query. requested tx (hash/ts): %s/%s. verify config values satisfy: (2*BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE+TRANSACTION_EXPIRATION_WINDOW) <= %d", input.Txhash, input.TransactionTimestamp, MAX_TX_SEARCH_TIME_RANGE_NANO)
-	}
 
 	blockPair, txIdx, err := s.persistence.GetBlockByTx(input.Txhash, start, end)
 	if err != nil {

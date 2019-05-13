@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -40,42 +39,6 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 		require.Nil(t, out.TransactionReceipt, "represents an empty receipt")
 		require.EqualValues(t, 1, out.BlockHeight, "last block height")
 		require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "last block timestamp")
-	})
-}
-
-func TestGetTransactionReceipt_ProtectedAgainstMisconfiguration(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
-			withSyncBroadcast(1).
-			withCommitStateDiff(1).
-			withValidateConsensusAlgos(1).
-			start(ctx)
-
-		// block closed with ts in the expiration window
-		block := builders.BlockPair().WithHeight(3).WithTransactions(10).WithReceiptsForTransactions().Build()
-		tx := block.TransactionsBlock.SignedTransactions[0].Transaction()
-		harness.commitBlock(ctx, block)
-
-		_, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
-			Txhash:               digest.CalcTxHash(tx),
-			TransactionTimestamp: tx.Timestamp(),
-		})
-
-		require.NoError(t, err, "expected no error when config is not over the supported limit")
-
-		// override config values
-		harness.withBlockStorageTransactionReceiptQueryTimestampGrace(16 * time.Minute)
-		txQueryGrace := harness.config.BlockStorageTransactionReceiptQueryTimestampGrace()
-		txExpirationWnd := harness.config.TransactionExpirationWindow()
-
-		require.True(t, 2*txQueryGrace+txExpirationWnd > blockstorage.MAX_TX_SEARCH_TIME_RANGE_NANO, "Please select a value which satisfies: 2*grace+expiration >> MAX_TX_SEARCH_TIME_RANGE_NANO")
-
-		_, err = harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
-			Txhash:               digest.CalcTxHash(tx),
-			TransactionTimestamp: tx.Timestamp(),
-		})
-
-		require.Error(t, err, "expected error to be returned if config is over the supported limit")
 	})
 }
 
