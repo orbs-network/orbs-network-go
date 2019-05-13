@@ -107,10 +107,3 @@ func TestValidateBlockWithInvalidHeight(t *testing.T) {
 		require.EqualError(t, err, "block height is 999, expected 2", "only rx block height was mutate, expected an error")
 	})
 }
-
-//TODO(v1) validate virtual chain
-//TODO(v1) validate transactions root hash
-//TODO(v1) validate metadata hash
-//TODO(v1) validate receipts root hash
-//TODO(v1) validate state diff hash
-//TODO(v1) validate block consensus
