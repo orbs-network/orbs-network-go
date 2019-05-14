@@ -2,7 +2,7 @@ package metric
 
 import (
 	"context"
-	"github.com/beevik/ntp"
+	"github.com/orbs-network/ntp"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
 	"time"
