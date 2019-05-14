@@ -107,6 +107,8 @@ const (
 	HTTP_ADDRESS = "HTTP_ADDRESS"
 
 	NTP_ENDPOINT = "NTP_ENDPOINT"
+
+	SIGNER_ENDPOINT = "SIGNER_ENDPOINT"
 )
 
 func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
@@ -403,4 +405,8 @@ func (c *config) HttpAddress() string {
 
 func (c *config) NTPEndpoint() string {
 	return c.kv[NTP_ENDPOINT].StringValue
+}
+
+func (c *config) SignerEndpoint() string {
+	return c.kv[SIGNER_ENDPOINT].StringValue
 }

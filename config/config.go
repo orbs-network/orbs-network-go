@@ -101,6 +101,9 @@ type NodeConfig interface {
 
 	// NTP Network Time Protocol
 	NTPEndpoint() string
+
+	// Remote signer
+	SignerEndpoint() string
 }
 
 type OverridableConfig interface {
@@ -209,6 +212,7 @@ type LeanHelixConsensusConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
+	SignerEndpoint() string
 }
 
 type ValidatorNode interface {

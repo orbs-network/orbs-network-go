@@ -6,6 +6,12 @@
 
 package config
 
+import (
+	"github.com/pkg/errors"
+	"io/ioutil"
+	"os"
+)
+
 type ArrayFlags []string
 
 func (i *ArrayFlags) String() string {
@@ -15,4 +21,31 @@ func (i *ArrayFlags) String() string {
 func (i *ArrayFlags) Set(value string) error {
 	*i = append(*i, value)
 	return nil
+}
+
+func GetNodeConfigFromFiles(configFiles ArrayFlags, httpAddress string) (NodeConfig, error) {
+	cfg := ForProduction("")
+
+	if len(configFiles) != 0 {
+		for _, configFile := range configFiles {
+			if _, err := os.Stat(configFile); os.IsNotExist(err) {
+				return nil, errors.Errorf("could not open config file: %s", err)
+			}
+
+			contents, err := ioutil.ReadFile(configFile)
+			if err != nil {
+				return nil, err
+			}
+
+			cfg, err = cfg.MergeWithFileConfig(string(contents))
+
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	cfg.SetString(HTTP_ADDRESS, httpAddress)
+
+	return cfg, nil
 }

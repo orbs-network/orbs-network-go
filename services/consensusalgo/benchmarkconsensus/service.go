@@ -35,6 +35,7 @@ type Config interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
 	BenchmarkConsensusRequiredQuorumPercentage() uint32
+	SignerEndpoint() string
 }
 
 type service struct {
