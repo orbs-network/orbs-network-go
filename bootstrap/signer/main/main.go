@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
+	httpAddress := flag.String("listen", ":7777", "ip address and port for http server")
 	silentLog := flag.Bool("silent", false, "disable output to stdout")
 	pathToLog := flag.String("log", "", "path/to/node.log")
 	version := flag.Bool("version", false, "returns information about version")
@@ -35,4 +35,5 @@ func main() {
 
 	service := kms.NewService(cfg.HttpAddress(), cfg.NodePrivateKey(), logger)
 	service.Start()
+	service.WaitUntilShutdown()
 }

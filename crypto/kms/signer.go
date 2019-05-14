@@ -2,7 +2,6 @@ package kms
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -39,12 +38,12 @@ func NewSignerClient(address string) Signer {
 }
 
 func (c *client) Sign(input []byte) ([]byte, error) {
-	response, err := http.Post(fmt.Sprintf("http://%s/sign", c.address), "binary/octet-stream", bytes.NewReader(input))
-	defer response.Body.Close()
-
+	response, err := http.Post(c.address+"/sign", "binary/octet-stream", bytes.NewReader(input))
 	if err != nil {
 		return nil, err
 	}
+
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, errors.New("bad response")

@@ -9,6 +9,16 @@ services:
       orbs-network:
         ipv4_address: 192.168.199.6
 
+  signer:
+    image: orbs:export
+    volumes:
+      - ../../_logs/:/opt/orbs/logs
+      - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    command: /opt/orbs/orbs-signer --listen :7777 --silent --config /opt/orbs/config/node1.json --config /opt/orbs/config/node1.keys.json --log /opt/orbs/logs/signer.log
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.9
+
   orbs-network-node-1:
     image: orbs:export
     environment:

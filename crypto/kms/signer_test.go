@@ -34,7 +34,7 @@ func TestSignerClient(t *testing.T) {
 	server.Start()
 	defer server.Shutdown()
 
-	c := NewSignerClient(address)
+	c := NewSignerClient("http://" + address)
 
 	payload := []byte("payload")
 

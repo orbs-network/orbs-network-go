@@ -32,9 +32,12 @@ func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be greater than benchmark consensus timeout")
 	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be greater than lean helix round timeout")
 	v.requireNonEmpty(cfg.NodeAddress(), "node address must not be empty")
-	v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
 	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
-	v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
+
+	if cfg.SignerEndpoint() == "" {
+		v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
+		v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
+	}
 }
 
 func (v *validator) ValidateMainNode(cfg NodeConfig) {
