@@ -13,6 +13,7 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -78,7 +79,8 @@ func NewLeanHelixConsensusAlgo(
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
-	mgr := NewKeyManager(logger, config.NodePrivateKey())
+	signer := kms.GetSigner(config)
+	mgr := NewKeyManager(logger, signer)
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 

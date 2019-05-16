@@ -6,6 +6,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/scribe/log"
 	"os"
 )
 
@@ -31,7 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg)
+	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg).WithTags(log.Node(cfg.NodeAddress().String()))
 
 	service := kms.NewService(cfg.HttpAddress(), cfg.NodePrivateKey(), logger)
 	service.Start()
