@@ -8,7 +8,6 @@ package blockstorage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -16,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -47,7 +47,16 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	if !added {
-		return nil, s.detectForks(input.BlockPair, logger)
+		storedRsBlock, err := s.persistence.GetResultsBlock(proposedBlockHeight)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load results block at proposed block height %d", proposedBlockHeight)
+		}
+
+		storedTxBlock, err := s.persistence.GetTransactionsBlock(proposedBlockHeight)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load transactions block at proposed block height %d", proposedBlockHeight)
+		}
+		return nil, detectForks(input.BlockPair, storedTxBlock.Header, storedRsBlock.Header, logger)
 	}
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
@@ -65,35 +74,25 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	return nil, nil
 }
 
-func (s *service) detectForks(proposedBlock *protocol.BlockPairContainer, logger log.Logger) error {
+func detectForks(proposedBlock *protocol.BlockPairContainer, storedTxBlockHeader *protocol.TransactionsBlockHeader, storedRsBlockHeader *protocol.ResultsBlockHeader, logger log.Logger) error {
 	txBlockHeader := proposedBlock.TransactionsBlock.Header
 	rsBlockHeader := proposedBlock.ResultsBlock.Header
 	proposedBlockHeight := txBlockHeader.BlockHeight()
 
-	storedRsBlock, err := s.persistence.GetResultsBlock(proposedBlockHeight)
-	if err != nil {
-		return err
-	}
-
-	storedTxBlock, err := s.persistence.GetTransactionsBlock(proposedBlockHeight)
-	if err != nil {
-		return err
-	}
-
-	if txBlockHeader.Timestamp() != storedTxBlock.Header.Timestamp() {
+	if txBlockHeader.Timestamp() != storedTxBlockHeader.Timestamp() {
 		errorMessage := "FORK!! block already in storage, timestamp mismatch"
 		// fork found! this is a major error we must report to logs
-		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlock.Header))
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlockHeader))
 		return errors.New(errorMessage)
-	} else if !txBlockHeader.Equal(storedTxBlock.Header) {
+	} else if !txBlockHeader.Equal(storedTxBlockHeader) {
 		errorMessage := "FORK!! block already in storage, transaction block header mismatch"
 		// fork found! this is a major error we must report to logs
-		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlock.Header))
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlockHeader))
 		return errors.New(errorMessage)
-	} else if !rsBlockHeader.Equal(storedRsBlock.Header) {
+	} else if !rsBlockHeader.Equal(storedRsBlockHeader) {
 		errorMessage := "FORK!! block already in storage, results block header mismatch"
 		// fork found! this is a major error we must report to logs
-		s.logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", storedRsBlock.Header))
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", storedRsBlockHeader))
 		return errors.New(errorMessage)
 	}
 

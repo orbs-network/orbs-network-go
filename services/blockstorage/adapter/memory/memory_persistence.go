@@ -77,9 +77,9 @@ func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight
 
 func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 
-	added, pHeight, err := bp.validateAndAddNextBlock(blockPair)
-	if err != nil || !added {
-		return added, pHeight, err
+	added, pHeight := bp.validateAndAddNextBlock(blockPair)
+	if !added {
+		return added, pHeight, nil
 	}
 
 	bp.metrics.size.Add(sizeOfBlock(blockPair))
@@ -87,19 +87,19 @@ func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPair
 	return added, pHeight, nil
 }
 
-func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
+func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight) {
 	bp.blockChain.Lock()
 	defer bp.blockChain.Unlock()
 
 	currentTop := primitives.BlockHeight(len(bp.blockChain.blocks))
 
 	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 != blockPair.TransactionsBlock.Header.BlockHeight() {
-		return false, currentTop, nil
+		return false, currentTop
 	}
 
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
-	return true, blockPair.ResultsBlock.Header.BlockHeight(), nil
+	return true, blockPair.ResultsBlock.Header.BlockHeight()
 }
 
 func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
