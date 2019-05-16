@@ -111,7 +111,7 @@ func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBl
 	var candidateBlocks []*protocol.BlockPairContainer
 	for _, blockPair := range allBlocks {
 		bts := blockPair.TransactionsBlock.Header.Timestamp()
-		if maxBlockTs > bts && minBlockTs < bts {
+		if maxBlockTs >= bts && minBlockTs <= bts {
 			candidateBlocks = append(candidateBlocks, blockPair)
 		}
 	}

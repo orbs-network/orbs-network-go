@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"os"
 	"time"
@@ -28,10 +29,15 @@ func main() {
 type localConfig struct {
 	dir            string
 	virtualChainId primitives.VirtualChainId
+	networkType    protocol.SignerNetworkType
 }
 
 func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.virtualChainId
+}
+
+func (l *localConfig) NetworkType() protocol.SignerNetworkType {
+	return l.networkType
 }
 
 func (l *localConfig) BlockStorageFileSystemDataDir() string {

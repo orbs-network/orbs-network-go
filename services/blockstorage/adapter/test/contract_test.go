@@ -259,6 +259,34 @@ func TestBlockPersistenceContract_ReturnsBlockByTx(t *testing.T) {
 	})
 }
 
+func TestReturnTransactionReceipt(t *testing.T) {
+	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
+
+		blocks := []*protocol.BlockPairContainer{
+			builders.BlockPair().WithHeight(1).WithTransactions(13).WithReceiptsForTransactions().WithTimestampAheadBy(2 * time.Second).Build(),
+			builders.BlockPair().WithHeight(2).WithTransactions(07).WithReceiptsForTransactions().WithTimestampAheadBy(4 * time.Second).Build(),
+			builders.BlockPair().WithHeight(3).WithTransactions(01).WithReceiptsForTransactions().WithTimestampAheadBy(6 * time.Second).Build(),
+		}
+
+		for _, b := range blocks {
+			added, _, err := adapter.WriteNextBlock(b)
+			require.NoError(t, err, "write should succeed")
+			require.True(t, added, "block should actually be added (it's not duplicate)")
+		}
+
+		second := primitives.TimestampNano(1 * time.Second)
+		block := blocks[1]
+		blockTimestamp := block.ResultsBlock.Header.Timestamp()
+		txIndex := 6
+		tx := block.TransactionsBlock.SignedTransactions[txIndex].Transaction()
+
+		retrievedBlock, retrievedTxIndex, err := adapter.GetBlockByTx(digest.CalcTxHash(tx), blockTimestamp-second, blockTimestamp+second)
+		require.NoError(t, err)
+		test.RequireCmpEqual(t, block, retrievedBlock, "expected correct block to be retrieved")
+		require.EqualValues(t, txIndex, retrievedTxIndex, "expected correct tx index to be retrieved")
+	})
+}
+
 type adapterUnderTest struct {
 	name    string
 	adapter adapter.BlockPersistence
