@@ -28,3 +28,19 @@ func TestPersistenceAdapter_DetectsVirtualChainMismatch(t *testing.T) {
 	_, _, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
 	require.Error(t, err, "expected error when trying to open a blocks file from a different virtual chain")
 }
+
+func TestPersistenceAdapter_DetectsNeworkTypeMismatch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Integration tests in short mode")
+	}
+
+	conf := newTempFileConfig()
+	defer conf.cleanDir()
+
+	writeRandomBlocksToFile(t, conf, 1, rand.NewControlledRand(t))
+
+	conf.setNetworkType(conf.networkType + 1)
+
+	_, _, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
+	require.Error(t, err, "expected error when trying to open a blocks file from a different network type")
+}
