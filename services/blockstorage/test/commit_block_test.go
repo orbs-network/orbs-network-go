@@ -20,7 +20,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockCreated := time.Now()
@@ -46,7 +46,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockCreated := time.Now()
@@ -74,7 +74,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			allowingErrorsMatching("protocol version mismatch in transactions block header").
 			start(ctx)
 
@@ -88,7 +88,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 		blockPair := builders.BlockPair().Build()
 
@@ -107,7 +107,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockPair := builders.BlockPair()
@@ -127,7 +127,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockPair := builders.BlockPair()
@@ -149,7 +149,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockPair := builders.BlockPair()
@@ -170,7 +170,7 @@ func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())

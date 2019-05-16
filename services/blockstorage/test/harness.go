@@ -103,10 +103,10 @@ func (d *harness) withValidateConsensusAlgos(times int) *harness {
 	return d
 }
 
-func (d *harness) withValidateConsensusAlgosAtLeast(times int) *harness {
+func (d *harness) expectValidateConsensusAlgos() *harness {
 	out := &handlers.HandleBlockConsensusOutput{}
 
-	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).AtLeast(times)
+	d.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Return(out, nil).AtLeast(0)
 	return d
 }
 

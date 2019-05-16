@@ -25,7 +25,7 @@ func TestGenerateProof(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockCreated := time.Now()
@@ -60,7 +60,7 @@ func TestGenerateProof_WrongTxHash(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		blockCreated := time.Now()

@@ -33,7 +33,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("protocol version mismatch in.*").
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 		block := builders.BlockPair().Build()
 

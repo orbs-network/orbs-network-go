@@ -25,7 +25,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 		harness := newBlockStorageHarness(t).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
@@ -69,7 +69,7 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -87,7 +87,7 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 		harness.commitSomeBlocks(ctx, 3)
 
@@ -112,7 +112,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			withBatchSize(batchSize).
 			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		lastBlock := 12
@@ -161,7 +161,7 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
-			withValidateConsensusAlgosAtLeast(0).
+			expectValidateConsensusAlgos().
 			start(ctx)
 		harness.commitSomeBlocks(ctx, lastBlock)
 
