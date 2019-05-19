@@ -122,50 +122,54 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 	if err != nil {
 		return 0, err
 	}
-	if info.Size() == 0 { // write header
-		header := newBlocksFileHeader(0, uint32(conf.VirtualChainId()))
-		logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
-		err = header.write(file)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error writing blocks file header")
+	if info.Size() == 0 { // empty file
+		if err := writeNewFileHeader(file, conf, logger); err != nil {
+			return 0, err
 		}
-		err = file.Sync()
-		if err != nil {
-			return 0, errors.Wrapf(err, "error writing blocks file header")
-		}
-	} else { // validate header
-
-		offset, err := file.Seek(0, io.SeekStart)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error reading blocks file header")
-		}
-		if offset != 0 {
-			return 0, fmt.Errorf("error reading blocks file header")
-		}
-
-		header := newBlocksFileHeader(0, 0)
-		err = header.read(file)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error reading blocks file header")
-		}
-
-		// TODO V1 TBD
-		//if header.networkId != conf.NetworkId() {
-		//	return 0, fmt.Errorf("blocks file network id mismatch. found netowrk id %d expected %d",header.networkId, conf.NetworkId())
-		//}
-
-		if header.ChainId != uint32(conf.VirtualChainId()) {
-			return 0, fmt.Errorf("blocks file virtual chain id mismatch. found vchain id %d expected %d", header.ChainId, conf.VirtualChainId())
-		}
-
 	}
 
-	offset, err := file.Seek(0, io.SeekCurrent)
+	offset, err := file.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error reading blocks file header")
+	}
+	if offset != 0 {
+		return 0, fmt.Errorf("error reading blocks file header")
+	}
+
+	header := newBlocksFileHeader(0, 0)
+	err = header.read(file)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error reading blocks file header")
+	}
+
+	if header.NetworkType != uint32(conf.NetworkType()) {
+		return 0, fmt.Errorf("blocks file network type mismatch. found netowrk type %d expected %d", header.NetworkType, conf.NetworkType())
+	}
+
+	if header.ChainId != uint32(conf.VirtualChainId()) {
+		return 0, fmt.Errorf("blocks file virtual chain id mismatch. found vchain id %d expected %d", header.ChainId, conf.VirtualChainId())
+	}
+
+	offset, err = file.Seek(0, io.SeekCurrent) // read current offset
 	if err != nil {
 		return 0, errors.Wrapf(err, "error reading blocks file header")
 	}
 
 	return offset, nil
+}
+
+func writeNewFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) error {
+	header := newBlocksFileHeader(uint32(conf.NetworkType()), uint32(conf.VirtualChainId()))
+	logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
+	err := header.write(file)
+	if err != nil {
+		return errors.Wrapf(err, "error writing blocks file header")
+	}
+	err = file.Sync()
+	if err != nil {
+		return errors.Wrapf(err, "error writing blocks file header")
+	}
+	return nil
 }
 
 func closeOnContextDone(ctx context.Context, file *os.File, logger log.Logger) {

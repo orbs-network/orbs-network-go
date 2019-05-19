@@ -105,6 +105,8 @@ const (
 	PROFILING = "PROFILING"
 
 	HTTP_ADDRESS = "HTTP_ADDRESS"
+
+	NTP_ENDPOINT = "NTP_ENDPOINT"
 )
 
 func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
@@ -397,4 +399,8 @@ func (c *config) Profiling() bool {
 
 func (c *config) HttpAddress() string {
 	return c.kv[HTTP_ADDRESS].StringValue
+}
+
+func (c *config) NTPEndpoint() string {
+	return c.kv[NTP_ENDPOINT].StringValue
 }

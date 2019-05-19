@@ -32,6 +32,8 @@ type runtimeReporter struct {
 	started time.Time
 }
 
+const RUNTIME_QUERY_INTERVAL = 5 * time.Second
+
 func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) interface{} {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
@@ -55,7 +57,7 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.L
 }
 
 func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) {
-	synchronization.NewPeriodicalTrigger(ctx, 5*time.Second, logger, func() {
+	synchronization.NewPeriodicalTrigger(ctx, RUNTIME_QUERY_INTERVAL, logger, func() {
 		r.reportRuntimeMetrics()
 	}, nil)
 }

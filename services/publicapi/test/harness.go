@@ -124,7 +124,7 @@ func (h *harness) getTransactionStatusFailed() {
 	h.bksMock.Never("GenerateReceiptProof", mock.Any)
 }
 
-func (h *harness) prepareGetBlock(blockPair *protocol.BlockPairContainer, lastCommitedBlockPair *protocol.BlockPairContainer) {
+func (h *harness) prepareGetBlock(blockPair *protocol.BlockPairContainer, lastCommittedBlockPair *protocol.BlockPairContainer) {
 	if blockPair != nil {
 		h.bksMock.When("GetBlockPair", mock.Any, mock.Any).Return(
 			&services.GetBlockPairOutput{
@@ -135,16 +135,16 @@ func (h *harness) prepareGetBlock(blockPair *protocol.BlockPairContainer, lastCo
 			&services.GetBlockPairOutput{
 				BlockPair: nil,
 			}).Times(1)
-		h.prepareGetLastBlock(lastCommitedBlockPair)
+		h.prepareGetLastBlock(lastCommittedBlockPair)
 	}
 }
 
-func (h *harness) prepareGetLastBlock(lastCommitedBlockPair *protocol.BlockPairContainer) {
-	if lastCommitedBlockPair != nil {
+func (h *harness) prepareGetLastBlock(lastCommittedBlockPair *protocol.BlockPairContainer) {
+	if lastCommittedBlockPair != nil {
 		h.bksMock.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(
 			&services.GetLastCommittedBlockHeightOutput{
-				LastCommittedBlockTimestamp: lastCommitedBlockPair.TransactionsBlock.Header.Timestamp(),
-				LastCommittedBlockHeight:    lastCommitedBlockPair.TransactionsBlock.Header.BlockHeight(),
+				LastCommittedBlockTimestamp: lastCommittedBlockPair.TransactionsBlock.Header.Timestamp(),
+				LastCommittedBlockHeight:    lastCommittedBlockPair.TransactionsBlock.Header.BlockHeight(),
 			}).Times(1)
 	} else {
 		h.bksMock.When("GetLastCommittedBlockHeight", mock.Any, mock.Any).Return(nil, errors.Errorf("someErr")).Times(1)

@@ -103,11 +103,11 @@ func (s *service) processTransactionSet(
 			outputEvents = (&protocol.EventsArrayBuilder{}).Build()
 		}
 
-		receipt := s.encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs, outputEvents)
+		receipt := encodeTransactionReceipt(signedTransaction.Transaction(), callResult, outputArgs, outputEvents)
 		receipts = append(receipts, receipt)
 	}
 
-	stateDiffs := s.encodeBatchTransientStateToStateDiffs(batchTransientState)
+	stateDiffs := encodeBatchTransientStateToStateDiffs(batchTransientState)
 	return receipts, stateDiffs
 }
 
@@ -119,7 +119,7 @@ func (s *service) getRecentCommittedBlockHeight(ctx context.Context) (primitives
 	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, nil
 }
 
-func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.ArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {
+func encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.ArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {
 	return (&protocol.TransactionReceiptBuilder{
 		Txhash:              digest.CalcTxHash(transaction),
 		ExecutionResult:     result,
@@ -128,7 +128,7 @@ func (s *service) encodeTransactionReceipt(transaction *protocol.Transaction, re
 	}).Build()
 }
 
-func (s *service) encodeBatchTransientStateToStateDiffs(batchTransientState *transientState) []*protocol.ContractStateDiff {
+func encodeBatchTransientStateToStateDiffs(batchTransientState *transientState) []*protocol.ContractStateDiff {
 	res := []*protocol.ContractStateDiff{}
 	for _, contractName := range batchTransientState.contractSortOrder {
 		stateDiffs := []*protocol.StateRecordBuilder{}

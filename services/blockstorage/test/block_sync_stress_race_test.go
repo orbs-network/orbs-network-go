@@ -44,7 +44,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			return nil, nil
 		})
 
-		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE && input.PrevCommittedBlockPair != nil {
 				currHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
 				prevHeight := input.PrevCommittedBlockPair.TransactionsBlock.Header.BlockHeight()

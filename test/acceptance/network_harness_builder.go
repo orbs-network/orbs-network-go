@@ -24,7 +24,7 @@ import (
 )
 
 const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-const TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+const TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
 const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66

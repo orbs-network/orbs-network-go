@@ -8,24 +8,36 @@ package gamma
 
 import (
 	"context"
+	"flag"
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
+	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
 	"os"
-	"sync"
-	"time"
+	"strconv"
 )
 
 type GammaServer struct {
-	httpServer   httpserver.HttpServer
-	shutdownCond *sync.Cond
-	ctxCancel    context.CancelFunc
-	Logger       log.Logger
+	bootstrap.OrbsProcess
+	network *inmemory.Network
 }
 
-func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson string, blocking bool) *GammaServer {
-	ctx, cancel := context.WithCancel(context.Background())
+type GammaServerConfig struct {
+	ServerAddress      string
+	Profiling          bool
+	OverrideConfigJson string
+	Silent             bool
+}
 
-	rootLogger := log.GetLogger().
+func getLogger(silent bool) log.Logger {
+
+	if silent {
+		return log.GetLogger().WithOutput()
+	}
+
+	return log.GetLogger().
 		WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())).
 		WithFilters(
 			//TODO(https://github.com/orbs-network/orbs-network-go/issues/585) what do we really want to output to the gamma server log? maybe some meaningful data for our users?
@@ -33,41 +45,53 @@ func StartGammaServer(serverAddress string, profiling bool, overrideConfigJson s
 			log.IgnoreMessagesMatching("finished waiting for responses"),
 			log.IgnoreMessagesMatching("no responses received"),
 		)
+}
 
-	network := NewDevelopmentNetwork(ctx, rootLogger, overrideConfigJson)
+func StartGammaServer(config GammaServerConfig) *GammaServer {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	rootLogger := getLogger(config.Silent)
+
+	network := NewDevelopmentNetwork(ctx, rootLogger, config.OverrideConfigJson)
 	rootLogger.Info("finished creating development network")
 
-	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(serverAddress, profiling),
+	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
 		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
 
 	s := &GammaServer{
-		ctxCancel:    cancel,
-		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		httpServer:   httpServer,
-		Logger:       rootLogger,
-	}
-
-	if blocking {
-		s.WaitUntilShutdown()
-	} else { // Used primarily in testing
-		go s.WaitUntilShutdown()
+		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
+		network:     network,
 	}
 
 	return s
 }
 
-func (n *GammaServer) GracefulShutdown(timeout time.Duration) {
-	n.ctxCancel()
-	n.httpServer.GracefulShutdown(timeout)
-	n.shutdownCond.Broadcast()
-}
-
-func (n *GammaServer) WaitUntilShutdown() {
-	n.shutdownCond.L.Lock()
-	n.shutdownCond.Wait()
-	n.shutdownCond.L.Unlock()
-}
-
 func (n *GammaServer) Port() int {
-	return n.httpServer.Port()
+	return n.HttpServer.Port()
+}
+
+var (
+	port               = flag.Int("port", 8080, "The port to bind the gamma server to")
+	profiling          = flag.Bool("profiling", false, "enable profiling")
+	version            = flag.Bool("version", false, "returns information about version")
+	overrideConfigJson = flag.String("override-config", "{}", "JSON-formatted config overrides, same format as the file config")
+)
+
+func Main() {
+
+	flag.Parse()
+
+	if *version {
+		fmt.Println(config.GetVersion())
+		return
+	}
+
+	var serverAddress = ":" + strconv.Itoa(*port)
+
+	StartGammaServer(GammaServerConfig{
+		ServerAddress:      serverAddress,
+		Profiling:          *profiling,
+		OverrideConfigJson: *overrideConfigJson,
+		Silent:             false,
+	}).WaitUntilShutdown()
 }

@@ -98,11 +98,13 @@ type NodeConfig interface {
 
 	// profiling
 	Profiling() bool
+
+	// NTP Network Time Protocol
+	NTPEndpoint() string
 }
 
 type OverridableConfig interface {
 	NodeConfig
-	OverrideNodeSpecificValues(httpAddress string, gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
@@ -138,6 +140,7 @@ type FilesystemBlockPersistenceConfig interface {
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 type GossipTransportConfig interface {

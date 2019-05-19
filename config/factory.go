@@ -8,29 +8,12 @@ package config
 
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"path/filepath"
 )
 
 func emptyConfig() mutableNodeConfig {
 	return &config{
 		kv: make(map[string]NodeConfigValue),
 	}
-}
-func (c *config) OverrideNodeSpecificValues(
-	httpAddress string,
-	gossipListenPort int,
-	nodeAddress primitives.NodeAddress,
-	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
-	blockStorageDataDirPrefix string,
-) NodeConfig {
-
-	cloned := c.Clone()
-	cloned.SetString(HTTP_ADDRESS, httpAddress)
-	cloned.SetNodeAddress(nodeAddress)
-	cloned.SetNodePrivateKey(nodePrivateKey)
-	cloned.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
-	cloned.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
-	return cloned
 }
 
 func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {

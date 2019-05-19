@@ -38,9 +38,8 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	publicApi       services.PublicApi
-	consensusAlgos  []services.ConsensusAlgo
-	runtimeReporter interface{} // only needed so that the runtime reporter doesn't get GCed
+	publicApi      services.PublicApi
+	consensusAlgos []services.ConsensusAlgo
 }
 
 func NewNodeLogic(
@@ -82,17 +81,19 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
 	metric.NewSystemReporter(ctx, metricRegistry, logger)
-	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
+	metric.NewRuntimeReporter(ctx, metricRegistry, logger)
+	metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint())
+
 	metricRegistry.PeriodicallyRotate(ctx, logger)
+	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
 	return &nodeLogic{
-		publicApi:       publicApiService,
-		consensusAlgos:  consensusAlgos,
-		runtimeReporter: runtimeReporter,
+		publicApi:      publicApiService,
+		consensusAlgos: consensusAlgos,
 	}
 }
 
