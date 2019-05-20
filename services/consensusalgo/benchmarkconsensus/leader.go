@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -155,7 +154,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := kms.GetSigner(s.config).Sign(signedData)
+	sig, err := s.signer.Sign(signedData)
 	// digest.SignAsNode(s.config.NodePrivateKey(), signedData)
 	if err != nil {
 		return nil, err

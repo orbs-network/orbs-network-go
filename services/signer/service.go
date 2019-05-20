@@ -1,4 +1,4 @@
-package kms
+package signer
 
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"

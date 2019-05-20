@@ -67,6 +67,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
+	signer kms.Signer,
 	parentLogger log.Logger,
 	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
@@ -79,7 +80,6 @@ func NewLeanHelixConsensusAlgo(
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
-	signer := kms.GetSigner(config)
 	mgr := NewKeyManager(logger, signer)
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)

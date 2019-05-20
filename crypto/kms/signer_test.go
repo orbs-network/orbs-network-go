@@ -2,6 +2,7 @@ package kms
 
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/services/signer"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestSignerClient(t *testing.T) {
 	testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 	testLogger := log.GetLogger().WithOutput(testOutput)
 
-	server := NewService(address, pk, testLogger)
+	server := signer.NewService(address, pk, testLogger)
 	server.Start()
 	defer server.Shutdown()
 
