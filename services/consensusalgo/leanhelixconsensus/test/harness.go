@@ -20,6 +20,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -57,7 +58,8 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0))
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
-	signer := signer.NewSigner(cfg)
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
 	return h

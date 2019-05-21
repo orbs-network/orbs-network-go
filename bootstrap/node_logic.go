@@ -8,6 +8,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -65,7 +66,10 @@ func NewNodeLogic(
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ethereumConnection, nodeConfig, logger, metricRegistry)
 
-	signer := signer.NewSigner(nodeConfig)
+	signer, err := signer.New(nodeConfig)
+	if err != nil {
+		panic(fmt.Sprintf("could not instantiate NodeLogic: %s", err))
+	}
 
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)

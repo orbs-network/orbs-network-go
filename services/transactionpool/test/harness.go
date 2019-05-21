@@ -24,6 +24,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -270,7 +271,8 @@ func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlock
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 
-	signer := signer.NewSigner(cfg)
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
 
 	h := &harness{
 		gossip:             gossip,

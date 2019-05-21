@@ -70,7 +70,8 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
-		signer := signer.NewSigner(&signerConfig{keyPair})
+		signer, err := signer.New(&signerConfig{keyPair})
+		require.NoError(t, err)
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 
@@ -94,7 +95,8 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
-		signer := signer.NewSigner(&signerConfig{keyPair})
+		signer, err := signer.New(&signerConfig{keyPair})
+		require.NoError(t, err)
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 

@@ -53,14 +53,14 @@ func (c *client) Sign(input []byte) ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
-func NewSigner(cfg config.SignerConfig) Signer {
+func New(cfg config.SignerConfig) (Signer, error) {
 	if cfg.NodePrivateKey() != nil {
-		return NewLocalSigner(cfg.NodePrivateKey())
+		return NewLocalSigner(cfg.NodePrivateKey()), nil
 	}
 
 	if cfg.SignerEndpoint() != "" {
-		return NewSignerClient(cfg.SignerEndpoint())
+		return NewSignerClient(cfg.SignerEndpoint()), nil
 	}
 
-	panic("bad private key configuration")
+	return nil, errors.New("bad private key configuration: both private key and signer endpoint were not set")
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -72,7 +73,8 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	consensusContext := &services.MockConsensusContext{}
 
-	signer := signer.NewSigner(cfg)
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
 
 	return &harness{
 		gossip:           gossip,
