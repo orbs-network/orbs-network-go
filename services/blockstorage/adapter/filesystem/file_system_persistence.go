@@ -224,7 +224,7 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 	return bhIndex, nil
 }
 
-func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 	f.blockWriter.Lock()
 	defer f.blockWriter.Unlock()
 
@@ -232,27 +232,24 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 
 	currentTop := f.bhIndex.getLastBlockHeight()
 	if bh != currentTop+1 {
-		if bh <= currentTop {
-			return false, nil
-		}
-		return false, fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
+		return false, currentTop, nil
 	}
 
 	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
-		return false, err
+		return false, currentTop, err
 	}
 
 	startPos := f.bhIndex.fetchBlockOffset(bh)
 	err = f.bhIndex.appendBlock(startPos, startPos+int64(n), blockPair)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to update index after writing block")
+		return false, currentTop, errors.Wrap(err, "failed to update index after writing block")
 	}
 
-	f.blockTracker.IncrementTo(currentTop + 1)
+	f.blockTracker.IncrementTo(bh)
 	f.metrics.size.Add(int64(n))
 
-	return true, nil
+	return true, bh, nil
 }
 
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {

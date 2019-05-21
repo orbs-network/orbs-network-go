@@ -8,7 +8,6 @@ package memory
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -76,38 +75,30 @@ func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight
 	return primitives.BlockHeight(len(bp.blockChain.blocks)), nil
 }
 
-func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 
-	added, err := bp.validateAndAddNextBlock(blockPair)
-	if err != nil || !added {
-		return added, err
+	added, pHeight := bp.validateAndAddNextBlock(blockPair)
+
+	if added {
+		bp.metrics.size.Add(sizeOfBlock(blockPair))
 	}
 
-	bp.metrics.size.Add(sizeOfBlock(blockPair))
-
-	return added, nil
+	return added, pHeight, nil
 }
 
-func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight) {
 	bp.blockChain.Lock()
 	defer bp.blockChain.Unlock()
 
-	if !(blockPair.ResultsBlock.BlockProof.IsTypeBenchmarkConsensus() || blockPair.ResultsBlock.BlockProof.IsTypeLeanHelix()) {
-		return false, errors.Errorf("block persistence tried to write block with invalid proof type: %s", blockPair.ResultsBlock.BlockProof)
+	currentTop := primitives.BlockHeight(len(bp.blockChain.blocks))
+
+	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 != blockPair.TransactionsBlock.Header.BlockHeight() {
+		return false, currentTop
 	}
 
-	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 < blockPair.TransactionsBlock.Header.BlockHeight() {
-		return false, errors.Errorf("block persistence tried to write next block with height %d when %d exist", blockPair.TransactionsBlock.Header.BlockHeight(), len(bp.blockChain.blocks))
-	}
-
-	if primitives.BlockHeight(len(bp.blockChain.blocks))+1 > blockPair.TransactionsBlock.Header.BlockHeight() {
-		bp.Logger.Info("block persistence ignoring write next block. incorrect height", log.Uint64("incoming-block-height", uint64(blockPair.TransactionsBlock.Header.BlockHeight())), logfields.BlockHeight(primitives.BlockHeight(len(bp.blockChain.blocks))))
-		// TODO(v1): since we're skipping the add, byte-compare the block header to make sure we don't have a fork
-		return false, nil
-	}
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
-	return true, nil
+	return true, blockPair.ResultsBlock.Header.BlockHeight()
 }
 
 func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {

@@ -208,7 +208,7 @@ func (d *harness) setupCustomBlocksForInit() time.Time {
 	now := time.Now()
 	for i := 1; i <= 10; i++ {
 		now = now.Add(1 * time.Millisecond)
-		_, _ = d.storageAdapter.WriteNextBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
+		_, _, _ = d.storageAdapter.WriteNextBlock(builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(now).Build())
 	}
 
 	return now
