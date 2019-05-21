@@ -9,7 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -23,7 +23,7 @@ import (
 func NewTransactionPool(ctx context.Context,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
-	signer kms.Signer,
+	signer signer.Signer,
 	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.Logger,

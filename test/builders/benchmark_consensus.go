@@ -9,7 +9,7 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -34,7 +34,7 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 			&protocol.ResultsBlockContainer{Header: rxHeaderBuilt}),
 	}
 	b.rxProof.TransactionsBlockHash = digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
-	sig, err := kms.NewLocalSigner(b.blockProofKey).Sign(b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
+	sig, err := signer.NewLocalSigner(b.blockProofKey).Sign(b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +112,7 @@ func (c *committed) WithInvalidSenderSignature(keyPair *testKeys.TestEcdsaSecp25
 
 func (c *committed) Build() *gossipmessages.BenchmarkConsensusCommittedMessage {
 	statusBuilt := c.status.Build()
-	sig, err := kms.NewLocalSigner(c.messageKey).Sign(statusBuilt.Raw())
+	sig, err := signer.NewLocalSigner(c.messageKey).Sign(statusBuilt.Raw())
 	if err != nil {
 		panic(err)
 	}

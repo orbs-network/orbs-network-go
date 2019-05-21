@@ -9,7 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -63,14 +63,14 @@ type transactionForwarder struct {
 	logger log.Logger
 	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
-	signer kms.Signer
+	signer signer.Signer
 
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
 	transactionAdded  chan uint16
 }
 
-func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer kms.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer signer.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
 	f := &transactionForwarder{
 		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
 		config:            config,

@@ -9,7 +9,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -27,7 +27,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 		tx := builders.TransferTransaction().Build()
 
 		hash, _, _ := transactionpool.HashTransactions(tx)
-		sig, _ := kms.NewLocalSigner(thisNodeKeyPair.PrivateKey()).Sign(hash)
+		sig, _ := signer.NewLocalSigner(thisNodeKeyPair.PrivateKey()).Sign(hash)
 
 		h.expectTransactionsToBeForwarded(sig, tx)
 

@@ -9,7 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -70,7 +70,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
-		signer := kms.GetSigner(&signerConfig{keyPair})
+		signer := signer.NewSigner(&signerConfig{keyPair})
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 
@@ -94,7 +94,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
-		signer := kms.GetSigner(&signerConfig{keyPair})
+		signer := signer.NewSigner(&signerConfig{keyPair})
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 

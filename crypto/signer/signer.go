@@ -1,7 +1,8 @@
-package kms
+package signer
 
 import (
 	"bytes"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -52,18 +53,13 @@ func (c *client) Sign(input []byte) ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
-type SignerConfig interface {
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	SignerEndpoint() string
-}
-
-func GetSigner(config SignerConfig) Signer {
-	if config.NodePrivateKey() != nil {
-		return NewLocalSigner(config.NodePrivateKey())
+func NewSigner(cfg config.SignerConfig) Signer {
+	if cfg.NodePrivateKey() != nil {
+		return NewLocalSigner(cfg.NodePrivateKey())
 	}
 
-	if config.SignerEndpoint() != "" {
-		return NewSignerClient(config.SignerEndpoint())
+	if cfg.SignerEndpoint() != "" {
+		return NewSignerClient(cfg.SignerEndpoint())
 	}
 
 	panic("bad private key configuration")

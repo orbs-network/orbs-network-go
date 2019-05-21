@@ -9,7 +9,7 @@ package leanhelixconsensus
 import (
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 func TestSignAndVerifyConsensusMessage(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	contentSig := mgr.SignConsensusMessage(1, content)
@@ -34,7 +34,7 @@ func TestSignAndVerifyConsensusMessage(t *testing.T) {
 func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyConsensusMessage()")
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	contentSig := mgr.SignConsensusMessage(1, content)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
@@ -49,7 +49,7 @@ func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedMessage := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -65,7 +65,7 @@ func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 func TestSignAndVerifyRandomSeed(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)
@@ -80,7 +80,7 @@ func TestSignAndVerifyRandomSeed(t *testing.T) {
 func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedRandomSeed := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
@@ -96,7 +96,7 @@ func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyRandomSeed()")
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-	mgr := NewKeyManager(log.DefaultTestingLogger(t), kms.NewLocalSigner(keyPair.PrivateKey()))
+	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)

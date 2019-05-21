@@ -14,7 +14,7 @@ services:
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./$CONSENSUSALGO-config/:/opt/orbs/config
-    command: /opt/orbs/orbs-signer --listen :7777 --silent --config /opt/orbs/config/node1.json --config /opt/orbs/config/node1.keys.json --log /opt/orbs/logs/signer1.log
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node1.json --config /opt/orbs/config/node1.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.9
@@ -24,7 +24,7 @@ services:
     volumes:
     - ../../_logs/:/opt/orbs/logs
     - ./$CONSENSUSALGO-config/:/opt/orbs/config
-    command: /opt/orbs/orbs-signer --listen :7777 --silent --config /opt/orbs/config/node2.json --config /opt/orbs/config/node2.keys.json --log /opt/orbs/logs/signer2.log
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node2.json --config /opt/orbs/config/node2.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.10
@@ -34,7 +34,7 @@ services:
     volumes:
     - ../../_logs/:/opt/orbs/logs
     - ./$CONSENSUSALGO-config/:/opt/orbs/config
-    command: /opt/orbs/orbs-signer --listen :7777 --silent --config /opt/orbs/config/node3.json --config /opt/orbs/config/node3.keys.json --log /opt/orbs/logs/signer3.log
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node3.json --config /opt/orbs/config/node3.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.11
@@ -44,7 +44,7 @@ services:
     volumes:
     - ../../_logs/:/opt/orbs/logs
     - ./$CONSENSUSALGO-config/:/opt/orbs/config
-    command: /opt/orbs/orbs-signer --listen :7777 --silent --config /opt/orbs/config/node4.json --config /opt/orbs/config/node4.keys.json --log /opt/orbs/logs/signer4.log
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node4.json --config /opt/orbs/config/node4.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.12

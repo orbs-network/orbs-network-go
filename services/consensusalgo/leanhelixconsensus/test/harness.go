@@ -11,7 +11,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -57,7 +57,7 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0))
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
-	signer := kms.GetSigner(cfg)
+	signer := signer.NewSigner(cfg)
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
 	return h

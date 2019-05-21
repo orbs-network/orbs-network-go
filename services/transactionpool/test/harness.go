@@ -13,7 +13,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -32,7 +32,7 @@ type harness struct {
 	txpool                  services.TransactionPool
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
-	signer                  kms.Signer
+	signer                  signer.Signer
 	trh                     *handlers.MockTransactionResultsHandler
 	lastBlockHeight         primitives.BlockHeight
 	lastBlockTimestamp      primitives.TimestampNano
@@ -123,7 +123,7 @@ func (h *harness) verifyMocks() error {
 func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEcdsaSecp256K1KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
-	sig, err := kms.NewLocalSigner(sender.PrivateKey()).Sign(oneBigHash)
+	sig, err := signer.NewLocalSigner(sender.PrivateKey()).Sign(oneBigHash)
 	if err != nil {
 		panic(err)
 	}
@@ -270,7 +270,7 @@ func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlock
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 
-	signer := kms.GetSigner(cfg)
+	signer := signer.NewSigner(cfg)
 
 	h := &harness{
 		gossip:             gossip,

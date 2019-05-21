@@ -10,7 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -28,7 +28,7 @@ type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
-	signer           kms.Signer
+	signer           signer.Signer
 	reporting        log.Logger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
@@ -72,7 +72,7 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	consensusContext := &services.MockConsensusContext{}
 
-	signer := kms.GetSigner(cfg)
+	signer := signer.NewSigner(cfg)
 
 	return &harness{
 		gossip:           gossip,

@@ -13,20 +13,20 @@ import (
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
 type keyManager struct {
-	signer kms.Signer
+	signer signer.Signer
 	logger log.Logger
 }
 
 // TODO Fix according to branch lh-outline, see https://tree.taiga.io/project/orbs-network/us/566
 
-func NewKeyManager(logger log.Logger, signer kms.Signer) *keyManager {
+func NewKeyManager(logger log.Logger, signer signer.Signer) *keyManager {
 	return &keyManager{
 		logger: logger,
 		signer: signer,

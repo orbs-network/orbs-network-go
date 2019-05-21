@@ -3,7 +3,7 @@ package test
 import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/signer"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	crypto "github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -34,7 +34,7 @@ func TestSignerClient(t *testing.T) {
 
 	server := signer.StartSignerServer(&signerServerConfig{pk, address}, testLogger)
 	defer server.GracefulShutdown(1 * time.Second)
-	c := kms.NewSignerClient("http://" + address)
+	c := crypto.NewSignerClient("http://" + address)
 
 	payload := []byte("payload")
 

@@ -9,7 +9,7 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -41,7 +41,7 @@ type service struct {
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
-	signer           kms.Signer
+	signer           signer.Signer
 	logger           log.Logger
 	config           Config
 
@@ -80,7 +80,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
-	signer kms.Signer,
+	signer signer.Signer,
 	parentLogger log.Logger,
 	config Config,
 	metricFactory metric.Factory,

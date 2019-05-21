@@ -14,8 +14,8 @@ import (
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -133,7 +133,7 @@ func TestTransactionReceiptProof(t *testing.T) {
 	signaturesJSON := []*SenderSignatureJSON{}
 	for i := 0; i < 5; i++ {
 		kp := testKeys.EcdsaSecp256K1KeyPairForTests(i)
-		sig, err := kms.NewLocalSigner(kp.PrivateKey()).Sign(dataToSign)
+		sig, err := signer.NewLocalSigner(kp.PrivateKey()).Sign(dataToSign)
 		require.NoError(t, err)
 		nodeSignatures = append(nodeSignatures, &lhprotocol.SenderSignatureBuilder{
 			MemberId:  lhprimitives.MemberId(kp.NodeAddress()),

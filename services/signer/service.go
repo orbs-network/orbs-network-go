@@ -1,7 +1,7 @@
 package signer
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 )
@@ -27,5 +27,5 @@ func NewService(config ServiceConfig, logger log.Logger) Service {
 }
 
 func (s *service) Sign(payload []byte) (primitives.EcdsaSecp256K1Sig, error) {
-	return kms.NewLocalSigner(s.config.NodePrivateKey()).Sign(payload)
+	return signer.NewLocalSigner(s.config.NodePrivateKey()).Sign(payload)
 }
