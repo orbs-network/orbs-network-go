@@ -32,6 +32,7 @@ var LogTag = log.Service("consensus-algo-lean-helix")
 
 type service struct {
 	blockStorage     services.BlockStorage
+	consensusContext services.ConsensusContext
 	membership       *membership
 	com              *communication
 	blockProvider    *blockProvider
@@ -85,13 +86,14 @@ func NewLeanHelixConsensusAlgo(
 	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
-		com:           com,
-		blockStorage:  blockStorage,
-		logger:        logger,
-		config:        config,
-		blockProvider: provider,
-		metrics:       newMetrics(metricFactory),
-		leanHelix:     nil,
+		com:              com,
+		blockStorage:     blockStorage,
+		consensusContext: consensusContext,
+		logger:           logger,
+		config:           config,
+		blockProvider:    provider,
+		metrics:          newMetrics(metricFactory),
+		leanHelix:        nil,
 	}
 
 	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
@@ -140,6 +142,8 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
+		s.maybePrintLogsByExecutingBlock(ctx, blockPair)
+
 		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
@@ -172,6 +176,18 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	return nil, nil
+}
+
+func (s *service) maybePrintLogsByExecutingBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) {
+	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
+	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
+		// ignore results - we only execute the transactions so that logs are printed in an audit node
+		_, _ = s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
+			TransactionsBlock:  blockPair.TransactionsBlock,
+			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
+			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
+		})
+	}
 }
 
 func ExtractBlockProof(blockPair *protocol.BlockPairContainer) (primitives.LeanHelixBlockProof, error) {

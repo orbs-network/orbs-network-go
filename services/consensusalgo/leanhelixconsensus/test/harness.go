@@ -20,19 +20,21 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 	"testing"
+	"time"
 )
 
 const NETWORK_SIZE = 4
 
 type harness struct {
-	consensus        services.ConsensusAlgoLeanHelix
-	gossip           *gossiptopics.MockLeanHelix
-	blockStorage     *services.MockBlockStorage
-	consensusContext *services.MockConsensusContext
-	instanceId       lhprimitives.InstanceId
+	consensus              services.ConsensusAlgoLeanHelix
+	gossip                 *gossiptopics.MockLeanHelix
+	blockStorage           *services.MockBlockStorage
+	consensusContext       *services.MockConsensusContext
+	instanceId             lhprimitives.InstanceId
+	auditBlocksYoungerThan time.Duration
 }
 
-func newLeanHelixServiceHarness() *harness {
+func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
 	gossip := &gossiptopics.MockLeanHelix{}
 	gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 
@@ -42,9 +44,10 @@ func newLeanHelixServiceHarness() *harness {
 	consensusContext := &services.MockConsensusContext{}
 
 	return &harness{
-		gossip:           gossip,
-		blockStorage:     blockStorage,
-		consensusContext: consensusContext,
+		gossip:                 gossip,
+		blockStorage:           blockStorage,
+		consensusContext:       consensusContext,
+		auditBlocksYoungerThan: auditBlocksYoungerThan,
 	}
 }
 
@@ -53,7 +56,7 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	logger := log.GetLogger().WithOutput(logOutput)
 	registry := metric.NewRegistry()
 
-	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0))
+	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, logger, cfg, registry)
