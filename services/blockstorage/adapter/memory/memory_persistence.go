@@ -78,11 +78,10 @@ func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight
 func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 
 	added, pHeight := bp.validateAndAddNextBlock(blockPair)
-	if !added {
-		return added, pHeight, nil
-	}
 
-	bp.metrics.size.Add(sizeOfBlock(blockPair))
+	if added {
+		bp.metrics.size.Add(sizeOfBlock(blockPair))
+	}
 
 	return added, pHeight, nil
 }
