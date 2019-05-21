@@ -44,9 +44,9 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 
 func TestHandleBlockConsensus_DoesNotExecuteBlocksOlderThanThreshold_AndModeIsVerify(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(5*time.Minute).start(t, ctx)
+		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
-		block := builders.BlockPair().WithTimestampAheadBy(-10 * time.Minute).WithHeight(1).WithEmptyLeanHelixBlockProof().Build()
+		block := builders.BlockPair().WithTimestampAheadBy(-1 * time.Nanosecond).WithHeight(1).WithEmptyLeanHelixBlockProof().Build()
 
 		h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 
