@@ -3,17 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/bootstrap/signer"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/services/signer"
 	"github.com/orbs-network/scribe/log"
 	"os"
 )
 
+func getLogger() log.Logger {
+	return log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+}
+
 func main() {
 	httpAddress := flag.String("listen", ":7777", "ip address and port for http server")
-	silentLog := flag.Bool("silent", false, "disable output to stdout")
-	pathToLog := flag.String("log", "", "path/to/node.log")
 	version := flag.Bool("version", false, "returns information about version")
 
 	var configFiles config.ArrayFlags
@@ -32,9 +33,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg).WithTags(log.Node(cfg.NodeAddress().String()))
-
-	service := signer.NewService(cfg.HttpAddress(), cfg.NodePrivateKey(), logger)
-	service.Start()
-	service.WaitUntilShutdown()
+	signer.StartSignerServer(cfg, getLogger()).WaitUntilShutdown()
 }
