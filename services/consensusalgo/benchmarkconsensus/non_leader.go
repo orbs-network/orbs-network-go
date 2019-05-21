@@ -8,7 +8,6 @@ package benchmarkconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -84,8 +83,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: lastCommittedBlockHeight,
 	}).Build()
-	sig, err := kms.GetSigner(s.config).Sign(status.Raw())
-	// digest.SignAsNode(s.config.NodePrivateKey(), status.Raw())
+	sig, err := s.signer.Sign(status.Raw())
 	if err != nil {
 		return err
 	}

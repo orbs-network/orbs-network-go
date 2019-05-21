@@ -30,13 +30,11 @@ var LogTag = log.Service("consensus-algo-benchmark")
 
 type Config interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	GenesisValidatorNodes() map[string]config.ValidatorNode
 	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
 	BenchmarkConsensusRequiredQuorumPercentage() uint32
-	SignerEndpoint() string
 }
 
 type service struct {

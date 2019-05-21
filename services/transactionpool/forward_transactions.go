@@ -9,6 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/kms"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -27,7 +28,6 @@ import (
 
 type TransactionForwarderConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
@@ -63,17 +63,19 @@ type transactionForwarder struct {
 	logger log.Logger
 	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
+	signer kms.Signer
 
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
 	transactionAdded  chan uint16
 }
 
-func NewTransactionForwarder(ctx context.Context, logger log.Logger, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer kms.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
 	f := &transactionForwarder{
 		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
 		config:            config,
 		gossip:            gossip,
+		signer:            signer,
 		forwardQueueMutex: &sync.Mutex{},
 		transactionAdded:  make(chan uint16),
 	}
@@ -125,7 +127,7 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 		return
 	}
 
-	sig, err := digest.SignAsNode(f.config.NodePrivateKey(), oneBigHash)
+	sig, err := f.signer.Sign(oneBigHash)
 	if err != nil {
 		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		return
