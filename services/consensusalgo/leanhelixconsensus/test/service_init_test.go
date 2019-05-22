@@ -18,7 +18,7 @@ import (
 
 func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness()
+		h := newLeanHelixServiceHarness(0)
 
 		t.Log("Service should do nothing on start")
 
@@ -46,7 +46,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 func TestService_LeaderProposesBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness().start(t, ctx)
+		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
 		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0
