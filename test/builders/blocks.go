@@ -211,6 +211,13 @@ func (b *blockPair) WithTimestampNow() *blockPair {
 	return b
 }
 
+func (b *blockPair) WithTimestampAheadBy(duration time.Duration) *blockPair {
+	timeToUse := primitives.TimestampNano(time.Now().UnixNano() + duration.Nanoseconds())
+	b.txHeader.Timestamp = timeToUse
+	b.rxHeader.Timestamp = timeToUse
+	return b
+}
+
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
 	b.rxProof = &protocol.ResultsBlockProofBuilder{
 		TransactionsBlockHash: hash,

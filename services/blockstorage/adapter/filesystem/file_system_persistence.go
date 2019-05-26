@@ -122,50 +122,54 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 	if err != nil {
 		return 0, err
 	}
-	if info.Size() == 0 { // write header
-		header := newBlocksFileHeader(0, uint32(conf.VirtualChainId()))
-		logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
-		err = header.write(file)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error writing blocks file header")
+	if info.Size() == 0 { // empty file
+		if err := writeNewFileHeader(file, conf, logger); err != nil {
+			return 0, err
 		}
-		err = file.Sync()
-		if err != nil {
-			return 0, errors.Wrapf(err, "error writing blocks file header")
-		}
-	} else { // validate header
-
-		offset, err := file.Seek(0, io.SeekStart)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error reading blocks file header")
-		}
-		if offset != 0 {
-			return 0, fmt.Errorf("error reading blocks file header")
-		}
-
-		header := newBlocksFileHeader(0, 0)
-		err = header.read(file)
-		if err != nil {
-			return 0, errors.Wrapf(err, "error reading blocks file header")
-		}
-
-		// TODO V1 TBD
-		//if header.networkId != conf.NetworkId() {
-		//	return 0, fmt.Errorf("blocks file network id mismatch. found netowrk id %d expected %d",header.networkId, conf.NetworkId())
-		//}
-
-		if header.ChainId != uint32(conf.VirtualChainId()) {
-			return 0, fmt.Errorf("blocks file virtual chain id mismatch. found vchain id %d expected %d", header.ChainId, conf.VirtualChainId())
-		}
-
 	}
 
-	offset, err := file.Seek(0, io.SeekCurrent)
+	offset, err := file.Seek(0, io.SeekStart)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error reading blocks file header")
+	}
+	if offset != 0 {
+		return 0, fmt.Errorf("error reading blocks file header")
+	}
+
+	header := newBlocksFileHeader(0, 0)
+	err = header.read(file)
+	if err != nil {
+		return 0, errors.Wrapf(err, "error reading blocks file header")
+	}
+
+	if header.NetworkType != uint32(conf.NetworkType()) {
+		return 0, fmt.Errorf("blocks file network type mismatch. found netowrk type %d expected %d", header.NetworkType, conf.NetworkType())
+	}
+
+	if header.ChainId != uint32(conf.VirtualChainId()) {
+		return 0, fmt.Errorf("blocks file virtual chain id mismatch. found vchain id %d expected %d", header.ChainId, conf.VirtualChainId())
+	}
+
+	offset, err = file.Seek(0, io.SeekCurrent) // read current offset
 	if err != nil {
 		return 0, errors.Wrapf(err, "error reading blocks file header")
 	}
 
 	return offset, nil
+}
+
+func writeNewFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) error {
+	header := newBlocksFileHeader(uint32(conf.NetworkType()), uint32(conf.VirtualChainId()))
+	logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
+	err := header.write(file)
+	if err != nil {
+		return errors.Wrapf(err, "error writing blocks file header")
+	}
+	err = file.Sync()
+	if err != nil {
+		return errors.Wrapf(err, "error writing blocks file header")
+	}
+	return nil
 }
 
 func closeOnContextDone(ctx context.Context, file *os.File, logger log.Logger) {
@@ -220,7 +224,7 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 	return bhIndex, nil
 }
 
-func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, error) {
+func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 	f.blockWriter.Lock()
 	defer f.blockWriter.Unlock()
 
@@ -228,27 +232,24 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 
 	currentTop := f.bhIndex.getLastBlockHeight()
 	if bh != currentTop+1 {
-		if bh <= currentTop {
-			return false, nil
-		}
-		return false, fmt.Errorf("attempt to write block %d out of order. current top height is %d", bh, currentTop)
+		return false, currentTop, nil
 	}
 
 	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
-		return false, err
+		return false, currentTop, err
 	}
 
 	startPos := f.bhIndex.fetchBlockOffset(bh)
 	err = f.bhIndex.appendBlock(startPos, startPos+int64(n), blockPair)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to update index after writing block")
+		return false, currentTop, errors.Wrap(err, "failed to update index after writing block")
 	}
 
-	f.blockTracker.IncrementTo(currentTop + 1)
+	f.blockTracker.IncrementTo(bh)
 	f.metrics.size.Add(int64(n))
 
-	return true, nil
+	return true, bh, nil
 }
 
 func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {

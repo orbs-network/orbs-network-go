@@ -18,7 +18,10 @@ import (
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -41,7 +44,10 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -66,7 +72,11 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).allowingErrorsMatching("protocol version mismatch in transactions block header").start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			allowingErrorsMatching("protocol version mismatch in transactions block header").
+			start(ctx)
 
 		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -76,22 +86,37 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
-		blockPair := builders.BlockPair().Build()
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
+		block1 := builders.BlockPair().WithHeight(1).Build()
+		block2 := builders.BlockPair().WithHeight(2).Build()
 
-		harness.commitBlock(ctx, blockPair)
-		_, err := harness.commitBlock(ctx, blockPair)
-
+		_, err := harness.commitBlock(ctx, block1)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "block should be written only once")
+		_, err = harness.commitBlock(ctx, block2)
+		require.NoError(t, err)
+
+		_, err = harness.commitBlock(ctx, block1)
+		require.NoError(t, err, "expected existing block to be silently ignored")
+
+		_, err = harness.commitBlock(ctx, block2)
+		require.NoError(t, err, "expected existing block to be silently ignored")
+
+		require.EqualValues(t, 2, harness.numOfWrittenBlocks(), "block should be written only once")
 		harness.verifyMocks(t, 1)
 	})
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -107,7 +132,11 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -125,7 +154,11 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -141,15 +174,27 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T
 	})
 }
 
-func TestCommitBlockReturnsErrorIfBlockIsNotSequential(t *testing.T) {
+func TestCommitBlockReturnsErrorIfBlockInFuture(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
-		harness.commitBlock(ctx, builders.BlockPair().Build())
+		now := time.Now()
+		block1 := builders.BlockPair().WithHeight(1).WithTransactions(1).WithBlockCreated(now).Build()
+		block2 := builders.BlockPair().WithHeight(2).WithPrevBlock(block1).Build()
 
-		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(1000).Build())
-		require.EqualError(t, err, "block height is 1000, expected 2", "block height was mutate to be invalid, should return an error")
-		require.EqualValues(t, 1, harness.numOfWrittenBlocks(), "only one block should have been written")
+		_, err := harness.commitBlock(ctx, block1)
+		require.NoError(t, err)
+		_, err = harness.commitBlock(ctx, block2)
+		require.NoError(t, err)
+
+		futureBlock := builders.BlockPair().WithHeight(1000).Build()
+
+		_, err = harness.commitBlock(ctx, futureBlock)
+		require.EqualError(t, err, "attempt to write future block 1000. current top height is 2", "block height was mutate to be invalid, should return an error")
+		require.EqualValues(t, 2, harness.numOfWrittenBlocks(), "only 2 blocks should have been written")
 		harness.verifyMocks(t, 1)
 	})
 }

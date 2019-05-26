@@ -32,7 +32,7 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 		targetBlockHeight := primitives.BlockHeight(100)
 
 		var topReportedHeight primitives.BlockHeight
-		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			if input.BlockPair != nil {
 				updateConsensusAlgoHeight <- struct{}{}
 				topReportedHeight = input.BlockPair.ResultsBlock.Header.BlockHeight()

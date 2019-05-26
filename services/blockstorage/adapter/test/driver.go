@@ -25,10 +25,6 @@ import (
 	"time"
 )
 
-// TODO V1 TBD - do we want to fuss with simulating io errors? (tampering FS)
-// TODO V1 can we detect errors that indicate we need to open a writing file handle?
-// TODO V1 file format includes a file version, vchain id, network id, and if it doesn't match don't run!
-
 const blocksFilename = "blocks"
 
 func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
@@ -48,8 +44,9 @@ func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPe
 }
 
 type localConfig struct {
-	dir     string
-	chainId primitives.VirtualChainId
+	dir         string
+	chainId     primitives.VirtualChainId
+	networkType protocol.SignerNetworkType
 }
 
 func newTempFileConfig() *localConfig {
@@ -58,8 +55,9 @@ func newTempFileConfig() *localConfig {
 		panic(err)
 	}
 	return &localConfig{
-		dir:     dirName,
-		chainId: 0xFF,
+		dir:         dirName,
+		chainId:     0xFF,
+		networkType: protocol.NETWORK_TYPE_TEST_NET,
 	}
 }
 func (l *localConfig) BlockStorageFileSystemDataDir() string {
@@ -74,12 +72,20 @@ func (l *localConfig) VirtualChainId() primitives.VirtualChainId {
 	return l.chainId
 }
 
+func (l *localConfig) NetworkType() protocol.SignerNetworkType {
+	return l.networkType
+}
+
 func (l *localConfig) cleanDir() {
 	_ = os.RemoveAll(l.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 }
 
-func (l *localConfig) setVirtualChainId(id primitives.VirtualChainId) {
-	l.chainId = id
+func (l *localConfig) setVirtualChainId(value primitives.VirtualChainId) {
+	l.chainId = value
+}
+
+func (l *localConfig) setNetworkType(value protocol.SignerNetworkType) {
+	l.networkType = value
 }
 
 func getFileSize(t *testing.T, conf *localConfig) int64 {
@@ -124,7 +130,7 @@ func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, c
 	blockChain := builders.RandomizedBlockChain(numBlocks, ctrlRand)
 
 	for _, block := range blockChain {
-		_, err = fsa.WriteNextBlock(block)
+		_, _, err = fsa.WriteNextBlock(block)
 		require.NoError(t, err)
 	}
 	return blockChain

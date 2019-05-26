@@ -26,7 +26,7 @@ import (
 
 func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness().start(t, ctx)
+		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
 		isLeanHelixStuckOnCreatingABlock := false
 

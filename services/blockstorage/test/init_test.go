@@ -16,7 +16,10 @@ import (
 
 func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 
 		val, err := harness.blockStorage.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 		require.NoError(t, err)
@@ -30,7 +33,7 @@ func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 
 func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1)
+		harness := newBlockStorageHarness(t).withSyncBroadcast(1).expectValidateConsensusAlgos()
 		now := harness.setupCustomBlocksForInit()
 		harness = harness.start(ctx)
 
