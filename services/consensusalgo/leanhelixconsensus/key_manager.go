@@ -34,12 +34,18 @@ func NewKeyManager(logger log.Logger, signer signer.Signer) *keyManager {
 }
 
 func (km *keyManager) SignConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.Signature {
-	sig, _ := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	if err != nil {
+		km.logger.Error("failed to sign consensus message", log.Error(err))
+	}
 	return lhprimitives.Signature(sig)
 }
 
 func (km *keyManager) SignRandomSeed(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.RandomSeedSignature {
-	sig, _ := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	if err != nil {
+		km.logger.Error("failed to sign random seed", log.Error(err))
+	}
 	return lhprimitives.RandomSeedSignature(sig)
 }
 
