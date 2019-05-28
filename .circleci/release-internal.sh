@@ -11,3 +11,8 @@ docker tag orbs:gamma-server $GAMMA_DOCKER_IMAGE:$(./docker/tag.sh)
 docker tag orbs:gamma-server $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh)
 
 docker push $GAMMA_DOCKER_IMAGE
+
+docker tag orbs:signer $SIGNER_DOCKER_IMAGE:$(./docker/tag.sh)
+docker tag orbs:signer $SIGNER_DOCKER_IMAGE:$(./docker/hash.sh)
+
+docker push $SIGNER_DOCKER_IMAGE
