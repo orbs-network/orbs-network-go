@@ -218,10 +218,12 @@ func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegators [][20]byte
 	for i := 0; i < numOfDelegators; i++ {
 		delegator := _getDelegatorAtIndex(i)
 		if !guardians[delegator] {
-			stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
-			delegatorStakes[delegator] = stake
-			delegators = append(delegators, delegator)
-			fmt.Printf("elections %10d: delegator %x, stake %d\n", getCurrentElectionBlockNumber(), delegator, stake)
+			if _, ok := delegatorStakes[delegator]; !ok { //
+				stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
+				delegatorStakes[delegator] = stake
+				delegators = append(delegators, delegator)
+				fmt.Printf("elections %10d: delegator %x, stake %d\n", getCurrentElectionBlockNumber(), delegator, stake)
+			}
 		} else {
 			fmt.Printf("elections %10d: delegator %x ignored as it is also a guardian\n", getCurrentElectionBlockNumber(), delegator)
 		}
