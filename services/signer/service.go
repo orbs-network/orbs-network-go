@@ -7,14 +7,12 @@
 package signer
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 )
-
-type Service interface {
-	Sign([]byte) (primitives.EcdsaSecp256K1Sig, error)
-}
 
 type service struct {
 	config ServiceConfig
@@ -25,13 +23,20 @@ type ServiceConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 }
 
-func NewService(config ServiceConfig, logger log.Logger) Service {
+func NewService(config ServiceConfig, logger log.Logger) services.Vault {
 	return &service{
 		config: config,
 		logger: logger.WithTags(log.Service("signer")),
 	}
 }
 
-func (s *service) Sign(payload []byte) (primitives.EcdsaSecp256K1Sig, error) {
-	return signer.NewLocalSigner(s.config.NodePrivateKey()).Sign(payload)
+func (s *service) NodeSign(ctx context.Context, input *services.NodeSignInput) (*services.NodeSignOutput, error) {
+	signature, err := signer.NewLocalSigner(s.config.NodePrivateKey()).Sign(input.Data())
+	if err != nil {
+		return nil, err
+	}
+
+	return (&services.NodeSignOutputBuilder{
+		Signature: signature,
+	}).Build(), nil
 }

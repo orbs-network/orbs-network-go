@@ -11,13 +11,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/services/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"net/http"
 )
 
 type SignerServer struct {
 	bootstrap.OrbsProcess
-	service signer.Service
+	service services.Vault
 }
 
 type SignerServerConfig interface {

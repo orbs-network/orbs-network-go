@@ -7,14 +7,15 @@
 package signer
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/signer"
+	"context"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"net/http"
 )
 
 type api struct {
-	signer signer.Service
+	vault  services.Vault
 	logger log.Logger
 }
 
@@ -22,12 +23,13 @@ func (a *api) SignHandler(writer http.ResponseWriter, request *http.Request) {
 	input, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
-		a.logger.Error("failed to sign payload")
+		a.logger.Error("failed to read request body")
 		return
 	}
 
-	if signature, err := a.signer.Sign(input); err == nil {
-		writer.Write(signature)
+	ctx := context.Background()
+	if signature, err := a.vault.NodeSign(ctx, services.NodeSignInputReader(input)); err == nil {
+		writer.Write(signature.Raw())
 		a.logger.Info("successfully signed payload")
 		return
 	}

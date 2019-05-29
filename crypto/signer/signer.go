@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
@@ -44,8 +45,13 @@ func NewSignerClient(address string) Signer {
 	}
 }
 
+// FIXME better error handling
 func (c *client) Sign(input []byte) ([]byte, error) {
-	response, err := http.Post(c.address+"/sign", "binary/octet-stream", bytes.NewReader(input))
+	nodeSignInput := (&services.NodeSignInputBuilder{
+		Data: input,
+	}).Build()
+
+	response, err := http.Post(c.address+"/sign", "binary/octet-stream", bytes.NewReader(nodeSignInput.Raw()))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +62,12 @@ func (c *client) Sign(input []byte) ([]byte, error) {
 		return nil, errors.New("bad response")
 	}
 
-	return ioutil.ReadAll(response.Body)
+	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return services.NodeSignOutputReader(data).Signature(), nil
 }
 
 func New(cfg config.SignerConfig) (Signer, error) {
