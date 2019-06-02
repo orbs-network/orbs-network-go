@@ -54,10 +54,15 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
-	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+	txArgs := []interface{}{contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE)}
+	for _, c := range code {
+		txArgs = append(txArgs, c)
+	}
+
+	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", txArgs)
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
 	}
@@ -133,12 +138,12 @@ func (h *harness) getMetrics() metrics {
 }
 
 // TODO remove Eventually loop once node can handle requests at block height 0
-func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes []byte) {
+func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
 	var dcExResult codec.ExecutionResult
 	var dcTxStatus codec.TransactionStatus
 	var dcErr error
 	require.True(t, test.Eventually(20*time.Second, func() bool {
-		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes)
+		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes...)
 		return dcErr == nil &&
 			dcTxStatus == codec.TRANSACTION_STATUS_COMMITTED &&
 			dcExResult == codec.EXECUTION_RESULT_SUCCESS
