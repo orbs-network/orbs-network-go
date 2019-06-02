@@ -29,7 +29,7 @@ const MAX_LEAK_BYTES = 5 * 1024 * 1024
 
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness().start(t, ctx)
+		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
 		t.Log("Block sync service to block 5")
 

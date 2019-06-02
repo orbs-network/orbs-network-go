@@ -130,7 +130,7 @@ func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, c
 	blockChain := builders.RandomizedBlockChain(numBlocks, ctrlRand)
 
 	for _, block := range blockChain {
-		_, err = fsa.WriteNextBlock(block)
+		_, _, err = fsa.WriteNextBlock(block)
 		require.NoError(t, err)
 	}
 	return blockChain

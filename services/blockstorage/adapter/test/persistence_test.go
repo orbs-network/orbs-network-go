@@ -32,8 +32,10 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, block := range blocks { // write some blocks
-		_, err = adapter1.WriteNextBlock(block)
+		added, pHeight, err := adapter1.WriteNextBlock(block)
 		require.NoError(t, err)
+		require.True(t, added)
+		require.EqualValues(t, block.TransactionsBlock.Header.BlockHeight(), pHeight)
 	}
 
 	requireCanReadAllBlocksInRandomOrder(t, adapter1, blocks, ctrlRand)

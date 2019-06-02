@@ -8,11 +8,14 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -27,32 +30,33 @@ func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	txBlockHeader := input.BlockPair.TransactionsBlock.Header
-	rsBlockHeader := input.BlockPair.ResultsBlock.Header
-
-	logger.Info("Trying to commit a block", logfields.BlockHeight(txBlockHeader.BlockHeight()))
+	proposedBlockHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
+	logger.Info("Trying to commit a block", logfields.BlockHeight(proposedBlockHeight))
 
 	if err := s.validateProtocolVersion(input.BlockPair); err != nil {
 		return nil, err
 	}
 
-	// the source of truth for the last committed block is persistence
-	lastCommittedBlock, err := s.persistence.GetLastBlock()
+	added, persistedHeight, err := s.persistence.WriteNextBlock(input.BlockPair)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO(https://github.com/orbs-network/orbs-network-go/issues/524): the logic here aborting commits for already committed blocks is duplicated in the adapter because this is not under lock. synchronize to avoid duplicating logic in adapter
-	if ok, err := s.validateBlockDoesNotExist(ctx, txBlockHeader, rsBlockHeader, lastCommittedBlock); err != nil || !ok {
-		return nil, err
+	if proposedBlockHeight > persistedHeight+1 {
+		return nil, fmt.Errorf("attempt to write future block %d. current top height is %d", proposedBlockHeight, persistedHeight)
 	}
 
-	if err := s.validateConsecutiveBlockHeight(input.BlockPair, lastCommittedBlock); err != nil {
-		return nil, err
-	}
+	if !added {
+		storedRsBlock, err := s.persistence.GetResultsBlock(proposedBlockHeight)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load results block at proposed block height %d", proposedBlockHeight)
+		}
 
-	if _, err := s.persistence.WriteNextBlock(input.BlockPair); err != nil {
-		return nil, err
+		storedTxBlock, err := s.persistence.GetTransactionsBlock(proposedBlockHeight)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load transactions block at proposed block height %d", proposedBlockHeight)
+		}
+		return nil, detectForks(input.BlockPair, storedTxBlock.Header, storedRsBlock.Header, logger)
 	}
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
@@ -65,7 +69,33 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		})
 	}
 
-	logger.Info("committed a block", logfields.BlockHeight(txBlockHeader.BlockHeight()), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
+	logger.Info("committed a block", logfields.BlockHeight(proposedBlockHeight), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
 
 	return nil, nil
+}
+
+func detectForks(proposedBlock *protocol.BlockPairContainer, storedTxBlockHeader *protocol.TransactionsBlockHeader, storedRsBlockHeader *protocol.ResultsBlockHeader, logger log.Logger) error {
+	txBlockHeader := proposedBlock.TransactionsBlock.Header
+	rsBlockHeader := proposedBlock.ResultsBlock.Header
+	proposedBlockHeight := txBlockHeader.BlockHeight()
+
+	if txBlockHeader.Timestamp() != storedTxBlockHeader.Timestamp() {
+		errorMessage := "FORK!! block already in storage, timestamp mismatch"
+		// fork found! this is a major error we must report to logs
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlockHeader))
+		return errors.New(errorMessage)
+	} else if !txBlockHeader.Equal(storedTxBlockHeader) {
+		errorMessage := "FORK!! block already in storage, transaction block header mismatch"
+		// fork found! this is a major error we must report to logs
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", txBlockHeader), log.Stringable("existing-block", storedTxBlockHeader))
+		return errors.New(errorMessage)
+	} else if !rsBlockHeader.Equal(storedRsBlockHeader) {
+		errorMessage := "FORK!! block already in storage, results block header mismatch"
+		// fork found! this is a major error we must report to logs
+		logger.Error(errorMessage, logfields.BlockHeight(proposedBlockHeight), log.Stringable("new-block", rsBlockHeader), log.Stringable("existing-block", storedRsBlockHeader))
+		return errors.New(errorMessage)
+	}
+
+	logger.Info("block already in storage, skipping", logfields.BlockHeight(proposedBlockHeight))
+	return nil
 }

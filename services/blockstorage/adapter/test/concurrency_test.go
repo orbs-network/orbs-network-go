@@ -30,8 +30,10 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 	require.NoError(t, err)
 	defer closeAdapter()
 
-	_, err = fsa.WriteNextBlock(blocks[0]) // write only the first block in the chain
-	require.NoError(t, err)
+	added, newHeight, err := fsa.WriteNextBlock(blocks[0]) // write only the first block in the chain
+	require.NoError(t, err, "expected successful writing of first block")
+	require.True(t, added, "expected block to be persisted")
+	require.EqualValues(t, 1, newHeight, "expected persisted height to be 1")
 
 	var topHeightRead primitives.BlockHeight
 	secondBlockWritten, midScan, finishedScan := newSignalChan(), newSignalChan(), newSignalChan()
@@ -50,8 +52,10 @@ func TestCanWriteAndScanConcurrently(t *testing.T) {
 
 	waitFor(midScan)
 
-	_, err = fsa.WriteNextBlock(blocks[1]) // write the second block while a block scan is ongoing
+	added, newHeight, err = fsa.WriteNextBlock(blocks[1]) // write the second block while a block scan is ongoing
 	require.NoError(t, err, "should be able to write block while scanning")
+	require.True(t, added, "expected successful writing of second block")
+	require.EqualValues(t, 2, newHeight, "expected persisted height to be 2")
 
 	signal(secondBlockWritten)
 

@@ -32,6 +32,7 @@ type NodeConfig interface {
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -210,6 +211,8 @@ type LeanHelixConsensusConfig interface {
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
+
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
 }
 
 type ValidatorNode interface {
