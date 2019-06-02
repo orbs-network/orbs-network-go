@@ -1,16 +1,30 @@
 #!/bin/bash -e
 
+#Disabling this so it doesn't affect anyone.
+exit 0
+
+# Installing aws cli
+echo "Installing AWS CLI"
+sudo apt-get update
+sudo apt-get install -y python-dev
+sudo apt-get install -y python-pip
+sudo pip install awscli
+
+aws --version
+
 touch $BASH_ENV
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
-
 export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v10.14.1 && nvm use v10.14.1
-
-echo $TESTNET_SSH_PUBLIC_KEY > ~/.ssh/id_rsa.pub
-
 export COMMIT_HASH=$(./docker/hash.sh)
 
-git clone https://github.com/orbs-network/nebula && cd nebula && git checkout testnet
-npm install
+curl -O https://s3.eu-central-1.amazonaws.com/boyar-ci/boyar/config.json
+node .circleci/testnet-deploy-tag.js $COMMIT_HASH
 
-export REGIONS=us-east-1,eu-central-1,ap-northeast-1,ap-northeast-2,sa-east-1,ca-central-1
-node deploy.js --regions $REGIONS --update-vchains --chain-version $COMMIT_HASH
+aws s3 cp --acl public-read config.json s3://boyar-ci/boyar/config.json
+
+echo "Configuration updated for all nodes in the CI testnet"
+echo "Waiting for all nodes to restart and reflect the new version is running"
+
+sleep 20
+
+node .circleci/check-testnet-deployment.js $COMMIT_HASH
