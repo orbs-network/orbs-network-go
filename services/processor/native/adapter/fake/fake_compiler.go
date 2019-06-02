@@ -16,7 +16,7 @@ import (
 
 type FakeCompiler interface {
 	adapter.Compiler
-	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string)
+	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string)
 }
 
 type fakeCompiler struct {
@@ -38,11 +38,11 @@ func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.Contract
 	c.provided[code] = fakeContractInfo
 }
 
-func (c *fakeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
+func (c *fakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	contractInfo, found := c.provided[code]
+	contractInfo, found := c.provided[code[0]]
 	if !found {
 		return nil, errors.New("fake contract for given code was not previously provided with ProvideFakeContract()")
 	}

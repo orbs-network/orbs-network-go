@@ -12,5 +12,5 @@ import (
 )
 
 type Compiler interface {
-	Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error)
+	Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error)
 }
