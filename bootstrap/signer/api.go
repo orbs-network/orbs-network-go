@@ -29,8 +29,11 @@ func (a *api) SignHandler(writer http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	if signature, err := a.vault.NodeSign(ctx, services.NodeSignInputReader(input)); err == nil {
-		writer.Write(signature.Raw())
 		a.logger.Info("successfully signed payload")
+		if _, err := writer.Write(signature.Raw()); err != nil {
+			a.logger.Error("could not write response body into the socket", log.Error(err))
+		}
+
 		return
 	}
 
