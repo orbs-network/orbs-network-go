@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+#Disabling this so it doesn't affect anyone.
+exit 0
+
 # Installing aws cli
 echo "Installing AWS CLI"
 sudo apt-get update

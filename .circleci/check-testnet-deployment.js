@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { waitUntilSync, getBlockHeight, getCommit } = require('@orbs-network/orbs-nebula/lib/metrics');
+const { waitUntilSync, waitUntilCommit, getBlockHeight, getCommit } = require('@orbs-network/orbs-nebula/lib/metrics');
 
 const topology = require('./config.json');
 const TARGET_HASH = process.argv[2];
@@ -12,37 +12,19 @@ if (!TARGET_HASH) {
 
 async function eventuallyDeployed({ chainId, nodes }) {
     // First let's poll the nodes for the correct version
-    // Until we meet the correct version on all nodes or we bail by the timeout defined
     let versionDeployed = false;
-    let runsCount = 0;
-    const maxRetries = 30; // 15 minutes
 
-    do {
-        if (runsCount + 1 > maxRetries) {
-            console.log('Max retries limit reached for chainId: ', chainId);
-            break;
-        }
+    const promises = nodes.map(({ ip }) => {
+        return waitUntilCommit(`${ip}/vchains/${chainId}`, TARGET_HASH);
+    });
 
-        runsCount++;
-        console.log('Polling all nodes for their version on chainId ', chainId);
-        const results = await Promise.all(nodes.map(({ ip }) => {
-            return getCommit(`${ip}/vchains/${chainId}`);
-        }))
-            .catch(err => {
-                console.log('failed getting the commit hash of one of the nodes for some reason');
-                console.log('error provided:', err);
-            });
-
-        console.log('Got: ', results);
-        if (results.filter(version => version === TARGET_HASH).length === nodes.length) {
-            // Version updated on all nodes
-            versionDeployed = true;
-            continue;
-        }
-
-        console.log('Sleeping for 30 seconds..');
-        await new Promise((r) => { setTimeout(r, 30 * 1000); });
-    } while (versionDeployed === false);
+    try {
+        await Promise.all(promises);
+        versionDeployed = true;
+    } catch (err) {
+        console.log(`Version ${TARGET_HASH} might not be deployed on all CI testnet nodes!`);
+        console.log('error provided:', err);
+    }
 
     return {
         ok: versionDeployed
@@ -52,11 +34,11 @@ async function eventuallyDeployed({ chainId, nodes }) {
 async function eventuallyClosingBlocks({ chainId, nodes }) {
     const firstEndpoint = `${nodes[0].ip}/vchains/${chainId}`;
 
-    // First let's get the current blockheight and wait for it to close another 50 blocks.
+    // First let's get the current blockheight and wait for it to close 5 more blocks
     const currentBlockheight = await getBlockHeight(firstEndpoint);
 
     try {
-        await waitUntilSync(firstEndpoint, currentBlockheight + 10);
+        await waitUntilSync(firstEndpoint, currentBlockheight + 5);
 
         return {
             ok: true,
