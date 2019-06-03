@@ -8,8 +8,10 @@ package transactionpool
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
+	test2 "github.com/orbs-network/orbs-network-go/crypto/signer/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -112,5 +114,40 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		txForwarder.submit(anotherTx)
 
 		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, gossip), "mocks were not called as expected")
+	})
+}
+
+func TestForwardsTransactionWithFaultySigner(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		gossip := &gossiptopics.MockTransactionRelay{}
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
+		cfg := &forwarderConfig{2, keyPair}
+
+		signer := &test2.FaultySigner{}
+		signer.When("Sign", mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
+
+		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
+		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
+
+		tx := builders.TransferTransaction().Build()
+		anotherTx := builders.TransferTransaction().Build()
+
+		gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(nil, nil).Times(0)
+
+		txForwarder.submit(tx)
+		txForwarder.submit(anotherTx)
+
+		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
+
+		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
+		sig, _ := signer.Sign(oneBigHash)
+		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
+
+		signer.Reset()
+		signer.When("Sign", mock.Any).Return(sig, nil)
+
+		txForwarder.drainQueueAndForward(ctx)
+
+		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*3, gossip), "mocks were not called as expected")
 	})
 }

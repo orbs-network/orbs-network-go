@@ -77,7 +77,7 @@ func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer sign
 		gossip:            gossip,
 		signer:            signer,
 		forwardQueueMutex: &sync.Mutex{},
-		transactionAdded:  make(chan uint16),
+		transactionAdded:  make(chan uint16, 1), // buffered channel because we don't always have a receiver to read
 	}
 
 	f.start(ctx)
@@ -85,9 +85,9 @@ func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer sign
 	return f
 }
 
-func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
+func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransaction) {
 	f.forwardQueueMutex.Lock()
-	f.forwardQueue = append(f.forwardQueue, transaction)
+	f.forwardQueue = append(f.forwardQueue, transactions...)
 	count := uint16(len(f.forwardQueue))
 	f.forwardQueueMutex.Unlock()
 	f.transactionAdded <- count
@@ -124,12 +124,14 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 	oneBigHash, hashes, err := HashTransactions(txs...)
 	if err != nil {
 		logger.Error("error creating one big hash while signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		f.submit(txs...)
 		return
 	}
 
 	sig, err := f.signer.Sign(oneBigHash)
 	if err != nil {
 		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		f.submit(txs...)
 		return
 	}
 
