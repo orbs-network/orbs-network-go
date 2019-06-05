@@ -36,10 +36,13 @@ type httpErr struct {
 type HttpServer interface {
 	GracefulShutdown(timeout time.Duration)
 	Port() int
+	Router() *http.ServeMux
 }
 
 type server struct {
-	httpServer     *http.Server
+	httpServer *http.Server
+	router     *http.ServeMux
+
 	logger         log.Logger
 	publicApi      services.PublicApi
 	metricRegistry metric.Registry
@@ -80,8 +83,9 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
 	} else {
 		server.port = listener.Addr().(*net.TCPAddr).Port
+		server.router = server.createRouter()
 		server.httpServer = &http.Server{
-			Handler: server.createRouter(),
+			Handler: server.router,
 		}
 
 		// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
@@ -95,6 +99,10 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 
 func (s *server) Port() int {
 	return s.port
+}
+
+func (s *server) Router() *http.ServeMux {
+	return s.router
 }
 
 func (s *server) listen(addr string) (net.Listener, error) {
@@ -113,7 +121,7 @@ func (s *server) GracefulShutdown(timeout time.Duration) {
 	}
 }
 
-func (s *server) createRouter() http.Handler {
+func (s *server) createRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
