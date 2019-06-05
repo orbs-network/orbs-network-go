@@ -26,11 +26,11 @@ type BlockPairCommitter interface {
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
-	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error
+	ScanBlocks(from primitives.BlockHeight, pageSize uint32, f adapter.CursorFunc) error
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 
-func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.Logger) (primitives.BlockHeight, error) {
+func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPairCommitter, logger log.Logger, batchSize uint32) (primitives.BlockHeight, error) {
 	topBlock, err := source.GetLastBlock()
 	if err != nil {
 		return 0, err
@@ -44,10 +44,13 @@ func syncToTopBlock(ctx context.Context, source blockSource, committer BlockPair
 
 	// scan all available blocks starting the requested height
 	committedHeight := requestedHeight - 1
-	err = source.ScanBlocks(requestedHeight, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
-		requestedHeight = syncOneBlock(ctx, page[0], committer, logger)
-		committedHeight = h
-		return requestedHeight == h+1
+	err = source.ScanBlocks(requestedHeight, batchSize, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
+		for _, block := range page {
+			requestedHeight = syncOneBlock(ctx, block, committer, logger)
+			committedHeight = block.TransactionsBlock.Header.BlockHeight()
+		}
+
+		return requestedHeight == h+primitives.BlockHeight(batchSize)
 	})
 	if err != nil {
 		return 0, err
@@ -74,7 +77,7 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	return requestedHeight
 }
 
-func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) {
+func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter, batchSize uint32) {
 	ctx = trace.NewContext(ctx, committer.getServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
@@ -87,7 +90,7 @@ func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSou
 				logger.Info("service block sync failed waiting for block", log.Error(err), logfields.BlockHeight(primitives.BlockHeight(height)))
 				return
 			}
-			height, err = syncToTopBlock(ctx, source, committer, logger)
+			height, err = syncToTopBlock(ctx, source, committer, logger, batchSize)
 		}
 	})
 }

@@ -106,7 +106,7 @@ func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *NetworkH
 	// count receipts for txHash in block storage of node 0
 	receiptCount := 0
 	var blocks []*BlockPairContainer
-	err = network.BlockPersistence(0).ScanBlocks(1, uint8(height), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
+	err = network.BlockPersistence(0).ScanBlocks(1, uint32(height), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
 		blocks = page
 		return false
 	})
@@ -136,7 +136,7 @@ func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
 		targetBlockHeight := 2
 		err1 := persistence.GetBlockTracker().WaitForBlock(ctx, primitives.BlockHeight(targetBlockHeight))
 
-		err2 := network.BlockPersistence(0).ScanBlocks(1, uint8(targetBlockHeight), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
+		err2 := network.BlockPersistence(0).ScanBlocks(1, uint32(targetBlockHeight), func(first primitives.BlockHeight, page []*BlockPairContainer) bool {
 			require.Len(t, page, targetBlockHeight)
 			return false
 		})

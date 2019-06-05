@@ -252,7 +252,7 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	return true, bh, nil
 }
 
-func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
+func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint32, cursor adapter.CursorFunc) error {
 	currentTop := f.bhIndex.topBlockHeight
 	if currentTop < from {
 		return fmt.Errorf("requested unknown block height %d. current height is %d", from, currentTop)
@@ -276,7 +276,7 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	for wantNext && !eof {
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 
-		for uint8(len(page)) < pageSize {
+		for uint32(len(page)) < pageSize {
 			aBlock, _, err := f.codec.decode(file)
 			if err != nil {
 				if err == io.EOF {

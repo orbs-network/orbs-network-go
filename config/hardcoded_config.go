@@ -103,6 +103,8 @@ const (
 	BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR                = "BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR"
 	BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES = "BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES"
 
+	BLOCK_STORAGE_INTERNAL_SYNC_BATCH_SIZE = "BLOCK_STORAGE_INTERNAL_SYNC_BATCH_SIZE"
+
 	PROFILING = "PROFILING"
 
 	HTTP_ADDRESS = "HTTP_ADDRESS"
@@ -408,4 +410,8 @@ func (c *config) HttpAddress() string {
 
 func (c *config) NTPEndpoint() string {
 	return c.kv[NTP_ENDPOINT].StringValue
+}
+
+func (c *config) BlockStorageInternalSyncBatchSize() uint32 {
+	return c.kv[BLOCK_STORAGE_INTERNAL_SYNC_BATCH_SIZE].Uint32Value
 }

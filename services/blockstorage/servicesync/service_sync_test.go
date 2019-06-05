@@ -38,7 +38,7 @@ func TestSyncLoop(t *testing.T) {
 		}).Times(5)
 
 		// run sync loop
-		syncedHeight, err := syncToTopBlock(ctx, sourceMock, committerMock, log.DefaultTestingLogger(t))
+		syncedHeight, err := syncToTopBlock(ctx, sourceMock, committerMock, log.DefaultTestingLogger(t), 2)
 		require.NoError(t, err, "expected syncToTopBlock to execute without error")
 		require.EqualValues(t, 4, committerHeight, "expected syncToTopBlock to advance committer to source height")
 		require.True(t, committerHeight == syncedHeight, "expected syncToTopBlock to return the current block height")
@@ -75,7 +75,7 @@ func TestSyncInitialState(t *testing.T) {
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
 
-		NewServiceBlockSync(ctx, logger, sourceMock, committerMock)
+		NewServiceBlockSync(ctx, logger, sourceMock, committerMock, 2)
 
 		// Wait for first sync
 		err := targetTracker.WaitForBlock(ctx, 3)
@@ -122,7 +122,7 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 }
 
 // TODO V1 - this duplicates logic form inMemoryBlockPersistence. Do we really need a mock object here?
-func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
+func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint32, f adapter.CursorFunc) error {
 	bsf.Called(from, pageSize, f)
 
 	topBlockHeight := bsf.lastBlock.ResultsBlock.Header.BlockHeight()

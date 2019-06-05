@@ -47,6 +47,7 @@ type NodeConfig interface {
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
+	BlockStorageInternalSyncBatchSize() uint32
 
 	// state storage
 	StateStorageHistorySnapshotNum() uint32
@@ -135,6 +136,7 @@ type BlockStorageConfig interface {
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
 	BlockTrackerGraceTimeout() time.Duration
+	BlockStorageInternalSyncBatchSize() uint32
 }
 
 type FilesystemBlockPersistenceConfig interface {

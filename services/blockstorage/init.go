@@ -75,7 +75,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	for _, bpr := range blockPairReceivers {
-		servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr)
+		servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr, config.BlockStorageInternalSyncBatchSize())
 	}
 
 	height, err := persistence.GetLastBlockHeight()

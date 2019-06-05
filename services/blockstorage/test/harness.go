@@ -70,6 +70,10 @@ func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
 	return c.blockTrackerGrace
 }
 
+func (c *configForBlockStorageTests) BlockStorageInternalSyncBatchSize() uint32 {
+	return 2
+}
+
 type harness struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
