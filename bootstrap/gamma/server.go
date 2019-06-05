@@ -63,6 +63,8 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 		network:     network,
 	}
 
+	s.addGammaHandlers(httpServer.Router())
+
 	return s
 }
 
