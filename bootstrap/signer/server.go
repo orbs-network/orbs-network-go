@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
-	"net/http"
 )
 
 type SignerServer struct {
@@ -34,14 +33,13 @@ func StartSignerServer(cfg SignerServerConfig, logger log.Logger) *SignerServer 
 		service, logger,
 	}
 
-	httpServer, err := NewHttpServer(cfg.HttpAddress(), logger, func(router *http.ServeMux) {
-		router.HandleFunc("/sign", api.SignHandler)
-	})
-
+	httpServer, err := NewHttpServer(cfg.HttpAddress(), logger)
 	// Must find a better way
 	if err != nil {
 		panic(err)
 	}
+
+	httpServer.Router().HandleFunc("/sign", api.SignHandler)
 
 	s := &SignerServer{
 		OrbsProcess: bootstrap.NewOrbsProcess(logger, cancel, httpServer),

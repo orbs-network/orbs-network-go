@@ -19,10 +19,11 @@ type httpServer struct {
 	server *http.Server
 	port   int
 	logger log.Logger
+	router *http.ServeMux
 }
 
 // TODO: unify with httpserver.HttpServer
-func NewHttpServer(address string, logger log.Logger, setup func(router *http.ServeMux)) (httpserver.HttpServer, error) {
+func NewHttpServer(address string, logger log.Logger) (httpserver.HttpServer, error) {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,6 @@ func NewHttpServer(address string, logger log.Logger, setup func(router *http.Se
 	logger.Info("started http server", log.String("address", address))
 
 	router := http.NewServeMux()
-	setup(router)
 
 	s := &httpServer{
 		server: &http.Server{
@@ -39,6 +39,7 @@ func NewHttpServer(address string, logger log.Logger, setup func(router *http.Se
 		},
 		port:   listener.Addr().(*net.TCPAddr).Port,
 		logger: logger,
+		router: router,
 	}
 
 	// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
@@ -61,4 +62,8 @@ func (s *httpServer) GracefulShutdown(timeout time.Duration) {
 
 func (s *httpServer) Port() int {
 	return s.port
+}
+
+func (s *httpServer) Router() *http.ServeMux {
+	return s.router
 }

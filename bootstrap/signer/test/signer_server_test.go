@@ -31,7 +31,7 @@ func (s *signerServerConfig) HttpAddress() string {
 	return s.address
 }
 
-func TestSignerClient(t *testing.T) {
+func TestSignerServer(t *testing.T) {
 	address := "localhost:9999"
 	pk := keys.EcdsaSecp256K1KeyPairForTests(0).PrivateKey()
 
