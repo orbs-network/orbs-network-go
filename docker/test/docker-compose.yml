@@ -9,6 +9,47 @@ services:
       orbs-network:
         ipv4_address: 192.168.199.6
 
+  signer-node-1:
+    image: orbs:signer
+    volumes:
+      - ../../_logs/:/opt/orbs/logs
+      - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node1.json --config /opt/orbs/config/node1.keys.json
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.9
+
+  signer-node-2:
+    image: orbs:signer
+    volumes:
+    - ../../_logs/:/opt/orbs/logs
+    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node2.json --config /opt/orbs/config/node2.keys.json
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.10
+
+  signer-node-3:
+    image: orbs:signer
+    volumes:
+    - ../../_logs/:/opt/orbs/logs
+    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node3.json --config /opt/orbs/config/node3.keys.json
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.11
+
+  signer-node-4:
+    image: orbs:signer
+    volumes:
+    - ../../_logs/:/opt/orbs/logs
+    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node4.json --config /opt/orbs/config/node4.keys.json
+    networks:
+      orbs-network:
+        ipv4_address: 192.168.199.12
+
+
   orbs-network-node-1:
     image: orbs:export
     environment:

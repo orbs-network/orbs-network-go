@@ -51,11 +51,11 @@ type server struct {
 	port int
 }
 
-type tcpKeepAliveListener struct {
+type TcpKeepAliveListener struct {
 	*net.TCPListener
 }
 
-func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
+func (ln TcpKeepAliveListener) Accept() (net.Conn, error) {
 	tc, err := ln.AcceptTCP()
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		}
 
 		// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
-		go server.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
+		go server.httpServer.Serve(TcpKeepAliveListener{listener.(*net.TCPListener)})
 	}
 
 	logger.Info("started http server", log.String("address", server.config.HttpAddress()))

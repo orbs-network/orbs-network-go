@@ -18,15 +18,15 @@ import (
 /// Test builders for: protocol.BlockPairContainer
 
 type blockPair struct {
-	txHeader         *protocol.TransactionsBlockHeaderBuilder
-	txMetadata       *protocol.TransactionsBlockMetadataBuilder
-	transactions     []*protocol.SignedTransaction
-	txProof          *protocol.TransactionsBlockProofBuilder
-	rxHeader         *protocol.ResultsBlockHeaderBuilder
-	receipts         []*protocol.TransactionReceipt
-	sdiffs           []*protocol.ContractStateDiff
-	rxProof          *protocol.ResultsBlockProofBuilder
-	blockProofSigner primitives.EcdsaSecp256K1PrivateKey
+	txHeader      *protocol.TransactionsBlockHeaderBuilder
+	txMetadata    *protocol.TransactionsBlockMetadataBuilder
+	transactions  []*protocol.SignedTransaction
+	txProof       *protocol.TransactionsBlockProofBuilder
+	rxHeader      *protocol.ResultsBlockHeaderBuilder
+	receipts      []*protocol.TransactionReceipt
+	sdiffs        []*protocol.ContractStateDiff
+	rxProof       *protocol.ResultsBlockProofBuilder
+	blockProofKey primitives.EcdsaSecp256K1PrivateKey
 }
 
 func BlockPair() *blockPair {
