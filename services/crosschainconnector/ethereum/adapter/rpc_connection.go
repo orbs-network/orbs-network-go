@@ -13,18 +13,12 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
-	"sync"
 )
 
 type EthereumRpcConnection struct {
 	connectorCommon
 
 	config ethereumAdapterConfig
-
-	mu struct {
-		sync.Mutex
-		client *ethclient.Client
-	}
 }
 
 func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.Logger) *EthereumRpcConnection {
@@ -33,36 +27,17 @@ func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.Logger) *
 	}
 	rpc.logger = logger.WithTags(log.String("adapter", "ethereum"))
 	rpc.getContractCaller = func() (caller EthereumCaller, e error) {
-		return rpc.dialIfNeededAndReturnClient()
+		return rpc.dial()
 	}
 	return rpc
 }
 
-func (rpc *EthereumRpcConnection) dial() error {
-	rpc.mu.Lock()
-	defer rpc.mu.Unlock()
-	if rpc.mu.client != nil {
-		return nil
-	}
-	if client, err := ethclient.Dial(rpc.config.EthereumEndpoint()); err != nil {
-		return err
-	} else {
-		rpc.mu.client = client
-	}
-	return nil
-}
-
-func (rpc *EthereumRpcConnection) dialIfNeededAndReturnClient() (*ethclient.Client, error) {
-	if rpc.mu.client == nil {
-		if err := rpc.dial(); err != nil {
-			return nil, err
-		}
-	}
-	return rpc.mu.client, nil
+func (rpc *EthereumRpcConnection) dial() (*ethclient.Client, error) {
+	return ethclient.Dial(rpc.config.EthereumEndpoint())
 }
 
 func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	client, err := rpc.dialIfNeededAndReturnClient()
+	client, err := rpc.dial()
 	if err != nil {
 		return nil, err
 	}
