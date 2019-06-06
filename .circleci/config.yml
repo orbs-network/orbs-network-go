@@ -152,6 +152,10 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+
+      - deploy_new_chain_pr_only:
+          requires:
+            - tests
       - e2e:
           filters:
             tags:
