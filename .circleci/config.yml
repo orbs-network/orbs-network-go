@@ -133,7 +133,7 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: ./chain_on_pr.sh
+      - run: ./.circleci/chain_on_pr.sh
 
   release:
     machine: true
