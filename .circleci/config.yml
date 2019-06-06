@@ -129,6 +129,12 @@ jobs:
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
+  deploy_new_chain_pr_only:
+    machine: true
+    steps:
+      - checkout
+      - run: ./chain_on_pr.sh
+
   release:
     machine: true
     steps:
