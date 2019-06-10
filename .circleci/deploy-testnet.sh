@@ -27,4 +27,4 @@ echo "Waiting for all nodes to restart and reflect the new version is running"
 
 sleep 20
 
-node .circleci/check-testnet-deployment.js $COMMIT_HASH
+node .circleci/check-testnet-deployment.js

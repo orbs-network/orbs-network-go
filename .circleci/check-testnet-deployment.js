@@ -1,28 +1,26 @@
 #!/usr/bin/env node
 
-const { waitUntilSync, waitUntilCommit, getBlockHeight, getCommit } = require('@orbs-network/orbs-nebula/lib/metrics');
+const { waitUntilSync, waitUntilCommit, getBlockHeight } = require('@orbs-network/orbs-nebula/lib/metrics');
 
 const topology = require('./config.json');
-const TARGET_HASH = process.argv[2];
-
-if (!TARGET_HASH) {
-    console.log('No target hash to check');
-    process.exit(1);
-}
 
 async function eventuallyDeployed({ chainId, nodes }) {
+    // The correct hash for this chainId is..
+    const chain = topology.chains.find(chain => chain.Id === chainId);
+    const chainSpecificTargetHash = chain.DockerConfig.Tag;
+
     // First let's poll the nodes for the correct version
     let versionDeployed = false;
 
     const promises = nodes.map(({ ip }) => {
-        return waitUntilCommit(`${ip}/vchains/${chainId}`, TARGET_HASH);
+        return waitUntilCommit(`${ip}/vchains/${chainId}`, chainSpecificTargetHash);
     });
 
     try {
         await Promise.all(promises);
         versionDeployed = true;
     } catch (err) {
-        console.log(`Version ${TARGET_HASH} might not be deployed on all CI testnet nodes!`);
+        console.log(`Version ${chainSpecificTargetHash} might not be deployed on all CI testnet nodes!`);
         console.log('error provided:', err);
     }
 
