@@ -41,6 +41,10 @@ then
 
     echo "E2E tests concluded, Killing the PR network.."
     node .circleci/testnet-remove-chain.js $PR_CHAIN_ID
+
+    echo "Copying the newly updated config.json to S3"
+    aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
+    echo "Done!"
 else
     echo "No active PR, exiting.."
 fi

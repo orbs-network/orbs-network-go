@@ -26,7 +26,7 @@ if (!targetChainId) {
 
 const configuration = require(configFilePath);
 
-const chainIndex = configuration.chains.findIndex(chain => chain.Id === targetChainId);
+const chainIndex = configuration.chains.findIndex(chain => chain.Id === parseInt(targetChainId));
 
 if (chainIndex !== -1) {
     console.log('Chain found, removing from config..');
