@@ -1,5 +1,14 @@
 #!/bin/bash -xe
 
+# Installing aws cli
+echo "Installing AWS CLI"
+sudo apt-get update
+sudo apt-get install -y python-dev
+sudo apt-get install -y python-pip
+sudo pip install awscli
+
+aws --version
+
 COMMIT_HASH=$(./docker/hash.sh)
 
 # Determine if we have an active PR
