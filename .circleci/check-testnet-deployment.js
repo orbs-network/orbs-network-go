@@ -60,8 +60,8 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
         process.exit(2);
     }
 
-    const results = await Promise.all(chains.map((chainId) => eventuallyClosingBlocks({ chainId, nodes })));
-    if (results.filter(r => r.ok === true).length === chains.length) {
+    const cbResults = await Promise.all(chains.map((chainId) => eventuallyClosingBlocks({ chainId, nodes })));
+    if (cbResults.filter(r => r.ok === true).length === chains.length) {
         console.log('Blocks are being closed on all chains in the testnet!');
         process.exit(0);
     } else {
