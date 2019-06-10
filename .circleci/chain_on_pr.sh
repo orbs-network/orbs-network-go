@@ -1,24 +1,8 @@
-#!/bin/bash
+#!/bin/bash -e
 
-# Installing aws cli
-echo "Installing AWS CLI"
-
-mkdir -p ~/.aws
-echo "[default]
-aws_access_key_id=$AWS_ACCESS_KEY_ID
-aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials
-
-echo "[profile default]
-region = us-east-1" > ~/.aws/config
-
-# Installing aws cli
-echo "Installing AWS CLI"
-sudo apt-get update
-sudo apt-get install -y python-dev
-sudo apt-get install -y python-pip
-sudo pip install awscli
-
-aws --version
+touch $BASH_ENV
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
+export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v10.14.1 && nvm use v10.14.1
 
 COMMIT_HASH=$(./docker/hash.sh)
 
