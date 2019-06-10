@@ -26,7 +26,7 @@ then
 
     echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
 
-    echo "Sleeping for 7 minutes to allow all the networks to come up"
+    echo "Sleeping for 2 minutes to allow all the networks to come up"
     sleep 120
     node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
 
