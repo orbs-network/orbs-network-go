@@ -17,6 +17,8 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | 
 export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v10.14.1 && nvm use v10.14.1
 export COMMIT_HASH=$(./docker/hash.sh)
 
+npm install @orbs-network/orbs-nebula -g
+
 curl -O https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json
 node .circleci/testnet-deploy-tag.js $COMMIT_HASH
 

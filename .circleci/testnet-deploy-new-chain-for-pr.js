@@ -36,16 +36,24 @@ const prLinkParts = githubPRLink.split('/');
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]) + 100000;
 
 const configuration = require(configFilePath);
-const lastChain = configuration.chains[configuration.chains.length - 1];
 
-// Clone the last chain and make modifications on top of it.
-const newChain = Object.assign({}, lastChain);
-newChain.DockerConfig.Tag = targetTag;
-newChain.Id = prNumber;
-newChain.HttpPort = newChain.HttpPort + 2;
-newChain.GossipPort = newChain.GossipPort + 2;
+const chainIndex = configuration.chains.findIndex(chain => chain.Id === prNumber);
 
-configuration.chains.push(newChain);
+if (chainIndex !== -1) {
+    // This means we already have a chain in the config, let's just update it's version ref
+    configuration.chains[chainIndex].DockerConfig.Tag = targetTag;
+} else {
+    const lastChain = configuration.chains[configuration.chains.length - 1];
+
+    // Clone the last chain and make modifications on top of it.
+    const newChain = Object.assign({}, lastChain);
+    newChain.DockerConfig.Tag = targetTag;
+    newChain.Id = prNumber;
+    newChain.HttpPort = newChain.HttpPort + 2;
+    newChain.GossipPort = newChain.GossipPort + 2;
+
+    configuration.chains.push(newChain);
+}
 
 fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
 
