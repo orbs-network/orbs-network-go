@@ -37,6 +37,8 @@ then
         STRESS_TEST_TARGET_TPS=200 \
         STRESS_TEST=true \
 
+    ./git-submodule-checkout.sh
+
     go test ./test/e2e/... -v
 
     # echo "E2E tests concluded, Killing the PR network.."
