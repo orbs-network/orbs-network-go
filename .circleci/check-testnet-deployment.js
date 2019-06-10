@@ -44,6 +44,7 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
 
     // First let's get the current blockheight and wait for it to close 5 more blocks
     const currentBlockheight = await getBlockHeight(firstEndpoint);
+    console.log('Fetching current blockheight of the network: ', currentBlockheight);
 
     try {
         await waitUntilSync(firstEndpoint, currentBlockheight + 5);
