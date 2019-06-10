@@ -1,6 +1,11 @@
 #!/bin/bash -e
 
-echo "adding something to see how PR builds behave"
-env
+# Determine if we have an active PR
+if [ -z "$CI_PULL_REQUESTS" ]
+then
+    echo "We have an active PR ($CI_PULL_REQUESTS)"
+else
+    echo "No active PR, exiting.."
+fi
 
 exit 0
