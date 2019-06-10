@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+const path = require('path');
 
 const { waitUntilSync, waitUntilCommit, getBlockHeight } = require('@orbs-network/orbs-nebula/lib/metrics');
 
-const topology = require('./config.json');
+const configFilePath = path.join(process.cwd(), 'config.json');
+const topology = require(configFilePath);
 
 async function eventuallyDeployed({ chainId, nodes }) {
     // The correct hash for this chainId is..
