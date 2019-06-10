@@ -10,10 +10,10 @@ COMMIT_HASH=$(./docker/hash.sh)
 if [ ! -z "$CI_PULL_REQUESTS" ]
 then
     echo "We have an active PR ($CI_PULL_REQUESTS)"
-    curl -O https://s3.eu-central-1.amazonaws.com/boyar-ci/boyar/config.json
+    curl -O https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json
     PR_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH)
 
-    aws s3 cp --acl public-read config.json s3://boyar-ci/boyar/config.json
+    aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
 
     echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
 
