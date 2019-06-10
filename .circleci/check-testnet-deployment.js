@@ -6,6 +6,13 @@ const { waitUntilSync, waitUntilCommit, getBlockHeight } = require('@orbs-networ
 const configFilePath = path.join(process.cwd(), 'config.json');
 const topology = require(configFilePath);
 
+const targetChainId = process.argv[2];
+
+if (!targetChainId) {
+    console.log('No chainId given!');
+    process.exit(1);
+}
+
 async function eventuallyDeployed({ chainId, nodes }) {
     // The correct hash for this chainId is..
     const chain = topology.chains.find(chain => chain.Id === chainId);
@@ -15,6 +22,7 @@ async function eventuallyDeployed({ chainId, nodes }) {
     let versionDeployed = false;
 
     const promises = nodes.map(({ ip }) => {
+        console.log('waiting until commit for chain id: ', chainId, ' and IP: ', ip, ' and commit: ', chainSpecificTargetHash);
         return waitUntilCommit(`${ip}/vchains/${chainId}`, chainSpecificTargetHash);
     });
 
@@ -51,8 +59,13 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
 }
 
 (async () => {
-    const nodes = topology.network;
-    const chains = topology.chains.map(chain => chain.Id);
+    const nodes = topology.network.filter(({ ip }) => ip !== '54.149.67.22');
+    const chains = topology.chains.map(chain => chain.Id).filter(chainId => chainId === parseInt(targetChainId));
+
+    if (chains.length === 0) {
+        console.log('No chains to check!');
+        process.exit(2);
+    }
 
     const results = await Promise.all(chains.map((chainId) => eventuallyDeployed({ chainId, nodes })));
     if (results.filter(r => r.ok === true).length === chains.length) {

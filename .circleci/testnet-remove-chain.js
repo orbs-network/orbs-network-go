@@ -19,14 +19,14 @@ const fs = require('fs');
 const targetChainId = process.argv[2];
 const configFilePath = path.join(process.cwd(), 'config.json');
 
-if (!targetTag) {
+if (!targetChainId) {
     console.log('No chainId given!');
     process.exit(1);
 }
 
 const configuration = require(configFilePath);
 
-const chainIndex = configuration.chains.findIndex(chain => chain.Id === prNumber);
+const chainIndex = configuration.chains.findIndex(chain => chain.Id === targetChainId);
 
 if (chainIndex !== -1) {
     console.log('Chain found, removing from config..');
