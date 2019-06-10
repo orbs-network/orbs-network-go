@@ -12,7 +12,19 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
-var participants = []struct {
+/**
+
+These two function fix the state for rewards and delegation and can be called only once (and between election 7928900 and 7948900).
+
+Fixed a bug in the reward calculation contract that incorrectly counted a small number of delegations.
+This issue affected 29 participating addresses, to the total sum of 89,668 ORBS.
+
+_fixRewardsDrift7928900 : fixes the 20 delegators and 9 guardians rewards according to addresses
+_fixDelegatorState7928900 : remove the double delegation pointer from the delegators' list in state.
+
+*/
+
+var participantsFixDoubleDelegationReward = []struct {
 	address string
 	reward  int
 }{
@@ -38,7 +50,7 @@ var participants = []struct {
 	{"8fd0a7b70aa896cf85b3034385f98af1d927d442", 4082},  // instead of 0
 }
 
-var guardians = []struct {
+var guardiansFixDoubleDelegationReward = []struct {
 	address string
 	reward  int
 }{
@@ -53,11 +65,11 @@ var guardians = []struct {
 	{"1763F3DA9380E2df7FfDE1dC245801BB14F80669", 21887},   // instead of 15898
 }
 
-func _fixRewards() {
-	key := []byte("_fixRewards7888900_")
+func _fixRewardsDrift7928900() {
+	key := []byte("_fixRewards7928900_")
 	if state.ReadUint32(key) == 0 {
 
-		for _, participant := range participants {
+		for _, participant := range participantsFixDoubleDelegationReward {
 			bytes, err := hex.DecodeString(participant.address)
 			if err != nil {
 				panic(fmt.Errorf("cannot parse %s , err %s", participant.address, err))
@@ -68,7 +80,7 @@ func _fixRewards() {
 			fmt.Printf("elections fix rewards: Participant %s reward changed from %d to %d\n", participant.address, wrongValue, newValue)
 		}
 
-		for _, guardian := range guardians {
+		for _, guardian := range guardiansFixDoubleDelegationReward {
 			bytes, err := hex.DecodeString(guardian.address)
 			if err != nil {
 				panic(fmt.Errorf("cannot parse %s , err %s", guardian.address, err))
@@ -102,21 +114,22 @@ var doubleDelegators = []string{
 	"22afe11457c368ee1b0314477f0538bfb44843af",
 }
 
-func _fixDelegatorState() {
-	key := []byte("_fixDelegatorState_7888900_")
+func _fixDelegatorState7928900() {
+	key := []byte("_fixDelegatorState_7928900_")
 	if state.ReadUint32(key) == 0 {
 
 		doubleDelegatorMap := make(map[[20]byte]bool, len(doubleDelegators))
 		for _, delegator := range doubleDelegators {
 			bytes, err := hex.DecodeString(delegator)
 			if err != nil {
-				panic(fmt.Errorf("cannot parse %s , err %s", delegator, err))
+				panic(fmt.Errorf("cannot parse %s, err %s", delegator, err))
 			}
 			doubleDelegatorMap[_addressSliceToArray(bytes)] = true
 		}
 
 		numOfDelegators := _getNumberOfDelegators()
 		newNumofDelegators := numOfDelegators
+
 		for i := 0; i < newNumofDelegators; i++ {
 			delegator := _getDelegatorAtIndex(i)
 			if doubleDelegatorMap[delegator] {
