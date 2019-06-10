@@ -3,7 +3,7 @@
 touch $BASH_ENV
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
 export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v10.14.1
-npm install @orbs-network/orbs-nebula -g
+cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
 
 COMMIT_HASH=$(./docker/hash.sh)
 
