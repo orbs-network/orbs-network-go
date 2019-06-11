@@ -116,6 +116,11 @@ func (d *harness) expectCommitStateDiffTimes(times int) {
 	d.stateStorage.When("CommitStateDiff", mock.Any, mock.Any).Return(csdOut, nil).Times(times)
 }
 
+func (d *harness) verifyMocksConsistently(t *testing.T, times int) {
+	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), d.gossip, d.stateStorage, d.consensus)
+	require.NoError(t, err)
+}
+
 func (d *harness) verifyMocks(t *testing.T, times int) {
 	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), d.gossip, d.stateStorage, d.consensus)
 	require.NoError(t, err)
