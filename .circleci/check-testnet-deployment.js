@@ -48,6 +48,10 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
 
     try {
         await waitUntilSync(firstEndpoint, currentBlockheight + 5);
+        setInterval(async () => {
+            const sampleBlockheight = await getBlockHeight(firstEndpoint);
+            console.log('Network blockheight: ', sampleBlockheight);
+        }, 60 * 1000);
 
         return {
             ok: true,
