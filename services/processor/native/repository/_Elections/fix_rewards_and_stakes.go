@@ -70,25 +70,25 @@ func _fixRewardsDrift7928900() {
 	if state.ReadUint32(key) == 0 {
 
 		for _, participant := range participantsFixDoubleDelegationReward {
-			bytes, err := hex.DecodeString(participant.address)
+			addressBytes, err := hex.DecodeString(participant.address)
 			if err != nil {
 				panic(fmt.Errorf("cannot parse %s , err %s", participant.address, err))
 			}
-			wrongValue := state.ReadUint64(_formatCumulativeParticipationReward(bytes))
-			state.WriteUint64(_formatCumulativeParticipationReward(bytes), uint64(participant.reward))
-			newValue := state.ReadUint64(_formatCumulativeParticipationReward(bytes))
-			fmt.Printf("elections fix rewards: Participant %s reward changed from %d to %d\n", participant.address, wrongValue, newValue)
+			wrongRewardValue := state.ReadUint64(_formatCumulativeParticipationReward(addressBytes))
+			state.WriteUint64(_formatCumulativeParticipationReward(addressBytes), uint64(participant.reward))
+			correctRewardValue := state.ReadUint64(_formatCumulativeParticipationReward(addressBytes))
+			fmt.Printf("elections fix rewards: Participant %s reward changed from %d to %d\n", participant.address, wrongRewardValue, correctRewardValue)
 		}
 
 		for _, guardian := range guardiansFixDoubleDelegationReward {
-			bytes, err := hex.DecodeString(guardian.address)
+			addressBytes, err := hex.DecodeString(guardian.address)
 			if err != nil {
 				panic(fmt.Errorf("cannot parse %s , err %s", guardian.address, err))
 			}
-			wrongValue := state.ReadUint64(_formatCumulativeGuardianExcellenceReward(bytes))
-			state.WriteUint64(_formatCumulativeGuardianExcellenceReward(bytes), uint64(guardian.reward))
-			newValue := state.ReadUint64(_formatCumulativeGuardianExcellenceReward(bytes))
-			fmt.Printf("elections fix rewards: Guardian %s reward changed from %d to %d\n", guardian.address, wrongValue, newValue)
+			wrongRewardValue := state.ReadUint64(_formatCumulativeGuardianExcellenceReward(addressBytes))
+			state.WriteUint64(_formatCumulativeGuardianExcellenceReward(addressBytes), uint64(guardian.reward))
+			correctRewardValue := state.ReadUint64(_formatCumulativeGuardianExcellenceReward(addressBytes))
+			fmt.Printf("elections fix rewards: Guardian %s reward changed from %d to %d\n", guardian.address, wrongRewardValue, correctRewardValue)
 		}
 
 		state.WriteUint32(key, 1)
@@ -120,11 +120,11 @@ func _fixDelegatorState7928900() {
 
 		doubleDelegatorMap := make(map[[20]byte]bool, len(doubleDelegators))
 		for _, delegator := range doubleDelegators {
-			bytes, err := hex.DecodeString(delegator)
+			addressBytes, err := hex.DecodeString(delegator)
 			if err != nil {
 				panic(fmt.Errorf("cannot parse %s, err %s", delegator, err))
 			}
-			doubleDelegatorMap[_addressSliceToArray(bytes)] = true
+			doubleDelegatorMap[_addressSliceToArray(addressBytes)] = true
 		}
 
 		numOfDelegators := _getNumberOfDelegators()
