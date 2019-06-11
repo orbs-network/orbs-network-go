@@ -26,8 +26,12 @@ then
 
     echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
 
-    echo "Sleeping for 5 minutes to allow the network to come up"
+    echo "Sleeping for 10 minutes to allow the network to come up"
     sleep 300
+    echo "Still sleeping..."
+    sleep 400
+
+    echo "Checking deployment status:"
     node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
 
     echo "Running the E2E suite against the newly deployed isolated chain for this PR.."
