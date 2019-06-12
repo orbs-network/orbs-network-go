@@ -10,6 +10,15 @@ export NVM_DIR="$HOME/.nvm"
 nvm install v10.14.1
 cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
 
+# Installing aws cli
+echo "Installing AWS CLI"
+sudo apt-get update
+sudo apt-get install -y python-dev
+sudo apt-get install -y python-pip
+sudo pip install awscli
+
+aws --version
+
 COMMIT_HASH=$(./docker/hash.sh)
 
 # Determine if we have an active PR
