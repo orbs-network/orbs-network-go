@@ -130,7 +130,9 @@ jobs:
     - run: ./.circleci/e2e-testnet.sh 2013
 
   deploy_new_chain_pr_only:
-    machine: true
+    docker:
+    - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./.circleci/chain_on_pr.sh

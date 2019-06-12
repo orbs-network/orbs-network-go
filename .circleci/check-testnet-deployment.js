@@ -47,14 +47,15 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
     console.log('Fetching current blockheight of the network: ', currentBlockheight);
 
     try {
-        let minuteCounter=0;
+        let minuteCounter = 0;
 
         setInterval(async () => {
+            minuteCounter++;
             const sampleBlockheight = await getBlockHeight(firstEndpoint);
-            console.log(minuteCounter, 'm Network blockheight: ', sampleBlockheight);
+            console.log(`${minuteCounter}m Network blockheight:  ${sampleBlockheight}`);
         }, 60 * 1000);
-        await waitUntilSync(firstEndpoint, currentBlockheight + 5, 60*1000, 60*1000*60);
-    
+        await waitUntilSync(firstEndpoint, currentBlockheight + 5, 60 * 1000, 60 * 1000 * 60);
+
         return {
             ok: true,
             chainId
