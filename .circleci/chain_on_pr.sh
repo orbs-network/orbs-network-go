@@ -22,33 +22,32 @@ aws --version
 COMMIT_HASH=$(./docker/hash.sh)
 
 # Determine if we have an active PR
+# (The condition means if the variable is not empty)
 if [ ! -z "$CI_PULL_REQUESTS" ]
 then
     echo "We have an active PR ($CI_PULL_REQUESTS)"
 
-    PR_CHAIN_ID=101184
+    echo "Downloading the current testnet Boyar config.json"
+    curl -O https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json
+    echo "Done downloading!"
 
-    # echo "Downloading the current testnet Boyar config.json"
-    # curl -O https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json
-    # echo "Done downloading!"
+    echo "Creating a network for this PR within the config.json file.."
+    PR_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH)
+    echo "Done adding a new chain ($PR_CHAIN_ID)"
 
-    # echo "Creating a network for this PR within the config.json file.."
-    # PR_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH)
-    # echo "Done adding a new chain ($PR_CHAIN_ID)"
+    echo "Copying the newly updated config.json to S3"
+    aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
+    echo "Done!"
 
-    # echo "Copying the newly updated config.json to S3"
-    # aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
-    # echo "Done!"
+    echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
 
-    # echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
+    echo "Sleeping for 10 minutes to allow the network to come up"
+    sleep 300
+    echo "Still sleeping..."
+    sleep 400
 
-    # echo "Sleeping for 10 minutes to allow the network to come up"
-    # sleep 300
-    # echo "Still sleeping..."
-    # sleep 400
-
-    # echo "Checking deployment status:"
-    # node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
+    echo "Checking deployment status:"
+    node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
 
     echo "Running the E2E suite against the newly deployed isolated chain for this PR.."
     export API_ENDPOINT=http://35.161.123.97/vchains/$PR_CHAIN_ID/ \
@@ -61,6 +60,7 @@ then
 
     echo "finished vendoring.."
 
+    echo "Starting E2e tests against network ($PR_CHAIN_ID)"
     go test ./test/e2e/... -v
 
     # echo "E2E tests concluded, Killing the PR network.."
