@@ -51,7 +51,7 @@ then
     # node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
 
     echo "Running the E2E suite against the newly deployed isolated chain for this PR.."
-    export API_ENDPOINT=http://35.172.102.63/vchains/$PR_CHAIN_ID/ \
+    export API_ENDPOINT=http://35.161.123.97/vchains/$PR_CHAIN_ID/ \
         STRESS_TEST_NUMBER_OF_TRANSACTIONS=100 \
         STRESS_TEST_FAILURE_RATE=20 \
         STRESS_TEST_TARGET_TPS=200 \
@@ -59,8 +59,7 @@ then
 
     ./git-submodule-checkout.sh
 
-    echo "finished?"
-    exit 0
+    echo "finished vendoring.."
 
     go test ./test/e2e/... -v
 
