@@ -58,18 +58,30 @@ then
 
     ./git-submodule-checkout.sh
 
-    echo "finished vendoring.."
+    echo "Finished vendoring.."
 
-    echo "Starting E2e tests against network ($PR_CHAIN_ID)"
+    echo "Starting E2E tests against network ($PR_CHAIN_ID)"
     export VCHAIN=$PR_CHAIN_ID
     go test ./test/e2e/... -v
 
-    # echo "E2E tests concluded, Killing the PR network.."
-    # node .circleci/testnet-remove-chain.js $PR_CHAIN_ID
+    echo "Disabling the $PR_CHAIN_ID network..."
 
-    # echo "Copying the newly updated config.json to S3"
-    # aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
-    # echo "Done!"
+    node .circleci/testnet-disable-chain.js $PR_CHAIN_ID
+    
+    echo "Copying the newly updated config.json to S3"
+    aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
+    echo "Done!"
+
+    echo "Waiting for chain $PR_CHAIN_ID to reflect it's disabled state..."
+    sleep 60
+    node .circleci/testnet-poll-disabled-chain.js $PR_CHAIN_ID
+
+    echo "E2E tests concluded, Killing the PR network.."
+    node .circleci/testnet-remove-chain.js $PR_CHAIN_ID
+
+    echo "Copying the newly updated config.json to S3"
+    aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
+    echo "Done!"
 else
     echo "No active PR, exiting.."
 fi
