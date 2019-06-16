@@ -61,6 +61,7 @@ then
     echo "finished vendoring.."
 
     echo "Starting E2e tests against network ($PR_CHAIN_ID)"
+    export VCHAIN=$PR_CHAIN_ID
     go test ./test/e2e/... -v
 
     # echo "E2E tests concluded, Killing the PR network.."
