@@ -135,6 +135,7 @@ jobs:
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
+      - run: ./git-submodule-checkout.sh
       - run: ./.circleci/chain_on_pr.sh
 
   release:

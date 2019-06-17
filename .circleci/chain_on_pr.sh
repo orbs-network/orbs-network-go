@@ -56,8 +56,6 @@ then
         STRESS_TEST_TARGET_TPS=200 \
         STRESS_TEST=true
 
-    ./git-submodule-checkout.sh
-
     echo "Finished vendoring.."
 
     echo "Starting E2E tests against network ($PR_CHAIN_ID)"
