@@ -9,15 +9,25 @@ package sanitizer
 import (
 	"github.com/pkg/errors"
 	"go/ast"
+	"go/token"
 )
 
-func (s *Sanitizer) verifyDeclarations(astFile *ast.File) (err error) {
+func (s *Sanitizer) verifyDeclarationsAndStatements(astFile *ast.File) (err error) {
 	for _, decl := range astFile.Decls {
 		ast.Inspect(decl, func(node ast.Node) bool {
 			switch node.(type) {
 			case *ast.ChanType:
 				err = errors.New("channels not allowed")
 				return false
+			case *ast.GoStmt:
+				err = errors.New("goroutines not allowed")
+				return false
+			case *ast.UnaryExpr:
+				expr := node.(*ast.UnaryExpr)
+				if expr.Op == token.ARROW {
+					err = errors.New("sending to channels not allowed")
+					return false
+				}
 			}
 			return true
 		})

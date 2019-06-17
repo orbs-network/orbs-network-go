@@ -53,7 +53,7 @@ func (s *Sanitizer) verifyAll(astFile *ast.File) error {
 		return err
 	}
 
-	err = s.verifyDeclarations(astFile)
+	err = s.verifyDeclarationsAndStatements(astFile)
 	if err != nil {
 		return err
 	}

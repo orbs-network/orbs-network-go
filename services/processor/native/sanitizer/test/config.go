@@ -13,6 +13,7 @@ func SanitizerConfigForTests() *sanitizer.SanitizerConfig {
 		ImportWhitelist: map[string]bool{
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:       true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`: true,
+			`"time"`: true,
 		},
 	}
 }
