@@ -53,5 +53,10 @@ func (s *Sanitizer) verifyAll(astFile *ast.File) error {
 		return err
 	}
 
+	err = s.verifyDeclarations(astFile)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
