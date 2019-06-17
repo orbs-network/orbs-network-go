@@ -67,7 +67,23 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
 }
 
 (async () => {
-    const nodes = topology.network.filter(({ ip }) => ip !== '54.149.67.22');
+    const ignoreIpsFilterFunction = ({ ip }) => {
+        let ips = [], ignoreIps = process.env.TESTNET_IGNORE_IPS;
+        if (ignoreIps && ignoreIps.length > 0) {
+            ips = ignoreIps.split(',');
+        }
+        let returnValue = true;
+
+        for (let n in ips) {
+            if (ips[n] === ip) {
+                returnValue = false;
+            }
+        }
+
+        return returnValue;
+    };
+
+    const nodes = topology.network.filter(ignoreIpsFilterFunction);
     const chains = topology.chains.map(chain => chain.Id).filter(chainId => chainId === parseInt(targetChainId));
 
     if (chains.length === 0) {
