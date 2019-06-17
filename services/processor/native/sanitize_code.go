@@ -23,6 +23,7 @@ func (s *service) createSanitizer() *sanitizer.Sanitizer {
 func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 	return &sanitizer.SanitizerConfig{
 		ImportWhitelist: map[string]bool{
+			// SDK
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      true,
@@ -31,9 +32,29 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  true,
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    true,
-			`"strings"`:      true,
-			`"json"`:         true,
-			`"encoding/hex"`: true,
+
+			// Text
+			`"fmt"`:           true,
+			`"strings"`:       true,
+			`"strconv"`:       true,
+			`"text/template"`: true,
+
+			// Time
+			`"time"`: true,
+
+			// Binary
+			`"bytes"`:           true,
+			`"encoding/binary"`: true,
+			`"io"`:              true,
+
+			// Encoding
+			`"encoding/json"`:   true,
+			`"encoding/hex"`:    true,
+			`"encoding/base32"`: true,
+			`"encoding/base64"`: true,
+
+			// Utils
+			`"sort"`: true,
 		},
 	}
 }

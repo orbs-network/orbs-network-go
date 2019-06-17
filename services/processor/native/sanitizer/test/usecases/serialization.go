@@ -11,7 +11,7 @@ const Serialization = `package main
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
-	"json"
+	"encoding/json"
 	"encoding/hex"
 )
 
