@@ -7,6 +7,7 @@
 package logfields
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 )
@@ -29,4 +30,16 @@ func BlockHeight(value primitives.BlockHeight) *log.Field {
 
 func VirtualChainId(value primitives.VirtualChainId) *log.Field {
 	return &log.Field{Key: "vcid", Uint: uint64(value), Type: log.UintType}
+}
+
+func ContextStringValue(ctx context.Context, key string) *log.Field {
+	val := "not-found-in-context"
+	if v := ctx.Value(key); v != nil {
+		if vString, ok := v.(string); ok {
+			val = vString
+		} else {
+			val = "found-in-context-but-not-string"
+		}
+	}
+	return log.String(key, val)
 }

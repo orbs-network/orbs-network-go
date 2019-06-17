@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -41,8 +42,6 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 	})
 }
 
-// TODO(v1) return transaction receipt while the transaction timestamp is in the future (and too far ahead to be in the grace
-
 func TestReturnTransactionReceipt(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness := newBlockStorageHarness(t).
@@ -51,31 +50,66 @@ func TestReturnTransactionReceipt(t *testing.T) {
 			withValidateConsensusAlgos(1).
 			start(ctx)
 
-		block := builders.BlockPair().WithHeight(1).WithTransactions(10).WithReceiptsForTransactions().WithTimestampNow().Build()
-		harness.commitBlock(ctx, block)
+		txQueryGrace := harness.config.BlockStorageTransactionReceiptQueryTimestampGrace()
+		txExpirationWnd := harness.config.TransactionExpirationWindow()
 
-		// it will be similar data transactions, but with different time stamps (and hashes..)
-		block2 := builders.BlockPair().WithHeight(2).WithTransactions(10).WithReceiptsForTransactions().WithTimestampNow().Build()
+		// block1: txs with current time but block timestamps in the past before grace
+		block1 := builders.BlockPair().WithHeight(1).WithTransactions(10).WithReceiptsForTransactions().WithTimestampAheadBy(-1 * (txQueryGrace + time.Second)).Build()
+		harness.commitBlock(ctx, block1)
+
+		require.True(t, block1.TransactionsBlock.SignedTransactions[3].Transaction().Timestamp() > block1.TransactionsBlock.Header.Timestamp()+primitives.TimestampNano(txQueryGrace.Nanoseconds()), "expected block to be in the past")
+
+		// block closed with ts in the past within grace
+		block2 := builders.BlockPair().WithHeight(2).WithTransactions(10).WithReceiptsForTransactions().WithTimestampAheadBy(txQueryGrace / -2).Build()
 		harness.commitBlock(ctx, block2)
 
-		// taking a transaction at 'random' (they were created at random)
-		tx := block.TransactionsBlock.SignedTransactions[3].Transaction()
-		txHash := digest.CalcTxHash(tx)
+		// block closed with ts in the expiration window
+		block3 := builders.BlockPair().WithHeight(3).WithTransactions(10).WithReceiptsForTransactions().WithTimestampAheadBy(txExpirationWnd / 2).Build()
+		harness.commitBlock(ctx, block3)
 
-		// the block timestamp is just a couple of nanos ahead of the transactions, which is inside the grace
-		out, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
-			Txhash:               txHash,
-			TransactionTimestamp: tx.Timestamp(),
-		})
+		// block closed with ts past the expiration window but within grace
+		block4 := builders.BlockPair().WithHeight(4).WithTransactions(10).WithReceiptsForTransactions().WithTimestampAheadBy(txExpirationWnd + txQueryGrace/2).Build()
+		harness.commitBlock(ctx, block4)
 
-		require.NoError(t, err, "receipt should be found in this flow")
-		require.NotNil(t, out.TransactionReceipt, "receipt should be found in this flow")
-		require.EqualValues(t, txHash, out.TransactionReceipt.Txhash(), "receipt should have the tx hash we looked for")
-		require.EqualValues(t, 1, out.BlockHeight, "receipt should have the block height of the block containing the transaction")
-		require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "receipt should have the timestamp of the block containing the transaction")
+		// block closed with ts past both the expiration window and grace period
+		block5 := builders.BlockPair().WithHeight(5).WithTransactions(10).WithReceiptsForTransactions().WithTimestampAheadBy(txExpirationWnd + txQueryGrace + 1).Build()
+		harness.commitBlock(ctx, block5)
+
+		requireTransactionFoundInBlock(ctx, t, harness, block2)
+		requireTransactionFoundInBlock(ctx, t, harness, block3)
+		requireTransactionFoundInBlock(ctx, t, harness, block4)
+
+		requireTransactionNotFoundInBlock(ctx, t, harness, block1, block5)
+		requireTransactionNotFoundInBlock(ctx, t, harness, block5, block5)
 	})
 }
 
-// TODO(v1) return transaction receipt while the transaction timestamp is outside the grace (regular)
-// TODO(v1) return transaction receipt while the transaction timestamp is at the expire window
-// TODO(v1) return transaction receipt while the transaction timestamp is at the expire window and within the grace
+func requireTransactionFoundInBlock(ctx context.Context, t *testing.T, harness *harness, block *protocol.BlockPairContainer) {
+	txHash, out, err := searchForTx(block.TransactionsBlock.SignedTransactions[3].Transaction(), harness, ctx)
+
+	require.NoError(t, err, "receipt should be found in this flow")
+	require.NotNil(t, out.TransactionReceipt, "receipt should be found in this flow")
+	require.EqualValues(t, txHash, out.TransactionReceipt.Txhash(), "receipt should have the tx hash we looked for")
+	require.EqualValues(t, block.ResultsBlock.Header.BlockHeight(), out.BlockHeight, "receipt should have the block height of the block containing the transaction")
+	require.EqualValues(t, block.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "receipt should have the timestamp of the block containing the transaction")
+}
+
+func requireTransactionNotFoundInBlock(ctx context.Context, t *testing.T, harness *harness, block *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) {
+	_, out, err := searchForTx(block.TransactionsBlock.SignedTransactions[3].Transaction(), harness, ctx)
+
+	require.NoError(t, err, "receipt should be found in this flow")
+	require.Nil(t, out.TransactionReceipt, "receipt should not be found in this flow")
+	require.EqualValues(t, lastCommittedBlock.ResultsBlock.Header.BlockHeight(), out.BlockHeight, "result should have the currently top committed block height")
+	require.EqualValues(t, lastCommittedBlock.ResultsBlock.Header.Timestamp(), out.BlockTimestamp, "result should have the timestamp of the currently top committed block")
+}
+
+func searchForTx(tx *protocol.Transaction, harness *harness, ctx context.Context) (primitives.Sha256, *services.GetTransactionReceiptOutput, error) {
+	// taking a transaction at 'random' (they were created at random)
+	txHash := digest.CalcTxHash(tx)
+	// the block timestamp is just a couple of nanos ahead of the transactions, which is inside the grace
+	out, err := harness.blockStorage.GetTransactionReceipt(ctx, &services.GetTransactionReceiptInput{
+		Txhash:               txHash,
+		TransactionTimestamp: tx.Timestamp(),
+	})
+	return txHash, out, err
+}

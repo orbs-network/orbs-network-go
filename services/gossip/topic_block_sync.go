@@ -8,6 +8,7 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -66,7 +67,7 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {
-			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err))
+			s.logger.Info("HandleBlockAvailabilityRequest failed", log.Error(err), logfields.ContextStringValue(ctx, "peer-ip"))
 		}
 	}
 }

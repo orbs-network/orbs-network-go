@@ -10,17 +10,17 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 const NETWORK_SIZE = 5
@@ -29,6 +29,7 @@ type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
+	signer           signer.Signer
 	reporting        log.Logger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
@@ -61,18 +62,7 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 	}
 
 	//TODO(v1) don't use acceptance tests config! use a per-service config
-	cfg := config.ForAcceptanceTestNetwork(
-		genesisValidatorNodes,
-		leaderKeyPair().NodeAddress(),
-		consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-		1,
-		100,
-		42,
-	)
-
-	cfg.SetDuration(config.BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
-	cfg.SetUint32(config.BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
-
+	cfg := config.ForBenchmarkConsensusTests(nodeKeyPair, leaderKeyPair(), genesisValidatorNodes)
 	log := log.DefaultTestingLogger(tb)
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
@@ -83,12 +73,16 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	consensusContext := &services.MockConsensusContext{}
 
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
+
 	return &harness{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
+		signer:           signer,
 		reporting:        log,
-		config:           cfg.OverrideNodeSpecificValues(":8080", 0, nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), ""),
+		config:           cfg,
 		service:          nil,
 		registry:         metric.NewRegistry(),
 	}
@@ -100,6 +94,7 @@ func (h *harness) createService(ctx context.Context) {
 		h.gossip,
 		h.blockStorage,
 		h.consensusContext,
+		h.signer,
 		h.reporting,
 		h.config,
 		h.registry,

@@ -55,12 +55,8 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: go get -u github.com/orbs-network/go-junit-report
-      - run: curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
-      - run: export NVM_DIR="/opt/circleci/.nvm" && . $NVM_DIR/nvm.sh && nvm install v11.2 && nvm use v11.2
-      - run: npm install junit-xml-stats -g
       - run:
-          command: ./test.flakiness.sh NIGHTLY
+          command: ./.circleci/nightly.sh
           no_output_timeout: 300m
       - store_artifacts:
           path: _out
@@ -89,10 +85,7 @@ jobs:
           command: ./docker/test/test.sh
           environment:
             CONSENSUSALGO: leanhelix
-      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/tag.sh)
-      - run: docker tag orbs:export $DOCKER_IMAGE:$(./docker/hash.sh)
-      - run: $(aws ecr get-login --no-include-email --region us-west-2)
-      - run: docker push $DOCKER_IMAGE
+      - run: ./.circleci/release-internal.sh
       - store_artifacts:
           path: _logs
 
@@ -109,7 +102,8 @@ jobs:
       - run: echo 'Success'
 
   deploy_testnet:
-    machine: true
+    docker:
+      - image: circleci/node:11.2.0
     steps:
       - checkout
       - run: ./.circleci/set-aws-credentials.sh
@@ -135,36 +129,29 @@ jobs:
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
-  release_gamma:
+  release:
     machine: true
     steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
-      - run: ./.circleci/release-gamma.sh
-
-  autonomous_swap:
-    machine: true
-    steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
-      - run: docker tag orbs:gamma-server orbsnetwork/gamma:experimental
-      - run: cd vendor/github.com/orbs-network/orbs-ethereum-contracts/ && .circleci/main.sh
+    - checkout
+    - run: ./.circleci/release.sh
 
 workflows:
   version: 2
   build:
     jobs:
-      - tests
-      - e2e
+      - tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - e2e:
+          filters:
+            tags:
+              only: /^v.*/
       - flakiness
-      - autonomous_swap
       - success:
           requires:
             - tests
             - e2e
-            - autonomous_swap
       - deploy_testnet:
           requires:
             - e2e
@@ -178,7 +165,7 @@ workflows:
       # - e2e_testnet_leanhelix:
       #     requires:
       #       - deploy_testnet
-      - release_gamma:
+      - release:
           requires:
             - tests
             - e2e
@@ -187,6 +174,7 @@ workflows:
               only: /^v.*/
             branches:
               only: master
+
   nightly:
     triggers:
       - schedule:

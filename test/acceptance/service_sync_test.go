@@ -84,7 +84,6 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		WithInitialBlocks(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
-			log.IgnoreMessagesMatching("Metric recorded"),
 			log.ExcludeField(internodesync.LogTag)).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 

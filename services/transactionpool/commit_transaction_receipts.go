@@ -32,7 +32,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.addCommitLock.Lock()
 	defer s.addCommitLock.Unlock()
 
-	newBh, ts := s.updateBlockHeightAndTimestamp(input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
+	newBh, ts := s.updateBlockHeightAndTimestamp(ctx, input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
 	c := &committer{logger: logger, adder: s.committedPool, remover: s.pendingPool, nodeAddress: s.config.NodeAddress(), blockHeight: newBh, blockTime: ts}
 
@@ -55,7 +55,9 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	}, nil
 }
 
-func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
 	s.lastCommitted.Lock()
 	defer s.lastCommitted.Unlock()
 
@@ -63,7 +65,7 @@ func (s *service) updateBlockHeightAndTimestamp(header *protocol.ResultsBlockHea
 	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 
-	s.logger.Info("transaction pool reached block height", logfields.BlockHeight(header.BlockHeight()))
+	logger.Info("transaction pool reached block height", logfields.BlockHeight(header.BlockHeight()))
 
 	return header.BlockHeight(), header.Timestamp()
 }

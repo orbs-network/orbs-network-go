@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
-	"time"
 )
 
 func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
@@ -78,16 +77,6 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 
 	start := input.TransactionTimestamp - primitives.TimestampNano(graceNano)
 	end := input.TransactionTimestamp + primitives.TimestampNano(graceNano+txExpireNano)
-
-	// TODO(v1): sanity check, this is really useless here right now, but we were going to refactor this, and when we were going to, this was here to remind us to have a sanity check on this query
-	if end < start || end-start > primitives.TimestampNano(time.Hour.Nanoseconds()) {
-		receipt, err := s.createEmptyTransactionReceiptResult(ctx)
-		if err != nil {
-			return nil, err
-		}
-		// TODO((https://github.com/orbs-network/orbs-network-go/issues/448): probably don't fail here
-		return receipt, errors.Errorf("failed to search for blocks on tx timestamp of %d, hash %s", input.TransactionTimestamp, input.Txhash)
-	}
 
 	blockPair, txIdx, err := s.persistence.GetBlockByTx(input.Txhash, start, end)
 	if err != nil {

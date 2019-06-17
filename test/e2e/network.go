@@ -65,7 +65,6 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		log.String("_test", "e2e"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
-		WithFilters(log.IgnoreMessagesMatching("Metric recorded")).
 		WithOutput(console)
 	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
@@ -84,19 +83,18 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 
 		cfg := config.
 			ForE2E(
-				processorArtifactPath,
-				genesisValidatorNodes,
-				gossipPeers,
-				leaderKeyPair.NodeAddress(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-				ethereumEndpoint).
-			OverrideNodeSpecificValues(
 				fmt.Sprintf(":%d", START_HTTP_PORT+i),
 				gossipPortByNodeIndex[i],
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
-				blockStorageDataDirPrefix)
-
+				gossipPeers,
+				genesisValidatorNodes,
+				blockStorageDataDirPrefix,
+				processorArtifactPath,
+				ethereumEndpoint,
+				leaderKeyPair.NodeAddress(),
+				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+			)
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger)

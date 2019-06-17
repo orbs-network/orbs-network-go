@@ -18,15 +18,15 @@ import (
 /// Test builders for: protocol.BlockPairContainer
 
 type blockPair struct {
-	txHeader         *protocol.TransactionsBlockHeaderBuilder
-	txMetadata       *protocol.TransactionsBlockMetadataBuilder
-	transactions     []*protocol.SignedTransaction
-	txProof          *protocol.TransactionsBlockProofBuilder
-	rxHeader         *protocol.ResultsBlockHeaderBuilder
-	receipts         []*protocol.TransactionReceipt
-	sdiffs           []*protocol.ContractStateDiff
-	rxProof          *protocol.ResultsBlockProofBuilder
-	blockProofSigner primitives.EcdsaSecp256K1PrivateKey
+	txHeader      *protocol.TransactionsBlockHeaderBuilder
+	txMetadata    *protocol.TransactionsBlockMetadataBuilder
+	transactions  []*protocol.SignedTransaction
+	txProof       *protocol.TransactionsBlockProofBuilder
+	rxHeader      *protocol.ResultsBlockHeaderBuilder
+	receipts      []*protocol.TransactionReceipt
+	sdiffs        []*protocol.ContractStateDiff
+	rxProof       *protocol.ResultsBlockProofBuilder
+	blockProofKey primitives.EcdsaSecp256K1PrivateKey
 }
 
 func BlockPair() *blockPair {
@@ -206,6 +206,13 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 
 func (b *blockPair) WithTimestampNow() *blockPair {
 	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
+	b.txHeader.Timestamp = timeToUse
+	b.rxHeader.Timestamp = timeToUse
+	return b
+}
+
+func (b *blockPair) WithTimestampAheadBy(duration time.Duration) *blockPair {
+	timeToUse := primitives.TimestampNano(time.Now().UnixNano() + duration.Nanoseconds())
 	b.txHeader.Timestamp = timeToUse
 	b.rxHeader.Timestamp = timeToUse
 	return b

@@ -13,32 +13,39 @@ import (
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
 type keyManager struct {
-	privateKey primitives.EcdsaSecp256K1PrivateKey
-	logger     log.Logger
+	signer signer.Signer
+	logger log.Logger
 }
 
 // TODO Fix according to branch lh-outline, see https://tree.taiga.io/project/orbs-network/us/566
 
-func NewKeyManager(logger log.Logger, privateKey primitives.EcdsaSecp256K1PrivateKey) *keyManager {
+func NewKeyManager(logger log.Logger, signer signer.Signer) *keyManager {
 	return &keyManager{
-		logger:     logger,
-		privateKey: privateKey,
+		logger: logger,
+		signer: signer,
 	}
 }
 
 func (km *keyManager) SignConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.Signature {
-	sig, _ := digest.SignAsNode(km.privateKey, content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	if err != nil {
+		km.logger.Error("failed to sign consensus message", log.Error(err))
+	}
 	return lhprimitives.Signature(sig)
 }
 
 func (km *keyManager) SignRandomSeed(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.RandomSeedSignature {
-	sig, _ := digest.SignAsNode(km.privateKey, content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+	if err != nil {
+		km.logger.Error("failed to sign random seed", log.Error(err))
+	}
 	return lhprimitives.RandomSeedSignature(sig)
 }
 

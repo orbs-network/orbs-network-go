@@ -13,6 +13,7 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -66,6 +67,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
+	signer signer.Signer,
 	parentLogger log.Logger,
 	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
@@ -78,7 +80,7 @@ func NewLeanHelixConsensusAlgo(
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
-	mgr := NewKeyManager(logger, config.NodePrivateKey())
+	mgr := NewKeyManager(logger, signer)
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
@@ -113,7 +115,7 @@ func NewLeanHelixConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
-			parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
+			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
@@ -140,11 +142,16 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
+
 		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
 		}
+
+		//Assume valid execution. Should be changed with the full implementation of audit nodes.
+		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
+
 	}
 
 	if shouldUpdateStateInLeanHelix(input.Mode) {
@@ -172,6 +179,19 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	}
 
 	return nil, nil
+}
+
+func (s *service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
+	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
+	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
+		// ignore results - we only execute the transactions so that logs are printed in an audit node
+		_, _ = s.blockProvider.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
+			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
+			ResultsBlock:       blockPair.ResultsBlock,
+			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:  blockPair.TransactionsBlock,
+			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp()})
+	}
 }
 
 func ExtractBlockProof(blockPair *protocol.BlockPairContainer) (primitives.LeanHelixBlockProof, error) {

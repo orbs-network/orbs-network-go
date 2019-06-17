@@ -44,7 +44,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			return nil, nil
 		})
 
-		harness.consensus.Reset().When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			resultsForVerification.logHandleBlockConsensusCalls(t, input, NUM_BLOCKS)
 			requireValidHandleBlockConsensusMode(t, input.Mode)
 			return nil, nil

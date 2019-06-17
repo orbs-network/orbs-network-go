@@ -62,37 +62,13 @@ func _processVotingStateMachine() [][20]byte {
 		}
 		return nil
 	} else if processState == VOTING_PROCESS_STATE_CALCULATIONS {
-		candidateVotes, totalVotes, participantStakes, guardiansAccumulatedStake := _calculateVotes()
+		candidateVotes, totalVotes, participants, participantStakes, guardiansAccumulatedStake := _calculateVotes()
 		elected := _processValidatorsSelection(candidateVotes, totalVotes)
-		_processRewards(totalVotes, elected, participantStakes, guardiansAccumulatedStake)
+		_processRewards(totalVotes, elected, participants, participantStakes, guardiansAccumulatedStake)
 		_setVotingProcessState("")
 		return elected
 	}
 	return nil
-}
-
-func _firstElectionFixRewards() {
-	key := []byte("_fix_rewards_first_election_")
-	if state.ReadUint32(key) == 0 {
-		candidateVotes, totalVotes, participantStakes, guardiansAccumulatedStake := _calculateVotes()
-		elected := _processValidatorsSelection(candidateVotes, totalVotes)
-		for participant, _ := range participantStakes {
-			fmt.Printf("elections %10d rewards: clear participant %x\n", getEffectiveElectionBlockNumber(), participant)
-			state.Clear(_formatCumulativeParticipationReward(participant[:]))
-		}
-		for guardian, _ := range guardiansAccumulatedStake {
-			fmt.Printf("elections %10d rewards: clear guardian %x\n", getEffectiveElectionBlockNumber(), guardian)
-			state.Clear(_formatCumulativeGuardianExcellenceReward(guardian[:]))
-		}
-		for _, validator := range elected {
-			fmt.Printf("elections %10d rewards: clear validator %x\n", getEffectiveElectionBlockNumber(), validator)
-			state.Clear(_formatCumulativeValidatorReward(validator[:]))
-		}
-		_processRewards(totalVotes, elected, participantStakes, guardiansAccumulatedStake)
-		state.WriteUint32(key, 1)
-	} else {
-		panic(fmt.Sprintf("cannot fix first election rewards anymore"))
-	}
 }
 
 func _nextProcessVotingState(stage string) {
@@ -209,12 +185,12 @@ func _getStakeAtElection(ethAddr [20]byte) uint64 {
 	return ((*stake).Div(*stake, ETHEREUM_STAKE_FACTOR)).Uint64()
 }
 
-func _calculateVotes() (candidateVotes map[[20]byte]uint64, totalVotes uint64, participantStakes map[[20]byte]uint64, guardianAccumulatedStakes map[[20]byte]uint64) {
+func _calculateVotes() (candidateVotes map[[20]byte]uint64, totalVotes uint64, participants [][20]byte, participantStakes map[[20]byte]uint64, guardianAccumulatedStakes map[[20]byte]uint64) {
 	guardians := _getGuardians()
 	guardianStakes := _collectGuardiansStake(guardians)
-	delegatorStakes := _collectDelegatorsStake(guardians)
-	guardianToDelegators := _findGuardianDelegators(delegatorStakes)
-	candidateVotes, totalVotes, participantStakes, guardianAccumulatedStakes = _guardiansCastVotes(guardianStakes, guardianToDelegators, delegatorStakes)
+	delegators, delegatorStakes := _collectDelegatorsStake(guardians)
+	guardianToDelegators := _findGuardianDelegators(delegators)
+	candidateVotes, totalVotes, participants, participantStakes, guardianAccumulatedStakes = _guardiansCastVotes(guardianStakes, guardianToDelegators, delegatorStakes)
 	return
 }
 
@@ -235,15 +211,19 @@ func _collectGuardiansStake(guardians map[[20]byte]bool) (guardianStakes map[[20
 	return
 }
 
-func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegatorStakes map[[20]byte]uint64) {
+func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegators [][20]byte, delegatorStakes map[[20]byte]uint64) {
 	delegatorStakes = make(map[[20]byte]uint64)
+	delegators = make([][20]byte, 0, _getNumberOfDelegators())
 	numOfDelegators := _getNumberOfDelegators()
 	for i := 0; i < numOfDelegators; i++ {
 		delegator := _getDelegatorAtIndex(i)
 		if !guardians[delegator] {
-			stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
-			delegatorStakes[delegator] = stake
-			fmt.Printf("elections %10d: delegator %x, stake %d\n", getCurrentElectionBlockNumber(), delegator, stake)
+			if _, ok := delegatorStakes[delegator]; !ok { //
+				stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
+				delegatorStakes[delegator] = stake
+				delegators = append(delegators, delegator)
+				fmt.Printf("elections %10d: delegator %x, stake %d\n", getCurrentElectionBlockNumber(), delegator, stake)
+			}
 		} else {
 			fmt.Printf("elections %10d: delegator %x ignored as it is also a guardian\n", getCurrentElectionBlockNumber(), delegator)
 		}
@@ -251,10 +231,10 @@ func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegatorStakes map[[
 	return
 }
 
-func _findGuardianDelegators(delegatorStakes map[[20]byte]uint64) (guardianToDelegators map[[20]byte][][20]byte) {
+func _findGuardianDelegators(delegators [][20]byte) (guardianToDelegators map[[20]byte][][20]byte) {
 	guardianToDelegators = make(map[[20]byte][][20]byte)
 
-	for delegator := range delegatorStakes {
+	for _, delegator := range delegators {
 		guardian := _getDelegatorGuardian(delegator[:])
 		if !bytes.Equal(guardian[:], delegator[:]) {
 			fmt.Printf("elections %10d: delegator %x, guardian/agent %x\n", getCurrentElectionBlockNumber(), delegator, guardian)
@@ -269,24 +249,31 @@ func _findGuardianDelegators(delegatorStakes map[[20]byte]uint64) (guardianToDel
 	return
 }
 
-func _guardiansCastVotes(guardianStakes map[[20]byte]uint64, guardianDelegators map[[20]byte][][20]byte, delegatorStakes map[[20]byte]uint64) (candidateVotes map[[20]byte]uint64, totalVotes uint64, participantStakes map[[20]byte]uint64, guardainsAccumulatedStakes map[[20]byte]uint64) {
+func _guardiansCastVotes(guardianStakes map[[20]byte]uint64, guardianDelegators map[[20]byte][][20]byte, delegatorStakes map[[20]byte]uint64) (candidateVotes map[[20]byte]uint64, totalVotes uint64, participants [][20]byte, participantStakes map[[20]byte]uint64, guardainsAccumulatedStakes map[[20]byte]uint64) {
 	totalVotes = uint64(0)
 	candidateVotes = make(map[[20]byte]uint64)
-	participantStakes = make(map[[20]byte]uint64)
-	guardainsAccumulatedStakes = make(map[[20]byte]uint64)
-	for guardian, guardianStake := range guardianStakes {
-		participantStakes[guardian] = guardianStake
-		fmt.Printf("elections %10d: guardian %x, self-voting stake %d\n", getCurrentElectionBlockNumber(), guardian, guardianStake)
-		stake := safeuint64.Add(guardianStake, _calculateOneGuardianVoteRecursive(guardian, guardianDelegators, delegatorStakes, participantStakes))
-		guardainsAccumulatedStakes[guardian] = stake
-		_setGuardianVotingWeight(guardian[:], stake)
-		totalVotes = safeuint64.Add(totalVotes, stake)
-		fmt.Printf("elections %10d: guardian %x, voting stake %d\n", getCurrentElectionBlockNumber(), guardian, stake)
+	participants = make([][20]byte, 0, len(guardianStakes)+len(delegatorStakes))
+	participantStakes = make(map[[20]byte]uint64, len(guardianStakes)+len(delegatorStakes))
+	guardainsAccumulatedStakes = make(map[[20]byte]uint64, len(guardianStakes))
+	numOfGuardians := _getNumberOfGuardians()
+	for i := 0; i < numOfGuardians; i++ { // must not range over map as we set to state and order must be fixed
+		guardian := _getGuardianAtIndex(i)
+		if guardianStake, ok := guardianStakes[guardian]; ok {
+			//	for guardian, guardianStake := range guardianStakes {
+			participantStakes[guardian] = guardianStake
+			participants = append(participants, guardian)
+			fmt.Printf("elections %10d: guardian %x, self-voting stake %d\n", getCurrentElectionBlockNumber(), guardian, guardianStake)
+			stake := safeuint64.Add(guardianStake, _calculateOneGuardianVoteRecursive(guardian, guardianDelegators, delegatorStakes, &participants, participantStakes))
+			guardainsAccumulatedStakes[guardian] = stake
+			_setGuardianVotingWeight(guardian[:], stake)
+			totalVotes = safeuint64.Add(totalVotes, stake)
+			fmt.Printf("elections %10d: guardian %x, voting stake %d\n", getCurrentElectionBlockNumber(), guardian, stake)
 
-		candidateList := _getCandidates(guardian[:])
-		for _, candidate := range candidateList {
-			fmt.Printf("elections %10d: guardian %x, voted for candidate %x\n", getCurrentElectionBlockNumber(), guardian, candidate)
-			candidateVotes[candidate] = safeuint64.Add(candidateVotes[candidate], stake)
+			candidateList := _getCandidates(guardian[:])
+			for _, candidate := range candidateList {
+				fmt.Printf("elections %10d: guardian %x, voted for candidate %x\n", getCurrentElectionBlockNumber(), guardian, candidate)
+				candidateVotes[candidate] = safeuint64.Add(candidateVotes[candidate], stake)
+			}
 		}
 	}
 	fmt.Printf("elections %10d: total voting stake %d\n", getCurrentElectionBlockNumber(), totalVotes)
@@ -295,13 +282,14 @@ func _guardiansCastVotes(guardianStakes map[[20]byte]uint64, guardianDelegators 
 }
 
 // Note : important that first call is to guardian ... otherwise not all delegators will be added to participants
-func _calculateOneGuardianVoteRecursive(currentLevelGuardian [20]byte, guardianToDelegators map[[20]byte][][20]byte, delegatorStakes map[[20]byte]uint64, participantStakes map[[20]byte]uint64) uint64 {
+func _calculateOneGuardianVoteRecursive(currentLevelGuardian [20]byte, guardianToDelegators map[[20]byte][][20]byte, delegatorStakes map[[20]byte]uint64, participants *[][20]byte, participantStakes map[[20]byte]uint64) uint64 {
 	guardianDelegatorList, ok := guardianToDelegators[currentLevelGuardian]
 	currentVotes := delegatorStakes[currentLevelGuardian]
 	if ok {
 		for _, delegate := range guardianDelegatorList {
 			participantStakes[delegate] = delegatorStakes[delegate]
-			currentVotes = safeuint64.Add(currentVotes, _calculateOneGuardianVoteRecursive(delegate, guardianToDelegators, delegatorStakes, participantStakes))
+			*participants = append(*participants, delegate)
+			currentVotes = safeuint64.Add(currentVotes, _calculateOneGuardianVoteRecursive(delegate, guardianToDelegators, delegatorStakes, participants, participantStakes))
 		}
 	}
 	return currentVotes

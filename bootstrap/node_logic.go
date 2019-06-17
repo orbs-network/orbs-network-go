@@ -8,7 +8,9 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -38,9 +40,8 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
-	publicApi       services.PublicApi
-	consensusAlgos  []services.ConsensusAlgo
-	runtimeReporter interface{} // only needed so that the runtime reporter doesn't get GCed
+	publicApi      services.PublicApi
+	consensusAlgos []services.ConsensusAlgo
 }
 
 func NewNodeLogic(
@@ -65,34 +66,41 @@ func NewNodeLogic(
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ethereumConnection, nodeConfig, logger, metricRegistry)
 
+	signer, err := signer.New(nodeConfig)
+	if err != nil {
+		panic(fmt.Sprintf("could not instantiate NodeLogic: %s", err))
+	}
+
 	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
-	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, nodeConfig, logger, metricRegistry)
 
-	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
-	leanHelixAlgo := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, logger, nodeConfig, metricRegistry)
+	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, nodeConfig, metricRegistry)
+	leanHelixAlgo := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, nodeConfig, metricRegistry)
 
 	consensusAlgos := make([]services.ConsensusAlgo, 0)
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
 	metric.NewSystemReporter(ctx, metricRegistry, logger)
-	runtimeReporter := metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metricRegistry.PeriodicallyReport(ctx, logger)
+	metric.NewRuntimeReporter(ctx, metricRegistry, logger)
+	metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint())
+
+	metricRegistry.PeriodicallyRotate(ctx, logger)
+	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
 	return &nodeLogic{
-		publicApi:       publicApiService,
-		consensusAlgos:  consensusAlgos,
-		runtimeReporter: runtimeReporter,
+		publicApi:      publicApiService,
+		consensusAlgos: consensusAlgos,
 	}
 }
 

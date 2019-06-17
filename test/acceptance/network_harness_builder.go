@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -23,11 +24,13 @@ import (
 )
 
 const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-const TEST_TIMEOUT_HARD_LIMIT = 20 * time.Second //TODO(v1) 10 seconds is infinity; reduce to 2 seconds when system is more stable (after we add feature of custom config per test)
+const TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
 const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
 const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
+
+var DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME = 10 * time.Millisecond
 
 type networkHarnessBuilder struct {
 	numNodes                 int
@@ -41,6 +44,7 @@ type networkHarnessBuilder struct {
 	requiredQuorumPercentage uint32
 	blockChain               []*protocol.BlockPairContainer
 	virtualChainId           primitives.VirtualChainId
+	emptyBlockTime           time.Duration
 }
 
 func newHarness() *networkHarnessBuilder {
@@ -135,7 +139,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime)
 
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
@@ -178,10 +182,10 @@ func (b *networkHarnessBuilder) makeLogger(tb testing.TB, testId string) (log.Lo
 		WithOutput(testOutput).
 		WithFilters(
 			log.IgnoreMessagesMatching("transport message received"),
-			log.IgnoreMessagesMatching("Metric recorded"),
+			log.ExcludeField(memory.LogTag),
 		).
 		WithFilters(b.logFilters...)
-	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints(), log.OnlyMetrics()))
+	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints()))
 
 	return logger, testOutput
 }
@@ -203,6 +207,11 @@ func (b *networkHarnessBuilder) WithInitialBlocks(blocks []*protocol.BlockPairCo
 
 func (b *networkHarnessBuilder) WithVirtualChainId(id primitives.VirtualChainId) *networkHarnessBuilder {
 	b.virtualChainId = id
+	return b
+}
+
+func (b *networkHarnessBuilder) WithEmptyBlockTime(emptyBlockTime time.Duration) *networkHarnessBuilder {
+	b.emptyBlockTime = emptyBlockTime
 	return b
 }
 

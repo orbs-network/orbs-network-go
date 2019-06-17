@@ -9,6 +9,7 @@ package builders
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -33,7 +34,7 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 			&protocol.ResultsBlockContainer{Header: rxHeaderBuilt}),
 	}
 	b.rxProof.TransactionsBlockHash = digest.CalcTransactionsBlockHash(&protocol.TransactionsBlockContainer{Header: txHeaderBuilt})
-	sig, err := digest.SignAsNode(b.blockProofSigner, b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
+	sig, err := signer.NewLocalSigner(b.blockProofKey).Sign(b.rxProof.BenchmarkConsensus.BlockRef.Build().Raw())
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +42,7 @@ func (b *blockPair) buildBenchmarkConsensusBlockProof(txHeaderBuilt *protocol.Tr
 }
 
 func (b *blockPair) WithBenchmarkConsensusBlockProof(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) *blockPair {
-	b.blockProofSigner = keyPair.PrivateKey()
+	b.blockProofKey = keyPair.PrivateKey()
 	b.txProof = &protocol.TransactionsBlockProofBuilder{
 		Type:               protocol.TRANSACTIONS_BLOCK_PROOF_TYPE_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: &consensus.BenchmarkConsensusBlockProofBuilder{},
@@ -71,9 +72,9 @@ func (b *blockPair) WithInvalidBenchmarkConsensusBlockProof(keyPair *testKeys.Te
 // gossipmessages.BenchmarkConsensusCommittedMessage
 
 type committed struct {
-	messageSigner primitives.EcdsaSecp256K1PrivateKey
-	status        *gossipmessages.BenchmarkConsensusStatusBuilder
-	sender        *gossipmessages.SenderSignatureBuilder
+	messageKey primitives.EcdsaSecp256K1PrivateKey
+	status     *gossipmessages.BenchmarkConsensusStatusBuilder
+	sender     *gossipmessages.SenderSignatureBuilder
 }
 
 func BenchmarkConsensusCommittedMessage() *committed {
@@ -96,7 +97,7 @@ func (c *committed) WithLastCommittedHeight(blockHeight primitives.BlockHeight) 
 }
 
 func (c *committed) WithSenderSignature(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) *committed {
-	c.messageSigner = keyPair.PrivateKey()
+	c.messageKey = keyPair.PrivateKey()
 	c.sender.SenderNodeAddress = keyPair.NodeAddress()
 	return c
 }
@@ -111,7 +112,7 @@ func (c *committed) WithInvalidSenderSignature(keyPair *testKeys.TestEcdsaSecp25
 
 func (c *committed) Build() *gossipmessages.BenchmarkConsensusCommittedMessage {
 	statusBuilt := c.status.Build()
-	sig, err := digest.SignAsNode(c.messageSigner, statusBuilt.Raw())
+	sig, err := signer.NewLocalSigner(c.messageKey).Sign(statusBuilt.Raw())
 	if err != nil {
 		panic(err)
 	}

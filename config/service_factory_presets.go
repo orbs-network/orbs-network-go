@@ -72,7 +72,7 @@ func ForStateStorageTest(numOfStateRevisionsToRetain uint32, graceBlockDiff uint
 	return cfg
 }
 
-func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair, timeBetweenEmptyBlocks time.Duration) TransactionPoolConfig {
+func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp256K1KeyPair, timeBetweenEmptyBlocks time.Duration) TransactionPoolConfigForTests {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
@@ -92,7 +92,7 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	return cfg
 }
 
-func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) LeanHelixConsensusConfig {
+func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, auditBlocksYoungerThan time.Duration) LeanHelixConsensusConfigForTests {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
@@ -103,6 +103,23 @@ func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair) Lea
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
+
+	cfg.SetDuration(INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN, auditBlocksYoungerThan)
+
+	return cfg
+}
+
+func ForBenchmarkConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, leaderKeyPair *testKeys.TestEcdsaSecp256K1KeyPair, validators map[string]ValidatorNode) NodeConfig {
+	cfg := emptyConfig()
+	cfg.SetGenesisValidatorNodes(validators)
+	cfg.SetBenchmarkConsensusConstantLeader(leaderKeyPair.NodeAddress())
+	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 1)
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
+	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 5*time.Millisecond)
+	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
+	cfg.SetNodeAddress(keyPair.NodeAddress())
+	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
 	return cfg
 }

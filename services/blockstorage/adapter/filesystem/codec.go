@@ -39,7 +39,7 @@ func newCodec(maxBlockSize uint32) *codec {
 type blocksFileHeader struct {
 	Magic       uint32
 	FileVersion uint32
-	NetworkId   uint32
+	NetworkType uint32
 	ChainId     uint32
 }
 
@@ -108,11 +108,11 @@ func (bh *blockHeader) read(r io.Reader) error {
 	return nil
 }
 
-func newBlocksFileHeader(networkId, vchainId uint32) *blocksFileHeader {
+func newBlocksFileHeader(networkType, vchainId uint32) *blocksFileHeader {
 	return &blocksFileHeader{
 		Magic:       orbsFormatMagic,
 		FileVersion: orbsFormatVersion,
-		NetworkId:   networkId,
+		NetworkType: networkType,
 		ChainId:     vchainId,
 	}
 }

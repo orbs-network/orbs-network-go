@@ -22,7 +22,12 @@ import (
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
-		harness := newBlockStorageHarness(t).withNodeAddress(sourceAddress).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withNodeAddress(sourceAddress).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
+
 		harness.commitSomeBlocks(ctx, 3)
 		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
 
@@ -60,10 +65,14 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 	})
 }
 
-func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *testing.T) {
+func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
-		harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
+
+		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
 
@@ -71,13 +80,38 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsBehindPetitioner(t *
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
 
 		require.NoError(t, err, "expecting a happy flow (without sending the response)")
-		harness.verifyMocks(t, 1)
+
+		harness.verifyMocks(t, 1) // eventually
+		harness.verifyMocksConsistently(t, 1)
+
+	})
+}
+
+func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
+
+		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
+
+		msg := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(0)).Build()
+		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
+
+		require.NoError(t, err, "expecting a happy flow (without sending the response)")
+
+		harness.verifyMocks(t, 1) // eventually
+		harness.verifyMocksConsistently(t, 1)
 	})
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 		harness.commitSomeBlocks(ctx, 3)
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
@@ -101,6 +135,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			withBatchSize(batchSize).
 			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
 			start(ctx)
 
 		lastBlock := 12
@@ -131,7 +166,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 		}
 
 		harness.gossip.When("SendBlockSyncResponse", mock.Any, mock.AnyIf("response should hold correct blocks", chunksResponseVerifier)).Return(nil, nil).Times(1)
-		harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
+		_, _ = harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
 		harness.verifyMocks(t, 1)
 	})
 }
@@ -147,7 +182,10 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			WithLastCommittedBlockHeight(lastHeight).
 			Build()
 
-		harness := newBlockStorageHarness(t).withSyncBroadcast(1).start(ctx)
+		harness := newBlockStorageHarness(t).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
 		harness.commitSomeBlocks(ctx, lastBlock)
 
 		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)
@@ -155,6 +193,8 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
 
 		require.Error(t, err, "expected source to return an error")
-		harness.verifyMocks(t, 1)
+
+		harness.verifyMocks(t, 1) // eventually
+		harness.verifyMocksConsistently(t, 1)
 	})
 }

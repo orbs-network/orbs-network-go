@@ -32,6 +32,7 @@ type NodeConfig interface {
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -98,11 +99,16 @@ type NodeConfig interface {
 
 	// profiling
 	Profiling() bool
+
+	// NTP Network Time Protocol
+	NTPEndpoint() string
+
+	// Remote signer
+	SignerEndpoint() string
 }
 
 type OverridableConfig interface {
 	NodeConfig
-	OverrideNodeSpecificValues(httpAddress string, gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, blockStorageDataDirPrefix string) NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
 }
 
@@ -138,6 +144,7 @@ type FilesystemBlockPersistenceConfig interface {
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
 	VirtualChainId() primitives.VirtualChainId
+	NetworkType() protocol.SignerNetworkType
 }
 
 type GossipTransportConfig interface {
@@ -173,7 +180,6 @@ type StateStorageConfig interface {
 
 type TransactionPoolConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	VirtualChainId() primitives.VirtualChainId
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
@@ -188,6 +194,11 @@ type TransactionPoolConfig interface {
 	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
+type TransactionPoolConfigForTests interface {
+	TransactionPoolConfig
+	SignerConfig
+}
+
 type EthereumCrosschainConnectorConfig interface {
 	EthereumFinalityTimeComponent() time.Duration
 	EthereumFinalityBlocksComponent() uint32
@@ -200,13 +211,19 @@ type NativeProcessorConfig interface {
 
 type LeanHelixConsensusConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
+
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
+}
+
+type LeanHelixConsensusConfigForTests interface {
+	LeanHelixConsensusConfig
+	SignerConfig
 }
 
 type ValidatorNode interface {
@@ -221,4 +238,9 @@ type GossipPeer interface {
 type HttpServerConfig interface {
 	HttpAddress() string
 	Profiling() bool
+}
+
+type SignerConfig interface {
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	SignerEndpoint() string
 }
