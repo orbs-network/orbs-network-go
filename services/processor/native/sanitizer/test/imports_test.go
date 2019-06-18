@@ -34,5 +34,5 @@ func TestCodeWithJsonAndHex(t *testing.T) {
 	source := usecases.Serialization
 	output, err := sanitizer.NewSanitizer(native.SanitizerConfigForProduction()).Process(source)
 	require.NoError(t, err)
-	require.Equal(t, source, output, "valid file content should be altered by sanitizer")
+	require.Equal(t, source, output, "valid file content should not be altered by sanitizer")
 }
