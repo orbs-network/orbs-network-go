@@ -167,7 +167,6 @@ func ForE2E(
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
 
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 	}
@@ -209,8 +208,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
-
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
@@ -240,7 +237,6 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ganache
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
