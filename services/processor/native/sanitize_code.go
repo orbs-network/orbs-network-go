@@ -6,7 +6,9 @@
 
 package native
 
-import "github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
+import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
+)
 
 func (s *service) sanitizeDeployedSourceCode(code string) (string, error) {
 	if s.config.ProcessorSanitizeDeployedContracts() {
@@ -17,17 +19,56 @@ func (s *service) sanitizeDeployedSourceCode(code string) (string, error) {
 }
 
 func (s *service) createSanitizer() *sanitizer.Sanitizer {
-	sanitizerConfig := &sanitizer.SanitizerConfig{
-		ImportWhitelist: map[string]bool{
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`: true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:   true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    true,
+	return sanitizer.NewSanitizer(SanitizerConfigForProduction())
+}
+
+func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
+	return &sanitizer.SanitizerConfig{
+		ImportWhitelist: map[string]string{
+			// package: reason to whitelist
+
+			// SDK
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`: "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:   "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    "SDK",
+
+			// Text
+			`"strings"`:       "Text manipulation",
+			`"strconv"`:       "Text manipulation",
+			`"text/template"`: "Text manipulation",
+
+			// Time
+			`"time"`: "Time manipulation",
+
+			// Binary
+			`"bytes"`:           "Binary manipulation",
+			`"encoding/binary"`: "Binary manipulation",
+			`"io"`:              "Binary manipulation",
+
+			// Encoding
+			`"encoding/json"`:   "Serialization",
+			`"encoding/hex"`:    "Serialization",
+			`"encoding/base32"`: "Serialization",
+			`"encoding/base64"`: "Serialization",
+
+			// Utils
+			`"sort"`: "Sorting collections of primitives",
+		},
+		FunctionBlacklist: map[string][]string{
+			"time": {
+				"After",
+				"AfterFunc",
+				"Sleep",
+				"Tick",
+				"NewTimer",
+				"NewTicker",
+				"Now",
+			},
 		},
 	}
-	return sanitizer.NewSanitizer(sanitizerConfig)
 }

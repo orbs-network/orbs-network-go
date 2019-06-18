@@ -4,9 +4,21 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package sanitizer
+package usecases
 
-type SanitizerConfig struct {
-	ImportWhitelist   map[string]string
-	FunctionBlacklist map[string][]string
+const NamedImport = `package main
+
+import (
+	time1 "time"
+)
+
+var PUBLIC = sdk.Export(read)
+var SYSTEM = sdk.Export(_init)
+
+func _init() {
 }
+
+func read() {
+	time1.Sleep(1*time1.Minute)
+}
+`
