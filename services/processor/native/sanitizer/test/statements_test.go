@@ -22,3 +22,11 @@ func TestCodeWithSendStatement(t *testing.T) {
 	require.Equal(t, `native code verification error: sending to channels not allowed`, err.Error())
 	require.Empty(t, output)
 }
+
+func TestCodeWithChannelDeclaration(t *testing.T) {
+	source := usecases.CreateChannel
+	output, err := sanitizer.NewSanitizer(SanitizerConfigForTests()).Process(source)
+	require.Error(t, err)
+	require.Equal(t, `native code verification error: channels not allowed`, err.Error())
+	require.Empty(t, output)
+}
