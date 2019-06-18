@@ -66,6 +66,7 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 				"Tick",
 				"NewTimer",
 				"NewTicker",
+				"Now",
 			},
 		},
 	}

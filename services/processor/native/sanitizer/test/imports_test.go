@@ -22,6 +22,14 @@ func TestCodeWithInvalidImport(t *testing.T) {
 	require.Empty(t, output)
 }
 
+func TestCodeWithNamedImport(t *testing.T) {
+	source := usecases.NamedImport
+	output, err := sanitizer.NewSanitizer(SanitizerConfigForTests()).Process(source)
+	require.Error(t, err)
+	require.Equal(t, `native code verification error: custom import names not allowed`, err.Error())
+	require.Empty(t, output)
+}
+
 func TestCodeWithJsonAndHex(t *testing.T) {
 	source := usecases.Serialization
 	output, err := sanitizer.NewSanitizer(native.SanitizerConfigForProduction()).Process(source)
