@@ -24,39 +24,40 @@ func (s *service) createSanitizer() *sanitizer.Sanitizer {
 
 func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 	return &sanitizer.SanitizerConfig{
-		ImportWhitelist: map[string]bool{
+		ImportWhitelist: map[string]string{
+			// package: reason to whitelist
+
 			// SDK
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`: true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:   true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  true,
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    true,
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`: "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:   "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    "SDK",
 
 			// Text
-			`"fmt"`:           true,
-			`"strings"`:       true,
-			`"strconv"`:       true,
-			`"text/template"`: true,
+			`"strings"`:       "Text manipulation",
+			`"strconv"`:       "Text manipulation",
+			`"text/template"`: "Text manipulation",
 
 			// Time
-			`"time"`: true,
+			`"time"`: "Time manipulation",
 
 			// Binary
-			`"bytes"`:           true,
-			`"encoding/binary"`: true,
-			`"io"`:              true,
+			`"bytes"`:           "Binary manipulation",
+			`"encoding/binary"`: "Binary manipulation",
+			`"io"`:              "Binary manipulation",
 
 			// Encoding
-			`"encoding/json"`:   true,
-			`"encoding/hex"`:    true,
-			`"encoding/base32"`: true,
-			`"encoding/base64"`: true,
+			`"encoding/json"`:   "Serialization",
+			`"encoding/hex"`:    "Serialization",
+			`"encoding/base32"`: "Serialization",
+			`"encoding/base64"`: "Serialization",
 
 			// Utils
-			`"sort"`: true,
+			`"sort"`: "Sorting collections of primitives",
 		},
 		FunctionBlacklist: map[string][]string{
 			"time": {

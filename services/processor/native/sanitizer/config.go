@@ -7,6 +7,6 @@
 package sanitizer
 
 type SanitizerConfig struct {
-	ImportWhitelist   map[string]bool
+	ImportWhitelist   map[string]string
 	FunctionBlacklist map[string][]string
 }
