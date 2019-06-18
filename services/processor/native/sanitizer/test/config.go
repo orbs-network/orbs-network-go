@@ -15,5 +15,8 @@ func SanitizerConfigForTests() *sanitizer.SanitizerConfig {
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`: true,
 			`"time"`: true,
 		},
+		FunctionBlacklist: map[string][]string{
+			`time`: {"Sleep", "After", "AfterFunc"},
+		},
 	}
 }

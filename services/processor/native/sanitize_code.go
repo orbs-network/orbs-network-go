@@ -6,7 +6,9 @@
 
 package native
 
-import "github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
+import (
+	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
+)
 
 func (s *service) sanitizeDeployedSourceCode(code string) (string, error) {
 	if s.config.ProcessorSanitizeDeployedContracts() {
@@ -55,6 +57,16 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 
 			// Utils
 			`"sort"`: true,
+		},
+		FunctionBlacklist: map[string][]string{
+			"time": {
+				"After",
+				"AfterFunc",
+				"Sleep",
+				"Tick",
+				"NewTimer",
+				"NewTicker",
+			},
 		},
 	}
 }

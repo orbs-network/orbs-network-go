@@ -32,10 +32,17 @@ func (s *Sanitizer) verifyDeclarationsAndStatements(astFile *ast.File) (err erro
 			case *ast.CallExpr:
 				expr := node.(*ast.CallExpr)
 				if expr, ok := expr.Fun.(*ast.SelectorExpr); ok {
-					if fmt.Sprintf("%s", expr.X) == "time" && fmt.Sprintf("%s", expr.Sel) == "Sleep" {
-						err = errors.New("time.Sleep not allowed")
-						return false
+					pkg := fmt.Sprintf("%s", expr.X)
+					f := fmt.Sprintf("%s", expr.Sel)
+					blacklist := s.config.FunctionBlacklist[pkg]
+
+					for _, blacklistedFunction := range blacklist {
+						if f == blacklistedFunction {
+							err = errors.Errorf("%s.%s not allowed", pkg, f)
+							return false
+						}
 					}
+
 				}
 			}
 			return true
