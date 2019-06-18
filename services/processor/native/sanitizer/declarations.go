@@ -7,6 +7,7 @@
 package sanitizer
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"go/ast"
 	"go/token"
@@ -27,6 +28,14 @@ func (s *Sanitizer) verifyDeclarationsAndStatements(astFile *ast.File) (err erro
 				if expr.Op == token.ARROW {
 					err = errors.New("sending to channels not allowed")
 					return false
+				}
+			case *ast.CallExpr:
+				expr := node.(*ast.CallExpr)
+				if expr, ok := expr.Fun.(*ast.SelectorExpr); ok {
+					if fmt.Sprintf("%s", expr.X) == "time" && fmt.Sprintf("%s", expr.Sel) == "Sleep" {
+						err = errors.New("time.Sleep not allowed")
+						return false
+					}
 				}
 			}
 			return true

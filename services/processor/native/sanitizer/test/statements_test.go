@@ -30,3 +30,11 @@ func TestCodeWithChannelDeclaration(t *testing.T) {
 	require.Equal(t, `native code verification error: channels not allowed`, err.Error())
 	require.Empty(t, output)
 }
+
+func TestCodeWithTimeSleep(t *testing.T) {
+	source := usecases.Sleep
+	output, err := sanitizer.NewSanitizer(SanitizerConfigForTests()).Process(source)
+	require.Error(t, err)
+	require.Equal(t, `native code verification error: time.Sleep not allowed`, err.Error())
+	require.Empty(t, output)
+}
