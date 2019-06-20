@@ -1,6 +1,6 @@
 *This is work in progress, it will turn into a Contributor's Guide in time.*
 
-## Design Principles
+## Design Principles 
 
 This section explains our way of dealing with common concerns in the project.
 
