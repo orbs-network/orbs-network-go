@@ -44,6 +44,7 @@ const START_HTTP_PORT = 8090
 
 type harness struct {
 	client *orbsClient.OrbsClient
+	config *E2EConfig
 }
 
 func newHarness() *harness {
@@ -51,6 +52,7 @@ func newHarness() *harness {
 
 	return &harness{
 		client: orbsClient.NewClient(config.baseUrl, config.virtualChainId, codec.NETWORK_TYPE_TEST_NET),
+		config: &config,
 	}
 }
 
