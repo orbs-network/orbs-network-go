@@ -78,6 +78,7 @@ func TestOrbsVotingContract_mirrorDelegationData_TransferDoesNotReplaceDelegate(
 
 func TestOrbsVotingContract_mirrorDelegationData_DelegateReplacesTransfer(t *testing.T) {
 	delegatorAddr := []byte{0x01}
+	agentOrgAddr := []byte{0x03}
 	agentAddr := []byte{0x02}
 	eventName := DELEGATION_NAME
 	eventBlockNumber := uint64(100)
@@ -88,6 +89,9 @@ func TestOrbsVotingContract_mirrorDelegationData_DelegateReplacesTransfer(t *tes
 		_setCurrentElectionBlockNumber(150)
 
 		// prepare
+		_setDelegatorAtIndex(0, delegatorAddr)
+		_setNumberOfDelegators(1)
+		state.WriteBytes(_formatDelegatorAgentKey(delegatorAddr[:]), agentOrgAddr)
 		state.WriteString(_formatDelegatorMethod(delegatorAddr), DELEGATION_BY_TRANSFER_NAME)
 		state.WriteUint64(_formatDelegatorBlockNumberKey(delegatorAddr), 105)
 		state.WriteUint32(_formatDelegatorBlockTxIndexKey(delegatorAddr), 50)
@@ -96,6 +100,7 @@ func TestOrbsVotingContract_mirrorDelegationData_DelegateReplacesTransfer(t *tes
 		_mirrorDelegationData(delegatorAddr, agentAddr, eventBlockNumber, eventBlockTxIndex, eventName)
 
 		// assert
+		require.Equal(t, 1, _getNumberOfDelegators())
 		require.EqualValues(t, agentAddr[:], state.ReadBytes(_formatDelegatorAgentKey(delegatorAddr)))
 		require.EqualValues(t, eventBlockNumber, state.ReadUint64(_formatDelegatorBlockNumberKey(delegatorAddr)))
 		require.EqualValues(t, eventBlockTxIndex, state.ReadUint32(_formatDelegatorBlockTxIndexKey(delegatorAddr)))

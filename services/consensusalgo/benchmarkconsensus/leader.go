@@ -154,7 +154,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := digest.SignAsNode(s.config.NodePrivateKey(), signedData)
+	sig, err := s.signer.Sign(signedData)
 	if err != nil {
 		return nil, err
 	}

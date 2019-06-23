@@ -152,7 +152,7 @@ func ForE2E(
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 2*time.Second)
 
-	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 100)
+	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1000)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
@@ -240,7 +240,6 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ganache
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")

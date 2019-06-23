@@ -32,6 +32,7 @@ type NodeConfig interface {
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
 
 	// benchmark consensus
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -101,6 +102,9 @@ type NodeConfig interface {
 
 	// NTP Network Time Protocol
 	NTPEndpoint() string
+
+	// Remote signer
+	SignerEndpoint() string
 }
 
 type OverridableConfig interface {
@@ -176,7 +180,6 @@ type StateStorageConfig interface {
 
 type TransactionPoolConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	VirtualChainId() primitives.VirtualChainId
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration
@@ -191,6 +194,11 @@ type TransactionPoolConfig interface {
 	TransactionPoolNodeSyncRejectTime() time.Duration
 }
 
+type TransactionPoolConfigForTests interface {
+	TransactionPoolConfig
+	SignerConfig
+}
+
 type EthereumCrosschainConnectorConfig interface {
 	EthereumFinalityTimeComponent() time.Duration
 	EthereumFinalityBlocksComponent() uint32
@@ -203,13 +211,19 @@ type NativeProcessorConfig interface {
 
 type LeanHelixConsensusConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	LeanHelixConsensusRoundTimeoutInterval() time.Duration
 	LeanHelixConsensusMaximumCommitteeSize() uint32
 	LeanHelixShowDebug() bool
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
+
+	InterNodeSyncAuditBlocksYoungerThan() time.Duration
+}
+
+type LeanHelixConsensusConfigForTests interface {
+	LeanHelixConsensusConfig
+	SignerConfig
 }
 
 type ValidatorNode interface {
@@ -224,4 +238,9 @@ type GossipPeer interface {
 type HttpServerConfig interface {
 	HttpAddress() string
 	Profiling() bool
+}
+
+type SignerConfig interface {
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	SignerEndpoint() string
 }

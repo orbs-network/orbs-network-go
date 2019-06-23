@@ -60,10 +60,13 @@ func _mirrorDelegationData(delegator []byte, agent []byte, eventBlockNumber uint
 	if stateMethod == DELEGATION_NAME && eventName == DELEGATION_BY_TRANSFER_NAME {
 		panic(fmt.Errorf("delegate with medthod %s from %v to %v failed since already have delegation with method %s",
 			eventName, delegator, agent, stateMethod))
+	} else if stateMethod == DELEGATION_BY_TRANSFER_NAME && eventName == DELEGATION_NAME {
+		stateBlockNumber = eventBlockNumber
 	} else if stateMethod == eventName {
 		stateBlockNumber = state.ReadUint64(_formatDelegatorBlockNumberKey(delegator))
 		stateBlockTxIndex := state.ReadUint32(_formatDelegatorBlockTxIndexKey(delegator))
 		if stateBlockNumber > eventBlockNumber || (stateBlockNumber == eventBlockNumber && stateBlockTxIndex >= eventBlockTxIndex) {
+			fmt.Println(" mirror error ")
 			panic(fmt.Errorf("delegate from %v to %v with block-height %d and tx-index %d failed since current delegation is from block-height %d and tx-index %d",
 				delegator, agent, eventBlockNumber, eventBlockTxIndex, stateBlockNumber, stateBlockTxIndex))
 		}

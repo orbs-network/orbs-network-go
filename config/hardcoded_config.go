@@ -50,6 +50,7 @@ const (
 	LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL = "LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL"
 	LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE"
 	LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE = "LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE"
+	INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN   = "INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN"
 	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
 
 	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH      = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
@@ -107,6 +108,8 @@ const (
 	HTTP_ADDRESS = "HTTP_ADDRESS"
 
 	NTP_ENDPOINT = "NTP_ENDPOINT"
+
+	SIGNER_ENDPOINT = "SIGNER_ENDPOINT"
 )
 
 func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
@@ -357,6 +360,10 @@ func (c *config) LeanHelixConsensusMaximumCommitteeSize() uint32 {
 	return c.kv[LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE].Uint32Value
 }
 
+func (c *config) InterNodeSyncAuditBlocksYoungerThan() time.Duration {
+	return c.kv[INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN].DurationValue
+}
+
 func (c *config) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
 }
@@ -403,4 +410,8 @@ func (c *config) HttpAddress() string {
 
 func (c *config) NTPEndpoint() string {
 	return c.kv[NTP_ENDPOINT].StringValue
+}
+
+func (c *config) SignerEndpoint() string {
+	return c.kv[SIGNER_ENDPOINT].StringValue
 }
