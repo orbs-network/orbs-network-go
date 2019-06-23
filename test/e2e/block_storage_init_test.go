@@ -9,6 +9,7 @@ package e2e
 import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 	"time"
 )
@@ -17,6 +18,12 @@ func TestInitialBlockHeight(t *testing.T) {
 	const expectedBlocks = 500
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
+	}
+
+	// This test is useless against remote networks since we cannot tamper with their storage
+	// So for the time being we skip this test.
+	if runningAgainstRemoteEnv := len(os.Getenv("API_ENDPOINT")) > 0; runningAgainstRemoteEnv == true {
+		t.Skip("Running against remote network - skipping")
 	}
 
 	runMultipleTimes(t, func(t *testing.T) {
