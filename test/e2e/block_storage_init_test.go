@@ -24,7 +24,7 @@ func TestInitialBlockHeight(t *testing.T) {
 
 		// This test is useless against remote networks since we cannot tamper with their storage
 		// So for the time being we skip this test
-		if !h.config.bootstrap {
+		if h.config.remoteEnvironment {
 			t.Skip("Running against remote network - skipping")
 		}
 
