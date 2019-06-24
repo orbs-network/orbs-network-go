@@ -8,17 +8,20 @@ package signer
 
 import (
 	"bytes"
+	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
 type Signer interface {
-	Sign(input []byte) ([]byte, error)
+	Sign(ctx context.Context, input []byte) ([]byte, error)
 }
 
 type local struct {
@@ -35,7 +38,7 @@ func NewLocalSigner(privateKey primitives.EcdsaSecp256K1PrivateKey) Signer {
 	}
 }
 
-func (c *local) Sign(input []byte) ([]byte, error) {
+func (c *local) Sign(ctx context.Context, input []byte) ([]byte, error) {
 	return digest.SignAsNode(c.privateKey, input)
 }
 
@@ -45,26 +48,40 @@ func NewSignerClient(address string) Signer {
 	}
 }
 
-// FIXME better error handling
-func (c *client) Sign(input []byte) ([]byte, error) {
+func (c *client) Sign(ctx context.Context, input []byte) ([]byte, error) {
 	nodeSignInput := (&services.NodeSignInputBuilder{
 		Data: input,
 	}).Build()
 
-	response, err := http.Post(c.address+"/sign", "binary/octet-stream", bytes.NewReader(nodeSignInput.Raw()))
+	request, err := http.NewRequest("POST", c.address+"/sign", bytes.NewReader(nodeSignInput.Raw()))
 	if err != nil {
-		return nil, err
+		log.Fatalf("%v", err)
+	}
+	request.Header.Set("Content-Type", "binary/octet-stream")
+	if traceContext, ok := trace.FromContext(ctx); ok {
+		traceContext.ToRequest(request)
 	}
 
-	defer response.Body.Close()
+	client := http.DefaultClient
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "error sending request to signer server")
+	}
+
+	defer func() {
+		err := response.Body.Close()
+		if err != nil {
+			log.Printf("Could not close response body.")
+		}
+	}()
 
 	if response.StatusCode != http.StatusOK {
-		return nil, errors.New("bad response")
+		return nil, errors.New("bad response code from signer server")
 	}
 
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not parse signer server response")
 	}
 
 	return services.NodeSignOutputReader(data).Signature(), nil

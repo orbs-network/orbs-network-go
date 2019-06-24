@@ -81,7 +81,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -106,7 +106,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -140,7 +140,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
 		signer.Reset()

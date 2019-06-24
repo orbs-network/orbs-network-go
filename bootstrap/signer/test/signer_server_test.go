@@ -7,9 +7,11 @@
 package test
 
 import (
+	"context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/signer"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	crypto "github.com/orbs-network/orbs-network-go/crypto/signer"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -42,12 +44,14 @@ func TestSignerServer(t *testing.T) {
 	defer server.GracefulShutdown(1 * time.Second)
 	c := crypto.NewSignerClient("http://" + address)
 
+	ctx := trace.NewContext(context.Background(), "test")
+
 	payload := []byte("payload")
 
 	signed, err := digest.SignAsNode(pk, payload)
 	require.NoError(t, err)
 
-	clientSignature, err := c.Sign(payload)
+	clientSignature, err := c.Sign(ctx, payload)
 	require.NoError(t, err)
 
 	require.EqualValues(t, signed, clientSignature)

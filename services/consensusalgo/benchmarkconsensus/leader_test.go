@@ -7,6 +7,7 @@
 package benchmarkconsensus
 
 import (
+	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -56,6 +57,6 @@ func TestLeaderBadKey(t *testing.T) {
 	}
 
 	require.Panics(t, func() {
-		s.leaderGenerateGenesisBlock()
+		s.leaderGenerateGenesisBlock(context.Background())
 	}, "should panic")
 }

@@ -7,6 +7,7 @@
 package leanhelixconsensus
 
 import (
+	"context"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
@@ -22,7 +23,7 @@ func TestSignAndVerifyConsensusMessage(t *testing.T) {
 	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	contentSig := mgr.SignConsensusMessage(1, content)
+	contentSig := mgr.SignConsensusMessage(context.Background(), 1, content)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
@@ -36,7 +37,7 @@ func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 	keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	contentSig := mgr.SignConsensusMessage(1, content)
+	contentSig := mgr.SignConsensusMessage(context.Background(), 1, content)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
@@ -53,7 +54,7 @@ func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 	content := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedMessage := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	contentSig := mgr.SignConsensusMessage(1, content)
+	contentSig := mgr.SignConsensusMessage(context.Background(), 1, content)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: contentSig,
@@ -68,7 +69,7 @@ func TestSignAndVerifyRandomSeed(t *testing.T) {
 	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)
+	randomSeedSig := mgr.SignRandomSeed(context.Background(), 1, randomSeed)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),
@@ -84,7 +85,7 @@ func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	tamperedRandomSeed := []byte{0, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)
+	randomSeedSig := mgr.SignRandomSeed(context.Background(), 1, randomSeed)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),
@@ -99,7 +100,7 @@ func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
 	mgr := NewKeyManager(log.DefaultTestingLogger(t), signer.NewLocalSigner(keyPair.PrivateKey()))
 	randomSeed := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	randomSeedSig := mgr.SignRandomSeed(1, randomSeed)
+	randomSeedSig := mgr.SignRandomSeed(context.Background(), 1, randomSeed)
 	senderSignature := lhprotocol.SenderSignatureBuilder{
 		MemberId:  lhprimitives.MemberId(keyPair.NodeAddress()),
 		Signature: lhprimitives.Signature(randomSeedSig),

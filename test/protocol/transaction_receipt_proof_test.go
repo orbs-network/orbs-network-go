@@ -7,6 +7,7 @@
 package protocol
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
@@ -133,7 +134,7 @@ func TestTransactionReceiptProof(t *testing.T) {
 	signaturesJSON := []*SenderSignatureJSON{}
 	for i := 0; i < 5; i++ {
 		kp := testKeys.EcdsaSecp256K1KeyPairForTests(i)
-		sig, err := signer.NewLocalSigner(kp.PrivateKey()).Sign(dataToSign)
+		sig, err := signer.NewLocalSigner(kp.PrivateKey()).Sign(context.Background(), dataToSign)
 		require.NoError(t, err)
 		nodeSignatures = append(nodeSignatures, &lhprotocol.SenderSignatureBuilder{
 			MemberId:  lhprimitives.MemberId(kp.NodeAddress()),

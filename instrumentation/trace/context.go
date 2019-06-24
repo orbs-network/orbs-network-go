@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/scribe/log"
+	"net/http"
 	"time"
 )
 
@@ -24,6 +25,34 @@ type Context struct {
 	requestId string
 }
 
+const RequestTraceName = "X-ORBS-NAME"
+const RequestTraceTime = "X-ORBS-CREATED"
+const RequestTraceRequestId = "X-ORBS-ID"
+
+func NewFromRequest(ctx context.Context, request *http.Request) context.Context {
+	name := request.Header.Get(RequestTraceName)
+	if name != "" {
+		created := time.Now()
+		if n, err := time.Parse(time.RFC3339Nano, request.Header.Get(RequestTraceTime)); err == nil {
+			created = n
+		}
+
+		traceContex := &Context{
+			name:      name,
+			created:   created,
+			requestId: request.Header.Get(RequestTraceRequestId),
+		}
+		return PropagateContext(ctx, traceContex)
+	}
+	return ctx
+}
+
+func (c *Context) ToRequest(request *http.Request) {
+	request.Header.Set(RequestTraceName, c.name)
+	request.Header.Set(RequestTraceTime, c.created.Format(time.RFC3339Nano))
+	request.Header.Set(RequestTraceRequestId, c.requestId)
+}
+
 func NewContext(parent context.Context, name string) context.Context {
 	now := time.Now()
 	ep := &Context{
@@ -36,7 +65,6 @@ func NewContext(parent context.Context, name string) context.Context {
 
 func PropagateContext(parent context.Context, tracingContext *Context) context.Context {
 	return context.WithValue(parent, entryPointKey, tracingContext)
-
 }
 
 func FromContext(ctx context.Context) (e *Context, ok bool) {
