@@ -20,12 +20,6 @@ async function eventuallyDeployed({ chainId, nodes }) {
 
     // First let's poll the nodes for the correct version
     let versionDeployed = false;
-
-    const promises = nodes.map(({ ip }) => {
-        console.log('waiting until commit for chain id: ', chainId, ' and IP: ', ip, ' and commit: ', chainSpecificTargetHash);
-        return waitUntilCommit(`${ip}/vchains/${chainId}`, chainSpecificTargetHash);
-    });
-
     let minuteCounter = 0;
 
     for (let i = 0; i <= 2; i++) {
@@ -36,6 +30,11 @@ async function eventuallyDeployed({ chainId, nodes }) {
         }
 
         try {
+            const promises = nodes.map(({ ip }) => {
+                console.log('waiting until commit for chain id: ', chainId, ' and IP: ', ip, ' and commit: ', chainSpecificTargetHash);
+                return waitUntilCommit(`${ip}/vchains/${chainId}`, chainSpecificTargetHash);
+            });
+
             waitForVersionPid = setInterval(async () => {
                 minuteCounter++;
                 console.log(`${minuteCounter}m Still waiting for nodes to come up with the right Node version`);
