@@ -39,7 +39,7 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
-
+	defer ctxCancel()
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))

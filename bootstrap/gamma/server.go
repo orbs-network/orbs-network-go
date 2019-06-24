@@ -49,7 +49,7 @@ func getLogger(silent bool) log.Logger {
 
 func StartGammaServer(config GammaServerConfig) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
-
+	defer cancel()
 	rootLogger := getLogger(config.Silent)
 
 	network := NewDevelopmentNetwork(ctx, rootLogger, config.OverrideConfigJson)
