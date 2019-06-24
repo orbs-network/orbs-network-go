@@ -51,6 +51,7 @@ then
 
     echo "Running the E2E suite against the newly deployed isolated chain for this PR.."
     export API_ENDPOINT=http://$TESTNET_NODE_IP/vchains/$PR_CHAIN_ID/ \
+        REMOTE_ENV="true" \
         STRESS_TEST_NUMBER_OF_TRANSACTIONS=100 \
         STRESS_TEST_FAILURE_RATE=20 \
         STRESS_TEST_TARGET_TPS=200 \
