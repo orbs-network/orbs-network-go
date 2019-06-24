@@ -27,8 +27,15 @@ async function eventuallyDeployed({ chainId, nodes }) {
     });
 
     try {
+        let minuteCounter = 0;
+        let waitForVersionPid = setInterval(async () => {
+            minuteCounter++;
+            console.log(`${minuteCounter}m Still waiting for nodes to come up with the right Node version`);
+        }, 60 * 1000);
+
         await Promise.all(promises);
         versionDeployed = true;
+        clearInterval(waitForVersionPid);
     } catch (err) {
         console.log(`Version ${chainSpecificTargetHash} might not be deployed on all CI testnet nodes!`);
         console.log('error provided:', err);
