@@ -22,7 +22,7 @@ async function eventuallyDeployed({ chainId, nodes }) {
     let versionDeployed = false;
     let minuteCounter = 0;
 
-    for (let i = 0; i <= 2; i++) {
+    for (let i = 0; i <= 4; i++) {
         let waitForVersionPid;
 
         if (versionDeployed) {
