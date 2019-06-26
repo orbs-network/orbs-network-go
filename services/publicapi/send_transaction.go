@@ -43,6 +43,7 @@ func (s *service) SendTransactionAsync(parentCtx context.Context, input *service
 
 func (s *service) sendTransaction(ctx context.Context, request *client.SendTransactionRequest, asyncMode bool) (*txOutput, error) {
 	s.metrics.totalTransactionsFromClients.Inc()
+	s.metrics.transactionsPerSecond.Measure(1)
 	if request == nil {
 		s.metrics.totalTransactionsErrNilRequest.Inc()
 		err := errors.Errorf("client request is nil")
