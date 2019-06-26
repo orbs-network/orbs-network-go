@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -39,18 +40,54 @@ type service struct {
 	transport       adapter.Transport
 	handlers        gossipListeners
 	headerValidator *headerValidator
+
+	transactionRelayChannel   chan gossipMessage
+	blockSyncChannel          chan gossipMessage
+	leanHelixChannel          chan gossipMessage
+	benchmarkConsensusChannel chan gossipMessage
 }
 
-func NewGossip(transport adapter.Transport, config Config, logger log.Logger) services.Gossip {
+type gossipMessage struct {
+	header   *gossipmessages.Header
+	payloads [][]byte
+}
+
+func NewGossip(transport adapter.Transport, config Config, parent log.Logger) services.Gossip {
+	logger := parent.WithTags(LogTag)
 	s := &service{
 		transport:       transport,
 		config:          config,
-		logger:          logger.WithTags(LogTag),
+		logger:          logger,
 		handlers:        gossipListeners{},
-		headerValidator: newHeaderValidator(config, logger),
+		headerValidator: newHeaderValidator(config, parent),
+
+		transactionRelayChannel:   make(chan gossipMessage),
+		blockSyncChannel:          make(chan gossipMessage),
+		leanHelixChannel:          make(chan gossipMessage),
+		benchmarkConsensusChannel: make(chan gossipMessage),
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
+
+	ctx := context.TODO()
+	runGossipTopicHandler(ctx, logger, s.transactionRelayChannel, s.receivedTransactionRelayMessage)
+	runGossipTopicHandler(ctx, logger, s.blockSyncChannel, s.receivedBlockSyncMessage)
+	runGossipTopicHandler(ctx, logger, s.leanHelixChannel, s.receivedLeanHelixMessage)
+	runGossipTopicHandler(ctx, logger, s.benchmarkConsensusChannel, s.receivedBenchmarkConsensusMessage)
+
 	return s
+}
+
+func runGossipTopicHandler(ctx context.Context, logger log.Logger, ch chan gossipMessage, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) supervised.ContextEndedChan {
+	return supervised.GoForever(ctx, logger, func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case message := <-ch:
+				handler(ctx, message.header, message.payloads)
+			}
+		}
+	})
 }
 
 func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
@@ -73,12 +110,12 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
 	switch header.Topic() {
 	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
-		s.receivedTransactionRelayMessage(ctx, header, payloads[1:])
+		s.transactionRelayChannel <- gossipMessage{header: header, payloads: payloads[1:]} //TODO should the channel have *gossipMessage as type
 	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
-		s.receivedLeanHelixMessage(ctx, header, payloads[1:])
+		s.leanHelixChannel <- gossipMessage{header: header, payloads: payloads[1:]} //TODO should the channel have *gossipMessage as type
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
-		s.receivedBenchmarkConsensusMessage(ctx, header, payloads[1:])
+		s.benchmarkConsensusChannel <- gossipMessage{header: header, payloads: payloads[1:]} //TODO should the channel have *gossipMessage as type
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
-		s.receivedBlockSyncMessage(ctx, header, payloads[1:])
+		s.blockSyncChannel <- gossipMessage{header: header, payloads: payloads[1:]} //TODO should the channel have *gossipMessage as type
 	}
 }
