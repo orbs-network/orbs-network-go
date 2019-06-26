@@ -8,7 +8,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -48,22 +50,28 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 		g.RegisterTransactionRelayHandler(trh)
 		g.RegisterBlockSyncHandler(bsh)
 
+		blockSyncNotify := make(chan struct{})
 		bsh.When("HandleBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(nested context.Context, input *gossiptopics.BlockAvailabilityRequestInput) {
+			close(blockSyncNotify)
 			time.Sleep(1 * time.Hour)
 		})
 
 		trh.When("HandleForwardedTransactions", mock.Any, mock.Any).Times(1).Return(&gossiptopics.EmptyOutput{}, nil)
 
 		require.NoError(t, transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress: cfg.NodeAddress(),
-			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-			Payloads:          aBlockSyncRequest(),
+			SenderNodeAddress:      []byte{0x02},
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{cfg.NodeAddress()},
+			Payloads:               aBlockSyncRequest(t),
 		}))
 
+		<-blockSyncNotify
+
 		require.NoError(t, transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress: cfg.NodeAddress(),
-			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-			Payloads:          aTransactionRelayRequest(),
+			SenderNodeAddress:      []byte{0x02},
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{cfg.NodeAddress()},
+			Payloads:               aTransactionRelayRequest(t),
 		}))
 
 		require.NoError(t, test.EventuallyVerify(1*time.Second, trh, bsh), "mocks were not invoked as expected")
@@ -71,8 +79,14 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 	})
 }
 
-func aBlockSyncRequest() [][]byte {
-	message := &gossipmessages.BlockAvailabilityRequestMessage{
+func aBlockSyncRequest(t testing.TB) [][]byte {
+	header := &gossipmessages.HeaderBuilder{
+		Topic:          gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
+		BlockSync:      gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
+		RecipientMode:  gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		VirtualChainId: 42,
+	}
+	payloads, err := codec.EncodeBlockAvailabilityRequest(header.Build(), &gossipmessages.BlockAvailabilityRequestMessage{
 		SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
 			BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
 			FirstBlockHeight:         1001,
@@ -83,12 +97,13 @@ func aBlockSyncRequest() [][]byte {
 			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
 			Signature:         []byte{0x04, 0x05, 0x06},
 		}).Build(),
-	}
-	payloads, _ := codec.EncodeBlockAvailabilityRequest((&gossipmessages.HeaderBuilder{}).Build(), message)
+	})
+
+	require.NoError(t, err, "encoding failed")
 	return payloads
 }
 
-func aTransactionRelayRequest() [][]byte {
+func aTransactionRelayRequest(t testing.TB) [][]byte {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:            gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY,
 		TransactionRelay: gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS,
@@ -96,6 +111,13 @@ func aTransactionRelayRequest() [][]byte {
 		VirtualChainId:   42,
 	}).Build()
 
-	payloads, _ := codec.EncodeForwardedTransactions(header, &gossipmessages.ForwardedTransactionsMessage{})
+	payloads, err := codec.EncodeForwardedTransactions(header, &gossipmessages.ForwardedTransactionsMessage{
+		Sender: (&gossipmessages.SenderSignatureBuilder{
+			SenderNodeAddress: []byte{0x01, 0x02, 0x03},
+			Signature:         []byte{0x04, 0x05, 0x06},
+		}).Build(),
+		SignedTransactions: transactionpool.Transactions{builders.TransferTransaction().Build()},
+	})
+	require.NoError(t, err, "encoding failed")
 	return payloads
 }
