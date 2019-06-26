@@ -1,9 +1,7 @@
 # Orbs Network Metrics Overview
 
-This overview provides a list of Orbs network node metrics that we deem significant because they provide valuable insight into node and virtual chain status.
-We expect the Orbs community to develop multiple monitoring tools for the nodes, that can serve validators, guardians, and app developers.
-
-Therefore, we have to highlight some metrics that might help with this task.
+This overview provides a list of Orbs network node metrics that we deem significant because they provide valuable insights into node and virtual chain status.
+We expect and encourage the Orbs community to develop multiple monitoring tools for the nodes, that can serve Validators, Guardians, and app developers. The following metrics might help with this task.
 
 Our goal is to recommend metrics for 4 types of monitoring:
 1. Single node monitoring - mostly relevant for Validators to monitor their own node
@@ -130,4 +128,4 @@ Meaning:
 Relevant values:
 * Specific to the tag on Github that corresponds with semantic version
 
-Useful to node operators.
+Useful to node operators
