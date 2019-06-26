@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -41,22 +42,24 @@ func (f *fakeFed) NodeAddress() primitives.NodeAddress {
 }
 
 func TestLeaderBadKey(t *testing.T) {
-	nodes := make(map[string]config.ValidatorNode)
+	test.WithContext(func(ctx context.Context) {
+		nodes := make(map[string]config.ValidatorNode)
 
-	for i := 1; i < 6; i++ {
-		nodes[fmt.Sprintf("fake-key-node%d", i)] = nil
-	}
-	fake := &fakeFed{}
-	nodes["fake-key-node0"] = fake
+		for i := 1; i < 6; i++ {
+			nodes[fmt.Sprintf("fake-key-node%d", i)] = nil
+		}
+		fake := &fakeFed{}
+		nodes["fake-key-node0"] = fake
 
-	cfg := config.ForProduction("")
-	cfg.SetGenesisValidatorNodes(nodes)
+		cfg := config.ForProduction("")
+		cfg.SetGenesisValidatorNodes(nodes)
 
-	s := &service{
-		config: cfg,
-	}
+		s := &service{
+			config: cfg,
+		}
 
-	require.Panics(t, func() {
-		s.leaderGenerateGenesisBlock(context.Background())
-	}, "should panic")
+		require.Panics(t, func() {
+			s.leaderGenerateGenesisBlock(ctx)
+		}, "should panic")
+	})
 }

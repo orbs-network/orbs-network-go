@@ -33,7 +33,7 @@ func NewService(config ServiceConfig, logger log.Logger) services.Vault {
 func (s *service) NodeSign(ctx context.Context, input *services.NodeSignInput) (*services.NodeSignOutput, error) {
 	signature, err := signer.NewLocalSigner(s.config.NodePrivateKey()).Sign(ctx, input.Data())
 	if err != nil {
-		s.logger.Info("Node sign error", log.Error(err))
+		s.logger.Error("Node sign error", log.Error(err))
 		return nil, err
 	}
 

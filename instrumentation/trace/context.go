@@ -31,23 +31,24 @@ const RequestTraceRequestId = "X-ORBS-ID"
 
 func NewFromRequest(ctx context.Context, request *http.Request) context.Context {
 	name := request.Header.Get(RequestTraceName)
-	if name != "" {
-		created := time.Now()
-		if n, err := time.Parse(time.RFC3339Nano, request.Header.Get(RequestTraceTime)); err == nil {
-			created = n
-		}
-
-		traceContex := &Context{
-			name:      name,
-			created:   created,
-			requestId: request.Header.Get(RequestTraceRequestId),
-		}
-		return PropagateContext(ctx, traceContex)
+	if name == "" {
+		return ctx
 	}
-	return ctx
+
+	created := time.Now()
+	if n, err := time.Parse(time.RFC3339Nano, request.Header.Get(RequestTraceTime)); err == nil {
+		created = n
+	}
+
+	traceContext := &Context{
+		name:      name,
+		created:   created,
+		requestId: request.Header.Get(RequestTraceRequestId),
+	}
+	return PropagateContext(ctx, traceContext)
 }
 
-func (c *Context) ToRequest(request *http.Request) {
+func (c *Context) WriteTraceToRequest(request *http.Request) {
 	request.Header.Set(RequestTraceName, c.name)
 	request.Header.Set(RequestTraceTime, c.created.Format(time.RFC3339Nano))
 	request.Header.Set(RequestTraceRequestId, c.requestId)

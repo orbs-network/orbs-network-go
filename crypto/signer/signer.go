@@ -55,11 +55,11 @@ func (c *client) Sign(ctx context.Context, input []byte) ([]byte, error) {
 
 	request, err := http.NewRequest("POST", c.address+"/sign", bytes.NewReader(nodeSignInput.Raw()))
 	if err != nil {
-		log.Fatalf("%v", err)
+		return nil, errors.Wrap(err, "error creating request to signer server")
 	}
 	request.Header.Set("Content-Type", "binary/octet-stream")
 	if traceContext, ok := trace.FromContext(ctx); ok {
-		traceContext.ToRequest(request)
+		traceContext.WriteTraceToRequest(request)
 	}
 
 	client := http.DefaultClient
@@ -69,8 +69,8 @@ func (c *client) Sign(ctx context.Context, input []byte) ([]byte, error) {
 	}
 
 	defer func() {
-		err := response.Body.Close()
-		if err != nil {
+		err2 := response.Body.Close()
+		if err2 != nil {
 			log.Printf("Could not close response body.")
 		}
 	}()

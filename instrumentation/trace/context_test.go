@@ -52,7 +52,7 @@ func TestTranslateToRequestAndBack(t *testing.T) {
 	ep, _ := FromContext(ctx)
 
 	request, _ := http.NewRequest("Get", "localhost", nil)
-	ep.ToRequest(request)
+	ep.WriteTraceToRequest(request)
 
 	require.Equal(t, "foo", request.Header.Get(RequestTraceName))
 
@@ -61,6 +61,5 @@ func TestTranslateToRequestAndBack(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, ep.name, ep2.name)
 	require.Equal(t, ep.requestId, ep2.requestId)
-	// had to compare this "flat" as the now function of time adds a debug string for monotonic that i can't seem to clear otherwise
-	require.EqualValues(t, ep.created.UnixNano(), ep2.created.UnixNano(), "%s %s", ep.created, ep2.created)
+	require.True(t, ep.created.Equal(ep2.created))
 }
