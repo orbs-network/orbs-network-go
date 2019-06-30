@@ -96,10 +96,10 @@ type gossipMessageDispatcher map[gossipmessages.HeaderTopic]chan gossipMessage
 
 func makeMessageDispatcher() (d gossipMessageDispatcher) {
 	d = make(gossipMessageDispatcher)
-	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = make(chan gossipMessage)
-	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = make(chan gossipMessage)
-	d[gossipmessages.HEADER_TOPIC_LEAN_HELIX] = make(chan gossipMessage)
-	d[gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS] = make(chan gossipMessage)
+	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = make(chan gossipMessage, 100)
+	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = make(chan gossipMessage, 100)
+	d[gossipmessages.HEADER_TOPIC_LEAN_HELIX] = make(chan gossipMessage, 100)
+	d[gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS] = make(chan gossipMessage, 100)
 	return
 }
 
