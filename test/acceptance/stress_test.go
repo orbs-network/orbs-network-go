@@ -32,6 +32,7 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 	getStressTestHarness().
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
+			"already stored Preprepare.*",                        // because LH will try to store PREPREPARE twice - see lean-helix-go at term_in_committee.go:validatePreprepare()
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
 			network.TransportTamperer().Duplicate(WithPercentChance(rnd, 15))

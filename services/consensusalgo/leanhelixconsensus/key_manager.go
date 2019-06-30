@@ -8,6 +8,7 @@ package leanhelixconsensus
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
@@ -33,16 +34,16 @@ func NewKeyManager(logger log.Logger, signer signer.Signer) *keyManager {
 	}
 }
 
-func (km *keyManager) SignConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.Signature {
-	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+func (km *keyManager) SignConsensusMessage(ctx context.Context, blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.Signature {
+	sig, err := km.signer.Sign(ctx, content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
 	if err != nil {
 		km.logger.Error("failed to sign consensus message", log.Error(err))
 	}
 	return lhprimitives.Signature(sig)
 }
 
-func (km *keyManager) SignRandomSeed(blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.RandomSeedSignature {
-	sig, err := km.signer.Sign(content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
+func (km *keyManager) SignRandomSeed(ctx context.Context, blockHeight lhprimitives.BlockHeight, content []byte) lhprimitives.RandomSeedSignature {
+	sig, err := km.signer.Sign(ctx, content) // TODO(v1): handle error (log) https://tree.taiga.io/project/orbs-network/us/603
 	if err != nil {
 		km.logger.Error("failed to sign random seed", log.Error(err))
 	}
