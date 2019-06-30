@@ -42,7 +42,7 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 		}
 		transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
-		g := gossip.NewGossip(transport, cfg, logger)
+		g := gossip.NewGossip(ctx, transport, cfg, logger)
 
 		trh := &gossiptopics.MockTransactionRelayHandler{}
 		bsh := &gossiptopics.MockBlockSyncHandler{}
