@@ -122,7 +122,7 @@ func (d gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logg
 			for {
 				select {
 				case <-ctx.Done():
-					return”
+					return
 				case message := <-ch:
 					handler(ctx, message.header, message.payloads)
 				}
