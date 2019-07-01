@@ -118,10 +118,12 @@ func TestWithNPctChance_ManualCheck(t *testing.T) {
 	t.Logf("Manual test for WithPercentChance: Tries=%d Chance=%d%% Hits=%d\n", tries, pct, hits)
 }
 
-func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHarness, t testing.TB, numTransactions int, ctrlRand *rand.ControlledRand) {
+func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHarness, t testing.TB, numTransactions int, ctrlRand *rand.ControlledRand) (transferDuration time.Duration, waitDuration time.Duration) {
 	fromAddress := 5
 	toAddress := 6
 	contract := network.DeployBenchmarkTokenContract(ctx, fromAddress)
+
+	start := time.Now()
 
 	var expectedSum uint64 = 0
 	var txHashes []primitives.Sha256
@@ -132,9 +134,15 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHar
 		txHash := contract.TransferInBackground(ctx, ctrlRand.Intn(network.Size()), amount, fromAddress, toAddress)
 		txHashes = append(txHashes, txHash)
 	}
+
+	transferDuration = time.Since(start)
+	startWaiting := time.Now()
+
 	for _, txHash := range txHashes {
 		network.WaitForTransactionInState(ctx, txHash)
 	}
+
+	waitDuration = time.Since(startWaiting)
 
 	for i := 0; i < network.Size(); i++ {
 		actualSum := contract.GetBalance(ctx, i, toAddress)
@@ -143,4 +151,6 @@ func sendTransfersAndAssertTotalBalance(ctx context.Context, network *NetworkHar
 		actualRemainder := contract.GetBalance(ctx, i, fromAddress)
 		require.EqualValuesf(t, benchmarktoken.TOTAL_SUPPLY-expectedSum, actualRemainder, "sender balance did not equal expected balance in node %d", i)
 	}
+
+	return
 }
