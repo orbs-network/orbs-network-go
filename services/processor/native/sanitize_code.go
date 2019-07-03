@@ -28,14 +28,17 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			// package: reason to whitelist
 
 			// SDK
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:          "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:  "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:      "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`: "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:   "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`: "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:  "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:    "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:                      "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"`:              "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"`:                  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"`:             "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"`:               "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath"`:             "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint32"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"`:  "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint256"`: "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"`:              "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:                "SDK",
 
 			// Text
 			`"strings"`:       "Text manipulation",
