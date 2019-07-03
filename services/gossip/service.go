@@ -94,12 +94,15 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 
 type gossipMessageDispatcher map[gossipmessages.HeaderTopic]chan gossipMessage
 
+// These channels are buffered because we don't want to assume that the topic consumers behave nicely
+// In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
+// and Transaction Relay shouldn't block for long anyway.
 func makeMessageDispatcher() (d gossipMessageDispatcher) {
 	d = make(gossipMessageDispatcher)
-	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = make(chan gossipMessage, 100)
-	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = make(chan gossipMessage, 100)
-	d[gossipmessages.HEADER_TOPIC_LEAN_HELIX] = make(chan gossipMessage, 100)
-	d[gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS] = make(chan gossipMessage, 100)
+	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = make(chan gossipMessage, 10)
+	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = make(chan gossipMessage, 10)
+	d[gossipmessages.HEADER_TOPIC_LEAN_HELIX] = make(chan gossipMessage, 10)
+	d[gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS] = make(chan gossipMessage, 10)
 	return
 }
 
