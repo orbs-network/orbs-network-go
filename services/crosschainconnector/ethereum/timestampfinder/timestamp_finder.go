@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"math/big"
 	"sync"
 	"time"
 )
@@ -24,7 +23,7 @@ const TIMESTAMP_FINDER_MAX_STEPS = 1000
 const TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS = 10
 
 type TimestampFinder interface {
-	FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error)
+	FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*BlockNumberAndTime, error)
 }
 
 type finder struct {
@@ -64,7 +63,7 @@ func NewTimestampFinder(btg BlockTimeGetter, logger log.Logger, metrics metric.F
 	return &finder{btg: btg, logger: logger, metrics: newTimestampFinderMetrics(metrics)}
 }
 
-func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*big.Int, error) {
+func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*BlockNumberAndTime, error) {
 	start := time.Now()
 	f.metrics.totalTimesCalled.Inc()
 
@@ -155,7 +154,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	return nil, errors.Errorf("ethereum timestamp finder went over maximum steps %d, reference timestamp %d", TIMESTAMP_FINDER_MAX_STEPS, referenceTimestampNano)
 }
 
-func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, steps int) (*big.Int, error) {
+func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.TimestampNano, below *BlockNumberAndTime, above *BlockNumberAndTime, steps int) (*BlockNumberAndTime, error) {
 	f.setLastResultCache(below, above)
 	f.metrics.stepsRequired.Measure(int64(steps))
 	// the block below is the one we actually return as result
@@ -164,22 +163,26 @@ func (f *finder) returnConfirmedResult(referenceTimestampNano primitives.Timesta
 		log.Uint64("reference-timestamp", referenceTimestampNano.KeyForMap()),
 		log.Int64("result-number", below.BlockNumber),
 		log.Uint64("result-timestamp", below.BlockTimeNano.KeyForMap()))
-	return big.NewInt(below.BlockNumber), nil
+	return below, nil
 }
 
-func (f *finder) getLastResultCache() (below BlockNumberAndTime, above BlockNumberAndTime) {
+func (f *finder) getLastResultCache() (below *BlockNumberAndTime, above *BlockNumberAndTime) {
 	f.lastResultCache.RLock()
 	defer f.lastResultCache.RUnlock()
 	if f.lastResultCache.below != nil {
-		below = *f.lastResultCache.below
+		below = f.lastResultCache.below
+	} else {
+		below = &BlockNumberAndTime{}
 	}
 	if f.lastResultCache.above != nil {
-		above = *f.lastResultCache.above
+		above = f.lastResultCache.above
+	} else {
+		above = &BlockNumberAndTime{}
 	}
 	return
 }
 
-func (f *finder) setLastResultCache(below BlockNumberAndTime, above BlockNumberAndTime) {
+func (f *finder) setLastResultCache(below *BlockNumberAndTime, above *BlockNumberAndTime) {
 	f.lastResultCache.Lock()
 	defer f.lastResultCache.Unlock()
 	f.lastResultCache.below = &BlockNumberAndTime{BlockNumber: below.BlockNumber, BlockTimeNano: below.BlockTimeNano}

@@ -8,53 +8,55 @@ package ethereum
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
-func getFinalitySafeBlockNumber(ctx context.Context, referenceTimestamp primitives.TimestampNano, timestampFinder timestampfinder.TimestampFinder, config config.EthereumCrosschainConnectorConfig) (*big.Int, error) {
+func (s *service) getFinalitySafeBlockNumber(ctx context.Context, referenceTimestamp primitives.TimestampNano) (*timestampfinder.BlockNumberAndTime, error) {
 	// regard finality time component
-	augmentedReferenceTimestamp := referenceTimestamp - primitives.TimestampNano(config.EthereumFinalityTimeComponent().Nanoseconds())
+	augmentedReferenceTimestamp := referenceTimestamp - primitives.TimestampNano(s.config.EthereumFinalityTimeComponent().Nanoseconds())
 
 	// find the latest block number
-	blockNumber, err := timestampFinder.FindBlockByTimestamp(ctx, augmentedReferenceTimestamp)
+	blockNumberAndTime, err := s.timestampFinder.FindBlockByTimestamp(ctx, augmentedReferenceTimestamp)
 	if err != nil {
 		return nil, err
 	}
 
 	// geth simulator returns nil from FindBlockByTimestamp
-	if blockNumber == nil {
-		return nil, nil
+	if blockNumberAndTime == nil {
+		return nil, errors.New("failed getting an actual current block from Ethereum")
 	}
 
 	// regard finality blocks component
-	finalityBlocks := big.NewInt(int64(config.EthereumFinalityBlocksComponent()))
-	result := new(big.Int).Sub(blockNumber, finalityBlocks)
+	finalityBlocks := int64(s.config.EthereumFinalityBlocksComponent())
+	resultBlock := blockNumberAndTime.BlockNumber - finalityBlocks
 
 	// make sure result is not below 1 (the first block)
-	if result.Cmp(big.NewInt(1)) < 0 {
-		return nil, errors.Errorf("there are not enough blocks to reach a finality safe block, finality safe block is %v", result)
+	if resultBlock < 1 {
+		return nil, errors.Errorf("there are not enough blocks to reach a finality safe block, finality safe block is %v", resultBlock)
 	}
 
+	result, err := s.blockTimeGetter.GetTimestampForBlockNumber(ctx, big.NewInt(resultBlock))
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
-func verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano, timestampFinder timestampfinder.TimestampFinder, config config.EthereumCrosschainConnectorConfig) error {
-	safeBlockNumberBigInt, err := getFinalitySafeBlockNumber(ctx, referenceTimestamp, timestampFinder, config)
+func (s *service) verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano) error {
+	safeBlockNumber, err := s.getFinalitySafeBlockNumber(ctx, referenceTimestamp)
 	if err != nil {
 		return err
 	}
 
 	// geth simulator returns nil from FindBlockByTimestamp
-	if safeBlockNumberBigInt == nil {
+	if safeBlockNumber == nil {
 		return nil
 	}
 
-	safeBlockNumber := safeBlockNumberBigInt.Uint64()
-	if blockNumber > safeBlockNumber {
+	if blockNumber > uint64(safeBlockNumber.BlockNumber) {
 		return errors.Errorf("ethereum block number %d is unsafe for finality, latest safe block number is %d", blockNumber, safeBlockNumber)
 	}
 

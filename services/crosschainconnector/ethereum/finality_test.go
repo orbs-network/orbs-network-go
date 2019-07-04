@@ -19,11 +19,13 @@ import (
 )
 
 const RECENT_TIMESTAMP = primitives.TimestampNano(1505735343000000000)
-const RECENT_BLOCK_NUMBER_OF_FAKE_GETTER = 938874
+const FINALITY_BLOCK_TIME = primitives.TimestampNano(1505734591000000000)
+const RECENT_BLOCK_NUMBER = 938874
+const FINALITY_BLOCK_NUMBER = 938774
+const FINALITY_BLOCKS = 100
 
 type harness struct {
-	cfg    *finalityConfig
-	finder timestampfinder.TimestampFinder
+	service *service
 }
 
 func newHarness(t testing.TB, fct time.Duration, fbc uint32) *harness {
@@ -33,9 +35,17 @@ func newHarness(t testing.TB, fct time.Duration, fbc uint32) *harness {
 	btg := timestampfinder.NewFakeBlockTimeGetter(logger)
 	finder := timestampfinder.NewTimestampFinder(btg, logger, metric.NewRegistry())
 
+	blockTimeGetter := timestampfinder.NewFakeBlockTimeGetter(logger)
+	s := &service{
+		connection:      nil,
+		blockTimeGetter: blockTimeGetter,
+		timestampFinder: finder,
+		logger:          logger,
+		config:          cfg,
+	}
+
 	h := &harness{
-		cfg:    cfg,
-		finder: finder,
+		service: s,
 	}
 	return h
 }
@@ -44,21 +54,23 @@ func TestFinality_GetSafeBlockWithoutLimits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, 0, 0)
 
-		safeBlockNumber, err := getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP, h.finder, h.cfg)
-		t.Log("safe block number is", safeBlockNumber)
+		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+		t.Log("safe block number is", safeBlockNumberAndTime)
 		require.NoError(t, err, "should not fail")
-		require.EqualValues(t, RECENT_BLOCK_NUMBER_OF_FAKE_GETTER, safeBlockNumber.Uint64(), "should return the recent block number of fake getter")
+		require.EqualValues(t, RECENT_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return the recent block number of fake getter")
+		require.EqualValues(t, RECENT_TIMESTAMP, safeBlockNumberAndTime.BlockTimeNano, "should return the recent block time of fake getter")
 	})
 }
 
 func TestFinality_GetSafeBlockWithBlockLimit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 0, 100)
+		h := newHarness(t, 0, FINALITY_BLOCKS)
 
-		safeBlockNumber, err := getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP, h.finder, h.cfg)
-		t.Log("safe block number is", safeBlockNumber)
+		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+		t.Log("safe block number is", safeBlockNumberAndTime)
 		require.NoError(t, err, "should not fail")
-		require.EqualValues(t, RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-100, safeBlockNumber.Uint64(), "should return 100 blocks before the recent block number of fake getter")
+		require.EqualValues(t, FINALITY_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return 100 blocks before the recent block number of fake getter")
+		require.EqualValues(t, FINALITY_BLOCK_TIME, safeBlockNumberAndTime.BlockTimeNano, "should return time of block which is 100 blocks before the recent block time of fake getter")
 	})
 }
 
@@ -66,10 +78,10 @@ func TestFinality_GetSafeBlockWithTimeLimit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, 200*time.Second, 0)
 
-		safeBlockNumber, err := getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP, h.finder, h.cfg)
-		t.Log("safe block number is", safeBlockNumber)
+		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+		t.Log("safe block number is", safeBlockNumberAndTime)
 		require.NoError(t, err, "should not fail")
-		require.Truef(t, safeBlockNumber.Uint64() < RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-10, "should return at least 10 blocks before the recent block number of fake getter, but difference is %d", RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-safeBlockNumber.Uint64())
+		require.Truef(t, safeBlockNumberAndTime.BlockNumber < RECENT_BLOCK_NUMBER-10, "should return at least 10 blocks before the recent block number of fake getter, but difference is %d", RECENT_BLOCK_NUMBER-safeBlockNumberAndTime.BlockNumber)
 	})
 }
 
@@ -77,7 +89,7 @@ func TestFinality_GetSafeBlockWithBlockLimit_WhenNotEnoughBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, 0, 2*timestampfinder.FAKE_CLIENT_NUMBER_OF_BLOCKS)
 
-		safeBlockNumber, err := getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP, h.finder, h.cfg)
+		safeBlockNumber, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
 		t.Log("safe block number is", safeBlockNumber)
 		require.Error(t, err, "should fail because not enough blocks")
 	})
@@ -87,13 +99,13 @@ func TestFinality_VerifySafeBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, 0, 100)
 
-		err := verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-100, RECENT_TIMESTAMP, h.finder, h.cfg)
+		err := h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-100, RECENT_TIMESTAMP)
 		require.NoError(t, err, "100 difference should be safe")
 
-		err = verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-101, RECENT_TIMESTAMP, h.finder, h.cfg)
+		err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-101, RECENT_TIMESTAMP)
 		require.NoError(t, err, "101 difference should be safe")
 
-		err = verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER_OF_FAKE_GETTER-99, RECENT_TIMESTAMP, h.finder, h.cfg)
+		err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-99, RECENT_TIMESTAMP)
 		require.Error(t, err, "99 difference should not be safe")
 	})
 }
@@ -102,7 +114,7 @@ func TestFinality_GetSafeBlockNeverReturnsNegative(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, 2*time.Minute, 90)
 
-		_, err := getFinalitySafeBlockNumber(ctx, primitives.TimestampNano(timestampfinder.FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS*time.Second+3*time.Minute), h.finder, h.cfg)
+		_, err := h.service.getFinalitySafeBlockNumber(ctx, primitives.TimestampNano(timestampfinder.FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS*time.Second+3*time.Minute))
 		require.Error(t, err, "should fail due to negative block number")
 	})
 }
