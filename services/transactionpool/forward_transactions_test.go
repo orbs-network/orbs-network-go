@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
-	test2 "github.com/orbs-network/orbs-network-go/crypto/signer/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -81,7 +80,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -106,7 +105,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -123,7 +122,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
 
-		signer := &test2.FaultySigner{}
+		signer := &FaultySigner{}
 		signer.When("Sign", mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
 
 		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
@@ -140,7 +139,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := signer.Sign(oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
 		signer.Reset()
@@ -150,4 +149,13 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 
 		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*3, gossip), "mocks were not called as expected")
 	})
+}
+
+type FaultySigner struct {
+	mock.Mock
+}
+
+func (c *FaultySigner) Sign(ctx context.Context, input []byte) ([]byte, error) {
+	call := c.Called(input)
+	return call.Get(0).([]byte), call.Error(1)
 }

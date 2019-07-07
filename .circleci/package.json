@@ -7,7 +7,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@orbs-network/orbs-nebula": "^1.1.2",
+    "@orbs-network/orbs-nebula": "https://github.com/orbs-network/nebula.git#master",
     "node-fetch": "^2.3.0"
   }
 }

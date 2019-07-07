@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -37,6 +38,7 @@ type networkHarnessBuilder struct {
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
 	setupFunc                func(ctx context.Context, network *NetworkHarness)
+	configOverride           func(config config.OverridableConfig) config.OverridableConfig
 	logFilters               []log.Filter
 	maxTxPerBlock            uint32
 	allowedErrors            []string
@@ -139,7 +141,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
 		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
 
 			logger.Info("acceptance network created")
 			defer printTestIdOnFailure(tb, testId)
@@ -212,6 +214,11 @@ func (b *networkHarnessBuilder) WithVirtualChainId(id primitives.VirtualChainId)
 
 func (b *networkHarnessBuilder) WithEmptyBlockTime(emptyBlockTime time.Duration) *networkHarnessBuilder {
 	b.emptyBlockTime = emptyBlockTime
+	return b
+}
+
+func (b *networkHarnessBuilder) WithConfigOverride(f func(cfg config.OverridableConfig) config.OverridableConfig) *networkHarnessBuilder {
+	b.configOverride = f
 	return b
 }
 

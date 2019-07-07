@@ -1,5 +1,7 @@
 Dockerfile*
-docker-*
+docker*
+_out
+_reports
 _logs
 *.log
 _tmp

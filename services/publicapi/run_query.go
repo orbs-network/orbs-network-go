@@ -20,6 +20,7 @@ import (
 )
 
 func (s *service) RunQuery(parentCtx context.Context, input *services.RunQueryInput) (*services.RunQueryOutput, error) {
+	s.metrics.queriesPerSecond.Measure(1)
 	ctx := trace.NewContext(parentCtx, "PublicApi.RunQuery")
 
 	if input.ClientRequest == nil {

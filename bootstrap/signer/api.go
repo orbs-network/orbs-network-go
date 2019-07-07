@@ -7,7 +7,7 @@
 package signer
 
 import (
-	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
@@ -27,7 +27,9 @@ func (a *api) SignHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx := request.Context()
+	ctx = trace.NewFromRequest(ctx, request)
+
 	if signature, err := a.vault.NodeSign(ctx, services.NodeSignInputReader(input)); err == nil {
 		a.logger.Info("successfully signed payload")
 		if _, err := writer.Write(signature.Raw()); err != nil {
