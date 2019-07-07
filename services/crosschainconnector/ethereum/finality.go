@@ -24,9 +24,9 @@ func (s *service) getFinalitySafeBlockNumber(ctx context.Context, referenceTimes
 		return nil, err
 	}
 
-	// geth simulator returns nil from FindBlockByTimestamp
+	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
 	if blockNumberAndTime == nil {
-		return nil, errors.New("failed getting an actual current block from Ethereum")
+		return nil, nil
 	}
 
 	// regard finality blocks component
@@ -51,7 +51,7 @@ func (s *service) verifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumb
 		return err
 	}
 
-	// geth simulator returns nil from FindBlockByTimestamp
+	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
 	if safeBlockNumber == nil {
 		return nil
 	}

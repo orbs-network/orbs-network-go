@@ -67,7 +67,7 @@ func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNan
 	start := time.Now()
 	f.metrics.totalTimesCalled.Inc()
 
-	// TODO: find a better way to handle this, the simulator has no concept of block number
+	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator doesn't support headers and blocks
 	if f.isEthereumSimulator() {
 		return nil, nil
 	}
