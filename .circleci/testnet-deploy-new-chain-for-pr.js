@@ -50,6 +50,16 @@ if (chainIndex !== -1) {
     const newChain = Object.assign({}, lastChain);
     const basePort = 9000;
     newChain.DockerConfig.Tag = targetTag;
+    newChain.Resources = {
+        Limits: {
+            Memory: 1024,
+            CPUs: 1,
+        },
+        Reservations: {
+            Memory: 0,
+            CPUs: 0
+        }
+    };
     newChain.Id = chainNumber;
     newChain.HttpPort = basePort + prNumber;
     newChain.GossipPort = basePort + prNumber + 2;
