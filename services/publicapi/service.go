@@ -42,6 +42,8 @@ type metrics struct {
 	totalTransactionsErrInvalidRequest *metric.Gauge
 	totalTransactionsErrAddingToTxPool *metric.Gauge
 	totalTransactionsErrDuplicate      *metric.Gauge
+	queriesPerSecond                   *metric.Rate
+	transactionsPerSecond              *metric.Rate
 }
 
 func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, getTransactionStatusTimeout time.Duration, runQueryTimeout time.Duration) *metrics {
@@ -54,6 +56,8 @@ func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, ge
 		totalTransactionsErrInvalidRequest: factory.NewGauge("PublicApi.TotalTransactionsErrInvalidRequest.Count"),
 		totalTransactionsErrAddingToTxPool: factory.NewGauge("PublicApi.TotalTransactionsErrAddingToTxPool.Count"),
 		totalTransactionsErrDuplicate:      factory.NewGauge("PublicApi.TotalTransactionsErrDuplicate.Count"),
+		queriesPerSecond:                   factory.NewRate("PublicAPI.Queries.PerSecond"),
+		transactionsPerSecond:              factory.NewRate("PublicAPI.Transactions.PerSecond"),
 	}
 }
 

@@ -128,7 +128,7 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 		return
 	}
 
-	sig, err := f.signer.Sign(oneBigHash)
+	sig, err := f.signer.Sign(ctx, oneBigHash)
 	if err != nil {
 		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
 		f.submit(txs...)

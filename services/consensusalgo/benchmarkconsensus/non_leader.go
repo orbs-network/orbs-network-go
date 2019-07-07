@@ -83,7 +83,7 @@ func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 	status := (&gossipmessages.BenchmarkConsensusStatusBuilder{
 		LastCommittedBlockHeight: lastCommittedBlockHeight,
 	}).Build()
-	sig, err := s.signer.Sign(status.Raw())
+	sig, err := s.signer.Sign(ctx, status.Raw())
 	if err != nil {
 		return err
 	}
