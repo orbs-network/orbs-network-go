@@ -46,7 +46,7 @@ go_test_junit_report () {
             junit-xml-stats ${OUT_DIR}/results.xml
         else
             # find the last RUN line number in the log file
-            LOG_START_LINE=$(grep -n "^=== RUN" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
+            LOG_START_LINE=$(grep -n "^--- FAIL" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
             # find the last line number in the log file
             LOG_END_LINE=$(cat ${OUT_DIR}/test.out | wc -l | awk '{$1=$1};1')
             # print the lines in between these line numbers to get the required failed log

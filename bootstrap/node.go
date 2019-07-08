@@ -9,6 +9,8 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -18,7 +20,6 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type Node interface {
@@ -39,7 +40,6 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	defer ctxCancel()
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
