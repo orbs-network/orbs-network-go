@@ -12,7 +12,9 @@ if (!targetTag) {
 
 const configuration = require(configFilePath);
 configuration.chains.forEach((_, index) => {
-    configuration.chains[index].DockerConfig.Tag = targetTag;
+    if (configuration.chains[index].Id < 100000){
+        configuration.chains[index].DockerConfig.Tag = targetTag;
+    }
 });
 
 fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
