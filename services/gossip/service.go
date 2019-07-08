@@ -8,6 +8,7 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -39,46 +40,53 @@ type service struct {
 	transport       adapter.Transport
 	handlers        gossipListeners
 	headerValidator *headerValidator
+
+	messageDispatcher *gossipMessageDispatcher
 }
 
-func NewGossip(transport adapter.Transport, config Config, logger log.Logger) services.Gossip {
+func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) services.Gossip {
+	logger := parent.WithTags(LogTag)
 	s := &service{
 		transport:       transport,
 		config:          config,
-		logger:          logger.WithTags(LogTag),
+		logger:          logger,
 		handlers:        gossipListeners{},
-		headerValidator: newHeaderValidator(config, logger),
+		headerValidator: newHeaderValidator(config, parent),
+
+		messageDispatcher: newMessageDispatcher(metricRegistry),
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
+
+	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage)
+	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage)
+	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage)
+	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage)
+
 	return s
 }
 
 func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	if len(payloads) == 0 {
-		logger.Error("transport did not receive any payloads, header missing")
+	select {
+	case <-ctx.Done():
 		return
-	}
-	header := gossipmessages.HeaderReader(payloads[0])
-	if !header.IsValid() {
-		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
-		return
-	}
+	default:
+		logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+		if len(payloads) == 0 {
+			logger.Error("transport did not receive any payloads, header missing")
+			return
+		}
+		header := gossipmessages.HeaderReader(payloads[0])
+		if !header.IsValid() {
+			logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
+			return
+		}
 
-	if err := s.headerValidator.validateMessageHeader(header); err != nil {
-		logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
-		return
-	}
+		if err := s.headerValidator.validateMessageHeader(header); err != nil {
+			logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
+			return
+		}
 
-	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
-	switch header.Topic() {
-	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
-		s.receivedTransactionRelayMessage(ctx, header, payloads[1:])
-	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
-		s.receivedLeanHelixMessage(ctx, header, payloads[1:])
-	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
-		s.receivedBenchmarkConsensusMessage(ctx, header, payloads[1:])
-	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
-		s.receivedBlockSyncMessage(ctx, header, payloads[1:])
+		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
+		s.messageDispatcher.dispatch(logger, header, payloads[1:])
 	}
 }

@@ -11,6 +11,7 @@ package acceptance
 import (
 	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"testing"
@@ -22,10 +23,21 @@ import (
 // therefore, this file is marked on top with a build flag ("memoryleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
-	before, _ := os.Create("/tmp/mem-shutdown-before.prof")
+	dir := os.Getenv("PPROF_DIR")
+	absPath, err := filepath.Abs("../../" + dir)
+
+	require.NoError(t, err)
+
+	t.Log("Will save profiling results in " + absPath)
+
+	beforeProf := absPath + "/mem-shutdown-before.prof"
+	afterProf := absPath + "/mem-shutdown-after.prof"
+	before, err := os.Create(beforeProf)
 	defer before.Close()
-	after, _ := os.Create("/tmp/mem-shutdown-after.prof")
+	require.NoError(t, err)
+	after, err := os.Create(afterProf)
 	defer after.Close()
+	require.NoError(t, err)
 
 	t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
 	t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
@@ -46,14 +58,10 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 		t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
 	}
 
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
+	sleepAndGC(t)
+	sleepAndGC(t)
+	sleepAndGC(t)
+	sleepAndGC(t)
 
 	memUsageAfterBytes := getMemUsageBytes()
 	pprof.WriteHeapProfile(after)
@@ -68,8 +76,16 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
-	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers",
-		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes)
+	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare %s and %s to see memory consumers",
+		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes, beforeProf, afterProf)
+}
+
+func sleepAndGC(t testing.TB) {
+	before := getMemUsageBytes()
+	time.Sleep(400 * time.Millisecond)
+	runtime.GC()
+	after := getMemUsageBytes()
+	t.Logf("Memory usage before GC %d bytes, after %d bytes, delta %d bytes", before, after, before-after)
 }
 
 func getMemUsageBytes() uint64 {
