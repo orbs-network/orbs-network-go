@@ -42,6 +42,7 @@ func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handle
 		for {
 			select {
 			case <-ctx.Done():
+				c.drain()
 				return
 			case message := <-c.ch:
 				handler(ctx, message.header, message.payloads)
@@ -50,6 +51,16 @@ func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handle
 		}
 	})
 
+}
+
+func (c *meteredTopicChannel) drain() {
+	for {
+		select {
+		case <-c.ch:
+		default:
+			return
+		}
+	}
 }
 
 func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
