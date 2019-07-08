@@ -8,7 +8,6 @@ package gossip
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -26,17 +25,28 @@ type meteredTopicChannel struct {
 	inQueue *metric.Gauge
 }
 
-func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
-	select {
-	case <-ctx.Done(): // this assumes that send() and runHandler() use the same context, which is slightly smelly
-		return
-	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
-		c.updateMetrics()
-	}
+func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) {
+	c.ch <- gossipMessage{header: header, payloads: payloads} //TODO should the channel have *gossipMessage as type?
+	c.updateMetrics()
 }
 
 func (c *meteredTopicChannel) updateMetrics() {
 	c.inQueue.Update(int64(len(c.ch)))
+}
+
+func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) {
+	supervised.GoForever(ctx, logger, func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case message := <-c.ch:
+				handler(ctx, message.header, message.payloads)
+				c.updateMetrics()
+			}
+		}
+	})
+
 }
 
 func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
@@ -64,33 +74,23 @@ func newMessageDispatcher(registry metric.Registry) (d gossipMessageDispatcher) 
 	return
 }
 
-func (d gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
+func (d gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
 	ch := d[header.Topic()]
 	if ch == nil {
 		logger.Error("no message channel for topic", log.Int("topic", int(header.Topic())))
 		return
 	}
 
-	ch.send(ctx, header, payloads)
+	ch.send(header, payloads)
 
 }
 
 func (d gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) {
 	topicChannel := d[topic]
 	if topicChannel == nil {
-		panic(fmt.Sprintf("no message channel for topic %d", topic))
+		logger.Error("no message channel for topic", log.Int("topic", int(topic)))
+		panic("no message channel for topic")
 	} else {
-		supervised.GoForever(ctx, logger, func() {
-			for {
-				select {
-				case <-ctx.Done():
-					close(topicChannel.ch)
-					return
-				case message := <-topicChannel.ch:
-					handler(ctx, message.header, message.payloads)
-					topicChannel.updateMetrics()
-				}
-			}
-		})
+		topicChannel.run(ctx, logger, handler)
 	}
 }

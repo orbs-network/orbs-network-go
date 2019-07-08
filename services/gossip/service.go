@@ -66,22 +66,27 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 }
 
 func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
-	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-	if len(payloads) == 0 {
-		logger.Error("transport did not receive any payloads, header missing")
+	select {
+	case <-ctx.Done():
 		return
-	}
-	header := gossipmessages.HeaderReader(payloads[0])
-	if !header.IsValid() {
-		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
-		return
-	}
+	default:
+		logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+		if len(payloads) == 0 {
+			logger.Error("transport did not receive any payloads, header missing")
+			return
+		}
+		header := gossipmessages.HeaderReader(payloads[0])
+		if !header.IsValid() {
+			logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
+			return
+		}
 
-	if err := s.headerValidator.validateMessageHeader(header); err != nil {
-		logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
-		return
-	}
+		if err := s.headerValidator.validateMessageHeader(header); err != nil {
+			logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
+			return
+		}
 
-	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
-	s.messageDispatcher.dispatch(ctx, logger, header, payloads[1:])
+		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
+		s.messageDispatcher.dispatch(logger, header, payloads[1:])
+	}
 }
