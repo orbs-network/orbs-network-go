@@ -32,7 +32,7 @@ func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]b
 }
 
 func (c *meteredTopicChannel) updateMetrics() {
-	c.size.Update(int64(len(c.ch)))
+	c.inQueue.Update(int64(len(c.ch)))
 }
 
 func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
