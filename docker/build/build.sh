@@ -27,3 +27,10 @@ docker cp orbs_build:$SRC/_bin .
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
+
+# Builds experimental features (extra libraries)
+if [[ $CIRCLE_TAG != v* ]] ;
+then
+    docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
+    docker build -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
+fi

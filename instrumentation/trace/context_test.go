@@ -9,6 +9,7 @@ package trace
 import (
 	"context"
 	"github.com/stretchr/testify/require"
+	"net/http"
 	"testing"
 )
 
@@ -44,4 +45,21 @@ func TestPropagateContextRetainsValue(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, "foo", propgatedTracingContext.name)
 	require.NotEmpty(t, propgatedTracingContext.requestId)
+}
+
+func TestTranslateToRequestAndBack(t *testing.T) {
+	ctx := NewContext(context.Background(), "foo")
+	ep, _ := FromContext(ctx)
+
+	request, _ := http.NewRequest("Get", "localhost", nil)
+	ep.WriteTraceToRequest(request)
+
+	require.Equal(t, "foo", request.Header.Get(RequestTraceName))
+
+	fctx := NewFromRequest(context.Background(), request)
+	ep2, ok := FromContext(fctx)
+	require.True(t, ok)
+	require.Equal(t, ep.name, ep2.name)
+	require.Equal(t, ep.requestId, ep2.requestId)
+	require.True(t, ep.created.Equal(ep2.created))
 }

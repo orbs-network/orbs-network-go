@@ -124,7 +124,7 @@ func (h *harness) verifyMocks() error {
 func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEcdsaSecp256K1KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
-	sig, err := signer.NewLocalSigner(sender.PrivateKey()).Sign(oneBigHash)
+	sig, err := signer.NewLocalSigner(sender.PrivateKey()).Sign(ctx, oneBigHash)
 	if err != nil {
 		panic(err)
 	}
