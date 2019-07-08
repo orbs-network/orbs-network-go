@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
@@ -42,7 +43,7 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 		}
 		transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
-		g := gossip.NewGossip(ctx, transport, cfg, logger)
+		g := gossip.NewGossip(ctx, transport, cfg, logger, metric.NewRegistry())
 
 		trh := &gossiptopics.MockTransactionRelayHandler{}
 		bsh := &gossiptopics.MockBlockSyncHandler{}

@@ -167,7 +167,7 @@ func ForE2E(
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
 
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
+	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
 	}
