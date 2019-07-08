@@ -9,6 +9,7 @@
 package acceptance
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"os"
 	"runtime"
@@ -46,14 +47,10 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 		t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
 	}
 
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
-	time.Sleep(100 * time.Millisecond)
-	runtime.GC()
+	sleepAndGC(t)
+	sleepAndGC(t)
+	sleepAndGC(t)
+	sleepAndGC(t)
 
 	memUsageAfterBytes := getMemUsageBytes()
 	pprof.WriteHeapProfile(after)
@@ -70,6 +67,14 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
 	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers",
 		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes)
+}
+
+func sleepAndGC(t testing.TB) {
+	before := getMemUsageBytes()
+	time.Sleep(400 * time.Millisecond)
+	runtime.GC()
+	after := getMemUsageBytes()
+	fmt.Sprintf("Memory usage before GC %d bytes, after %d bytes, delta %d bytes", before, after, before-after)
 }
 
 func getMemUsageBytes() uint64 {
