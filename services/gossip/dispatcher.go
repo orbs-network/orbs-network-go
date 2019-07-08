@@ -12,7 +12,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
+
+type handlerFunc func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)
 
 type gossipMessage struct {
 	header   *gossipmessages.Header
@@ -34,7 +37,7 @@ func (c *meteredTopicChannel) updateMetrics() {
 	c.inQueue.Update(int64(len(c.ch)))
 }
 
-func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) {
+func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) {
 	supervised.GoForever(ctx, logger, func() {
 		for {
 			select {
@@ -60,24 +63,30 @@ func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopic
 	}
 }
 
-type gossipMessageDispatcher map[gossipmessages.HeaderTopic]*meteredTopicChannel
+type gossipMessageDispatcher struct {
+	transactionRelay   *meteredTopicChannel
+	blockSync          *meteredTopicChannel
+	leanHelix          *meteredTopicChannel
+	benchmarkConsensus *meteredTopicChannel
+}
 
 // These channels are buffered because we don't want to assume that the topic consumers behave nicely
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
-func newMessageDispatcher(registry metric.Registry) (d gossipMessageDispatcher) {
-	d = make(gossipMessageDispatcher)
-	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = newMeteredTopicChannel("TransactionRelay", registry)
-	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = newMeteredTopicChannel("BlockSync", registry)
-	d[gossipmessages.HEADER_TOPIC_LEAN_HELIX] = newMeteredTopicChannel("LeanHelixConsensus", registry)
-	d[gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS] = newMeteredTopicChannel("BenchmarkConsensus", registry)
+func newMessageDispatcher(registry metric.Registry) (d *gossipMessageDispatcher) {
+	d = &gossipMessageDispatcher{
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry),
+		blockSync:          newMeteredTopicChannel("BlockSync", registry),
+		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry),
+		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry),
+	}
 	return
 }
 
-func (d gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
-	ch := d[header.Topic()]
-	if ch == nil {
-		logger.Error("no message channel for topic", log.Int("topic", int(header.Topic())))
+func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
+	ch, err := d.get(header.Topic())
+	if err != nil {
+		logger.Error("no message channel found", log.Error(err))
 		return
 	}
 
@@ -85,12 +94,27 @@ func (d gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessa
 
 }
 
-func (d gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) {
-	topicChannel := d[topic]
-	if topicChannel == nil {
-		logger.Error("no message channel for topic", log.Int("topic", int(topic)))
-		panic("no message channel for topic")
+func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) {
+	topicChannel, err := d.get(topic)
+	if err != nil {
+		logger.Error("no message channel found", log.Error(err))
+		panic(err)
 	} else {
 		topicChannel.run(ctx, logger, handler)
+	}
+}
+
+func (d *gossipMessageDispatcher) get(topic gossipmessages.HeaderTopic) (*meteredTopicChannel, error) {
+	switch topic {
+	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
+		return d.transactionRelay, nil
+	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
+		return d.blockSync, nil
+	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
+		return d.leanHelix, nil
+	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
+		return d.benchmarkConsensus, nil
+	default:
+		return nil, errors.Errorf("no message channel for topic", log.Int("topic", int(topic)))
 	}
 }

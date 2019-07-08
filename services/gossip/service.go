@@ -41,7 +41,7 @@ type service struct {
 	handlers        gossipListeners
 	headerValidator *headerValidator
 
-	messageDispatcher gossipMessageDispatcher
+	messageDispatcher *gossipMessageDispatcher
 }
 
 func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) services.Gossip {
