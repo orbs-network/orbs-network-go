@@ -115,6 +115,6 @@ func (d *gossipMessageDispatcher) get(topic gossipmessages.HeaderTopic) (*metere
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
 		return d.benchmarkConsensus, nil
 	default:
-		return nil, errors.Errorf("no message channel for topic", log.Int("topic", int(topic)))
+		return nil, errors.Errorf("no message channel for topic %d", topic)
 	}
 }
