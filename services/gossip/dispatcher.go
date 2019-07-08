@@ -26,9 +26,13 @@ type meteredTopicChannel struct {
 	inQueue *metric.Gauge
 }
 
-func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) {
-	c.ch <- gossipMessage{header: header, payloads: payloads} //TODO should the channel have *gossipMessage as type?
-	c.updateMetrics()
+func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+	select {
+	case <-ctx.Done(): // this assumes that send() and runHandler() use the same context, which is slightly smelly
+		return
+	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
+		c.updateMetrics()
+	}
 }
 
 func (c *meteredTopicChannel) updateMetrics() {
@@ -51,7 +55,7 @@ type gossipMessageDispatcher map[gossipmessages.HeaderTopic]*meteredTopicChannel
 // These channels are buffered because we don't want to assume that the topic consumers behave nicely
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
-func makeMessageDispatcher(registry metric.Registry) (d gossipMessageDispatcher) {
+func newMessageDispatcher(registry metric.Registry) (d gossipMessageDispatcher) {
 	d = make(gossipMessageDispatcher)
 	d[gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY] = newMeteredTopicChannel("TransactionRelay", registry)
 	d[gossipmessages.HEADER_TOPIC_BLOCK_SYNC] = newMeteredTopicChannel("BlockSync", registry)
@@ -60,14 +64,15 @@ func makeMessageDispatcher(registry metric.Registry) (d gossipMessageDispatcher)
 	return
 }
 
-func (d gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
+func (d gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
 	ch := d[header.Topic()]
 	if ch == nil {
 		logger.Error("no message channel for topic", log.Int("topic", int(header.Topic())))
 		return
 	}
 
-	ch.send(header, payloads)
+	ch.send(ctx, header, payloads)
+
 }
 
 func (d gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)) {
@@ -79,6 +84,7 @@ func (d gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logg
 			for {
 				select {
 				case <-ctx.Done():
+					close(topicChannel.ch)
 					return
 				case message := <-topicChannel.ch:
 					handler(ctx, message.header, message.payloads)

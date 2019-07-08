@@ -53,7 +53,7 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 		handlers:        gossipListeners{},
 		headerValidator: newHeaderValidator(config, parent),
 
-		messageDispatcher: makeMessageDispatcher(metricRegistry),
+		messageDispatcher: newMessageDispatcher(metricRegistry),
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
 
@@ -83,5 +83,5 @@ func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 	}
 
 	logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
-	s.messageDispatcher.dispatch(logger, header, payloads[1:])
+	s.messageDispatcher.dispatch(ctx, logger, header, payloads[1:])
 }
