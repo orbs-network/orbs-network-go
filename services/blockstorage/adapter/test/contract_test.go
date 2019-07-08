@@ -173,7 +173,8 @@ func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *test
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 
 		// block until timeout before block is written
-		shortDeadlineCtx, _ := context.WithTimeout(context.Background(), 5*time.Millisecond)
+		shortDeadlineCtx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+		defer cancel()
 		err := adapter.GetBlockTracker().WaitForBlock(shortDeadlineCtx, 1)
 		require.Error(t, err, "expected timeout to expire when requested block height not available")
 
@@ -184,7 +185,8 @@ func TestBlockPersistenceContract_BlockTrackerBlocksUntilRequestedHeight(t *test
 		require.EqualValues(t, 1, newHeight, "expected persisted height to be 1")
 
 		// block tracker returns from wait immediately without error
-		shortDeadlineCtx, _ = context.WithTimeout(context.Background(), 5*time.Millisecond)
+		shortDeadlineCtx, cancel = context.WithTimeout(context.Background(), 5*time.Millisecond)
+		defer cancel()
 		err = adapter.GetBlockTracker().WaitForBlock(shortDeadlineCtx, 1)
 		require.NoError(t, err)
 	})

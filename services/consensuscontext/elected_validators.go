@@ -73,8 +73,9 @@ func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, b
 		}
 
 		// sleep or wait for ctx done, whichever comes first
-		sleepOrShutdown, _ := context.WithTimeout(ctx, CALL_ELECTIONS_CONTRACT_INTERVAL)
+		sleepOrShutdown, cancel := context.WithTimeout(ctx, CALL_ELECTIONS_CONTRACT_INTERVAL)
 		<-sleepOrShutdown.Done()
+		cancel()
 
 		attempts++
 	}
