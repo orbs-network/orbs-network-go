@@ -9,7 +9,6 @@
 package acceptance
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"os"
 	"runtime"
@@ -74,7 +73,7 @@ func sleepAndGC(t testing.TB) {
 	time.Sleep(400 * time.Millisecond)
 	runtime.GC()
 	after := getMemUsageBytes()
-	fmt.Sprintf("Memory usage before GC %d bytes, after %d bytes, delta %d bytes", before, after, before-after)
+	t.Logf("Memory usage before GC %d bytes, after %d bytes, delta %d bytes", before, after, before-after)
 }
 
 func getMemUsageBytes() uint64 {
