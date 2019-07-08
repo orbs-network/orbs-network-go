@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-PPROF_DIR="_out/memory_leaks"
+export PPROF_DIR="_out/memory_leaks"
 
 . ./test.common.sh
 go_test_junit_report memory_leaks ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1

@@ -11,6 +11,7 @@ package acceptance
 import (
 	"github.com/stretchr/testify/require"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"testing"
@@ -23,10 +24,20 @@ import (
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	dir := os.Getenv("PPROF_DIR")
-	before, _ := os.Create(dir + "/mem-shutdown-before.prof")
+	absPath, err := filepath.Abs("../../" + dir)
+
+	require.NoError(t, err)
+
+	t.Log("Will save profiling results in " + absPath)
+
+	beforeProf := absPath + "/mem-shutdown-before.prof"
+	afterProf := absPath + "/mem-shutdown-after.prof"
+	before, err := os.Create(beforeProf)
 	defer before.Close()
-	after, _ := os.Create(dir + "/mem-shutdown-after.prof")
+	require.NoError(t, err)
+	after, err := os.Create(afterProf)
 	defer after.Close()
+	require.NoError(t, err)
 
 	t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
 	t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
@@ -65,8 +76,8 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
-	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare /tmp/mem-shutdown-before.prof and /tmp/mem-shutdown-after.prof to see memory consumers",
-		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes)
+	}, "Heap size after GC is too large. Pre-run: %d bytes, post-run: %d bytes, added %d bytes. This is more than 10%% of initial memory and more than the allowed addition of %d bytes. Compare %s and %s to see memory consumers",
+		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes, beforeProf, afterProf)
 }
 
 func sleepAndGC(t testing.TB) {
