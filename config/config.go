@@ -110,6 +110,7 @@ type NodeConfig interface {
 type OverridableConfig interface {
 	NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
+	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 }
 
 type mutableNodeConfig interface {
@@ -125,7 +126,6 @@ type mutableNodeConfig interface {
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
 	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
-	MergeWithFileConfig(source string) (mutableNodeConfig, error)
 	Clone() mutableNodeConfig
 }
 
