@@ -30,7 +30,8 @@ func (f *EthereumBasedBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Co
 		return nil, err
 	}
 
-	if header == nil { // simulator always returns nil block number
+	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator always returns nil block number
+	if header == nil {
 		return nil, nil
 	}
 

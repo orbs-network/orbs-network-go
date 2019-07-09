@@ -88,7 +88,7 @@ func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
 		b, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano((FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS-1)*time.Second))
 		require.NoError(t, err, "expecting no error when trying to get latest time with some extra millis")
 		// why -1 below? because the algorithm locks us to a block with time stamp **less** than what we requested, so it finds the latest but it is greater (ts-wise) so it will return -1
-		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS-1, b.Int64(), "expecting block number to be of last value in fake db")
+		require.EqualValues(t, FAKE_CLIENT_NUMBER_OF_BLOCKS-1, b.BlockNumber, "expecting block number to be of last value in fake db")
 	})
 }
 
@@ -97,23 +97,20 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 		h := NewTestHarness(t)
 
 		// something recent
-		blockBI, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-		block := blockBI.Int64()
+		blockAndTime, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of a recent block")
-		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
+		require.EqualValues(t, 938874, blockAndTime.BlockNumber, "expected ts 1505735343 to return a specific block")
 
 		// something not so recent
-		blockBI, err = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1500198628000000000))
-		block = blockBI.Int64()
+		blockAndTime, err = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1500198628000000000))
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of an older block")
-		require.EqualValues(t, 32600, block, "expected ts 1500198628 to return a specific block")
+		require.EqualValues(t, 32600, blockAndTime.BlockNumber, "expected ts 1500198628 to return a specific block")
 
 		callsBefore := h.GetBtgAsFake().TimesCalled
 		// "realtime" - 200 seconds
-		blockBI, err = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1506108583000000000))
+		blockAndTime, err = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1506108583000000000))
 		require.NoError(t, err, "something went wrong while getting the block by timestamp of a 'realtime' block")
-		newBlock := blockBI.Int64()
-		require.EqualValues(t, 999974, newBlock, "expected ts 1506108583 to return a specific block")
+		require.EqualValues(t, 999974, blockAndTime.BlockNumber, "expected ts 1506108583 to return a specific block")
 
 		t.Log(h.GetBtgAsFake().TimesCalled - callsBefore)
 	})
@@ -124,17 +121,15 @@ func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T)
 		h := NewTestHarness(t)
 
 		// complex request
-		blockBI, internalErr := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-		block := blockBI.Int64()
+		blockAndTime, internalErr := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		require.EqualValues(t, 0, h.finder.metrics.cacheHits.Value(), "shouldn't be a cache hit yet")
 		require.NoError(t, internalErr, "something went wrong while getting the block by timestamp of a recent block")
-		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
+		require.EqualValues(t, 938874, blockAndTime.BlockNumber, "expected ts 1505735343 to return a specific block")
 
-		blockBI, internalErr = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
-		block = blockBI.Int64()
+		blockAndTime, internalErr = h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(1505735343000000000))
 		require.EqualValues(t, 1, h.finder.metrics.cacheHits.Value(), "expected a cache hit from the metric")
 		require.NoError(t, internalErr, "expected cache to hit to not throw an error")
-		require.EqualValues(t, 938874, block, "expected ts 1505735343 to return a specific block")
+		require.EqualValues(t, 938874, blockAndTime.BlockNumber, "expected ts 1505735343 to return a specific block")
 	})
 }
 
@@ -250,10 +245,10 @@ func TestGetEthBlockByTimestampWhenSmallNumOfBlocks(t *testing.T) {
 			test.WithContext(func(ctx context.Context) {
 
 				h := NewTestHarness(t).WithBtg(tt.btg)
-				blockBI, err := h.finder.FindBlockByTimestamp(ctx, tt.referenceTs)
+				blockAndTime, err := h.finder.FindBlockByTimestamp(ctx, tt.referenceTs)
 				if !tt.expectedError {
 					require.NoError(t, err)
-					require.Equal(t, tt.expectedNum, blockBI.Int64())
+					require.Equal(t, tt.expectedNum, blockAndTime.BlockNumber)
 				} else {
 					require.Error(t, err)
 				}
