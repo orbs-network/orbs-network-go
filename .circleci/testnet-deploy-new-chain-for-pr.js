@@ -56,8 +56,8 @@ if (chainIndex !== -1) {
             CPUs: 1,
         },
         Reservations: {
-            Memory: 0,
-            CPUs: 0
+            Memory: 1,
+            CPUs: 0.001,
         }
     };
     newChain.Id = chainNumber;
