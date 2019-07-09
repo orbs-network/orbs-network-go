@@ -40,8 +40,11 @@ func TestIncomingTransactionTriggersImmediateBlockClosure(t *testing.T) {
 		WithLogFilters(log.ExcludeEntryPoint("BlockSync")).
 		Start(t, func(tb testing.TB, ctx context.Context, network *NetworkHarness) {
 			contract := callcontract.NewContractClient(network)
-			time.Sleep(1 * time.Second)
+
+			network.WaitForBlock(ctx, 1) // wait for network to start closing blocks
+
 			_, txHash := contract.Transfer(ctx, 0, 43, 5, 6)
+
 			network.WaitForTransactionInState(ctx, txHash)
 
 		})
