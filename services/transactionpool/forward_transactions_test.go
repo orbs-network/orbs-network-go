@@ -123,7 +123,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		cfg := &forwarderConfig{2, keyPair}
 
 		signer := &FaultySigner{}
-		signer.When("Sign", mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
+		signer.When("Sign", mock.Any, mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
 
 		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
 		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
@@ -143,7 +143,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
 		signer.Reset()
-		signer.When("Sign", mock.Any).Return(sig, nil)
+		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil)
 
 		txForwarder.drainQueueAndForward(ctx)
 
@@ -156,6 +156,6 @@ type FaultySigner struct {
 }
 
 func (c *FaultySigner) Sign(ctx context.Context, input []byte) ([]byte, error) {
-	call := c.Called(input)
+	call := c.Called(ctx, input)
 	return call.Get(0).([]byte), call.Error(1)
 }

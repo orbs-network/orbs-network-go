@@ -1,5 +1,7 @@
 #!/bin/bash -x
 
+export PPROF_DIR="_out/memory_leaks"
+
 . ./test.common.sh
 go_test_junit_report memory_leaks ./test/acceptance -tags memoryleak -run TestMemoryLeaks -count 1
 
@@ -12,7 +14,7 @@ if [ $EXIT_CODE != 0 ]; then
   echo ""
   echo "****** Memory delta:"
   echo ""
-  go tool pprof --inuse_space -nodecount 10 -top --base /tmp/mem-shutdown-before.prof /tmp/mem-shutdown-after.prof
+  go tool pprof --inuse_space -nodecount 10 -top --base "$PPROF_DIR/mem-shutdown-before.prof" "$PPROF_DIR/mem-shutdown-after.prof"
 
   cat test.out
 

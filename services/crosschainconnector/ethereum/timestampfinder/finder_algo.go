@@ -19,7 +19,7 @@ func secondsToNano(seconds int64) primitives.TimestampNano {
 	return primitives.TimestampNano(seconds) * primitives.TimestampNano(time.Second)
 }
 
-func algoDidReachResult(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime) bool {
+func algoDidReachResult(referenceTimestampNano primitives.TimestampNano, below *BlockNumberAndTime, above *BlockNumberAndTime) bool {
 	if below.BlockNumber+1 != above.BlockNumber {
 		return false
 	}
@@ -29,7 +29,7 @@ func algoDidReachResult(referenceTimestampNano primitives.TimestampNano, below B
 	return false
 }
 
-func algoVerifyResultInsideRange(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime) error {
+func algoVerifyResultInsideRange(referenceTimestampNano primitives.TimestampNano, below *BlockNumberAndTime, above *BlockNumberAndTime) error {
 	if below.BlockNumber < 1 {
 		return errors.Errorf("ethereum timestamp finder range corrupt, below is %d (below 1)", below.BlockNumber)
 	}
@@ -45,21 +45,21 @@ func algoVerifyResultInsideRange(referenceTimestampNano primitives.TimestampNano
 	return nil
 }
 
-func algoExtendAbove(ctx context.Context, referenceTimestampNano primitives.TimestampNano, btg BlockTimeGetter) (BlockNumberAndTime, error) {
+func algoExtendAbove(ctx context.Context, referenceTimestampNano primitives.TimestampNano, btg BlockTimeGetter) (*BlockNumberAndTime, error) {
 	latest, err := btg.GetTimestampForLatestBlock(ctx)
 	if err != nil {
-		return BlockNumberAndTime{}, err
+		return nil, err
 	}
 	if latest == nil {
-		return BlockNumberAndTime{}, errors.New("ethereum timestamp finder received nil as latest block from getter")
+		return nil, errors.New("ethereum timestamp finder received nil as latest block from getter")
 	}
 	if referenceTimestampNano >= latest.BlockTimeNano {
-		return BlockNumberAndTime{}, errors.Errorf("the latest ethereum block %d at %d is not newer than the reference timestamp %d", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano)
+		return nil, errors.Errorf("the latest ethereum block %d at %d is not newer than the reference timestamp %d", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano)
 	}
-	return *latest, nil
+	return latest, nil
 }
 
-func algoExtendBelow(ctx context.Context, referenceTimestampNano primitives.TimestampNano, belowBlockNumber int64, aboveBlockNumber int64, btg BlockTimeGetter) (BlockNumberAndTime, error) {
+func algoExtendBelow(ctx context.Context, referenceTimestampNano primitives.TimestampNano, belowBlockNumber int64, aboveBlockNumber int64, btg BlockTimeGetter) (*BlockNumberAndTime, error) {
 	startBlockNumber := belowBlockNumber
 	if startBlockNumber < 1 {
 		startBlockNumber = aboveBlockNumber
@@ -76,16 +76,16 @@ func algoExtendBelow(ctx context.Context, referenceTimestampNano primitives.Time
 
 			cursor, err := btg.GetTimestampForBlockNumber(ctx, big.NewInt(cursorBlockNumber))
 			if err != nil {
-				return BlockNumberAndTime{}, err
+				return nil, err
 			}
 			if cursor == nil {
-				return BlockNumberAndTime{}, errors.New("ethereum timestamp finder received nil as cursor block from getter")
+				return nil, errors.New("ethereum timestamp finder received nil as cursor block from getter")
 			}
 			if 1 <= cursor.BlockNumber && cursor.BlockTimeNano <= referenceTimestampNano {
-				return *cursor, nil
+				return cursor, nil
 			}
 			if cursor.BlockNumber == 1 {
-				return BlockNumberAndTime{}, errors.Errorf("the first ethereum block %d at %d is newer than the reference timestamp %d",
+				return nil, errors.Errorf("the first ethereum block %d at %d is newer than the reference timestamp %d",
 					cursor.BlockNumber, cursor.BlockTimeNano, referenceTimestampNano)
 			}
 
@@ -93,11 +93,11 @@ func algoExtendBelow(ctx context.Context, referenceTimestampNano primitives.Time
 	}
 
 	// not supposed to be able to get here
-	return BlockNumberAndTime{}, errors.Errorf("unable to extend below, reference timestamp is %d, above is %d, below is %d",
+	return nil, errors.Errorf("unable to extend below, reference timestamp is %d, above is %d, below is %d",
 		referenceTimestampNano, aboveBlockNumber, belowBlockNumber)
 }
 
-func algoReduceRange(ctx context.Context, referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime, btg BlockTimeGetter, step int) (BlockNumberAndTime, BlockNumberAndTime, error) {
+func algoReduceRange(ctx context.Context, referenceTimestampNano primitives.TimestampNano, below *BlockNumberAndTime, above *BlockNumberAndTime, btg BlockTimeGetter, step int) (*BlockNumberAndTime, *BlockNumberAndTime, error) {
 	allowedHeuristics := false
 	if step <= TIMESTAMP_FINDER_ALLOWED_HEURISTIC_STEPS {
 		allowedHeuristics = true
@@ -114,21 +114,21 @@ func algoReduceRange(ctx context.Context, referenceTimestampNano primitives.Time
 	// get the block at the cursor
 	cursor, err := btg.GetTimestampForBlockNumber(ctx, big.NewInt(cursorBlockNumber))
 	if err != nil {
-		return BlockNumberAndTime{}, BlockNumberAndTime{}, err
+		return nil, nil, err
 	}
 	if cursor == nil {
-		return BlockNumberAndTime{}, BlockNumberAndTime{}, errors.New("ethereum timestamp finder received nil as cursor block from getter")
+		return nil, nil, errors.New("ethereum timestamp finder received nil as cursor block from getter")
 	}
 
 	// make the range smaller
 	if referenceTimestampNano < cursor.BlockTimeNano {
-		return below, *cursor, nil
+		return below, cursor, nil
 	} else {
-		return *cursor, above, nil
+		return cursor, above, nil
 	}
 }
 
-func algoGetCursorWithHeuristics(referenceTimestampNano primitives.TimestampNano, below BlockNumberAndTime, above BlockNumberAndTime) int64 {
+func algoGetCursorWithHeuristics(referenceTimestampNano primitives.TimestampNano, below *BlockNumberAndTime, above *BlockNumberAndTime) int64 {
 	distInBlocks := above.BlockNumber - below.BlockNumber
 	distInNano := above.BlockTimeNano - below.BlockTimeNano
 	if distInNano == 0 {
@@ -147,7 +147,7 @@ func algoGetCursorWithHeuristics(referenceTimestampNano primitives.TimestampNano
 	return res
 }
 
-func algoGetCursorWithBinarySearch(below BlockNumberAndTime, above BlockNumberAndTime) int64 {
+func algoGetCursorWithBinarySearch(below *BlockNumberAndTime, above *BlockNumberAndTime) int64 {
 	distInBlocks := above.BlockNumber - below.BlockNumber
 	// distInBlocks must be >= 2 according to algoVerifyResultInsideRange
 	return below.BlockNumber + distInBlocks/2

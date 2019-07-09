@@ -70,7 +70,7 @@ func TestAlgoDidReachResult(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.expected, algoDidReachResult(test.referenceTs, test.below, test.above))
+			require.Equal(t, test.expected, algoDidReachResult(test.referenceTs, &test.below, &test.above))
 		})
 	}
 }
@@ -128,7 +128,7 @@ func TestAlgoVerifyResultInsideRange(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := algoVerifyResultInsideRange(test.referenceTs, test.below, test.above)
+			err := algoVerifyResultInsideRange(test.referenceTs, &test.below, &test.above)
 			if !test.expectedError {
 				require.NoError(t, err)
 			} else {
@@ -319,7 +319,7 @@ func TestAlgoReduceRange(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			below, above, err := algoReduceRange(context.TODO(), test.referenceTs, test.below, test.above, test.btg, test.step)
+			below, above, err := algoReduceRange(context.TODO(), test.referenceTs, &test.below, &test.above, test.btg, test.step)
 			if !test.expectedError {
 				require.NoError(t, err)
 				require.EqualValues(t, test.expectedBelow, below.BlockNumber)
@@ -365,7 +365,7 @@ func TestAlgoGetCursorWithBinarySearch(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.expected, algoGetCursorWithBinarySearch(test.below, test.above))
+			require.Equal(t, test.expected, algoGetCursorWithBinarySearch(&test.below, &test.above))
 		})
 	}
 }
@@ -444,7 +444,7 @@ func TestAlgoGetCursorWithHeuristics(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.expected, algoGetCursorWithHeuristics(test.referenceTs, test.below, test.above))
+			require.Equal(t, test.expected, algoGetCursorWithHeuristics(test.referenceTs, &test.below, &test.above))
 		})
 	}
 }
