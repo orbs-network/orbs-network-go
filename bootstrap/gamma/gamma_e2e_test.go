@@ -104,3 +104,27 @@ func TestGammaWithEmptyBlocks(t *testing.T) {
 	t.Run("Benchmark", testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`))
 	t.Run("LeanHelix", testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 }
+
+func TestGammaSetBlockTime(t *testing.T) {
+	randomPort := test.RandomPort()
+	runMain(t, randomPort, "")
+	endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
+
+	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
+
+	res, err := http.Post(endpoint+"/debug/gamma/inc-time?seconds-to-add=10", "text/plain", nil)
+	require.NoError(t, err, "failed incrementing next block time")
+	require.EqualValues(t, 200, res.StatusCode, "http call to increment time failed")
+
+	sender, _ := orbsClient.CreateAccount()
+	transferTo, _ := orbsClient.CreateAccount()
+	client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
+
+	payload, _, err := client.CreateTransaction(sender.PublicKey, sender.PrivateKey, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
+	require.NoError(t, err)
+	response, err := client.SendTransaction(payload)
+	require.NoError(t, err)
+
+	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+	require.True(t, response.BlockTimestamp.After(time.Now().Add(10*time.Second)), "new block time did not reflect added seconds")
+}
