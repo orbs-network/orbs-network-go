@@ -120,11 +120,12 @@ func TestGammaSetBlockTime(t *testing.T) {
 	transferTo, _ := orbsClient.CreateAccount()
 	client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 
+	desiredTime := time.Now().Add(10 * time.Second)
 	payload, _, err := client.CreateTransaction(sender.PublicKey, sender.PrivateKey, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
 	require.NoError(t, err)
 	response, err := client.SendTransaction(payload)
 	require.NoError(t, err)
 
 	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-	require.True(t, response.BlockTimestamp.After(time.Now().Add(10*time.Second)), "new block time did not reflect added seconds")
+	require.WithinDuration(t, desiredTime, response.BlockTimestamp, 1*time.Second, "new block time did not increase") // we check within a delta to prevent flakiness
 }

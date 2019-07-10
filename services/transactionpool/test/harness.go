@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -232,7 +233,7 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 }
 
 func (h *harness) start(ctx context.Context) *harness {
-	service := transactionpool.NewTransactionPool(ctx, h.gossip, h.vm, h.signer, nil, h.config, h.logger, metric.NewRegistry())
+	service := transactionpool.NewTransactionPool(ctx, adapter.NewSystemClock(), h.gossip, h.vm, h.signer, nil, h.config, h.logger, metric.NewRegistry())
 	service.RegisterTransactionResultsHandler(h.trh)
 	h.txpool = service
 	h.fastForwardTo(ctx, 1)

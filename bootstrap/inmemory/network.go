@@ -20,6 +20,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
+	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -38,6 +39,7 @@ type Network struct {
 	Logger         log.Logger
 	Transport      adapter.Transport
 	VirtualChainId primitives.VirtualChainId
+	MaybeClock     txPoolAdapter.Clock
 }
 
 type NodeDependencies struct {
@@ -57,12 +59,14 @@ func NewNetworkWithNumOfNodes(
 	parent log.Logger,
 	cfgTemplate config.OverridableConfig,
 	transport adapter.Transport,
+	maybeClock txPoolAdapter.Clock,
 	provider nodeDependencyProvider,
 ) *Network {
 
 	network := &Network{
 		Logger:         parent,
 		Transport:      transport,
+		MaybeClock:     maybeClock,
 		VirtualChainId: cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
@@ -141,6 +145,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.statePersistence,
 			node.stateBlockHeightReporter,
 			node.transactionPoolBlockTracker,
+			n.MaybeClock,
 			node.nativeCompiler,
 			n.Logger.WithTags(log.Node(node.name)),
 			node.metricRegistry,

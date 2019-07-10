@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,6 +22,7 @@ import (
 )
 
 func NewTransactionPool(ctx context.Context,
+	maybeClock adapter.Clock,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	signer signer.Signer,
@@ -42,6 +44,7 @@ func NewTransactionPool(ctx context.Context,
 	txForwarder := NewTransactionForwarder(ctx, logger, signer, config, gossip)
 
 	s := &service{
+		clock:          createClockIfNeeded(maybeClock),
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
@@ -69,6 +72,14 @@ func NewTransactionPool(ctx context.Context,
 	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger)
 
 	return s
+}
+
+func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
+	if maybeClock == nil {
+		return adapter.NewSystemClock()
+	}
+
+	return maybeClock
 }
 
 func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {

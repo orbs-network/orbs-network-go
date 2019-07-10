@@ -2,6 +2,7 @@ package gamma
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -32,10 +33,18 @@ func (s *GammaServer) incrementTime(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	seconds := request.Form.Get("seconds-to-add")
-	if seconds == "" {
+	secondsParam := request.Form.Get("seconds-to-add")
+	if secondsParam == "" {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	seconds, err := strconv.Atoi(secondsParam)
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	s.clock.AddSeconds(seconds)
 
 }

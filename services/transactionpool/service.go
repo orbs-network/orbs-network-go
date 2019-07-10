@@ -9,6 +9,7 @@ package transactionpool
 import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -25,6 +26,7 @@ type BlockHeightReporter interface {
 }
 
 type service struct {
+	clock                      adapter.Clock
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
 	blockHeightReporter        BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
