@@ -71,7 +71,7 @@ func NewNodeLogic(
 		panic(fmt.Sprintf("could not instantiate NodeLogic: %s", err))
 	}
 
-	gossipService := gossip.NewGossip(gossipTransport, nodeConfig, logger)
+	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)

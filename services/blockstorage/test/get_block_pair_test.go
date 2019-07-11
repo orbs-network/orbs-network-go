@@ -53,7 +53,8 @@ func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		harness, _ := generateAndCommitOneBlock(ctx, t)
 
-		childCtx, _ := context.WithTimeout(ctx, time.Millisecond)
+		childCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
+		defer cancel()
 		output, err := harness.blockStorage.GetBlockPair(childCtx, &services.GetBlockPairInput{BlockHeight: 2})
 
 		require.NoError(t, err, "far future is not found but valid")

@@ -9,8 +9,10 @@ package gossip
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -24,17 +26,28 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 	s.handlers.blockSyncHandlers = append(s.handlers.blockSyncHandlers, handler)
 }
 
+// handles both client and server sides of block sync
+// server side (responding to requests) fires a new goroutine to handle each requests so as to not block the topic
+// client side will be handled in the block sync client main loop
 func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
-		s.receivedBlockSyncAvailabilityRequest(ctx, header, payloads)
+		supervised.GoOnce(s.logger, func() {
+			s.receivedBlockSyncAvailabilityRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
+		})
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
 		s.receivedBlockSyncAvailabilityResponse(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_REQUEST:
-		s.receivedBlockSyncRequest(ctx, header, payloads)
+		supervised.GoOnce(s.logger, func() {
+			s.receivedBlockSyncRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
+		})
 	case gossipmessages.BLOCK_SYNC_RESPONSE:
 		s.receivedBlockSyncResponse(ctx, header, payloads)
 	}
+}
+
+func createBlockSyncServerChildContextFrom(ctx context.Context) context.Context {
+	return trace.NewContext(ctx, "BlockSyncServer")
 }
 
 func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
