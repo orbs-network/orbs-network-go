@@ -75,7 +75,6 @@ func TestProcessCall_Arguments(t *testing.T) {
 					require.NoError(t, err, "call should succeed")
 					require.Equal(t, tt.expectedOutput, output.OutputArgumentArray, "call return args should be equal")
 				}
-				require.Equal(t, tt.expectedResult, output.CallResult, "call result should be equal")
 			})
 		})
 	}
