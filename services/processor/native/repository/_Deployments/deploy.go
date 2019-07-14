@@ -37,7 +37,7 @@ func getCodeParts(serviceName string) uint32 {
 	return _codeCounter(serviceName)
 }
 
-func deployService(serviceName string, processorType uint32, code []byte) {
+func deployService(serviceName string, processorType uint32, code ...[]byte) {
 	if processorType == uint32(protocol.PROCESSOR_TYPE_NATIVE) {
 		_validateNativeDeploymentLock()
 	}
@@ -51,35 +51,13 @@ func deployService(serviceName string, processorType uint32, code []byte) {
 
 	_writeProcessor(serviceName, processorType)
 
-	if len(code) != 0 {
-		_writeCode(serviceName, code, 0)
-	}
-
-	service.CallMethod(serviceName, "_init")
-}
-
-func deployService2(serviceName string, processorType uint32, code0 []byte, code1 []byte) {
-	if processorType == uint32(protocol.PROCESSOR_TYPE_NATIVE) {
-		_validateNativeDeploymentLock()
-	}
-
-	// TODO(https://github.com/orbs-network/orbs-network-go/issues/571): sanitize serviceName
-
-	existingProcessorType := _readProcessor(serviceName)
-	if existingProcessorType != 0 {
-		panic("contract already deployed")
-	}
-
-	_writeProcessor(serviceName, processorType)
-
-	code := [][]byte{code0, code1}
-
-	if len(code) != 0 {
+	if len(code) > 0 {
 		for i, c := range code {
 			_writeCode(serviceName, c, uint32(i))
 		}
+	} else {
+		panic("contract doesn't have any code")
 	}
-
 	service.CallMethod(serviceName, "_init")
 }
 

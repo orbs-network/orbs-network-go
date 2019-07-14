@@ -12,6 +12,5 @@ var PUBLIC = sdk.Export(getInfo,
 	getCode,
 	getCodeParts,
 	deployService,
-	deployService2,
 	lockNativeDeployment,
 	unlockNativeDeployment)

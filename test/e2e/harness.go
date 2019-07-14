@@ -61,8 +61,7 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
 
-	// revert to using code[0]
-	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService2", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code[0], code[1])
+	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code[0], code[1])
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
 	}
