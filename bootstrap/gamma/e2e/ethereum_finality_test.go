@@ -8,22 +8,21 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/e2e/contracts/calc/eth"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 const ORBS_CALC_CONTRACT = `package main
@@ -72,17 +71,6 @@ func sum(txCommaSeparatedList string) uint64 {
 
 `
 
-func moveToRealtimeInGanache(t *testing.T, c *rpc.Client, ethC *ethclient.Client, ctx context.Context, buffer int) {
-	latestBlockInGanache, err := ethC.HeaderByNumber(ctx, nil)
-	require.NoError(t, err, "failed to get latest block in ganache")
-
-	now := time.Now().Unix()
-	gap := now - latestBlockInGanache.Time.Int64() - int64(buffer)
-	require.True(t, gap >= 0, "ganache must be set up back enough to the past so finality test would pass in this flow, it was rolled too close to realtime, gap was %d", gap)
-	t.Logf("moving %d blocks into the future to get to now - %d seconds", gap, buffer)
-	moveBlocksInGanache(t, c, int(gap), 1)
-}
-
 func moveBlocksInGanache(t *testing.T, c *rpc.Client, count int, blockGapInSeconds int) {
 	for i := 0; i < count; i++ {
 		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed evm_increaseTime")
@@ -102,12 +90,16 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		t.Skip("Skipping Ganache-dependent E2E - missing endpoint or private key")
 	}
 
+
 	test.WithContext(func(ctx context.Context) {
 
-		h := newHarness()
-		h.waitUntilTransactionPoolIsReady(t)
+		port := test.RandomPort()
+		gammaEndpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+		gamma.RunMain(t, port, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
+		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(gammaEndpoint, 1)))
 
 		contractOwner, _ := orbsClient.CreateAccount()
+		orbs := orbsClient.NewClient(gammaEndpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 
 		key, err := crypto.HexToECDSA(privateKey)
 		require.NoError(t, err, "failed reading Ethereum private key")
@@ -121,21 +113,18 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		loggerContractAddress, _, loggerContract, err := eth.DeployLogger(auth, ethereumRpc)
 		require.NoError(t, err, "failed deploying Logger contract to Ganache")
 
-		h.eventuallyDeploy(t, keys.NewEd25519KeyPair(contractOwner.PublicKey, contractOwner.PrivateKey), "LogCalculator", []byte(ORBS_CALC_CONTRACT))
-
-		res, _, err := h.sendTransaction(contractOwner.PublicKey, contractOwner.PrivateKey, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI))
-		require.NoError(t, err, "failed binding Ethereum contract to Orbs contract")
-		require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED.String(), res.TransactionStatus.String(), "deployment transaction not committed")
-		require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), res.ExecutionResult.String(), "deployment transaction not successful")
+		deployContract(t, orbs, contractOwner, "LogCalculator", []byte(ORBS_CALC_CONTRACT))
 
 		txHashes := sendEthTransactions(t, loggerContract, auth, 25)
 
-		moveToRealtimeInGanache(t, ethRpc, ethereumRpc, ctx, 0)
+		httpRes, err := http.Post(gammaEndpoint+"/debug/gamma/inc-time?seconds-to-add=120", "text/plain", nil)
+		require.NoError(t, err, "failed incrementing next block time")
+		require.EqualValues(t, 200, httpRes.StatusCode, "http call to increment time failed")
+		moveBlocksInGanache(t, ethRpc,120, 1)
 
-		queryRes, err := h.runQuery(contractOwner.PublicKey, "LogCalculator", "sum", strings.Join(txHashes, ","))
-		require.NoError(t, err, "failed reading log")
-		require.EqualValues(t, codec.REQUEST_STATUS_COMPLETED.String(), queryRes.RequestStatus.String(), "failed calling sum method")
-		require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), queryRes.ExecutionResult.String(), "failed calling sum method")
+		sendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
+
+		queryRes := sendQuery(t, orbs, contractOwner, "LogCalculator", "sum", strings.Join(txHashes, ","))
 
 		require.EqualValues(t, 325, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
 	})
@@ -150,9 +139,4 @@ func sendEthTransactions(t testing.TB, loggerContract *eth.Logger, auth *bind.Tr
 	}
 
 	return
-}
-
-func readFile(path string) ([]byte, error) {
-	absPath, _ := filepath.Abs(path)
-	return ioutil.ReadFile(absPath)
 }

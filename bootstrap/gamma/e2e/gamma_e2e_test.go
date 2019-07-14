@@ -4,54 +4,25 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package gamma
+package e2e
 
 import (
-	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
 )
 
-const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
-
-type metrics map[string]map[string]interface{}
-
-func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) func() bool {
-	return func() bool {
-		res, err := http.Get(endpoint + "/metrics")
-		if err != nil {
-			fmt.Println(err)
-			return false
-		}
-
-		readBytes, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			fmt.Println(err)
-			return false
-		}
-		m := make(metrics)
-		json.Unmarshal(readBytes, &m)
-
-		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
-		return primitives.BlockHeight(blockHeight) >= targetBlockHeight
-	}
-}
-
 func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		runMain(t, randomPort, configJSON)
+		gamma.RunMain(t, randomPort, configJSON)
 		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
@@ -73,18 +44,11 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		randomPort := test.RandomPort()
-		runMain(t, randomPort, configJSON)
+		gamma.RunMain(t, randomPort, configJSON)
 		endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
 	}
-}
-
-func runMain(t testing.TB, port int, overrideConfig string) {
-	require.NoError(t, flag.Set("override-config", overrideConfig))
-	require.NoError(t, flag.Set("port", strconv.Itoa(port)))
-
-	go Main()
 }
 
 func TestGamma(t *testing.T) {
@@ -107,7 +71,7 @@ func TestGammaWithEmptyBlocks(t *testing.T) {
 
 func TestGammaSetBlockTime(t *testing.T) {
 	randomPort := test.RandomPort()
-	runMain(t, randomPort, "")
+	gamma.RunMain(t, randomPort, "")
 	endpoint := fmt.Sprintf("http://0.0.0.0:%d", randomPort)
 
 	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
