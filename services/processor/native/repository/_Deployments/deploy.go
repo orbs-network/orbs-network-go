@@ -58,7 +58,7 @@ func deployService(serviceName string, processorType uint32, code []byte) {
 	service.CallMethod(serviceName, "_init")
 }
 
-func deployService2(serviceName string, processorType uint32, code ...[]byte) {
+func deployService2(serviceName string, processorType uint32, code0 []byte, code1 []byte) {
 	if processorType == uint32(protocol.PROCESSOR_TYPE_NATIVE) {
 		_validateNativeDeploymentLock()
 	}
@@ -71,6 +71,8 @@ func deployService2(serviceName string, processorType uint32, code ...[]byte) {
 	}
 
 	_writeProcessor(serviceName, processorType)
+
+	code := [][]byte{code0, code1}
 
 	if len(code) != 0 {
 		for i, c := range code {
@@ -125,5 +127,5 @@ func _codeCounter(serviceName string) uint32 {
 
 func _codeCounterIncrement(serviceName string) {
 	counter := _codeCounter(serviceName)
-	state.WriteUint32([]byte(serviceName+".CodeParts"), counter)
+	state.WriteUint32([]byte(serviceName+".CodeParts"), counter+1)
 }
