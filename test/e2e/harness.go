@@ -60,12 +60,9 @@ func newHarness() *harness {
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
-	txArgs := []interface{}{contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE)}
-	for _, c := range code {
-		txArgs = append(txArgs, c)
-	}
 
-	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", txArgs)
+	// revert to using code[0]
+	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code[0])
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
 	}
