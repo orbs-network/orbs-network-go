@@ -16,6 +16,7 @@ import (
 
 type FakeCompiler interface {
 	adapter.Compiler
+	// Does not support multi-file fakes!
 	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string)
 }
 
@@ -31,11 +32,11 @@ func NewCompiler() *fakeCompiler {
 	}
 }
 
-func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
+func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.provided[code] = fakeContractInfo
+	c.provided[code[0]] = fakeContractInfo
 }
 
 func (c *fakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
