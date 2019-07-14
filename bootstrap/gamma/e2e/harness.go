@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -39,6 +41,15 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 	}
 }
 
+func runGammaOnRandomPort(t testing.TB, overrideConfig string) string {
+	port := test.RandomPort()
+	endpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+	gamma.RunMain(t, port, overrideConfig)
+	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
+
+	return endpoint
+}
+
 func sendTransaction(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.OrbsAccount, contractName string, method string, args ...interface{}) *codec.SendTransactionResponse {
 
 	tx, _, err := orbs.CreateTransaction(sender.PublicKey, sender.PrivateKey, contractName, method, args...)
@@ -64,4 +75,10 @@ func sendQuery(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.Orb
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), res.ExecutionResult.String(), "failed calling %s.%s", contractName, method)
 
 	return res
+}
+
+func timeTravel(t *testing.T, endpoint string, delta time.Duration) {
+	res, err := http.Post(fmt.Sprintf("%s/debug/gamma/inc-time?seconds-to-add=%.0f", endpoint, delta.Seconds()), "text/plain", nil)
+	require.NoError(t, err, "failed incrementing next block time")
+	require.EqualValues(t, 200, res.StatusCode, "http call to increment time failed")
 }

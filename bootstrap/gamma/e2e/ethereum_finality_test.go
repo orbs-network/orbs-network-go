@@ -15,14 +15,13 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
-	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/e2e/contracts/calc/eth"
 	"github.com/stretchr/testify/require"
-	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 const ORBS_CALC_CONTRACT = `package main
@@ -90,13 +89,9 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		t.Skip("Skipping Ganache-dependent E2E - missing endpoint or private key")
 	}
 
-
 	test.WithContext(func(ctx context.Context) {
 
-		port := test.RandomPort()
-		gammaEndpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
-		gamma.RunMain(t, port, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
-		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(gammaEndpoint, 1)))
+		gammaEndpoint := runGammaOnRandomPort(t, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
 
 		contractOwner, _ := orbsClient.CreateAccount()
 		orbs := orbsClient.NewClient(gammaEndpoint, 42, codec.NETWORK_TYPE_TEST_NET)
@@ -117,10 +112,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 
 		txHashes := sendEthTransactions(t, loggerContract, auth, 25)
 
-		httpRes, err := http.Post(gammaEndpoint+"/debug/gamma/inc-time?seconds-to-add=120", "text/plain", nil)
-		require.NoError(t, err, "failed incrementing next block time")
-		require.EqualValues(t, 200, httpRes.StatusCode, "http call to increment time failed")
-		moveBlocksInGanache(t, ethRpc,120, 1)
+		ensureFinalityInGanacheAndGamma(t, gammaEndpoint, ethRpc)
 
 		sendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
 
@@ -129,6 +121,12 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		require.EqualValues(t, 325, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
 	})
 
+}
+
+func ensureFinalityInGanacheAndGamma(t *testing.T, gammaEndpoint string, ethRpc *rpc.Client) {
+	finalityTime := 120 * time.Second
+	timeTravel(t, gammaEndpoint, finalityTime)
+	moveBlocksInGanache(t, ethRpc, int(finalityTime.Seconds()), 1)
 }
 
 func sendEthTransactions(t testing.TB, loggerContract *eth.Logger, auth *bind.TransactOpts, numOfTxs int) (hashes []string) {
