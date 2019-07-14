@@ -109,3 +109,25 @@ func (h *harness) packInputArgumentsForSampleStorage(method string, args []inter
 		return ethereum.ABIPackFunctionInputArguments(parsedABI, method, args)
 	}
 }
+
+//type mockFinality struct {
+//	mock.Mock
+//}
+//
+//func (s *mockFinality) GetFinalitySafeBlockNumber(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*timestampfinder.BlockNumberAndTime, error) {
+//	ret := s.Called(ctx, referenceTimestampNano)
+//	if out := ret.Get(0); out != nil {
+//		return out.(*timestampfinder.BlockNumberAndTime), ret.Error(1)
+//	} else {
+//		return nil, ret.Error(1)
+//	}
+//}
+//
+//func (s *mockFinality) VerifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano) error {
+//	ret := s.Called(ctx, blockNumber, referenceTimestamp)
+//	if out := ret.Get(0); out != nil {
+//		return ret.Error(1)
+//	} else {
+//		return ret.Error(1)
+//	}
+//}

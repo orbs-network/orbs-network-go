@@ -21,6 +21,13 @@ func TestInitialBlockHeight(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 		h := newHarness()
+
+		// This test is useless against remote networks since we cannot tamper with their storage
+		// So for the time being we skip this test
+		if h.config.remoteEnvironment {
+			t.Skip("Running against remote network - skipping")
+		}
+
 		require.True(t, test.Eventually(2*time.Second, func() bool {
 			blockHeight := h.getMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
 			return blockHeight >= expectedBlocks

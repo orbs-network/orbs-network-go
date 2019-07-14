@@ -129,20 +129,25 @@ jobs:
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
+  deploy_new_chain_pr_only:
+    docker:
+    - image: circleci/golang:1.11.4
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    environment:
+      BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
+      BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
+      TESTNET_NODE_IP: "35.161.123.97"
+      TESTNET_IGNORE_IPS: "54.149.67.22"
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: ./.circleci/chain_on_pr.sh
+
   release:
     machine: true
     steps:
     - checkout
     - run: ./.circleci/release.sh
-
-  autonomous_swap:
-    machine: true
-    steps:
-      - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: ./docker/build/build.sh
-      - run: docker tag orbs:gamma-server orbsnetwork/gamma:experimental
-      - run: cd vendor/github.com/orbs-network/orbs-ethereum-contracts/ && .circleci/main.sh
 
 workflows:
   version: 2
@@ -152,17 +157,19 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+
+      - deploy_new_chain_pr_only:
+          requires:
+            - tests
       - e2e:
           filters:
             tags:
               only: /^v.*/
       - flakiness
-      - autonomous_swap
       - success:
           requires:
             - tests
             - e2e
-            - autonomous_swap
       - deploy_testnet:
           requires:
             - e2e

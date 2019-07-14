@@ -31,6 +31,24 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 	})
 }
 
+func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(t).start(ctx)
+
+		// init a cancelled child context for the exercise
+		cancelledCtx, cancel := context.WithCancel(ctx)
+		cancel()
+
+		_, err := h.txpool.GetTransactionsForOrdering(cancelledCtx, &services.GetTransactionsForOrderingInput{
+			CurrentBlockHeight:      3,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.EqualError(t, errors.Cause(err), context.Canceled.Error(), "when presented with a cancelled context getTransactionsForOrdering did not cancel immediately")
+	})
+}
+
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t).start(ctx)
@@ -71,6 +89,21 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 		out := <-ch
 		require.EqualValues(t, 1, len(out.SignedTransactions), "did not wait for transaction to reach pool")
 		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp is zero")
+	})
+}
+
+func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t).start(ctx)
+
+		// init a cancelled child context for the exercise
+		cancelledCtx, cancel := context.WithCancel(ctx)
+		cancel()
+
+		out, err := h.getTransactionsForOrdering(cancelledCtx, 2, 1)
+
+		require.EqualValues(t, 0, len(out.SignedTransactions), "when presented with a cancelled context, and not enough transactions in pool, getTransactionsForOrdering did not return an empty block immediately")
+		require.NoError(t, err, "when presented with a cancelled context, and not enough transactions in pool, getTransactionsForOrdering should return gracefully")
 	})
 }
 

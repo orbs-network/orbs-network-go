@@ -9,6 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
@@ -27,7 +28,6 @@ import (
 
 type TransactionForwarderConfig interface {
 	NodeAddress() primitives.NodeAddress
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	TransactionPoolPropagationBatchSize() uint16
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
@@ -63,19 +63,21 @@ type transactionForwarder struct {
 	logger log.Logger
 	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
+	signer signer.Signer
 
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
 	transactionAdded  chan uint16
 }
 
-func NewTransactionForwarder(ctx context.Context, logger log.Logger, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
+func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer signer.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
 	f := &transactionForwarder{
 		logger:            logger.WithTags(log.String("component", "transaction-forwarder")),
 		config:            config,
 		gossip:            gossip,
+		signer:            signer,
 		forwardQueueMutex: &sync.Mutex{},
-		transactionAdded:  make(chan uint16),
+		transactionAdded:  make(chan uint16, 1), // buffered channel because we don't always have a receiver to read
 	}
 
 	f.start(ctx)
@@ -83,9 +85,9 @@ func NewTransactionForwarder(ctx context.Context, logger log.Logger, config Tran
 	return f
 }
 
-func (f *transactionForwarder) submit(transaction *protocol.SignedTransaction) {
+func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransaction) {
 	f.forwardQueueMutex.Lock()
-	f.forwardQueue = append(f.forwardQueue, transaction)
+	f.forwardQueue = append(f.forwardQueue, transactions...)
 	count := uint16(len(f.forwardQueue))
 	f.forwardQueueMutex.Unlock()
 	f.transactionAdded <- count
@@ -122,12 +124,14 @@ func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {
 	oneBigHash, hashes, err := HashTransactions(txs...)
 	if err != nil {
 		logger.Error("error creating one big hash while signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		f.submit(txs...)
 		return
 	}
 
-	sig, err := digest.SignAsNode(f.config.NodePrivateKey(), oneBigHash)
+	sig, err := f.signer.Sign(ctx, oneBigHash)
 	if err != nil {
 		logger.Error("error signing transactions", log.Error(err), log.StringableSlice("transactions", txs))
+		f.submit(txs...)
 		return
 	}
 

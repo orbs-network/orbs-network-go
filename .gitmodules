@@ -43,9 +43,6 @@
 [submodule "vendor/github.com/orbs-network/orbs-client-sdk-go"]
 	path = vendor/github.com/orbs-network/orbs-client-sdk-go
 	url = https://github.com/orbs-network/orbs-client-sdk-go
-[submodule "vendor/github.com/orbs-network/orbs-ethereum-contracts"]
-	path = vendor/github.com/orbs-network/orbs-ethereum-contracts
-	url = https://github.com/orbs-network/orbs-ethereum-contracts
 [submodule "vendor/github.com/c9s/goprocinfo"]
 	path = vendor/github.com/c9s/goprocinfo
 	url = https://github.com/c9s/goprocinfo
@@ -58,3 +55,6 @@
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net
+[submodule "vendor/github.com/orbs-network/contract-external-libraries-go"]
+	path = vendor/github.com/orbs-network/contract-external-libraries-go
+	url = https://github.com/orbs-network/contract-external-libraries-go

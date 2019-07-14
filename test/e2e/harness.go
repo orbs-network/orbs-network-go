@@ -26,11 +26,12 @@ import (
 )
 
 type E2EConfig struct {
-	virtualChainId   uint32
-	bootstrap        bool
-	baseUrl          string
-	stressTest       StressTestConfig
-	ethereumEndpoint string
+	virtualChainId    uint32
+	remoteEnvironment bool
+	bootstrap         bool
+	baseUrl           string
+	stressTest        StressTestConfig
+	ethereumEndpoint  string
 }
 
 type StressTestConfig struct {
@@ -44,6 +45,7 @@ const START_HTTP_PORT = 8090
 
 type harness struct {
 	client *orbsClient.OrbsClient
+	config *E2EConfig
 }
 
 func newHarness() *harness {
@@ -51,6 +53,7 @@ func newHarness() *harness {
 
 	return &harness{
 		client: orbsClient.NewClient(config.baseUrl, config.virtualChainId, codec.NETWORK_TYPE_TEST_NET),
+		config: &config,
 	}
 }
 
@@ -179,6 +182,8 @@ func getConfig() E2EConfig {
 	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
 	baseUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8080 is leader, 8082 is node-3
 
+	isRemoteEnvironment := os.Getenv("REMOTE_ENV") == "true"
+
 	stressTestEnabled := os.Getenv("STRESS_TEST") == "true"
 	stressTestNumberOfTransactions := int64(10000)
 	stressTestFailureRate := int64(2)
@@ -199,9 +204,10 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		virtualChainId: virtualChainId,
-		bootstrap:      shouldBootstrap,
-		baseUrl:        baseUrl,
+		virtualChainId:    virtualChainId,
+		bootstrap:         shouldBootstrap,
+		remoteEnvironment: isRemoteEnvironment,
+		baseUrl:           baseUrl,
 		stressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
 			numberOfTransactions:  stressTestNumberOfTransactions,

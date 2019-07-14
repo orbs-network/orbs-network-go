@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -18,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -27,6 +29,7 @@ type harness struct {
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
+	signer           signer.Signer
 	reporting        log.Logger
 	config           benchmarkconsensus.Config
 	service          services.ConsensusAlgoBenchmark
@@ -70,10 +73,14 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 
 	consensusContext := &services.MockConsensusContext{}
 
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
+
 	return &harness{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
+		signer:           signer,
 		reporting:        log,
 		config:           cfg,
 		service:          nil,
@@ -87,6 +94,7 @@ func (h *harness) createService(ctx context.Context) {
 		h.gossip,
 		h.blockStorage,
 		h.consensusContext,
+		h.signer,
 		h.reporting,
 		h.config,
 		h.registry,

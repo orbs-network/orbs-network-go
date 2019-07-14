@@ -13,6 +13,7 @@ import (
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -66,6 +67,7 @@ func NewLeanHelixConsensusAlgo(
 	gossip gossiptopics.LeanHelix,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
+	signer signer.Signer,
 	parentLogger log.Logger,
 	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
@@ -78,20 +80,20 @@ func NewLeanHelixConsensusAlgo(
 	logger.Info("NewLeanHelixConsensusAlgo() start", log.String("node-address", config.NodeAddress().String()))
 	com := NewCommunication(logger, gossip)
 	membership := NewMembership(logger, config.NodeAddress(), consensusContext, config.LeanHelixConsensusMaximumCommitteeSize())
-	mgr := NewKeyManager(logger, config.NodePrivateKey())
+	mgr := NewKeyManager(logger, signer)
 
 	provider := NewBlockProvider(logger, blockStorage, consensusContext)
 
 	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
 	s := &service{
-		com:              com,
-		blockStorage:     blockStorage,
-		logger:           logger,
-		config:           config,
-		blockProvider:    provider,
-		metrics:          newMetrics(metricFactory),
-		leanHelix:        nil,
+		com:           com,
+		blockStorage:  blockStorage,
+		logger:        logger,
+		config:        config,
+		blockProvider: provider,
+		metrics:       newMetrics(metricFactory),
+		leanHelix:     nil,
 	}
 
 	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
@@ -183,12 +185,12 @@ func (s *service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *
 	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
 	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
 		// ignore results - we only execute the transactions so that logs are printed in an audit node
-		_,_ = s.blockProvider.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
-			CurrentBlockHeight:	blockPair.TransactionsBlock.Header.BlockHeight(),
-			ResultsBlock:	blockPair.ResultsBlock,
-			PrevBlockHash: blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock: blockPair.TransactionsBlock,
-			PrevBlockTimestamp:	prevBlockPair.TransactionsBlock.Header.Timestamp()})
+		_, _ = s.blockProvider.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
+			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
+			ResultsBlock:       blockPair.ResultsBlock,
+			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:  blockPair.TransactionsBlock,
+			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp()})
 	}
 }
 

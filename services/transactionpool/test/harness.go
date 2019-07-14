@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -23,6 +24,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
@@ -31,6 +33,7 @@ type harness struct {
 	txpool                  services.TransactionPool
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
+	signer                  signer.Signer
 	trh                     *handlers.MockTransactionResultsHandler
 	lastBlockHeight         primitives.BlockHeight
 	lastBlockTimestamp      primitives.TimestampNano
@@ -121,7 +124,7 @@ func (h *harness) verifyMocks() error {
 func (h *harness) handleForwardFrom(ctx context.Context, sender *testKeys.TestEcdsaSecp256K1KeyPair, transactions ...*protocol.SignedTransaction) {
 	oneBigHash, _, _ := transactionpool.HashTransactions(transactions...)
 
-	sig, err := digest.SignAsNode(sender.PrivateKey(), oneBigHash)
+	sig, err := signer.NewLocalSigner(sender.PrivateKey()).Sign(ctx, oneBigHash)
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +232,7 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 }
 
 func (h *harness) start(ctx context.Context) *harness {
-	service := transactionpool.NewTransactionPool(ctx, h.gossip, h.vm, nil, h.config, h.logger, metric.NewRegistry())
+	service := transactionpool.NewTransactionPool(ctx, h.gossip, h.vm, h.signer, nil, h.config, h.logger, metric.NewRegistry())
 	service.RegisterTransactionResultsHandler(h.trh)
 	h.txpool = service
 	h.fastForwardTo(ctx, 1)
@@ -268,9 +271,13 @@ func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlock
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 
+	signer, err := signer.New(cfg)
+	require.NoError(tb, err)
+
 	h := &harness{
 		gossip:             gossip,
 		vm:                 virtualMachine,
+		signer:             signer,
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		config:             cfg,

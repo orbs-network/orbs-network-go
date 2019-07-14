@@ -144,3 +144,69 @@ func (s *service) SdkEthereumGetBlockNumber(executionContextId sdkContext.Contex
 
 	return output.OutputArguments[0].Uint64Value()
 }
+
+func (s *service) SdkEthereumGetBlockNumberByTime(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethBlockTimestamp uint64) (ethBlockNumber uint64) {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:     primitives.ExecutionContextId(executionContextId),
+		OperationName: SDK_OPERATION_NAME_ETHEREUM,
+		MethodName:    "getBlockNumberByTime",
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// ethBlockTimestamp
+				Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+				Uint64Value: ethBlockTimestamp,
+			}).Build(),
+		},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint64Value() {
+		panic("getBlockNumberByTime Sdk.Ethereum returned corrupt output value")
+	}
+
+	return output.OutputArguments[0].Uint64Value()
+}
+
+func (s *service) SdkEthereumGetBlockTime(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) (ethBlockTimestamp uint64) {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ETHEREUM,
+		MethodName:      "getBlockTime",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint64Value() {
+		panic("getBlockTime Sdk.Ethereum returned corrupt output value")
+	}
+
+	return output.OutputArguments[0].Uint64Value()
+}
+
+func (s *service) SdkEthereumGetBlockTimeByNumber(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, ethBlockNumber uint64) (ethBlockTimestamp uint64) {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:     primitives.ExecutionContextId(executionContextId),
+		OperationName: SDK_OPERATION_NAME_ETHEREUM,
+		MethodName:    "getBlockTimeByNumber",
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// ethBlockNumber
+				Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+				Uint64Value: ethBlockNumber,
+			}).Build(),
+		},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeUint64Value() {
+		panic("getBlockTimeByNumber Sdk.Ethereum returned corrupt output value")
+	}
+
+	return output.OutputArguments[0].Uint64Value()
+}

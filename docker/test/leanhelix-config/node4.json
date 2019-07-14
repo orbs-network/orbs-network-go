@@ -1,6 +1,5 @@
 {
   "node-address": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
-  "node-private-key": "1e404ba4e421cedf58dcc3dddcee656569afc7904e209612f7de93e1ad710300",
   "active-consensus-algo": 2,
   "genesis-validator-addresses": [
     "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
@@ -16,5 +15,6 @@
   ],
   "ethereum-endpoint": "http://192.168.199.6:8545",
   "logger-full-log": true,
-  "processor-sanitize-deployed-contracts": false
+  "processor-sanitize-deployed-contracts": false,
+  "signer-endpoint": "http://192.168.199.12:7777"
 }

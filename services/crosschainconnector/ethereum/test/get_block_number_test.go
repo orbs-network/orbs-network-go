@@ -15,14 +15,85 @@ import (
 	"testing"
 )
 
+// TODO NOAM rename file
+
+const RECENT_TIMESTAMP = primitives.TimestampNano(1505735343000000000)
+const RECENT_BLOCK_NUMBER = 938874
+const NON_RECENT_TIMESTAMP = primitives.TimestampNano(1505734591000000000)
+const NON_RECENT_BLOCK_NUMBER = 938774
+const TOO_RECENT_TIMESTAMP = primitives.TimestampNano(1506109783000000000) // max + 1000 seconds
+const TOO_RECENT_BLOCK_NUMBER = 999999
+
 func TestEthereumGetBlockNumber(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
 		in := &services.EthereumGetBlockNumberInput{
-			ReferenceTimestamp: primitives.TimestampNano(1505735343000000000), // should return block number 938874
+			ReferenceTimestamp: RECENT_TIMESTAMP,
 		}
 		o, err := h.connector.EthereumGetBlockNumber(ctx, in)
 		require.NoError(t, err, "failed getting block number from timestamp")
-		require.EqualValues(t, 938874, o.EthereumBlockNumber, "block number on fake data mismatch")
+		require.EqualValues(t, RECENT_BLOCK_NUMBER, o.EthereumBlockNumber, "block number on fake data mismatch")
+	})
+}
+
+func TestEthereumGetBlockTime(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
+		in := &services.EthereumGetBlockTimeInput{
+			ReferenceTimestamp: RECENT_TIMESTAMP,
+		}
+		o, err := h.connector.EthereumGetBlockTime(ctx, in)
+		require.NoError(t, err, "failed getting block number from timestamp")
+		require.EqualValues(t, RECENT_TIMESTAMP, o.EthereumTimestamp, "block time on fake data mismatch")
+	})
+}
+
+func TestEthereumGetBlockByTime(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
+		in := &services.EthereumGetBlockNumberByTimeInput{
+			ReferenceTimestamp: RECENT_TIMESTAMP,
+			EthereumTimestamp:  NON_RECENT_TIMESTAMP,
+		}
+		o, err := h.connector.EthereumGetBlockNumberByTime(ctx, in)
+		require.NoError(t, err, "failed getting block number from timestamp")
+		require.EqualValues(t, NON_RECENT_BLOCK_NUMBER, o.EthereumBlockNumber, "block time on fake data mismatch")
+	})
+}
+
+func TestEthereumGetBlockByTimeTooNewFails(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
+		in := &services.EthereumGetBlockNumberByTimeInput{
+			ReferenceTimestamp: RECENT_TIMESTAMP,
+			EthereumTimestamp:  TOO_RECENT_TIMESTAMP,
+		}
+		_, err := h.connector.EthereumGetBlockNumberByTime(ctx, in)
+		require.Error(t, err, "should fail getting block number from a too recent timestamp")
+	})
+}
+
+func TestEthereumGetBlockTimeByNumber(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
+		in := &services.EthereumGetBlockTimeByNumberInput{
+			ReferenceTimestamp:  RECENT_TIMESTAMP,
+			EthereumBlockNumber: NON_RECENT_BLOCK_NUMBER,
+		}
+		o, err := h.connector.EthereumGetBlockTimeByNumber(ctx, in)
+		require.NoError(t, err, "failed getting block number from timestamp")
+		require.EqualValues(t, NON_RECENT_TIMESTAMP, o.EthereumTimestamp, "block time on fake data mismatch")
+	})
+}
+
+func TestEthereumGetBlockTimeByNumberTooNewFails(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newSimulatedEthereumConnectorHarness(t).WithFakeTimeGetter()
+		in := &services.EthereumGetBlockTimeByNumberInput{
+			ReferenceTimestamp:  RECENT_TIMESTAMP,
+			EthereumBlockNumber: TOO_RECENT_BLOCK_NUMBER,
+		}
+		_, err := h.connector.EthereumGetBlockTimeByNumber(ctx, in)
+		require.Error(t, err, "should fail getting block number from a too recent timestamp")
 	})
 }

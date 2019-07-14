@@ -1,3 +1,9 @@
+// Copyright 2019 the orbs-network-go authors
+// This file is part of the orbs-network-go library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
 package test
 
 import (
@@ -22,11 +28,11 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 		prevBlock := builders.BlockPair().WithHeight(0).WithEmptyLeanHelixBlockProof().Build()
 
 		vrb := &services.ValidateResultsBlockInput{
-			CurrentBlockHeight:	block.TransactionsBlock.Header.BlockHeight(),
-			ResultsBlock:	block.ResultsBlock,
-			PrevBlockHash: block.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock: block.TransactionsBlock,
-			PrevBlockTimestamp:	prevBlock.TransactionsBlock.Header.Timestamp()}
+			CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
+			ResultsBlock:       block.ResultsBlock,
+			PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:  block.TransactionsBlock,
+			PrevBlockTimestamp: prevBlock.TransactionsBlock.Header.Timestamp()}
 
 		h.consensusContext.When("ValidateResultsBlock", mock.Any, vrb).
 			Return(&services.ValidateResultsBlockOutput{}, nil).Times(1)

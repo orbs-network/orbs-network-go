@@ -10,13 +10,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
-	"os"
-	"strconv"
 )
 
 type GammaServer struct {
@@ -49,7 +50,6 @@ func getLogger(silent bool) log.Logger {
 
 func StartGammaServer(config GammaServerConfig) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	rootLogger := getLogger(config.Silent)
 
 	network := NewDevelopmentNetwork(ctx, rootLogger, config.OverrideConfigJson)
@@ -62,6 +62,8 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
 		network:     network,
 	}
+
+	s.addGammaHandlers(httpServer.Router())
 
 	return s
 }

@@ -24,7 +24,7 @@ import (
 )
 
 func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
-	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock()
+	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
 	for {
 		start := time.Now()
 		ctx := trace.NewContext(parent, "BenchmarkConsensus.Tick")
@@ -92,7 +92,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 }
 
 // used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
-func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
+func (s *service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
@@ -105,7 +105,7 @@ func (s *service) leaderGenerateGenesisBlock() *protocol.BlockPairContainer {
 		ContractStateDiffs:  []*protocol.ContractStateDiff{},
 		BlockProof:          nil, // will be generated in a minute when signed
 	}
-	blockPair, err := s.leaderSignBlockProposal(transactionsBlock, resultsBlock)
+	blockPair, err := s.leaderSignBlockProposal(ctx, transactionsBlock, resultsBlock)
 	if err != nil {
 		s.logger.Error("leader failed to sign genesis block", log.Error(err))
 		panic(fmt.Sprintf("leader failed to sign genesis block, abort, err=%s", err.Error()))
@@ -143,10 +143,10 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 	}
 
 	// generate signed block
-	return s.leaderSignBlockProposal(txOutput.TransactionsBlock, rxOutput.ResultsBlock)
+	return s.leaderSignBlockProposal(ctx, txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 }
 
-func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+func (s *service) leaderSignBlockProposal(ctx context.Context, transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
@@ -154,7 +154,7 @@ func (s *service) leaderSignBlockProposal(transactionsBlock *protocol.Transactio
 
 	// prepare signature over the block headers
 	signedData := s.signedDataForBlockProof(blockPair)
-	sig, err := digest.SignAsNode(s.config.NodePrivateKey(), signedData)
+	sig, err := s.signer.Sign(ctx, signedData)
 	if err != nil {
 		return nil, err
 	}

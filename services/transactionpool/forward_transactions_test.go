@@ -8,8 +8,9 @@ package transactionpool
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -32,16 +33,24 @@ func (c *forwarderConfig) NodeAddress() primitives.NodeAddress {
 	return c.keyPair.NodeAddress()
 }
 
-func (c *forwarderConfig) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
-	return c.keyPair.PrivateKey()
-}
-
 func (c *forwarderConfig) TransactionPoolPropagationBatchSize() uint16 {
 	return c.queueSize
 }
 
 func (c *forwarderConfig) TransactionPoolPropagationBatchingTimeout() time.Duration {
 	return 5 * time.Millisecond
+}
+
+type signerConfig struct {
+	keyPair *testKeys.TestEcdsaSecp256K1KeyPair
+}
+
+func (c *signerConfig) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
+	return c.keyPair.PrivateKey()
+}
+
+func (c *signerConfig) SignerEndpoint() string {
+	return ""
 }
 
 func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, nodeAddress primitives.NodeAddress, sig primitives.EcdsaSecp256K1Sig, transactions ...*protocol.SignedTransaction) {
@@ -60,15 +69,18 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
-		cfg := &forwarderConfig{3, testKeys.EcdsaSecp256K1KeyPairForTests(0)}
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
+		cfg := &forwarderConfig{2, keyPair}
+		signer, err := signer.New(&signerConfig{keyPair})
+		require.NoError(t, err)
 
-		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := digest.SignAsNode(cfg.NodePrivateKey(), oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -80,18 +92,20 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-
 	test.WithContext(func(ctx context.Context) {
 		gossip := &gossiptopics.MockTransactionRelay{}
-		cfg := &forwarderConfig{2, testKeys.EcdsaSecp256K1KeyPairForTests(0)}
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
+		cfg := &forwarderConfig{2, keyPair}
+		signer, err := signer.New(&signerConfig{keyPair})
+		require.NoError(t, err)
 
-		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
-		sig, _ := digest.SignAsNode(cfg.NodePrivateKey(), oneBigHash)
+		sig, _ := signer.Sign(ctx, oneBigHash)
 
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
@@ -100,4 +114,48 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 
 		require.NoError(t, test.EventuallyVerify(10*time.Millisecond, gossip), "mocks were not called as expected")
 	})
+}
+
+func TestForwardsTransactionWithFaultySigner(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		gossip := &gossiptopics.MockTransactionRelay{}
+		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
+		cfg := &forwarderConfig{2, keyPair}
+
+		signer := &FaultySigner{}
+		signer.When("Sign", mock.Any, mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
+
+		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
+		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
+
+		tx := builders.TransferTransaction().Build()
+		anotherTx := builders.TransferTransaction().Build()
+
+		gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(nil, nil).Times(0)
+
+		txForwarder.submit(tx)
+		txForwarder.submit(anotherTx)
+
+		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
+
+		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
+		sig, _ := signer.Sign(ctx, oneBigHash)
+		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
+
+		signer.Reset()
+		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil)
+
+		txForwarder.drainQueueAndForward(ctx)
+
+		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*3, gossip), "mocks were not called as expected")
+	})
+}
+
+type FaultySigner struct {
+	mock.Mock
+}
+
+func (c *FaultySigner) Sign(ctx context.Context, input []byte) ([]byte, error) {
+	call := c.Called(ctx, input)
+	return call.Get(0).([]byte), call.Error(1)
 }

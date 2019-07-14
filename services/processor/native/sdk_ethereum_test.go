@@ -21,6 +21,7 @@ import (
 var examplePackedOutput = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 104, 101, 108, 108, 111, 32, 101, 116, 104, 101, 114, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 var exampleBlockNumber = uint64(1234)
 var exampleTxIndex = uint32(56)
+var exampleBlockTimestamp = uint64(12345)
 
 func TestSdkEthereum_CallMethod(t *testing.T) {
 	s := createEthereumSdk()
@@ -49,7 +50,31 @@ func TestSdkEthereum_GetBlockNumber(t *testing.T) {
 
 	ethBlockNumber := s.SdkEthereumGetBlockNumber(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM)
 
-	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from transaction log")
+	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from Ethereum")
+}
+
+func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
+	s := createEthereumSdk()
+
+	ethBlockNumber := s.SdkEthereumGetBlockNumberByTime(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, exampleBlockTimestamp)
+
+	require.Equal(t, exampleBlockNumber, ethBlockNumber, "did not get expected block number from Ethereum")
+}
+
+func TestSdkEthereum_GetBlockTime(t *testing.T) {
+	s := createEthereumSdk()
+
+	ethBlockTimestamp := s.SdkEthereumGetBlockTime(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM)
+
+	require.Equal(t, exampleBlockTimestamp, ethBlockTimestamp, "did not get expected block time from Ethereum")
+}
+
+func TestSdkEthereum_GetBlockTimeByNumber(t *testing.T) {
+	s := createEthereumSdk()
+
+	ethBlockTimestamp := s.SdkEthereumGetBlockTimeByNumber(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SYSTEM, exampleBlockNumber)
+
+	require.Equal(t, exampleBlockTimestamp, ethBlockTimestamp, "did not get expected block number from Ethereum")
 }
 
 func createEthereumSdk() *service {
@@ -74,6 +99,18 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 	case "getBlockNumber":
 		return &handlers.HandleSdkCallOutput{
 			OutputArguments: builders.Arguments(exampleBlockNumber),
+		}, nil
+	case "getBlockNumberByTime":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments(exampleBlockNumber),
+		}, nil
+	case "getBlockTime":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments(exampleBlockTimestamp),
+		}, nil
+	case "getBlockTimeByNumber":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments(exampleBlockTimestamp),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")
