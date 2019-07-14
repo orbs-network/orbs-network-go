@@ -10,4 +10,5 @@ package deployments_systemcontract
 const CONTRACT_NAME = "_Deployments"
 const METHOD_GET_INFO = "getInfo"
 const METHOD_GET_CODE = "getCode"
+const METHOD_GET_CODE_PARTS = "getCodeParts"
 const METHOD_DEPLOY_SERVICE = "deployService"
