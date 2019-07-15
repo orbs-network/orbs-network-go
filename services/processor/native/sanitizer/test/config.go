@@ -11,9 +11,11 @@ import "github.com/orbs-network/orbs-network-go/services/processor/native/saniti
 func SanitizerConfigForTests() *sanitizer.SanitizerConfig {
 	return &sanitizer.SanitizerConfig{
 		ImportWhitelist: map[string]string{
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:       "SDK",
-			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`: "SDK",
-			`"time"`: "test",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:            "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`:      "SDK",
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/*"`: "SDK",
+			`"encoding/json"`: "Encoding",
+			`"time"`:          "test",
 		},
 		FunctionBlacklist: map[string][]string{
 			`time`: {"Sleep", "After", "AfterFunc"},

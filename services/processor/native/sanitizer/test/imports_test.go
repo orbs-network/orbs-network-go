@@ -36,3 +36,10 @@ func TestCodeWithJsonAndHex(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, source, output, "valid file content should not be altered by sanitizer")
 }
+
+func TestWildcardImport(t *testing.T) {
+	source := usecases.WildcardImport
+	output, err := sanitizer.NewSanitizer(SanitizerConfigForTests()).Process(source)
+	require.NoError(t, err)
+	require.Equal(t, source, output, "valid file content with wildcards should not be rejected by sanitizer")
+}
