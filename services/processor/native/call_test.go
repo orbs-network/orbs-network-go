@@ -70,6 +70,22 @@ func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 	require.EqualValues(t, [][]byte{[]byte("one"), []byte("two")}, outValues[0].Interface())
 }
 
+func TestPrepareMethodArgumentsForCallWithTwoByteArrays(t *testing.T) {
+	s := &service{}
+
+	methodInstance := func(a []byte, b []byte) [][]byte {
+		return [][]byte{a, b}
+	}
+
+	args := argsToArgumentArray([]byte("one"), []byte("two"))
+
+	inValues, err := s.prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	require.NoError(t, err)
+
+	outValues := reflect.ValueOf(methodInstance).Call(inValues)
+	require.EqualValues(t, [][]byte{[]byte("one"), []byte("two")}, outValues[0].Interface())
+}
+
 func TestPrepareMethodArgumentsForCallWithIncorrectNumberOfArgs(t *testing.T) {
 	s := &service{}
 
