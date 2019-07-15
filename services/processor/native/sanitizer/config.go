@@ -6,7 +6,21 @@
 
 package sanitizer
 
+import (
+	"strings"
+)
+
 type SanitizerConfig struct {
 	ImportWhitelist   map[string]string
 	FunctionBlacklist map[string][]string
+}
+
+func (c SanitizerConfig) AllowedPrefixes() (prefixes []string) {
+	for whitelist := range c.ImportWhitelist {
+		if strings.HasSuffix(whitelist, `*"`) {
+			prefixes = append(prefixes, whitelist[:len(whitelist)-3])
+		}
+	}
+
+	return
 }
