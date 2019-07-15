@@ -18,7 +18,7 @@ type SanitizerConfig struct {
 func (c SanitizerConfig) AllowedPrefixes() (prefixes []string) {
 	for whitelist := range c.ImportWhitelist {
 		if strings.HasSuffix(whitelist, `*"`) {
-			prefixes = append(prefixes, whitelist[:len(whitelist)-2])
+			prefixes = append(prefixes, whitelist[:len(whitelist)-3])
 		}
 	}
 
