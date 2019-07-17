@@ -43,6 +43,7 @@ func _clearGuardians() {
 		state.Clear(_formatGuardianCandidateKey(guardian))
 		state.Clear(_formatGuardianStakeKey(guardian))
 		state.Clear(_formatGuardianVoteBlockNumberKey(guardian))
+		state.Clear(_formatGuardianVoteWeightKey(guardian))
 	}
 	_setNumberOfGuardians(0)
 }
