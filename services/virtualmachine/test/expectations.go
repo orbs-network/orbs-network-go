@@ -176,6 +176,45 @@ func (h *harness) expectEthereumConnectorGetBlockNumber(returnError error, retur
 	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockNumber", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
+func (h *harness) expectEthereumConnectorGetBlockNumberByTime(returnError error, returnBlockNumber uint64) {
+	contractMatcher := func(i interface{}) bool {
+		_, ok := i.(*services.EthereumGetBlockNumberByTimeInput)
+		return ok
+	}
+
+	outputToReturn := &services.EthereumGetBlockNumberByTimeOutput{
+		EthereumBlockNumber: returnBlockNumber,
+	}
+
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockNumberByTime", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
+func (h *harness) expectEthereumConnectorGetBlockTime(returnError error, returnBlockTimestamp uint64) {
+	contractMatcher := func(i interface{}) bool {
+		_, ok := i.(*services.EthereumGetBlockTimeInput)
+		return ok
+	}
+
+	outputToReturn := &services.EthereumGetBlockTimeOutput{
+		EthereumTimestamp: primitives.TimestampNano(returnBlockTimestamp),
+	}
+
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockTime", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
+func (h *harness) expectEthereumConnectorGetBlockTimeByNumber(returnError error, returnBlockTimestamp uint64) {
+	contractMatcher := func(i interface{}) bool {
+		_, ok := i.(*services.EthereumGetBlockTimeByNumberInput)
+		return ok
+	}
+
+	outputToReturn := &services.EthereumGetBlockTimeByNumberOutput{
+		EthereumTimestamp: primitives.TimestampNano(returnBlockTimestamp),
+	}
+
+	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockTimeByNumber", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
+}
+
 func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {
 	outputToReturn := &services.GetStateStorageBlockHeightOutput{
 		LastCommittedBlockHeight:    returnValue,

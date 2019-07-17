@@ -48,7 +48,8 @@ func (s *Sanitizer) Process(code string) (string, error) {
 }
 
 func (s *Sanitizer) verifyAll(astFile *ast.File) error {
-	err := s.verifyImports(astFile)
+	allowedPrefixes := s.config.AllowedPrefixes()
+	err := s.verifyImports(astFile, allowedPrefixes)
 	if err != nil {
 		return err
 	}
