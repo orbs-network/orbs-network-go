@@ -13,7 +13,21 @@ func SanitizerConfigForTests() *sanitizer.SanitizerConfig {
 		ImportWhitelist: map[string]string{
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"`:       "SDK",
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"`: "SDK",
-			`"time"`: "test",
+			`"encoding/json"`: "Encoding",
+			`"time"`:          "test",
+		},
+		FunctionBlacklist: map[string][]string{
+			`time`: {"Sleep", "After", "AfterFunc"},
+		},
+	}
+}
+
+func SanitizerConfigWithWildcardForTests() *sanitizer.SanitizerConfig {
+	return &sanitizer.SanitizerConfig{
+		ImportWhitelist: map[string]string{
+			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/*"`: "SDK",
+			`"encoding/json"`: "Encoding",
+			`"time"`:          "test",
 		},
 		FunctionBlacklist: map[string][]string{
 			`time`: {"Sleep", "After", "AfterFunc"},
