@@ -87,7 +87,7 @@ func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersist
 	}
 
 	if fi, err := file.Stat(); err != nil {
-		adapter.logger.Info("unable to read file size for metrics", log.Error(err))
+		return adapter, errors.Wrap(err, "unable to read file size for metrics")
 	} else {
 		adapter.metrics.sizeOnDisk.Add(fi.Size())
 	}
