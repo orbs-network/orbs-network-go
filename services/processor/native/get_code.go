@@ -52,15 +52,15 @@ func (s *service) retrieveContractInfo(ctx context.Context, executionContextId p
 func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
 	start := time.Now()
 
-	codeBytes, err := s.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
+	rawCodeFiles, err := s.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
 	var code []string
 
-	for _, cb := range codeBytes {
-		sanitizedCode, err := s.sanitizeDeployedSourceCode(string(cb))
+	for _, rawCodeFile := range rawCodeFiles {
+		sanitizedCode, err := s.sanitizeDeployedSourceCode(rawCodeFile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 		}
@@ -95,13 +95,13 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 	return newContractInfo, nil
 }
 
-func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([][]byte, error) {
-	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, 0)
+func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
+	code, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	results := [][]byte{codeBytes}
+	results := []string{code}
 	codeParts, err := s.getCodeParts(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, exe
 	return results, nil
 }
 
-func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) ([]byte, error) {
+func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE)
 
@@ -146,21 +146,21 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
 	ArgumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
 	argIterator := ArgumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
 	arg0 := argIterator.NextArguments()
 	if !arg0.IsTypeBytesValue() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
 	}
-	return arg0.BytesValue(), nil
+	return string(arg0.BytesValue()), nil
 }
 
 func (s *service) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
