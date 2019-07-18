@@ -44,8 +44,9 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 func runGammaOnRandomPort(t testing.TB, overrideConfig string) string {
 	port := test.RandomPort()
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
+	t.Log(t.Name(), "running Gamma at", endpoint)
 	gamma.RunMain(t, port, overrideConfig)
-	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)))
+	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)), "Gamma did not start ")
 
 	return endpoint
 }

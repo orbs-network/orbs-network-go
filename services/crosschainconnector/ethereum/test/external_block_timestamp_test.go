@@ -34,9 +34,10 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
 
 		// create first block in case we are running only this test (clean ganache, but no real hard in actual)
-		h.moveBlocksInGanache(t, 1, 0)
+		h.moveBlocksInGanache(t, 1, 1)
 		blockAtStart, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 		require.NoError(t, err, "failed to get latest block in ganache")
+		t.Logf("block at start: %d | %d", blockAtStart.Number.Int64(), blockAtStart.Time.Int64())
 
 		time.Sleep(time.Second)
 
@@ -46,14 +47,11 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 		blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 		require.NoError(t, err, "failed to get latest block in ganache")
-		t.Logf("block at deploy: %d | %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64(), time.Now().Unix())
+		t.Logf("block at deploy: %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64())
 
-		t.Logf("finality is %f seconds", h.config.finalityTimeComponent.Seconds())
-		time.Sleep(time.Second)                                  // buffer
-		h.moveBlocksInGanache(t, 1, 0)                           // finality block
-		time.Sleep(time.Second)                                  // buffer
-		h.moveBlocksInGanache(t, 1, 0)                           // block we will request below of because of the finder algo
-		time.Sleep(h.config.finalityTimeComponent - time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+		t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
+		h.moveBlocksInGanache(t, int(h.config.finalityBlocksComponent+1), 1)                                                                                          // finality blocks + block we will request below of because of the finder algo
+		referenceTime := time.Unix(blockAtStart.Time.Int64(), 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent+1)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
 
 		methodToCall := "getValues"
 		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
@@ -64,6 +62,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 		// request at time now, which should be (with finality) after the contract was deployed
 		input := builders.EthereumCallContractInput().
+			WithTimestamp(referenceTime).
 			WithContractAddress(contractAddress).
 			WithAbi(contract.SimpleStorageABI).
 			WithFunctionName(methodToCall).
