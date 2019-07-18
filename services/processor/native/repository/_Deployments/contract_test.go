@@ -28,7 +28,7 @@ func TestGetMultipleFilesCode(t *testing.T) {
 	diffs, _, _ := InSystemScope(nil, nil, func(m Mockery) {
 		m.MockServiceCallMethod("hello", "_init", nil)
 
-		deployService2("hello", 2, []byte("contract"), []byte("more contract stuff"))
+		deployService("hello", 2, []byte("contract"), []byte("more contract stuff"))
 		code := getCode("hello", 0)
 		require.EqualValues(t, []byte("contract"), code)
 
