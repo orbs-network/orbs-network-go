@@ -36,6 +36,10 @@ func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.Contract
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	if len(code) > 1 {
+		panic("fake compiler does not support multiple files in contracts")
+	}
+
 	c.provided[code[0]] = fakeContractInfo
 }
 
