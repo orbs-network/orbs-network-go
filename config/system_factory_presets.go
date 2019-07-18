@@ -7,6 +7,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -247,5 +248,8 @@ func TemplateForGamma(
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts", fmt.Sprintf("%d", time.Now().Unix())))
+
 	return cfg
 }
