@@ -130,6 +130,9 @@ func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, l
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
 func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, peerQueue := range t.outgoingPeerQueues {
@@ -153,6 +156,12 @@ func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData)
 
 func (t *DirectTransport) Port() int {
 	return t.serverPort
+}
+
+func (t *DirectTransport) safeLenOfOutgoingPeerQueues() int {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	return len(t.outgoingPeerQueues)
 }
 
 func calcPaddingSize(size uint32) uint32 {

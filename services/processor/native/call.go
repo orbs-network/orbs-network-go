@@ -70,9 +70,9 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 	methodType := reflect.ValueOf(methodInstance).Type()
 
 	var arg *protocol.Argument
+	i := 0
 	argsIterator := args.ArgumentsIterator()
-	for i := 0; i < methodType.NumIn(); i++ {
-
+	for ; argsIterator.HasNext(); i++ {
 		// get the next arg from the transaction
 		if argsIterator.HasNext() {
 			arg = argsIterator.NextArguments()
@@ -80,8 +80,15 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 			return nil, errors.Errorf("method '%s' takes %d args but received %d", functionNameForErrors, methodType.NumIn(), i)
 		}
 
+		// in case of variable length we take the last available index
+		methodTypeIndex := i
+		if methodTypeIndex >= methodType.NumIn() {
+			methodTypeIndex = methodType.NumIn() - 1
+		}
+		methodTypeIn := methodType.In(methodTypeIndex)
+
 		// translate argument type
-		switch methodType.In(i).Kind() {
+		switch methodTypeIn.Kind() {
 		case reflect.Uint32:
 			if !arg.IsTypeUint32Value() {
 				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", functionNameForErrors, i, arg.StringType())
@@ -98,22 +105,38 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 			}
 			res = append(res, reflect.ValueOf(arg.StringValue()))
 		case reflect.Slice:
-			if methodType.In(i).Elem().Kind() != reflect.Uint8 {
-				return nil, errors.Errorf("method '%s' arg %d slice type is not byte", functionNameForErrors, i)
+			switch methodTypeIn.Elem().Kind() {
+			case reflect.Uint8:
+				res = append(res, reflect.ValueOf(arg.BytesValue()))
+			case reflect.String:
+				res = append(res, reflect.ValueOf(arg.StringStringValue()))
+			case reflect.Uint32:
+				res = append(res, reflect.ValueOf(arg.Uint32Value()))
+			case reflect.Uint64:
+				res = append(res, reflect.ValueOf(arg.Uint64Value()))
+			case reflect.Slice:
+				if !arg.IsTypeBytesValue() {
+					return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", functionNameForErrors, i, arg.StringType())
+				}
+				res = append(res, reflect.ValueOf(arg.BytesValue()))
+			default:
+				return nil, errors.Errorf("method '%s' expect arg %d to be of different type", functionNameForErrors, i)
 			}
-			if !arg.IsTypeBytesValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-			res = append(res, reflect.ValueOf(arg.BytesValue()))
 		default:
 			return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
 		}
 
 	}
 
-	// make sure transaction doesn't have any more args left
-	if argsIterator.HasNext() {
-		return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
+	// Handle case of overflow unless the last argument was an array (supposedly of variable length)
+	if i > methodType.NumIn() && methodType.NumIn() > 0 {
+		if k := methodType.In(methodType.NumIn() - 1).Kind(); k != reflect.Slice {
+			return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
+		}
+	}
+
+	if i < methodType.NumIn() {
+		return nil, errors.Errorf("method '%s' takes %d args but received less", functionNameForErrors, methodType.NumIn())
 	}
 
 	return res, nil

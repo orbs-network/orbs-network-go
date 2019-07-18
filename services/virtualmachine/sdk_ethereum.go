@@ -49,6 +49,30 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 			Uint64Value: ethBlockNumber,
 		}).Build()}, err
 
+	case "getBlockNumberByTime":
+		ethBlockNumber, err := s.handleSdkEthereumGetBlockNumberByTime(ctx, executionContext, args, permissionScope)
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+			Uint64Value: ethBlockNumber,
+		}).Build()}, err
+
+	case "getBlockTime":
+		ethBlockTimestamp, err := s.handleSdkEthereumGetBlockTime(ctx, executionContext, args, permissionScope)
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+			Uint64Value: ethBlockTimestamp,
+		}).Build()}, err
+
+	case "getBlockTimeByNumber":
+		ethBlockTimestamp, err := s.handleSdkEthereumGetBlockTimeByNumber(ctx, executionContext, args, permissionScope)
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// outputArgs
+			Type:        protocol.ARGUMENT_TYPE_UINT_64_VALUE,
+			Uint64Value: ethBlockTimestamp,
+		}).Build()}, err
+
 	default:
 		return nil, errors.Errorf("unknown SDK service call method: %s", methodName)
 	}
@@ -140,12 +164,12 @@ func (s *service) handleSdkEthereumGetBlockNumber(ctx context.Context, execution
 	}
 
 	// get block timestamp
-	blockTimestamp := executionContext.currentBlockTimestamp
+	orbsBlockTimestamp := executionContext.currentBlockTimestamp
 
 	// execute the call
 	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
 	output, err := connector.EthereumGetBlockNumber(ctx, &services.EthereumGetBlockNumberInput{
-		ReferenceTimestamp: blockTimestamp,
+		ReferenceTimestamp: orbsBlockTimestamp,
 	})
 	if err != nil {
 		logger.Info("Sdk.Ethereum.GetBlockNumber failed", log.Error(err))
@@ -153,4 +177,79 @@ func (s *service) handleSdkEthereumGetBlockNumber(ctx context.Context, execution
 	}
 
 	return output.EthereumBlockNumber, nil
+}
+
+// inputArg0: ethBlockTimestamp (uint64)
+// outputArg0: ethBlockNumber (uint64)
+func (s *service) handleSdkEthereumGetBlockNumberByTime(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	if len(args) != 1 || !args[0].IsTypeUint64Value() {
+		return 0, errors.Errorf("invalid SDK ethereum getBlockNumberByTime args: %v", args)
+	}
+	ethBlockTimestamp := args[0].Uint64Value()
+
+	// get block timestamp
+	orbsBlockTimestamp := executionContext.currentBlockTimestamp
+
+	// execute the call
+	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
+	output, err := connector.EthereumGetBlockNumberByTime(ctx, &services.EthereumGetBlockNumberByTimeInput{
+		ReferenceTimestamp: orbsBlockTimestamp,
+		EthereumTimestamp:  primitives.TimestampNano(ethBlockTimestamp),
+	})
+	if err != nil {
+		logger.Info("Sdk.Ethereum.GetBlockNumberByTime failed", log.Error(err))
+		return 0, err
+	}
+
+	return output.EthereumBlockNumber, nil
+}
+
+// outputArg0: ethBlockTimestamp (uint64)
+func (s *service) handleSdkEthereumGetBlockTime(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	if len(args) != 0 {
+		return 0, errors.Errorf("invalid SDK ethereum getBlockTime args: %v", args)
+	}
+
+	// get block timestamp
+	orbsBlockTimestamp := executionContext.currentBlockTimestamp
+
+	// execute the call
+	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
+	output, err := connector.EthereumGetBlockTime(ctx, &services.EthereumGetBlockTimeInput{
+		ReferenceTimestamp: orbsBlockTimestamp,
+	})
+	if err != nil {
+		logger.Info("Sdk.Ethereum.GetBlockTime failed", log.Error(err))
+		return 0, err
+	}
+
+	return uint64(output.EthereumTimestamp), nil
+}
+
+// inputArg0: ethBlockBlockNumber (uint64)
+// outputArg0: ethBlockTimestamp (uint64)
+func (s *service) handleSdkEthereumGetBlockTimeByNumber(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	if len(args) != 1 || !args[0].IsTypeUint64Value() {
+		return 0, errors.Errorf("invalid SDK ethereum getBlockTimeByNumber args: %v", args)
+	}
+	ethBlockNumber := args[0].Uint64Value()
+
+	// get block timestamp
+	orbsBlockTimestamp := executionContext.currentBlockTimestamp
+
+	// execute the call
+	connector := s.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM]
+	output, err := connector.EthereumGetBlockTimeByNumber(ctx, &services.EthereumGetBlockTimeByNumberInput{
+		ReferenceTimestamp:  orbsBlockTimestamp,
+		EthereumBlockNumber: ethBlockNumber,
+	})
+	if err != nil {
+		logger.Info("Sdk.Ethereum.GetBlockTimeByNumber failed", log.Error(err))
+		return 0, err
+	}
+
+	return uint64(output.EthereumTimestamp), nil
 }

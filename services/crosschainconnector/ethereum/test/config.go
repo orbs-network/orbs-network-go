@@ -43,8 +43,8 @@ func (c *ethereumConnectorConfigForTests) GetAuthFromConfig() (*bind.TransactOpt
 
 func ConfigForSimulatorConnection() *ethereumConnectorConfigForTests {
 	return &ethereumConnectorConfigForTests{
-		finalityTimeComponent:   0 * time.Millisecond,
-		finalityBlocksComponent: 0,
+		finalityTimeComponent:   100 * time.Millisecond,
+		finalityBlocksComponent: 3,
 	}
 }
 

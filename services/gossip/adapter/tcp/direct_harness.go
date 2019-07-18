@@ -187,6 +187,9 @@ func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
 }
 
 func (h *directHarness) allOutgoingQueuesEnabled() bool {
+	h.transport.mutex.RLock()
+	defer h.transport.mutex.RUnlock()
+
 	for _, queue := range h.transport.outgoingPeerQueues {
 		if queue.disabled {
 			return false

@@ -190,7 +190,7 @@ func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.Et
 }
 
 func (s *service) EthereumGetBlockNumberByTime(ctx context.Context, input *services.EthereumGetBlockNumberByTimeInput) (*services.EthereumGetBlockNumberByTimeOutput, error) {
-	blockNumberAndTime, err := s.getFinalitySafeBlockNumber(ctx, input.EthereumTimestamp)
+	blockNumberAndTime, err := s.timestampFinder.FindBlockByTimestamp(ctx, input.EthereumTimestamp)
 	if err != nil {
 		return nil, err
 	}

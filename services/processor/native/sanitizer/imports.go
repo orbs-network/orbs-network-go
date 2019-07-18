@@ -9,9 +9,10 @@ package sanitizer
 import (
 	"github.com/pkg/errors"
 	"go/ast"
+	"strings"
 )
 
-func (s *Sanitizer) verifyImports(astFile *ast.File) error {
+func (s *Sanitizer) verifyImports(astFile *ast.File, allowedPrefixes []string) error {
 	for _, importSpec := range astFile.Imports {
 		if importSpec.Name != nil {
 			return errors.New("custom import names not allowed")
@@ -19,8 +20,19 @@ func (s *Sanitizer) verifyImports(astFile *ast.File) error {
 
 		importPath := importSpec.Path.Value
 		if _, ok := s.config.ImportWhitelist[importPath]; !ok {
-			return errors.Errorf("import not allowed '%s'", importPath)
+			if !foundInPrefixes(importPath, allowedPrefixes) {
+				return errors.Errorf("import not allowed '%s'", importPath)
+			}
 		}
 	}
 	return nil
+}
+
+func foundInPrefixes(candidate string, allowedPrefixes []string) bool {
+	for _, prefix := range allowedPrefixes {
+		if strings.HasPrefix(candidate, prefix) {
+			return true
+		}
+	}
+	return false
 }
