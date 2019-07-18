@@ -26,16 +26,14 @@ import (
 )
 
 type metrics struct {
-	bytesWritten *metric.Gauge
-	sizeOnDisk   *metric.Gauge
+	sizeOnDisk *metric.Gauge
 }
 
 const blocksFilename = "blocks"
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		bytesWritten: m.NewGauge("BlockStorage.Write.Bytes"),
-		sizeOnDisk:   m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		sizeOnDisk: m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
 	}
 }
 
@@ -263,7 +261,6 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	}
 
 	f.blockTracker.IncrementTo(bh)
-	f.metrics.bytesWritten.Add(int64(n))
 	f.metrics.sizeOnDisk.Add(int64(n))
 
 	return true, bh, nil
