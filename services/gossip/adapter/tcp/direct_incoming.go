@@ -29,24 +29,27 @@ func (t *DirectTransport) serverListenForIncomingConnections(ctx context.Context
 	// this goroutine will shut down the server gracefully when context is done
 	go func() {
 		<-ctx.Done()
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
-		t.serverListeningUnderMutex = false
-		listener.Close()
+		t.server.Lock()
+		defer t.server.Unlock()
+		t.server.listening = false
+		err := listener.Close()
+		if err != nil {
+			t.logger.Error("Failed to close direct transport lister", log.Error(err))
+		}
 	}()
 
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.serverListeningUnderMutex = true
+	t.server.Lock()
+	defer t.server.Unlock()
+	t.server.listening = true
 
 	return listener, err
 }
 
 func (t *DirectTransport) IsServerListening() bool {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.server.RLock()
+	defer t.server.RUnlock()
 
-	return t.serverListeningUnderMutex
+	return t.server.listening
 }
 
 func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort uint16) {
@@ -55,8 +58,8 @@ func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort u
 		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", listenPort, err.Error()))
 	}
 
-	t.serverPort = listener.Addr().(*net.TCPAddr).Port
-	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.serverPort)))
+	t.setServerPort(listener.Addr().(*net.TCPAddr).Port)
+	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.GetServerPort())))
 
 	for {
 		if parentCtx.Err() != nil {
@@ -165,10 +168,10 @@ func (t *DirectTransport) notifyListener(ctx context.Context, payloads [][]byte)
 }
 
 func (t *DirectTransport) getListener() adapter.TransportListener {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.server.RLock()
+	defer t.server.RUnlock()
 
-	return t.transportListenerUnderMutex
+	return t.server.listener
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {
