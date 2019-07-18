@@ -45,7 +45,11 @@ func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Conte
 		e.view = view
 		e.blockHeight = blockHeight
 		e.Stop()
-		e.triggerTimer = time.AfterFunc(timeout, e.sendTrigger)
+		e.triggerTimer = time.AfterFunc(timeout, func() {
+			if ctx.Err() == nil { // only send trigger if system is not shutting down TODO delete this code when lean helix refactor is done
+				e.sendTrigger()
+			}
+		})
 		if e.view > 2 {
 			e.logger.Info("Started election trigger", log.Uint64("block-height", uint64(e.blockHeight)), log.Uint64("lh-view", uint64(e.view)), log.String("lh-election-timeout", timeout.String()))
 		}
