@@ -86,13 +86,21 @@ func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersist
 		codec:        codec,
 	}
 
-	if fi, err := file.Stat(); err != nil {
-		return adapter, errors.Wrap(err, "unable to read file size for metrics")
+	if size, err := getBlockFileSize(file); err != nil {
+		return adapter, err
 	} else {
-		adapter.metrics.sizeOnDisk.Add(fi.Size())
+		adapter.metrics.sizeOnDisk.Add(size)
 	}
 
 	return adapter, nil
+}
+
+func getBlockFileSize(file *os.File) (int64, error) {
+	if fi, err := file.Stat(); err != nil {
+		return 0, errors.Wrap(err, "unable to read file size for metrics")
+	} else {
+		return fi.Size(), nil
+	}
 }
 
 func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (*os.File, int64, error) {
