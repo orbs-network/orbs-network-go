@@ -137,7 +137,7 @@ jobs:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
       BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
       TESTNET_NODE_IP: "35.161.123.97"
-      TESTNET_IGNORE_IPS: "54.149.67.22"
+      TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
@@ -160,6 +160,7 @@ workflows:
 
       - deploy_new_chain_pr_only:
           requires:
+            - e2e
             - tests
       - e2e:
           filters:

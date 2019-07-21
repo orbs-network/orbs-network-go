@@ -41,16 +41,15 @@ then
 
     echo "Configuration updated, waiting for the new PR chain ($PR_CHAIN_ID) to come up!"
 
-    echo "Sleeping for 10 minutes to allow the network to come up"
-    sleep 300
-    echo "Still sleeping..."
-    sleep 400
-
+    echo "Sleeping for 2 minutes to allow the network to come up"
+    sleep 120
+    
     echo "Checking deployment status:"
     node .circleci/check-testnet-deployment.js $PR_CHAIN_ID
 
     echo "Running the E2E suite against the newly deployed isolated chain for this PR.."
     export API_ENDPOINT=http://$TESTNET_NODE_IP/vchains/$PR_CHAIN_ID/ \
+        REMOTE_ENV="true" \
         STRESS_TEST_NUMBER_OF_TRANSACTIONS=100 \
         STRESS_TEST_FAILURE_RATE=20 \
         STRESS_TEST_TARGET_TPS=200 \
