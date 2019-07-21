@@ -33,8 +33,8 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
 
-		// create first block in case we are running only this test (clean ganache, but no real hard in actual)
-		h.moveBlocksInGanache(t, 1, 1)
+		// pad Ganache nicely so that any previous test
+		h.moveBlocksInGanache(t, 100, 1)
 		blockAtStart, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 		require.NoError(t, err, "failed to get latest block in ganache")
 		t.Logf("block at start: %d | %d", blockAtStart.Number.Int64(), blockAtStart.Time.Int64())
