@@ -60,7 +60,7 @@ func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Co
 	transport := makeTransport(ctx, t, cfg)                                               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
 	// end of section where order matters
 
-	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
+	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort())      // establish connection from test to server port ( test harness ==> SUT )
 	peersListenersConnections := establishPeerServerConnections(t, peersListeners) // establish connection from transport clients to peer servers ( SUT ==> test harness)
 
 	h := &directHarness{
@@ -187,15 +187,7 @@ func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
 }
 
 func (h *directHarness) allOutgoingQueuesEnabled() bool {
-	h.transport.mutex.RLock()
-	defer h.transport.mutex.RUnlock()
-
-	for _, queue := range h.transport.outgoingPeerQueues {
-		if queue.disabled {
-			return false
-		}
-	}
-	return true
+	return h.transport.allOutgoingQueuesEnabled()
 }
 
 func concatSlices(slices ...[]byte) []byte {

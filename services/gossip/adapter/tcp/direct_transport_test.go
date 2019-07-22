@@ -52,11 +52,11 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 			return node1.IsServerListening() && node2.IsServerListening()
 		}), "server did not start")
 
-		node1.AddPeer(ctx, address2, config.NewHardCodedGossipPeer(node2.serverPort, "127.0.0.1"))
-		node2.AddPeer(ctx, address1, config.NewHardCodedGossipPeer(node1.serverPort, "127.0.0.1"))
+		node1.AddPeer(ctx, address2, config.NewHardCodedGossipPeer(node2.GetServerPort(), "127.0.0.1"))
+		node2.AddPeer(ctx, address1, config.NewHardCodedGossipPeer(node1.GetServerPort(), "127.0.0.1"))
 
 		require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-			return node1.safeLenOfOutgoingPeerQueues() > 0 && node2.safeLenOfOutgoingPeerQueues() > 0
+			return len(node1.outgoingQueues.peers) > 0 && len(node2.outgoingQueues.peers) > 0
 		}), "expected all outgoing queues to become enabled after successfully connecting to added peers")
 
 		header := (&gossipmessages.HeaderBuilder{

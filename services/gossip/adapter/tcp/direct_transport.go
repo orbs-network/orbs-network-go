@@ -41,16 +41,25 @@ type metrics struct {
 	outgoingMessageSize *metric.Histogram
 }
 
+type lockableOutgoingQueues struct {
+	sync.RWMutex
+	peers map[string]*transportQueue
+}
+
+type lockableTransportServer struct {
+	sync.RWMutex
+	listener  adapter.TransportListener
+	listening bool
+	port      int
+}
+
 type DirectTransport struct {
 	config config.GossipTransportConfig
 	logger log.Logger
 
-	outgoingPeerQueues map[string]*transportQueue
+	outgoingQueues *lockableOutgoingQueues
 
-	mutex                       *sync.RWMutex
-	transportListenerUnderMutex adapter.TransportListener
-	serverListeningUnderMutex   bool
-	serverPort                  int
+	server *lockableTransportServer
 
 	metrics        *metrics
 	metricRegistry metric.Registry
@@ -76,9 +85,9 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		logger:         logger.WithTags(LogTag),
 		metricRegistry: registry,
 
-		outgoingPeerQueues: make(map[string]*transportQueue),
+		outgoingQueues: newLockableOutgoingQueues(),
+		server:         newDirectTransportServer(),
 
-		mutex:   &sync.RWMutex{},
 		metrics: getMetrics(registry),
 	}
 
@@ -88,60 +97,75 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	})
 
 	// client goroutines
-	t.mutex.Lock()
 	for peerNodeAddress, peer := range t.config.GossipPeers() {
-		t.connect(ctx, peerNodeAddress, peer)
+		t.connectForever(ctx, peerNodeAddress, peer)
 	}
-	t.mutex.Unlock()
 
 	return t
 }
 
+func newDirectTransportServer() *lockableTransportServer {
+	return &lockableTransportServer{
+		listener:  nil,
+		listening: false,
+		port:      0,
+	}
+}
+
+func newLockableOutgoingQueues() *lockableOutgoingQueues {
+	return &lockableOutgoingQueues{
+		peers: make(map[string]*transportQueue),
+	}
+}
+
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
-func (t *DirectTransport) connect(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
+func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
+	t.outgoingQueues.Lock()
+	defer t.outgoingQueues.Unlock()
+
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-		t.outgoingPeerQueues[peerNodeAddress] = NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
-		t.outgoingPeerQueues[peerNodeAddress].Disable() // until connection is established
+
+		newQueue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
 
 		peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-		t.outgoingPeerQueues[peerNodeAddress].networkAddress = peerAddress
+		newQueue.networkAddress = peerAddress
+		newQueue.Disable() // until connection is established
+
+		t.outgoingQueues.peers[peerNodeAddress] = newQueue
 
 		supervised.GoForever(bgCtx, t.logger, func() {
-			t.clientMainLoop(bgCtx, t.outgoingPeerQueues[peerNodeAddress])
+			t.clientMainLoop(bgCtx, newQueue) // avoid referencing queue map not under lock
 		})
 	}
 }
 
 func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
 	t.config.GossipPeers()[address.KeyForMap()] = peer
-	t.connect(bgCtx, address.KeyForMap(), peer)
+	t.connectForever(bgCtx, address.KeyForMap(), peer)
 }
 
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+	t.server.Lock()
+	defer t.server.Unlock()
 
-	t.transportListenerUnderMutex = listener
+	t.server.listener = listener
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
 func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData) error {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
+	t.outgoingQueues.RLock()
+	defer t.outgoingQueues.RUnlock()
 
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, peerQueue := range t.outgoingPeerQueues {
+		for _, peerQueue := range t.outgoingQueues.peers {
 			t.addDataToOutgoingPeerQueue(data, peerQueue)
 		}
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientNodeAddresses {
-			if peerQueue, found := t.outgoingPeerQueues[recipientPublicKey.KeyForMap()]; found {
+			if peerQueue, found := t.outgoingQueues.peers[recipientPublicKey.KeyForMap()]; found {
 				t.addDataToOutgoingPeerQueue(data, peerQueue)
 			} else {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
@@ -154,14 +178,30 @@ func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return errors.Errorf("unknown recipient mode: %s", data.RecipientMode.String())
 }
 
-func (t *DirectTransport) Port() int {
-	return t.serverPort
+func (t *DirectTransport) GetServerPort() int {
+	t.server.Lock()
+	defer t.server.Unlock()
+
+	return t.server.port
 }
 
-func (t *DirectTransport) safeLenOfOutgoingPeerQueues() int {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
-	return len(t.outgoingPeerQueues)
+func (t *DirectTransport) setServerPort(v int) {
+	t.server.Lock()
+	defer t.server.Unlock()
+
+	t.server.port = v
+}
+
+func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
+	t.outgoingQueues.RLock()
+	defer t.outgoingQueues.RUnlock()
+
+	for _, queue := range t.outgoingQueues.peers {
+		if queue.disabled {
+			return false
+		}
+	}
+	return true
 }
 
 func calcPaddingSize(size uint32) uint32 {
