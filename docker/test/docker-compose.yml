@@ -4,7 +4,7 @@ services:
 
   ganache:
     image: trufflesuite/ganache-cli
-    command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid" -t $GANACHE_START_TIME
+    command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
     networks:
       orbs-network:
         ipv4_address: 192.168.199.6

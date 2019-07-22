@@ -66,5 +66,5 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 }
 
 func runningWithDocker() bool {
-	return os.Getenv("EXTERNAL_TEST") == "true"
+	return os.Getenv("ETHEREUM_ENDPOINT") != ""
 }

@@ -10,6 +10,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"os"
 	"strconv"
 
@@ -23,6 +24,7 @@ import (
 type GammaServer struct {
 	bootstrap.OrbsProcess
 	network *inmemory.Network
+	clock   *adapter.AdjustableClock
 }
 
 type GammaServerConfig struct {
@@ -52,7 +54,9 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	rootLogger := getLogger(config.Silent)
 
-	network := NewDevelopmentNetwork(ctx, rootLogger, config.OverrideConfigJson)
+	clock := adapter.NewAdjustableClock()
+
+	network := NewDevelopmentNetwork(ctx, rootLogger, clock, config.OverrideConfigJson)
 	rootLogger.Info("finished creating development network")
 
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
@@ -61,6 +65,7 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	s := &GammaServer{
 		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
 		network:     network,
+		clock:       clock,
 	}
 
 	s.addGammaHandlers(httpServer.Router())

@@ -60,7 +60,7 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) error {
+func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) {
 	c, err := rpc.Dial(h.config.endpoint)
 	require.NoError(t, err, "failed creating Ethereum rpc client")
 	//start := time.Now()
@@ -69,7 +69,6 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
 
-	return nil
 }
 
 func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigForTests) *harness {
