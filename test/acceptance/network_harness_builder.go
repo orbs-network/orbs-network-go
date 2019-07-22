@@ -69,7 +69,9 @@ func newHarness() *networkHarnessBuilder {
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
 		WithVirtualChainId(DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID).
-		AllowingErrors("ValidateBlockProposal failed.*") // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		AllowingErrors(
+			"ValidateBlockProposal failed.*", // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		)
 
 	return harness
 }

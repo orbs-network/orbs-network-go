@@ -206,3 +206,9 @@ func (n *NetworkHarness) DumpState() {
 		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
 	}
 }
+
+func (n *NetworkHarness) WaitForBlock(ctx context.Context, height primitives.BlockHeight) {
+	for _, tracker := range n.transactionPoolBlockHeightTrackers {
+		tracker.WaitForBlock(ctx, height)
+	}
+}
