@@ -125,11 +125,7 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 
-		logger := t.logger.WithTags(log.String("peer-node-address", peerNodeAddress))
-		sharedMetrics := t.metrics
-		transportConfig := t.config
-		metricRegistry := t.metricRegistry
-		client := newClientConnection(peerNodeAddress, peer, logger, metricRegistry, sharedMetrics, transportConfig)
+		client := newClientConnection(peerNodeAddress, peer, t.logger, t.metricRegistry, t.metrics, t.config)
 
 		t.clientConnections.peers[peerNodeAddress] = client
 
@@ -158,13 +154,15 @@ func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData)
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for _, client := range t.clientConnections.peers {
-			client.addDataToOutgoingPeerQueue(data)
+			client.addDataToOutgoingPeerQueue(ctx, data)
+			t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 		}
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientNodeAddresses {
 			if client, found := t.clientConnections.peers[recipientPublicKey.KeyForMap()]; found {
-				client.addDataToOutgoingPeerQueue(data)
+				client.addDataToOutgoingPeerQueue(ctx, data)
+				t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 			} else {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
 			}
