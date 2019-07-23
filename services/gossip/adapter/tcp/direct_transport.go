@@ -126,7 +126,7 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
 
-		newQueue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
+		newQueue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry, peerNodeAddress)
 
 		peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 		newQueue.networkAddress = peerAddress

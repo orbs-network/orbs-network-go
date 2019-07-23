@@ -16,9 +16,11 @@ import (
 	"time"
 )
 
+const someAddress = ""
+
 func TestQueue_PushAndPopMultiple(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+		q := NewTransportQueue(1000, 1000, metric.NewRegistry(), someAddress)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
 		require.NoError(t, err)
@@ -42,7 +44,7 @@ func TestQueue_PushAndPopMultiple(t *testing.T) {
 
 func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 2, metric.NewRegistry())
+		q := NewTransportQueue(1000, 2, metric.NewRegistry(), someAddress)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
 		require.NoError(t, err)
@@ -66,7 +68,7 @@ func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
 
 func TestQueue_PopWhenEmptyWaitsUntilPush(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+		q := NewTransportQueue(1000, 1000, metric.NewRegistry(), someAddress)
 
 		go func() {
 			time.Sleep(10 * time.Millisecond)
@@ -81,7 +83,7 @@ func TestQueue_PopWhenEmptyWaitsUntilPush(t *testing.T) {
 
 func TestQueue_PopWhenEmptyCancelsWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+	q := NewTransportQueue(1000, 1000, metric.NewRegistry(), someAddress)
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
@@ -94,7 +96,7 @@ func TestQueue_PopWhenEmptyCancelsWithContext(t *testing.T) {
 
 func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(10, 1000, metric.NewRegistry())
+		q := NewTransportQueue(10, 1000, metric.NewRegistry(), someAddress)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}, Payloads: [][]byte{buf(3), buf(4)}})
 		require.NoError(t, err)
@@ -118,7 +120,7 @@ func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 
 func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 3, metric.NewRegistry())
+		q := NewTransportQueue(1000, 3, metric.NewRegistry(), someAddress)
 
 		q.Clear(ctx)
 
@@ -146,7 +148,7 @@ func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
 
 func TestQueue_DisableThenEnable(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 2, metric.NewRegistry())
+		q := NewTransportQueue(1000, 2, metric.NewRegistry(), someAddress)
 
 		q.Disable()
 
