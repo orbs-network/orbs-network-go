@@ -128,13 +128,12 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	}
 
 	logger := log.DefaultTestingLogger(tb)
-	registry := metric.NewRegistry()
 
 	transports := []*tcp.DirectTransport{
-		tcp.NewDirectTransport(ctx, configs[0], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[1], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[2], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[3], logger, registry),
+		tcp.NewDirectTransport(ctx, configs[0], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[1], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[2], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[3], logger, metric.NewRegistry()),
 	}
 
 	test.Eventually(1*time.Second, func() bool {
