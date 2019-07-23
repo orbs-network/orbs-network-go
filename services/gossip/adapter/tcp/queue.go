@@ -8,6 +8,7 @@ package tcp
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/pkg/errors"
@@ -26,9 +27,11 @@ type transportQueue struct {
 		bytesLeft int
 	}
 	usagePercentageMetric *metric.Gauge
+	sendErrors            *metric.Gauge
+	sendQueueErrors       *metric.Gauge
 }
 
-func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory) *transportQueue {
+func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory, peerNodeAddress string) *transportQueue {
 	q := &transportQueue{
 		channel:     make(chan *adapter.TransportData, maxSizeMessages),
 		maxBytes:    maxSizeBytes,
@@ -36,7 +39,9 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	}
 	q.protected.bytesLeft = maxSizeBytes
 
-	q.usagePercentageMetric = metricFactory.NewGauge("Gossip.OutgoingConnection.Queue.Usage.Percent")
+	q.usagePercentageMetric = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
+	q.sendErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerNodeAddress))
+	q.sendQueueErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerNodeAddress))
 
 	return q
 }

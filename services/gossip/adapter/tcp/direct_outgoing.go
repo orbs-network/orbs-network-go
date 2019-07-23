@@ -57,7 +57,8 @@ func (t *DirectTransport) clientHandleOutgoingConnection(ctx context.Context, co
 			// meaning do a regular send (we have data)
 			err := t.sendTransportData(ctx, conn, data)
 			if err != nil {
-				t.metrics.outgoingConnectionSendErrors.Inc()
+				t.metrics.outgoingConnectionSendErrors.Inc() //TODO remove, replaced by following metric
+				queue.sendErrors.Inc()
 				t.logger.Info("failed sending transport data, reconnecting", log.Error(err), log.String("peer", queue.networkAddress), trace.LogFieldFrom(ctx))
 				conn.Close()
 				return true
@@ -93,7 +94,8 @@ func (t *DirectTransport) clientHandleOutgoingConnection(ctx context.Context, co
 func (t *DirectTransport) addDataToOutgoingPeerQueue(data *adapter.TransportData, outgoingQueue *transportQueue) {
 	err := outgoingQueue.Push(data)
 	if err != nil {
-		t.metrics.outgoingConnectionSendQueueErrors.Inc()
+		t.metrics.outgoingConnectionSendQueueErrors.Inc() //TODO remove, replaced by following metric
+		outgoingQueue.sendQueueErrors.Inc()
 		t.logger.Info("direct transport send queue error", log.Error(err), log.String("peer", outgoingQueue.networkAddress))
 	}
 	t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))

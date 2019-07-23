@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,6 +77,13 @@ type inMemoryRegistry struct {
 func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	for _, existing := range r.mu.metrics {
+		if existing.Name() == m.Name() {
+			err := errors.Errorf("a metric with name %s is already registered", m.Name())
+			panic(err)
+		}
+	}
+
 	r.mu.metrics = append(r.mu.metrics, m)
 }
 
