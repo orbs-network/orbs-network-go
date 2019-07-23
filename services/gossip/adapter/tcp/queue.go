@@ -27,8 +27,6 @@ type transportQueue struct {
 		bytesLeft int
 	}
 	usagePercentageMetric *metric.Gauge
-	sendErrors            *metric.Gauge
-	sendQueueErrors       *metric.Gauge
 }
 
 func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory, peerNodeAddress string) *transportQueue {
@@ -40,8 +38,6 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	q.protected.bytesLeft = maxSizeBytes
 
 	q.usagePercentageMetric = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
-	q.sendErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerNodeAddress))
-	q.sendQueueErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerNodeAddress))
 
 	return q
 }

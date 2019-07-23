@@ -56,7 +56,7 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 		node2.AddPeer(ctx, address1, config.NewHardCodedGossipPeer(node1.GetServerPort(), "127.0.0.1"))
 
 		require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-			return len(node1.outgoingQueues.peers) > 0 && len(node2.outgoingQueues.peers) > 0
+			return len(node1.clientConnections.peers) > 0 && len(node2.clientConnections.peers) > 0
 		}), "expected all outgoing queues to become enabled after successfully connecting to added peers")
 
 		header := (&gossipmessages.HeaderBuilder{
