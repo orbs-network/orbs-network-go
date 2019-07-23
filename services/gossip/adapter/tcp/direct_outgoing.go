@@ -33,6 +33,7 @@ type clientConnection struct {
 	sharedMetrics   *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
 	queue           *transportQueue
 	peerNodeAddress string
+	disconnect      context.CancelFunc
 
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
@@ -56,7 +57,9 @@ func newClientConnection(peerNodeAddress string, peer config.GossipPeer, parentL
 	return client
 }
 
-func (c *clientConnection) connect(ctx context.Context) {
+func (c *clientConnection) connect(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	c.disconnect = cancel
 
 	supervised.GoForever(ctx, c.logger, func() {
 		c.clientMainLoop(ctx, c.queue) // avoid referencing queue map not under lock
@@ -130,7 +133,7 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 
 				// parent ctx is closed, so system shutdown
 				// meaning cleanup and exit
-				logger.Info("client loop stopped since server is shutting down")
+				logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
 				conn.Close()
 				return false
 
