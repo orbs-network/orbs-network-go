@@ -28,12 +28,12 @@ type clientConnectionConfig interface {
 }
 
 type clientConnection struct {
-	logger          log.Logger
-	config          clientConnectionConfig
-	sharedMetrics   *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
-	queue           *transportQueue
-	peerNodeAddress string
-	disconnect      context.CancelFunc
+	logger         log.Logger
+	config         clientConnectionConfig
+	sharedMetrics  *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
+	queue          *transportQueue
+	peerHexAddress string
+	disconnect     context.CancelFunc
 
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
@@ -50,6 +50,7 @@ func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLo
 		sharedMetrics:   sharedMetrics,
 		config:          transportConfig,
 		queue:           queue,
+		peerHexAddress:  peerHexAddress,
 		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
 		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
 	}
@@ -68,7 +69,7 @@ func (c *clientConnection) connect(parent context.Context) {
 
 func (c *clientConnection) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
 	for {
-		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerNodeAddress))
+		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")
@@ -97,7 +98,6 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 	defer queue.Disable()
 
 	for {
-
 		ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, c.config.GossipConnectionKeepAliveInterval())
 		data := queue.Pop(ctxWithKeepAliveTimeout)
 		cancelCtxWithKeepAliveTimeout()
