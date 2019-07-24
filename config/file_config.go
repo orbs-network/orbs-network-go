@@ -76,7 +76,8 @@ func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
 		for _, item := range nodeList {
 			kv := item.(map[string]interface{})
 
-			if nodeAddress, err := hex.DecodeString(kv["address"].(string)); err != nil {
+			hexAddress := kv["address"].(string)
+			if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
 				return peers, err
 			} else {
 				nodeAddress := primitives.NodeAddress(nodeAddress)

@@ -8,6 +8,7 @@ package tcp
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -120,7 +121,7 @@ func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
 
 		peersListeners[i] = conn
 		port := conn.Addr().(*net.TCPAddr).Port
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(port, "127.0.0.1")
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(port, "127.0.0.1", hex.EncodeToString(nodeAddress))
 	}
 	return gossipPeers, peersListeners
 }

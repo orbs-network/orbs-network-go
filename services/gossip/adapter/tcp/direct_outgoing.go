@@ -39,19 +39,19 @@ type clientConnection struct {
 	sendQueueErrors *metric.Gauge
 }
 
-func newClientConnection(peerNodeAddress string, peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig config.GossipTransportConfig) *clientConnection {
+func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig config.GossipTransportConfig) *clientConnection {
 	peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerNodeAddress)
+	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
 	queue.networkAddress = peerAddress
 	queue.Disable() // until connection is established
 
 	client := &clientConnection{
-		logger:          parentLogger.WithTags(log.String("peer-node-address", peerNodeAddress), log.String("peer-network-address", peerAddress)),
+		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", peerAddress)),
 		sharedMetrics:   sharedMetrics,
 		config:          transportConfig,
 		queue:           queue,
-		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerNodeAddress)),
-		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerNodeAddress)),
+		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
+		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
 	}
 
 	return client
