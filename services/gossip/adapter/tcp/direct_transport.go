@@ -140,6 +140,11 @@ func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.Node
 }
 
 func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
+
+	//oldConfig := t.config
+
+	//peersToRemove, peersToAdd := peerDiff(oldConfig.GossipPeers(), newConfig.GossipPeers())
+
 	t.disconnectAllClients(bgCtx)
 
 	t.config = newConfig
