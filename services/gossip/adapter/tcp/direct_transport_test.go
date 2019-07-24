@@ -108,6 +108,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 			node1, node2, node4)
 
 		node1.requireSendsSuccessfullyTo(t, ctx, node4)
+		node1.requireSendsSuccessfullyTo(t, ctx, node2)
 		require.Error(t, node2.transport.Send(ctx, &adapter.TransportData{
 			SenderNodeAddress:      node2.address,
 			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
