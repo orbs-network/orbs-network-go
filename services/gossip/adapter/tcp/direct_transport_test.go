@@ -63,6 +63,61 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 	})
 }
 
+func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
+	logger := log.DefaultTestingLogger(t)
+	test.WithContext(func(ctx context.Context) {
+		node1 := aNode(ctx, logger)
+		node2 := aNode(ctx, logger)
+		node3 := aNode(ctx, logger)
+		node4 := aNode(ctx, logger)
+
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
+
+		firstTopology := aTopologyContaining(node1, node2, node3)
+		node1.transport.UpdateTopology(ctx, firstTopology)
+		node2.transport.UpdateTopology(ctx, firstTopology)
+		node3.transport.UpdateTopology(ctx, firstTopology)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all nodes to have peers added",
+			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			node1, node2, node3)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all outgoing queues to become enabled after topology change",
+			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
+			node1, node2, node3)
+
+		node1.requireSendsSuccessfullyTo(t, ctx, node2)
+		node2.requireSendsSuccessfullyTo(t, ctx, node1)
+		node2.requireSendsSuccessfullyTo(t, ctx, node3)
+
+		secondTopology := aTopologyContaining(node1, node2, node4)
+		node1.transport.UpdateTopology(ctx, secondTopology)
+		node2.transport.UpdateTopology(ctx, secondTopology)
+		node4.transport.UpdateTopology(ctx, secondTopology)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all nodes to have peers added",
+			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			node1, node2, node4)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all outgoing queues to become enabled after topology change",
+			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
+			node1, node2, node4)
+
+		node1.requireSendsSuccessfullyTo(t, ctx, node4)
+		require.Error(t, node2.transport.Send(ctx, &adapter.TransportData{
+			SenderNodeAddress:      node2.address,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{node3.address},
+			Payloads:               aMessage(),
+		}), "node 2 was able to send a message to node 3 which is no longer a part of its topology")
+
+	})
+}
+
 type nodeHarness struct {
 	transport *DirectTransport
 	address   primitives.NodeAddress
@@ -70,7 +125,7 @@ type nodeHarness struct {
 }
 
 func (n *nodeHarness) addPeer(ctx context.Context, other *nodeHarness) {
-	n.transport.AddPeer(ctx, other.address, config.NewHardCodedGossipPeer(other.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address)))
+	n.transport.AddPeer(ctx, other.address, other.toGossipPeer())
 }
 
 func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Context, other *nodeHarness) {
@@ -87,8 +142,12 @@ func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Conte
 	require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, other.listener), "message was not sent to target node")
 }
 
+func (n *nodeHarness) toGossipPeer() config.GossipPeer {
+	return config.NewHardCodedGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
+}
+
 func waitForAllNodesToSatisfy(t *testing.T, message string, predicate func(node *nodeHarness) bool, nodes ...*nodeHarness) {
-	require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+	require.True(t, test.Eventually(1*time.Second, func() bool {
 		ok := true
 		for _, node := range nodes {
 			ok = ok && predicate(node)
@@ -112,8 +171,8 @@ func aMessage() [][]byte {
 var currentNodeIndex = 1
 
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
-	keepAliveInterval := 20 * time.Hour // High value to disable keep alive
-	transport := NewDirectTransport(ctx, config.ForDirectTransportTests(make(map[string]config.GossipPeer), keepAliveInterval, 1*time.Second), logger, metric.NewRegistry())
+	cfg := aTopologyContaining()
+	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
@@ -121,6 +180,12 @@ func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	return &nodeHarness{transport, address, listener}
 }
 
-func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
-
+func aTopologyContaining(nodes ...*nodeHarness) config.GossipTransportConfig {
+	keepAliveInterval := 20 * time.Hour
+	// High value to disable keep alive
+	peers := make(map[string]config.GossipPeer)
+	for _, node := range nodes {
+		peers[node.address.KeyForMap()] = node.toGossipPeer()
+	}
+	return config.ForDirectTransportTests(peers, keepAliveInterval, 1*time.Second)
 }

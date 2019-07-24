@@ -38,6 +38,7 @@ type Registry interface {
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
+	Remove(metric metric)
 }
 
 type exportedMetric interface {
@@ -72,6 +73,23 @@ type inMemoryRegistry struct {
 		sync.Mutex
 		metrics []metric
 	}
+}
+
+func (r *inMemoryRegistry) Remove(m metric) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s := r.mu.metrics
+	for i, existing := range s {
+		if existing.Name() == m.Name() {
+			s[i] = s[len(s)-1]
+			// We do not need to put s[i] at the end, as it will be discarded anyway
+			r.mu.metrics = s[:len(s)-1]
+			return
+		}
+	}
+
+	err := errors.Errorf("a metric with name %s cannot be removed as it is not registered", m.Name())
+	panic(err)
 }
 
 func (r *inMemoryRegistry) register(m metric) {

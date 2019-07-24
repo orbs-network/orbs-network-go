@@ -139,6 +139,28 @@ func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.Node
 	t.connectForever(bgCtx, address.KeyForMap(), peer)
 }
 
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
+	t.disconnectAllClients(bgCtx)
+
+	t.config = newConfig
+	for peerNodeAddress, peer := range t.config.GossipPeers() {
+		t.connectForever(bgCtx, peerNodeAddress, peer)
+	}
+}
+
+func (t *DirectTransport) disconnectAllClients(ctx context.Context) {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for key, client := range t.clientConnections.peers {
+		select {
+		case <-client.disconnect():
+			delete(t.clientConnections.peers, key)
+		case <-ctx.Done():
+			t.logger.Info("system shutdown while waiting for clients to disconnect")
+		}
+	}
+}
+
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
 	t.server.Lock()
 	defer t.server.Unlock()

@@ -29,14 +29,17 @@ type clientConnectionConfig interface {
 
 type clientConnection struct {
 	logger         log.Logger
+	metricRegistry metric.Registry
 	config         clientConnectionConfig
 	sharedMetrics  *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
 	queue          *transportQueue
 	peerHexAddress string
-	disconnect     context.CancelFunc
+	cancel         context.CancelFunc
 
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
+
+	closed chan struct{}
 }
 
 func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig config.GossipTransportConfig) *clientConnection {
@@ -48,11 +51,14 @@ func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLo
 	client := &clientConnection{
 		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", peerAddress)),
 		sharedMetrics:   sharedMetrics,
+		metricRegistry:  metricFactory,
 		config:          transportConfig,
 		queue:           queue,
 		peerHexAddress:  peerHexAddress,
 		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
 		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
+
+		closed: make(chan struct{}),
 	}
 
 	return client
@@ -60,11 +66,16 @@ func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLo
 
 func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
-	c.disconnect = cancel
+	c.cancel = cancel
 
 	supervised.GoForever(ctx, c.logger, func() {
 		c.clientMainLoop(ctx, c.queue) // avoid referencing queue map not under lock
 	})
+}
+
+func (c *clientConnection) disconnect() chan struct{} {
+	c.cancel()
+	return c.closed
 }
 
 func (c *clientConnection) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
@@ -135,6 +146,10 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 				// meaning cleanup and exit
 				logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
 				conn.Close()
+				c.metricRegistry.Remove(c.sendErrors)
+				c.metricRegistry.Remove(c.sendQueueErrors)
+				c.metricRegistry.Remove(c.queue.usagePercentageMetric)
+				close(c.closed)
 				return false
 
 			}
