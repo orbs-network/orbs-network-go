@@ -67,7 +67,8 @@ jobs:
           path: _reports
 
   e2e:
-    machine: true
+    machine:
+      image: circleci/classic:201808-01
     steps:
       - checkout
       - run: ./docker/build/build.sh
