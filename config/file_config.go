@@ -23,25 +23,23 @@ func (i *ArrayFlags) Set(value string) error {
 	return nil
 }
 
-func NewFromMultipleFiles(configFiles []string) (*MapBasedConfig, error) {
+func NewFromMultipleFiles(configFiles ...string) (*MapBasedConfig, error) {
 	cfg := ForProduction("")
 
-	if len(configFiles) != 0 {
-		for _, configFile := range configFiles {
-			if _, err := os.Stat(configFile); os.IsNotExist(err) {
-				return nil, errors.Errorf("could not open config file: %s", err)
-			}
+	for _, configFile := range configFiles {
+		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+			return nil, errors.Errorf("could not open config file: %s", err)
+		}
 
-			contents, err := ioutil.ReadFile(configFile)
-			if err != nil {
-				return nil, err
-			}
+		contents, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			return nil, err
+		}
 
-			cfg, err = cfg.MergeWithJSONConfig(string(contents))
+		cfg, err = cfg.MergeWithJSONConfig(string(contents))
 
-			if err != nil {
-				return nil, err
-			}
+		if err != nil {
+			return nil, err
 		}
 	}
 

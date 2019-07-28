@@ -1,9 +1,9 @@
 package filesystem
 
 import (
+	"github.com/orbs-network/orbs-network-go/test/files"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"os"
 	"testing"
 )
 
@@ -14,7 +14,7 @@ func TestGetFileSizeGoodFile(t *testing.T) {
 
 	file, err := ioutil.TempFile("", "")
 	require.NoError(t, err, "failed to create a temp file")
-	defer func() { _ = os.Remove(file.Name()) }()
+	defer files.RemoveSilently(file.Name())
 
 	size, err := getBlockFileSize(file)
 
@@ -39,7 +39,7 @@ func TestGetFileSizeBadFile(t *testing.T) {
 
 	file, err := ioutil.TempFile("", "")
 	require.NoError(t, err, "failed to create a temp file")
-	defer func() { _ = os.Remove(file.Name()) }()
+	defer files.RemoveSilently(file.Name())
 
 	err = file.Close()
 	require.NoError(t, err, "expected closing of the temp file to succeed")
