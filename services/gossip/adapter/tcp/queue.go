@@ -91,6 +91,11 @@ func (q *transportQueue) Enable() {
 	q.disabled = false
 }
 
+func (q *transportQueue) OnNewConnection(ctx context.Context) {
+	q.Clear(ctx)
+	q.Enable()
+}
+
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	q.protected.Lock()
 	defer q.protected.Unlock()

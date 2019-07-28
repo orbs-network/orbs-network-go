@@ -233,7 +233,7 @@ type ValidatorNode interface {
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
-	HexAddress() string
+	HexOrbsAddress() string
 }
 
 type HttpServerConfig interface {

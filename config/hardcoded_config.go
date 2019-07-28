@@ -20,7 +20,7 @@ type hardCodedValidatorNode struct {
 type hardCodedGossipPeer struct {
 	gossipPort     int
 	gossipEndpoint string
-	hexAddress     string
+	hexOrbsAddress string
 }
 
 type NodeConfigValue struct {
@@ -123,7 +123,7 @@ func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string, hexAddress st
 	return &hardCodedGossipPeer{
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
-		hexAddress:     hexAddress,
+		hexOrbsAddress: hexAddress,
 	}
 }
 
@@ -194,8 +194,8 @@ func (c *hardCodedGossipPeer) GossipEndpoint() string {
 	return c.gossipEndpoint
 }
 
-func (c *hardCodedGossipPeer) HexAddress() string {
-	return c.hexAddress
+func (c *hardCodedGossipPeer) HexOrbsAddress() string {
+	return c.hexOrbsAddress
 }
 
 func (c *config) NodeAddress() primitives.NodeAddress {
