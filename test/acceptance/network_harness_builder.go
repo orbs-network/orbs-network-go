@@ -154,7 +154,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 				b.setupFunc(ctx, network)
 			}
 
-			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
+			network.CreateAndStartNodes(ctx, b.numOfNodesToStart).Wait()
 			logger.Info("acceptance network started")
 
 			logger.Info("acceptance network running test")

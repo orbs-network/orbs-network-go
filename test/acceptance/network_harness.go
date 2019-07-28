@@ -54,7 +54,7 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	supervised.Recover(logger, func() {
 		defer cancel()
 		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, nil)
-		network.CreateAndStartNodes(ctx, 2)
+		network.CreateAndStartNodes(ctx, 2).Wait()
 		f(ctx, network)
 	})
 }
