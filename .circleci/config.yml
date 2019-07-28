@@ -148,15 +148,15 @@ workflows:
             - e2e
             - tests
       - memory_leaks:
-        requires:
-          - tests
+          requires:
+            - tests
       - e2e:
           filters:
             tags:
               only: /^v.*/
       - flakiness
-        requires:
-          - tests
+          requires:
+            - tests
       - success:
           requires:
             - tests
