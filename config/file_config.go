@@ -23,10 +23,18 @@ func (i *ArrayFlags) Set(value string) error {
 	return nil
 }
 
-func NewFromMultipleFiles(configFiles ...string) (*MapBasedConfig, error) {
+type Loader struct {
+	files []string
+}
+
+func NewLoader(configFiles ...string) *Loader {
+	return &Loader{files: configFiles}
+}
+
+func (l *Loader) Load() (*MapBasedConfig, error) {
 	cfg := ForProduction("")
 
-	for _, configFile := range configFiles {
+	for _, configFile := range l.files {
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
 			return nil, errors.Errorf("could not open config file: %s", err)
 		}

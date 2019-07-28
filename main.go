@@ -31,7 +31,9 @@ func main() {
 		return
 	}
 
-	cfg, err := config.NewFromMultipleFiles(configFiles...)
+	configLoader := config.NewLoader(configFiles...)
+
+	cfg, err := configLoader.Load()
 	if err != nil {
 		fmt.Printf("%s \n", err)
 		os.Exit(1)
