@@ -156,8 +156,6 @@ workflows:
             tags:
               only: /^v.*/
       - flakiness
-          requires:
-            - tests
       - success:
           requires:
             - tests
