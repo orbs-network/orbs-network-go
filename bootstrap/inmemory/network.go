@@ -130,7 +130,7 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *
 	n.Nodes = append(n.Nodes, node)
 }
 
-func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) *sync.WaitGroup {
+func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
 	wg := &sync.WaitGroup{}
 	for i, node := range n.Nodes {
 		if i >= numOfNodesToStart {
@@ -165,7 +165,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		}(node)
 	}
 
-	return wg
+	wg.Wait()
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {

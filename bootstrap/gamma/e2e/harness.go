@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const WAIT_FOR_BLOCK_TIMEOUT = 15 * time.Second
+const WAIT_FOR_BLOCK_TIMEOUT = 20 * time.Second
 
 type metrics map[string]map[string]interface{}
 
