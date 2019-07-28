@@ -2,36 +2,37 @@ version: 2
 jobs:
   tests:
     docker:
-      - image: circleci/golang:1.11.4
+      - image: itamararjuan/golang_with_node_aws
     resource_class: large
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: go get -u github.com/orbs-network/go-junit-report
-      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
-      - run: sudo apt-get install -y nodejs
       - run: ./test.sh
       - store_artifacts:
           path: _out
           destination: test-output
       - store_artifacts:
-          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          path: _reports
           destination: test-results
       - store_test_results:
           path: _reports
 
-  flakiness:
+  memory_leaks:
     docker:
-      - image: circleci/golang:1.11.4
-    parallelism: 6
+      - image: circleci/golang:1.12.6
     resource_class: xlarge
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
-      - run: sudo apt-get install -y nodejs
+      - run: ./test.goroutine-leaks.sh
+      - run: ./test.memory-leaks.sh
+
+  flakiness:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    parallelism: 6
+    resource_class: xlarge
+    steps:
+      - checkout
       - run: sudo npm install junit-xml-stats -g
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
@@ -41,20 +42,18 @@ jobs:
           path: _out
           destination: test-output
       - store_artifacts:
-          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          path: _reports
           destination: test-results
       - store_test_results:
           path: _reports
 
   nightly:
     docker:
-      - image: circleci/golang:1.11.4
+      - image: circleci/golang:1.12.6
     parallelism: 6
     resource_class: xlarge
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run:
           command: ./.circleci/nightly.sh
           no_output_timeout: 300m
@@ -62,7 +61,7 @@ jobs:
           path: _out
           destination: test-output
       - store_artifacts:
-          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          path: _reports
           destination: test-results
       - store_test_results:
           path: _reports
@@ -71,7 +70,6 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
@@ -89,13 +87,6 @@ jobs:
       - store_artifacts:
           path: _logs
 
-
-#  notify_github_about_dashboard:
-#    machine: true
-#    steps:
-#      - checkout
-#      - run: python ./.circleci/post-dashboard-link.py
-
   success:
     machine: true
     steps:
@@ -111,28 +102,23 @@ jobs:
 
   e2e_testnet_benchmark:
     docker:
-      - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+      - image: circleci/golang:1.12.6
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42
 
   e2e_testnet_leanhelix:
     docker:
-    - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    - image: circleci/golang:1.12.6
     steps:
     - checkout
-    - run: ./git-submodule-checkout.sh
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
   deploy_new_chain_pr_only:
     docker:
-    - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    - image: itamararjuan/golang_with_node_aws
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
       BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
@@ -140,7 +126,6 @@ jobs:
       TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: ./.circleci/chain_on_pr.sh
 
   release:
@@ -162,11 +147,16 @@ workflows:
           requires:
             - e2e
             - tests
+      - memory_leaks:
+        requires:
+          - tests
       - e2e:
           filters:
             tags:
               only: /^v.*/
       - flakiness
+        requires:
+          - tests
       - success:
           requires:
             - tests

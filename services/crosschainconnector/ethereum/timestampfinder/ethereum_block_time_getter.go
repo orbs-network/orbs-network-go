@@ -8,8 +8,9 @@ package timestampfinder
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type adapterHeaderFetcher interface {
