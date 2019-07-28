@@ -11,7 +11,9 @@ jobs:
       - run: go get -u github.com/orbs-network/go-junit-report
       - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
       - run: sudo apt-get install -y nodejs
-      - run: ./test.sh
+      - run:
+          command: ./test.sh
+          no_output_timeout: 15m
       - store_artifacts:
           path: _out
           destination: test-output
