@@ -29,7 +29,7 @@ type NodeConfigValue struct {
 	BoolValue     bool
 }
 
-type config struct {
+type MapBasedConfig struct {
 	kv                      map[string]NodeConfigValue
 	genesisValidatorNodes   map[string]ValidatorNode
 	gossipPeers             map[string]GossipPeer
@@ -125,57 +125,57 @@ func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string) GossipPeer {
 	}
 }
 
-func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
+func (c *MapBasedConfig) Set(key string, value NodeConfigValue) *MapBasedConfig {
 	c.kv[key] = value
 	return c
 }
 
-func (c *config) SetDuration(key string, value time.Duration) mutableNodeConfig {
+func (c *MapBasedConfig) SetDuration(key string, value time.Duration) *MapBasedConfig {
 	c.kv[key] = NodeConfigValue{DurationValue: value}
 	return c
 }
 
-func (c *config) SetUint32(key string, value uint32) mutableNodeConfig {
+func (c *MapBasedConfig) SetUint32(key string, value uint32) *MapBasedConfig {
 	c.kv[key] = NodeConfigValue{Uint32Value: value}
 	return c
 }
 
-func (c *config) SetString(key string, value string) mutableNodeConfig {
+func (c *MapBasedConfig) SetString(key string, value string) *MapBasedConfig {
 	c.kv[key] = NodeConfigValue{StringValue: value}
 	return c
 }
 
-func (c *config) SetBool(key string, value bool) mutableNodeConfig {
+func (c *MapBasedConfig) SetBool(key string, value bool) *MapBasedConfig {
 	c.kv[key] = NodeConfigValue{BoolValue: value}
 	return c
 }
 
-func (c *config) SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig {
+func (c *MapBasedConfig) SetNodeAddress(key primitives.NodeAddress) *MapBasedConfig {
 	c.nodeAddress = key
 	return c
 }
 
-func (c *config) SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig {
+func (c *MapBasedConfig) SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) *MapBasedConfig {
 	c.nodePrivateKey = key
 	return c
 }
 
-func (c *config) SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig {
+func (c *MapBasedConfig) SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) *MapBasedConfig {
 	c.constantConsensusLeader = key
 	return c
 }
 
-func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig {
+func (c *MapBasedConfig) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) *MapBasedConfig {
 	c.activeConsensusAlgo = algoType
 	return c
 }
 
-func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig {
+func (c *MapBasedConfig) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) *MapBasedConfig {
 	c.genesisValidatorNodes = nodes
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeConfig {
+func (c *MapBasedConfig) SetGossipPeers(gossipPeers map[string]GossipPeer) *MapBasedConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
@@ -192,226 +192,226 @@ func (c *hardCodedGossipPeer) GossipEndpoint() string {
 	return c.gossipEndpoint
 }
 
-func (c *config) NodeAddress() primitives.NodeAddress {
+func (c *MapBasedConfig) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
 }
 
-func (c *config) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
+func (c *MapBasedConfig) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
 	return c.nodePrivateKey
 }
 
-func (c *config) ProtocolVersion() primitives.ProtocolVersion {
+func (c *MapBasedConfig) ProtocolVersion() primitives.ProtocolVersion {
 	return primitives.ProtocolVersion(c.kv[PROTOCOL_VERSION].Uint32Value)
 }
 
-func (c *config) VirtualChainId() primitives.VirtualChainId {
+func (c *MapBasedConfig) VirtualChainId() primitives.VirtualChainId {
 	return primitives.VirtualChainId(c.kv[VIRTUAL_CHAIN_ID].Uint32Value)
 }
 
-func (c *config) NetworkType() protocol.SignerNetworkType {
+func (c *MapBasedConfig) NetworkType() protocol.SignerNetworkType {
 	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
 }
 
-func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
+func (c *MapBasedConfig) GenesisValidatorNodes() map[string]ValidatorNode {
 	return c.genesisValidatorNodes
 }
 
-func (c *config) GossipPeers() map[string]GossipPeer {
+func (c *MapBasedConfig) GossipPeers() map[string]GossipPeer {
 	return c.gossipPeers
 }
 
-func (c *config) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
+func (c *MapBasedConfig) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
 	return c.constantConsensusLeader
 }
 
-func (c *config) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
+func (c *MapBasedConfig) ActiveConsensusAlgo() consensus.ConsensusAlgoType {
 	return c.activeConsensusAlgo
 }
 
-func (c *config) BenchmarkConsensusRetryInterval() time.Duration {
+func (c *MapBasedConfig) BenchmarkConsensusRetryInterval() time.Duration {
 	return c.kv[BENCHMARK_CONSENSUS_RETRY_INTERVAL].DurationValue
 }
 
-func (c *config) LeanHelixConsensusRoundTimeoutInterval() time.Duration {
+func (c *MapBasedConfig) LeanHelixConsensusRoundTimeoutInterval() time.Duration {
 	return c.kv[LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL].DurationValue
 }
 
-func (c *config) LeanHelixShowDebug() bool {
+func (c *MapBasedConfig) LeanHelixShowDebug() bool {
 	return c.kv[LEAN_HELIX_SHOW_DEBUG].BoolValue
 }
 
-func (c *config) BlockSyncNumBlocksInBatch() uint32 {
+func (c *MapBasedConfig) BlockSyncNumBlocksInBatch() uint32 {
 	return c.kv[BLOCK_SYNC_NUM_BLOCKS_IN_BATCH].Uint32Value
 }
 
-func (c *config) BlockSyncNoCommitInterval() time.Duration {
+func (c *MapBasedConfig) BlockSyncNoCommitInterval() time.Duration {
 	return c.kv[BLOCK_SYNC_NO_COMMIT_INTERVAL].DurationValue
 }
 
-func (c *config) BlockSyncCollectResponseTimeout() time.Duration {
+func (c *MapBasedConfig) BlockSyncCollectResponseTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT].DurationValue
 }
 
-func (c *config) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
+func (c *MapBasedConfig) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
 	return c.kv[BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE].DurationValue
 }
 
-func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
+func (c *MapBasedConfig) ConsensusContextMaximumTransactionsInBlock() uint32 {
 	return c.kv[CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK].Uint32Value
 }
 
-func (c *config) ConsensusContextSystemTimestampAllowedJitter() time.Duration {
+func (c *MapBasedConfig) ConsensusContextSystemTimestampAllowedJitter() time.Duration {
 	return c.kv[CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER].DurationValue
 }
 
-func (c *config) StateStorageHistorySnapshotNum() uint32 {
+func (c *MapBasedConfig) StateStorageHistorySnapshotNum() uint32 {
 	return c.kv[STATE_STORAGE_HISTORY_SNAPSHOT_NUM].Uint32Value
 }
 
-func (c *config) BlockTrackerGraceDistance() uint32 {
+func (c *MapBasedConfig) BlockTrackerGraceDistance() uint32 {
 	return c.kv[BLOCK_TRACKER_GRACE_DISTANCE].Uint32Value
 }
 
-func (c *config) BlockTrackerGraceTimeout() time.Duration {
+func (c *MapBasedConfig) BlockTrackerGraceTimeout() time.Duration {
 	return c.kv[BLOCK_TRACKER_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) TransactionPoolPendingPoolSizeInBytes() uint32 {
+func (c *MapBasedConfig) TransactionPoolPendingPoolSizeInBytes() uint32 {
 	return c.kv[TRANSACTION_POOL_PENDING_POOL_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *config) TransactionExpirationWindow() time.Duration {
+func (c *MapBasedConfig) TransactionExpirationWindow() time.Duration {
 	return c.kv[TRANSACTION_EXPIRATION_WINDOW].DurationValue
 }
 
-func (c *config) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
+func (c *MapBasedConfig) TransactionPoolFutureTimestampGraceTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_FUTURE_TIMESTAMP_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) TransactionPoolPendingPoolClearExpiredInterval() time.Duration {
+func (c *MapBasedConfig) TransactionPoolPendingPoolClearExpiredInterval() time.Duration {
 	return c.kv[TRANSACTION_POOL_PENDING_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
-func (c *config) TransactionPoolCommittedPoolClearExpiredInterval() time.Duration {
+func (c *MapBasedConfig) TransactionPoolCommittedPoolClearExpiredInterval() time.Duration {
 	return c.kv[TRANSACTION_POOL_COMMITTED_POOL_CLEAR_EXPIRED_INTERVAL].DurationValue
 }
 
-func (c *config) TransactionPoolPropagationBatchSize() uint16 {
+func (c *MapBasedConfig) TransactionPoolPropagationBatchSize() uint16 {
 	return uint16(c.kv[TRANSACTION_POOL_PROPAGATION_BATCH_SIZE].Uint32Value)
 }
 
-func (c *config) TransactionPoolPropagationBatchingTimeout() time.Duration {
+func (c *MapBasedConfig) TransactionPoolPropagationBatchingTimeout() time.Duration {
 	return c.kv[TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT].DurationValue
 }
 
-func (c *config) TransactionPoolTimeBetweenEmptyBlocks() time.Duration {
+func (c *MapBasedConfig) TransactionPoolTimeBetweenEmptyBlocks() time.Duration {
 	return c.kv[TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS].DurationValue
 }
 
-func (c *config) TransactionPoolNodeSyncRejectTime() time.Duration {
+func (c *MapBasedConfig) TransactionPoolNodeSyncRejectTime() time.Duration {
 	return c.kv[TRANSACTION_POOL_NODE_SYNC_REJECT_TIME].DurationValue
 }
 
-func (c *config) PublicApiSendTransactionTimeout() time.Duration {
+func (c *MapBasedConfig) PublicApiSendTransactionTimeout() time.Duration {
 	return c.kv[PUBLIC_API_SEND_TRANSACTION_TIMEOUT].DurationValue
 }
 
-func (c *config) PublicApiNodeSyncWarningTime() time.Duration {
+func (c *MapBasedConfig) PublicApiNodeSyncWarningTime() time.Duration {
 	return c.kv[PUBLIC_API_NODE_SYNC_WARNING_TIME].DurationValue
 }
 
-func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
+func (c *MapBasedConfig) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
 }
 
-func (c *config) ProcessorArtifactPath() string {
+func (c *MapBasedConfig) ProcessorArtifactPath() string {
 	return c.kv[PROCESSOR_ARTIFACT_PATH].StringValue
 }
 
-func (c *config) ProcessorSanitizeDeployedContracts() bool {
+func (c *MapBasedConfig) ProcessorSanitizeDeployedContracts() bool {
 	return c.kv[PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS].BoolValue
 }
 
-func (c *config) GossipListenPort() uint16 {
+func (c *MapBasedConfig) GossipListenPort() uint16 {
 	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
 }
 
-func (c *config) GossipConnectionKeepAliveInterval() time.Duration {
+func (c *MapBasedConfig) GossipConnectionKeepAliveInterval() time.Duration {
 	return c.kv[GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL].DurationValue
 }
 
-func (c *config) GossipNetworkTimeout() time.Duration {
+func (c *MapBasedConfig) GossipNetworkTimeout() time.Duration {
 	return c.kv[GOSSIP_NETWORK_TIMEOUT].DurationValue
 }
 
-func (c *config) GossipReconnectInterval() time.Duration {
+func (c *MapBasedConfig) GossipReconnectInterval() time.Duration {
 	return c.kv[GOSSIP_RECONNECT_INTERVAL].DurationValue
 }
 
-func (c *config) BenchmarkConsensusRequiredQuorumPercentage() uint32 {
+func (c *MapBasedConfig) BenchmarkConsensusRequiredQuorumPercentage() uint32 {
 	return c.kv[BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE].Uint32Value
 }
 
-func (c *config) LeanHelixConsensusMinimumCommitteeSize() uint32 {
+func (c *MapBasedConfig) LeanHelixConsensusMinimumCommitteeSize() uint32 {
 	return c.kv[LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE].Uint32Value
 }
 
-func (c *config) LeanHelixConsensusMaximumCommitteeSize() uint32 {
+func (c *MapBasedConfig) LeanHelixConsensusMaximumCommitteeSize() uint32 {
 	return c.kv[LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE].Uint32Value
 }
 
-func (c *config) InterNodeSyncAuditBlocksYoungerThan() time.Duration {
+func (c *MapBasedConfig) InterNodeSyncAuditBlocksYoungerThan() time.Duration {
 	return c.kv[INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN].DurationValue
 }
 
-func (c *config) EthereumEndpoint() string {
+func (c *MapBasedConfig) EthereumEndpoint() string {
 	return c.kv[ETHEREUM_ENDPOINT].StringValue
 }
 
-func (c *config) EthereumFinalityTimeComponent() time.Duration {
+func (c *MapBasedConfig) EthereumFinalityTimeComponent() time.Duration {
 	return c.kv[ETHEREUM_FINALITY_TIME_COMPONENT].DurationValue
 }
 
-func (c *config) EthereumFinalityBlocksComponent() uint32 {
+func (c *MapBasedConfig) EthereumFinalityBlocksComponent() uint32 {
 	return c.kv[ETHEREUM_FINALITY_BLOCKS_COMPONENT].Uint32Value
 }
 
-func (c *config) LoggerHttpEndpoint() string {
+func (c *MapBasedConfig) LoggerHttpEndpoint() string {
 	return c.kv[LOGGER_HTTP_ENDPOINT].StringValue
 }
 
-func (c *config) LoggerBulkSize() uint32 {
+func (c *MapBasedConfig) LoggerBulkSize() uint32 {
 	return c.kv[LOGGER_BULK_SIZE].Uint32Value
 }
 
-func (c *config) LoggerFileTruncationInterval() time.Duration {
+func (c *MapBasedConfig) LoggerFileTruncationInterval() time.Duration {
 	return c.kv[LOGGER_FILE_TRUNCATION_INTERVAL].DurationValue
 }
 
-func (c *config) LoggerFullLog() bool {
+func (c *MapBasedConfig) LoggerFullLog() bool {
 	return c.kv[LOGGER_FULL_LOG].BoolValue
 }
 
-func (c *config) BlockStorageFileSystemDataDir() string {
+func (c *MapBasedConfig) BlockStorageFileSystemDataDir() string {
 	return c.kv[BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR].StringValue
 }
 
-func (c *config) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
+func (c *MapBasedConfig) BlockStorageFileSystemMaxBlockSizeInBytes() uint32 {
 	return c.kv[BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES].Uint32Value
 }
 
-func (c *config) Profiling() bool {
+func (c *MapBasedConfig) Profiling() bool {
 	return c.kv[PROFILING].BoolValue
 }
 
-func (c *config) HttpAddress() string {
+func (c *MapBasedConfig) HttpAddress() string {
 	return c.kv[HTTP_ADDRESS].StringValue
 }
 
-func (c *config) NTPEndpoint() string {
+func (c *MapBasedConfig) NTPEndpoint() string {
 	return c.kv[NTP_ENDPOINT].StringValue
 }
 
-func (c *config) SignerEndpoint() string {
+func (c *MapBasedConfig) SignerEndpoint() string {
 	return c.kv[SIGNER_ENDPOINT].StringValue
 }

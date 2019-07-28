@@ -209,10 +209,10 @@ func TestConfig_ContractCodeSanitation(t *testing.T) {
 }
 
 func TestConfig_E2EConfigFile(t *testing.T) {
-	content, err := ioutil.ReadFile("../docker/test/benchmark-config/node1.json")
-	require.NoError(t, err, "failed reading config file")
+	content, err := ioutil.ReadFile("../docker/test/benchmark-MapBasedConfig/node1.json")
+	require.NoError(t, err, "failed reading MapBasedConfig file")
 	cfg, err := newEmptyFileConfig(string(content))
-	require.NoError(t, err, "failed parsing config file")
+	require.NoError(t, err, "failed parsing MapBasedConfig file")
 
 	require.EqualValues(t, "a328846cd5b4979d68a8c58a9bdfeee657b34de7", cfg.NodeAddress().String())
 }

@@ -110,23 +110,7 @@ type NodeConfig interface {
 type OverridableConfig interface {
 	NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
-	MergeWithFileConfig(source string) (mutableNodeConfig, error)
-}
-
-type mutableNodeConfig interface {
-	OverridableConfig
-	Set(key string, value NodeConfigValue) mutableNodeConfig
-	SetDuration(key string, value time.Duration) mutableNodeConfig
-	SetUint32(key string, value uint32) mutableNodeConfig
-	SetString(key string, value string) mutableNodeConfig
-	SetBool(key string, value bool) mutableNodeConfig
-	SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig
-	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
-	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
-	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
-	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
-	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
-	Clone() mutableNodeConfig
+	MergeWithFileConfig(source string) (*MapBasedConfig, error)
 }
 
 type BlockStorageConfig interface {

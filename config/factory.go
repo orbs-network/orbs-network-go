@@ -10,13 +10,13 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 
-func emptyConfig() mutableNodeConfig {
-	return &config{
+func emptyConfig() *MapBasedConfig {
+	return &MapBasedConfig{
 		kv: make(map[string]NodeConfigValue),
 	}
 }
 
-func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {
+func (c *MapBasedConfig) ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig {
 
 	cloned := c.Clone()
 	cloned.SetNodeAddress(nodeAddress)
@@ -24,12 +24,12 @@ func (c *config) ForNode(nodeAddress primitives.NodeAddress, privateKey primitiv
 	return cloned
 }
 
-func (c *config) MergeWithFileConfig(source string) (mutableNodeConfig, error) {
+func (c *MapBasedConfig) MergeWithFileConfig(source string) (*MapBasedConfig, error) {
 	return newFileConfig(c, source)
 }
 
-func (c *config) Clone() mutableNodeConfig {
-	return &config{
+func (c *MapBasedConfig) Clone() *MapBasedConfig {
+	return &MapBasedConfig{
 		activeConsensusAlgo:     c.activeConsensusAlgo,
 		constantConsensusLeader: c.constantConsensusLeader,
 		genesisValidatorNodes:   c.genesisValidatorNodes,

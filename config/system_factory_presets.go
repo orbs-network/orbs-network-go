@@ -15,7 +15,7 @@ import (
 )
 
 // all other configs are variations from the production one
-func defaultProductionConfig() mutableNodeConfig {
+func defaultProductionConfig() *MapBasedConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
@@ -101,8 +101,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	return cfg
 }
 
-// config for a production node (either main net or test net)
-func ForProduction(processorArtifactPath string) mutableNodeConfig {
+// MapBasedConfig for a production node (either main net or test net)
+func ForProduction(processorArtifactPath string) *MapBasedConfig {
 	cfg := defaultProductionConfig()
 
 	if processorArtifactPath != "" {
@@ -111,7 +111,7 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 	return cfg
 }
 
-// config for end-to-end tests (very similar to production but slightly faster)
+// MapBasedConfig for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
 	httpAddress string,
 	gossipListenPort int,
@@ -188,7 +188,7 @@ func ForAcceptanceTestNetwork(
 	requiredQuorumPercentage uint32,
 	virtualChainId primitives.VirtualChainId,
 	emptyBlockTime time.Duration,
-) mutableNodeConfig {
+) *MapBasedConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
@@ -218,11 +218,11 @@ func ForAcceptanceTestNetwork(
 	return cfg
 }
 
-// config for gamma dev network that runs with in-memory adapters except for contract compilation
+// MapBasedConfig for gamma dev network that runs with in-memory adapters except for contract compilation
 func TemplateForGamma(
 	genesisValidatorNodes map[string]ValidatorNode,
 	constantConsensusLeader primitives.NodeAddress,
-) mutableNodeConfig {
+) *MapBasedConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 100*time.Millisecond)

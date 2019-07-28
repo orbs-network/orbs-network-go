@@ -17,11 +17,11 @@ import (
 	"time"
 )
 
-func newEmptyFileConfig(source string) (mutableNodeConfig, error) {
+func newEmptyFileConfig(source string) (*MapBasedConfig, error) {
 	return newFileConfig(emptyConfig(), source)
 }
 
-func newFileConfig(parent mutableNodeConfig, source string) (mutableNodeConfig, error) {
+func newFileConfig(parent *MapBasedConfig, source string) (*MapBasedConfig, error) {
 	var data map[string]interface{}
 	if err := json.Unmarshal([]byte(source), &data); err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
 	return peers, nil
 }
 
-func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
+func populateConfig(cfg *MapBasedConfig, data map[string]interface{}) error {
 	for key, value := range data {
 		var duration time.Duration
 		var numericValue uint32
@@ -186,7 +186,7 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			return fmt.Errorf("could not decode value for MapBasedConfig key %s: %s", key, err)
 		}
 	}
 
