@@ -8,20 +8,21 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"github.com/orbs-network/scribe/log"
 	"math/rand"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 )
 
 const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
@@ -138,7 +139,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 	logger, testOutput := b.makeLogger(tb, testId)
 
-	supervised.Recover(logger, func() {
+	govnr.Recover(logger, func() {
 		defer testOutput.TestTerminated() // this will suppress test failures from goroutines after test terminates
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 

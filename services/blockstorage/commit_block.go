@@ -9,14 +9,15 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"time"
 )
 
 func (s *service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -62,7 +63,7 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
 	if notifyNodeSync {
-		supervised.GoOnce(logger, func() {
+		govnr.GoOnce(logger, func() {
 			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
 			defer cancel()
 			s.nodeSync.HandleBlockCommitted(shortCtx)

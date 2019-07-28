@@ -9,15 +9,16 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"sync"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
@@ -92,7 +93,7 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 	}
 
 	// server goroutine
-	supervised.GoForever(ctx, t.logger, func() {
+	govnr.GoForever(ctx, t.logger, func() {
 		t.serverMainLoop(ctx, t.config.GossipListenPort())
 	})
 
@@ -134,7 +135,7 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 
 		t.outgoingQueues.peers[peerNodeAddress] = newQueue
 
-		supervised.GoForever(bgCtx, t.logger, func() {
+		govnr.GoForever(bgCtx, t.logger, func() {
 			t.clientMainLoop(bgCtx, newQueue) // avoid referencing queue map not under lock
 		})
 	}

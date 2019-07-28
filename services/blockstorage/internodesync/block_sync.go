@@ -8,14 +8,15 @@ package internodesync
 
 import (
 	"context"
+	"time"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 var LogTag = log.String("flow", "block-sync")
@@ -69,7 +70,7 @@ type BlockSync struct {
 	conduit blockSyncConduit
 
 	metrics *stateMachineMetrics
-	done    supervised.ContextEndedChan
+	done    govnr.ContextEndedChan
 }
 
 type stateMachineMetrics struct {
@@ -100,7 +101,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
-	bs.done = supervised.GoForever(ctx, logger, func() {
+	bs.done = govnr.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
 	})
 

@@ -8,12 +8,16 @@ package transactionpool
 
 import (
 	"context"
+	"hash/adler32"
+	"sync"
+	"time"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -21,9 +25,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"hash/adler32"
-	"sync"
-	"time"
 )
 
 type TransactionForwarderConfig interface {
@@ -94,7 +95,7 @@ func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransactio
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
-	supervised.GoForever(parent, f.logger, func() {
+	govnr.GoForever(parent, f.logger, func() {
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())

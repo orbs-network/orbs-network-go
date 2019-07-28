@@ -9,11 +9,12 @@ package servicesync
 import (
 	"context"
 	"fmt"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -78,7 +79,7 @@ func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSou
 	ctx = trace.NewContext(ctx, committer.getServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
-	supervised.GoForever(ctx, logger, func() {
+	govnr.GoForever(ctx, logger, func() {
 		var height primitives.BlockHeight
 		var err error
 		for err == nil {

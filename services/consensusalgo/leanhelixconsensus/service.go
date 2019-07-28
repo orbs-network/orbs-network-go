@@ -8,7 +8,10 @@ package leanhelixconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/lean-helix-go"
+	"time"
+
+	"github.com/orbs-network/govnr"
+	leanhelix "github.com/orbs-network/lean-helix-go"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -17,7 +20,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -26,7 +28,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var LogTag = log.Service("consensus-algo-lean-helix")
@@ -114,7 +115,7 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		supervised.GoForever(ctx, logger, func() {
+		govnr.GoForever(ctx, logger, func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
 		})

@@ -8,11 +8,12 @@ package testkit
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/orbs-network-go/test/rand"
 	"sync"
 	"time"
+
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 )
 
 type failingTamperer struct {
@@ -39,7 +40,7 @@ type duplicatingTamperer struct {
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
-		supervised.GoOnce(o.transport.logger, func() {
+		govnr.GoOnce(o.transport.logger, func() {
 			time.Sleep(10 * time.Millisecond)
 			o.transport.sendToPeers(ctx, data)
 		})
@@ -59,7 +60,7 @@ type delayingTamperer struct {
 
 func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		supervised.GoOnce(o.transport.logger, func() {
+		govnr.GoOnce(o.transport.logger, func() {
 			time.Sleep(o.duration())
 			o.transport.sendToPeers(ctx, data)
 		})

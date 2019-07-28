@@ -8,8 +8,9 @@ package gossip
 
 import (
 	"context"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ func (c *meteredTopicChannel) updateMetrics() {
 }
 
 func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) {
-	supervised.GoForever(ctx, logger, func() {
+	govnr.GoForever(ctx, logger, func() {
 		for {
 			select {
 			case <-ctx.Done():

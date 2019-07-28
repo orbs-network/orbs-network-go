@@ -8,12 +8,13 @@ package internodesync
 
 import (
 	"context"
+	"time"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type collectingAvailabilityResponsesState struct {
@@ -40,7 +41,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
-	supervised.GoOnce(logger, func() {
+	govnr.GoOnce(logger, func() {
 		shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
 		defer cancel()
 		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)

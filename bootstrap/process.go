@@ -8,14 +8,15 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/scribe/log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
+	"github.com/orbs-network/scribe/log"
 )
 
 type OrbsProcess struct {
@@ -44,7 +45,7 @@ func (n *OrbsProcess) WaitUntilShutdown() {
 	// if waiting for shutdown, listen for sigint and sigterm
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	supervised.GoOnce(n.Logger, func() {
+	govnr.GoOnce(n.Logger, func() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
 		n.GracefulShutdown(0)

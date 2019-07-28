@@ -8,10 +8,11 @@ package synchronization
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/orbs-network/govnr"
 )
 
 type Trigger interface {
@@ -28,14 +29,14 @@ type periodicalTrigger struct {
 	d       time.Duration
 	f       func()
 	s       func()
-	logger  supervised.Errorer
+	logger  govnr.Errorer
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 	metrics *Telemetry
 	wgSync  sync.WaitGroup
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.Errorer, trigger func(), onStop func()) Trigger {
+func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger govnr.Errorer, trigger func(), onStop func()) Trigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &periodicalTrigger{
 		ticker:  nil,
@@ -57,7 +58,7 @@ func (t *periodicalTrigger) TimesTriggered() uint64 {
 
 func (t *periodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	supervised.GoForever(ctx, t.logger, func() {
+	govnr.GoForever(ctx, t.logger, func() {
 		t.wgSync.Add(1)
 		defer t.wgSync.Done()
 		for {

@@ -8,10 +8,14 @@ package benchmarkconsensus
 
 import (
 	"context"
+	"math"
+	"sync"
+	"time"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -19,9 +23,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
-	"math"
-	"sync"
-	"time"
 )
 
 const blockHeightNone = primitives.BlockHeight(math.MaxUint64)
@@ -111,7 +112,7 @@ func NewBenchmarkConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
 		logger.Info("NewBenchmarkConsensusAlgo() Benchmark Consensus is active algo, and this node is leader, starting goroutine now")
-		supervised.GoForever(ctx, logger, func() {
+		govnr.GoForever(ctx, logger, func() {
 			s.leaderConsensusRoundRunLoop(ctx)
 		})
 	}

@@ -12,14 +12,15 @@ package memory
 
 import (
 	"context"
+	"sync"
+
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
-	"sync"
 )
 
 const SEND_QUEUE_MAX_MESSAGES = 1000
@@ -95,7 +96,7 @@ func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 		logger:   logger,
 	}
 
-	supervised.GoForever(ctx, logger, func() {
+	govnr.GoForever(ctx, logger, func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
