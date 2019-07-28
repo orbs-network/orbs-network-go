@@ -12,6 +12,7 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -26,16 +27,14 @@ func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
 		client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 
 		sendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
-
-		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 2)))
+		require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 2)), "Gamma did not close a block")
 	}
 }
 
 func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 	return func(t *testing.T) {
 		endpoint := runGammaOnRandomPort(t, configJSON)
-
-		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
+		require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 5)), "Gamma did not reach desired block")
 	}
 }
 
