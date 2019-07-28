@@ -8,6 +8,7 @@ package tcp
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -52,11 +53,11 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 			return node1.IsServerListening() && node2.IsServerListening()
 		}), "server did not start")
 
-		node1.AddPeer(ctx, address2, config.NewHardCodedGossipPeer(node2.GetServerPort(), "127.0.0.1"))
-		node2.AddPeer(ctx, address1, config.NewHardCodedGossipPeer(node1.GetServerPort(), "127.0.0.1"))
+		node1.AddPeer(ctx, address2, config.NewHardCodedGossipPeer(node2.GetServerPort(), "127.0.0.1", hex.EncodeToString(address1)))
+		node2.AddPeer(ctx, address1, config.NewHardCodedGossipPeer(node1.GetServerPort(), "127.0.0.1", hex.EncodeToString(address2)))
 
 		require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-			return len(node1.outgoingQueues.peers) > 0 && len(node2.outgoingQueues.peers) > 0
+			return len(node1.clientConnections.peers) > 0 && len(node2.clientConnections.peers) > 0
 		}), "expected all outgoing queues to become enabled after successfully connecting to added peers")
 
 		header := (&gossipmessages.HeaderBuilder{
@@ -71,19 +72,22 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 		payloads := [][]byte{header.Raw(), message.Content}
 
 		l2.ExpectReceive(payloads)
-		require.NoError(t, node1.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      address1,
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientNodeAddresses: []primitives.NodeAddress{address2},
-			Payloads:               payloads,
-		}))
+		require.NoError(t, sendTo(ctx, node1, address1, address2, payloads))
 
 		l1.ExpectReceive(payloads)
-		require.NoError(t, node2.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      address2,
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientNodeAddresses: []primitives.NodeAddress{address1},
-			Payloads:               payloads,
-		}))
+		require.NoError(t, sendTo(ctx, node2, address2, address1, payloads))
 	})
+}
+
+func sendTo(ctx context.Context, node *DirectTransport, from primitives.NodeAddress, to primitives.NodeAddress, payloads [][]byte) error {
+	return node.Send(ctx, &adapter.TransportData{
+		SenderNodeAddress:      from,
+		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+		RecipientNodeAddresses: []primitives.NodeAddress{to},
+		Payloads:               payloads,
+	})
+}
+
+func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
+
 }
