@@ -62,17 +62,17 @@ func (c *clientConnection) connect(parent context.Context) {
 	c.disconnect = cancel
 
 	supervised.GoForever(ctx, c.logger, func() {
-		c.clientMainLoop(ctx, c.queue) // avoid referencing queue map not under lock
+		c.clientMainLoop(ctx)
 	})
 }
 
-func (c *clientConnection) clientMainLoop(parentCtx context.Context, queue *transportQueue) {
+func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
 	for {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerNodeAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")
-		conn, err := net.DialTimeout("tcp", queue.networkAddress, c.config.GossipNetworkTimeout())
+		conn, err := net.DialTimeout("tcp", c.queue.networkAddress, c.config.GossipNetworkTimeout())
 
 		if err != nil {
 			logger.Info("cannot connect to gossip peer endpoint")
@@ -80,66 +80,74 @@ func (c *clientConnection) clientMainLoop(parentCtx context.Context, queue *tran
 			continue
 		}
 
-		if !c.clientHandleOutgoingConnection(ctx, conn, queue) {
+		if !c.clientHandleOutgoingConnection(ctx, conn) {
 			return
 		}
 	}
 }
 
 // returns true if should attempt reconnect on error
-func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn, queue *transportQueue) bool {
+func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn) bool {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("successful outgoing gossip transport connection")
+
 	c.sharedMetrics.activeOutgoingConnections.Inc()
 	defer c.sharedMetrics.activeOutgoingConnections.Dec()
-	queue.Clear(ctx)
-	queue.Enable()
-	defer queue.Disable()
+
+	c.queue.OnNewConnection(ctx)
+	defer c.queue.Disable()
+
+	defer conn.Close() // we only exit this function when this connection has errored, or if we're disconnecting, so we can safely defer close()
 
 	for {
-
-		ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, c.config.GossipConnectionKeepAliveInterval())
-		data := queue.Pop(ctxWithKeepAliveTimeout)
-		cancelCtxWithKeepAliveTimeout()
-
-		if data != nil {
-
-			// ctxWithKeepAliveTimeout not closed, so no keep alive timeout nor system shutdown
-			// meaning do a regular send (we have data)
-			err := c.sendTransportData(ctx, conn, data)
+		if data := c.popMessageFromQueue(ctx); data != nil {
+			// got data from queue
+			err := c.sendToSocket(ctx, conn, data)
 			if err != nil {
-				c.sharedMetrics.outgoingConnectionSendErrors.Inc() //TODO remove, replaced by following metric
-				c.sendErrors.Inc()
-				logger.Info("failed sending transport data, reconnecting", log.Error(err))
-				conn.Close()
-				return true
+				return c.reconnectAfterSocketError(logger, err)
+			} // else - continue looping
+
+		} else if shouldKeepAlive(ctx) {
+			err := c.sendKeepAlive(ctx, conn)
+			if err != nil {
+				return c.reconnectAfterKeepAliveFailure(logger, err)
 			}
 
 		} else {
-			// ctxWithKeepAliveTimeout is closed, so either keep alive timeout or system shutdown
-			if ctx.Err() == nil {
-
-				// parent ctx not closed, so no system shutdown
-				// meaning keep alive timeout
-				err := c.sendKeepAlive(ctx, conn)
-				if err != nil {
-					c.sharedMetrics.outgoingConnectionKeepaliveErrors.Inc()
-					logger.Info("failed sending keepalive, reconnecting", log.Error(err))
-					conn.Close()
-					return true
-				}
-
-			} else {
-
-				// parent ctx is closed, so system shutdown
-				// meaning cleanup and exit
-				logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
-				conn.Close()
-				return false
-
-			}
+			// parent ctx is closed, we're disconnecting
+			return c.onDisconnect(logger)
 		}
 	}
+}
+
+func (c *clientConnection) popMessageFromQueue(ctx context.Context) *adapter.TransportData {
+	ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, c.config.GossipConnectionKeepAliveInterval())
+	defer cancelCtxWithKeepAliveTimeout()
+
+	return c.queue.Pop(ctxWithKeepAliveTimeout)
+}
+
+// if this context is not closed, we send keep alive; otherwise - we're asked to disconnect
+func shouldKeepAlive(ctx context.Context) bool {
+	return ctx.Err() == nil
+}
+
+func (c *clientConnection) onDisconnect(logger log.Logger) bool {
+	logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
+	return false
+}
+
+func (c *clientConnection) reconnectAfterKeepAliveFailure(logger log.Logger, err error) bool {
+	c.sharedMetrics.outgoingConnectionKeepaliveErrors.Inc()
+	logger.Info("failed sending keepalive, reconnecting", log.Error(err))
+	return true
+}
+
+func (c *clientConnection) reconnectAfterSocketError(logger log.Logger, err error) bool {
+	c.sharedMetrics.outgoingConnectionSendErrors.Inc() //TODO remove, replaced by following metric
+	c.sendErrors.Inc()
+	logger.Info("failed sending transport data, reconnecting", log.Error(err))
+	return true
 }
 
 func (c *clientConnection) addDataToOutgoingPeerQueue(ctx context.Context, data *adapter.TransportData) {
@@ -151,7 +159,7 @@ func (c *clientConnection) addDataToOutgoingPeerQueue(ctx context.Context, data 
 	}
 }
 
-func (c *clientConnection) sendTransportData(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
+func (c *clientConnection) sendToSocket(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
 	timeout := c.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)

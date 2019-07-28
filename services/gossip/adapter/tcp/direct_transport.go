@@ -124,8 +124,8 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 	defer t.clientConnections.Unlock()
 
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-
-		client := newClientConnection(peer.HexAddress()[:6], peer, t.logger, t.metricRegistry, t.metrics, t.config)
+		idForLogs := peer.HexOrbsAddress()[:6]
+		client := newClientConnection(idForLogs, peer, t.logger, t.metricRegistry, t.metrics, t.config)
 
 		t.clientConnections.peers[peerNodeAddress] = client
 
