@@ -24,13 +24,15 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 	return func() bool {
 		res, err := http.Get(endpoint + "/metrics")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("%s error getting metrics: %s\n", time.Now(), err)
 			return false
+		} else {
+			fmt.Printf("%s successfully got metrics\n", time.Now())
 		}
 
 		readBytes, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("%s error parsing metrics: %s\n", time.Now(), err)
 			return false
 		}
 		m := make(metrics)
