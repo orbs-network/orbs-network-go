@@ -97,6 +97,10 @@ type hardcodedConfig struct {
 	artifactPath string
 }
 
+func (c *hardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
+	return true
+}
+
 func (c *hardcodedConfig) ProcessorArtifactPath() string {
 	return c.artifactPath
 }
