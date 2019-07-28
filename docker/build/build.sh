@@ -19,10 +19,8 @@ docker build -f ./docker/build/Dockerfile.build \
 
 docker run --name orbs_build orbs:build sleep 1
 
-export SRC=/go/src/github.com/orbs-network/orbs-network-go
-
 rm -rf _bin
-docker cp orbs_build:$SRC/_bin .
+docker cp orbs_build:./_bin .
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
