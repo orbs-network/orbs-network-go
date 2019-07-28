@@ -87,3 +87,9 @@ func timeTravel(t *testing.T, endpoint string, delta time.Duration) {
 	require.NoError(t, err, "failed incrementing next block time")
 	require.EqualValues(t, 200, res.StatusCode, "http call to increment time failed")
 }
+
+func shutdown(t *testing.T, endpoint string) {
+	res, err := http.Post(fmt.Sprintf("%s/debug/gamma/shutdown", endpoint), "text/plain", nil)
+	require.NoError(t, err, "failed sending shutdown call")
+	require.EqualValues(t, 200, res.StatusCode, "failed sending shutdown call")
+}
