@@ -24,8 +24,8 @@ func (c *MapBasedConfig) ForNode(nodeAddress primitives.NodeAddress, privateKey 
 	return cloned
 }
 
-func (c *MapBasedConfig) MergeWithFileConfig(source string) (*MapBasedConfig, error) {
-	return newFileConfig(c, source)
+func (c *MapBasedConfig) MergeWithJSONConfig(source string) (*MapBasedConfig, error) {
+	return newFromJSONWithParent(c, source)
 }
 
 func (c *MapBasedConfig) Clone() *MapBasedConfig {

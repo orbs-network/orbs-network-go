@@ -80,7 +80,7 @@ func BenchmarkHappyFlow1kWithOverrides(b *testing.B) {
 
 	rnd := rand.NewControlledRand(b)
 	newHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-		c, err := cfg.MergeWithFileConfig(`{
+		c, err := cfg.MergeWithJSONConfig(`{
 	"consensus-context-maximum-transactions-in-block": 70,
 	"transaction-pool-propagation-batch-size": 100
 }`)

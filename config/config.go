@@ -110,7 +110,7 @@ type NodeConfig interface {
 type OverridableConfig interface {
 	NodeConfig
 	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
-	MergeWithFileConfig(source string) (*MapBasedConfig, error)
+	MergeWithJSONConfig(source string) (*MapBasedConfig, error)
 }
 
 type BlockStorageConfig interface {

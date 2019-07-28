@@ -101,7 +101,7 @@ func defaultProductionConfig() *MapBasedConfig {
 	return cfg
 }
 
-// MapBasedConfig for a production node (either main net or test net)
+// config for a production node (either main net or test net)
 func ForProduction(processorArtifactPath string) *MapBasedConfig {
 	cfg := defaultProductionConfig()
 
@@ -111,7 +111,7 @@ func ForProduction(processorArtifactPath string) *MapBasedConfig {
 	return cfg
 }
 
-// MapBasedConfig for end-to-end tests (very similar to production but slightly faster)
+// config for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
 	httpAddress string,
 	gossipListenPort int,
@@ -218,7 +218,7 @@ func ForAcceptanceTestNetwork(
 	return cfg
 }
 
-// MapBasedConfig for gamma dev network that runs with in-memory adapters except for contract compilation
+// config for gamma dev network that runs with in-memory adapters except for contract compilation
 func TemplateForGamma(
 	genesisValidatorNodes map[string]ValidatorNode,
 	constantConsensusLeader primitives.NodeAddress,

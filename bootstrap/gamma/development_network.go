@@ -41,7 +41,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock ad
 		overrideConfigJson = "{}"
 	}
 
-	configWithOverrides, err := cfgTemplate.MergeWithFileConfig(overrideConfigJson)
+	configWithOverrides, err := cfgTemplate.MergeWithJSONConfig(overrideConfigJson)
 	if err != nil {
 		panic(err)
 	}

@@ -31,11 +31,13 @@ func main() {
 		return
 	}
 
-	cfg, err := config.GetNodeConfigFromFiles(configFiles, *httpAddress)
+	cfg, err := config.NewFromMultipleFiles(configFiles)
 	if err != nil {
 		fmt.Printf("%s \n", err)
 		os.Exit(1)
 	}
+
+	cfg.SetString(config.HTTP_ADDRESS, *httpAddress)
 
 	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg)
 
