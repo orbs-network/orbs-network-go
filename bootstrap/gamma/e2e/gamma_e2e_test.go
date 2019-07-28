@@ -38,22 +38,34 @@ func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
 	}
 }
 
-func TestGamma(t *testing.T) {
+func TestGamma_Benchmark(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}
-
-	t.Run("Benchmark", testGammaWithJSONConfig(""))
-	t.Run("LeanHelix", testGammaWithJSONConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	testGammaWithJSONConfig("")
 }
 
-func TestGammaWithEmptyBlocks(t *testing.T) {
+func TestGamma_LeanHelix(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
+	testGammaWithJSONConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX))
+}
+
+func TestGammaWithEmptyBlocks_Benchmark(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	t.Run("Benchmark", testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`))
-	t.Run("LeanHelix", testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`)
+}
+
+func TestGammaWithEmptyBlocks_LeanHelix(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
+
+	testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX))
 }
 
 func TestGammaSetBlockTime(t *testing.T) {
