@@ -70,6 +70,7 @@ jobs:
       image: circleci/classic:201808-01
     steps:
       - checkout
+      - run: ./.circleci/install-go.sh
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
