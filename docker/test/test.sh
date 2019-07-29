@@ -19,7 +19,7 @@ cp ./test/e2e/_data/blocks _tmp/blocks/node3
 cp ./test/e2e/_data/blocks _tmp/blocks/node4
 
 # run docker-reliant tests
-docker-compose -f ./docker/test/docker-compose.yml up --abort-on-container-exit -d
+docker-compose -f ./docker/test/docker-compose.yml up -d
 
 export API_ENDPOINT=http://localhost:8080/api/v1/ \
       STRESS_TEST_NUMBER_OF_TRANSACTIONS=5000 \
