@@ -23,6 +23,7 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./test.goroutine-leaks.sh
       - run: ./test.memory-leaks.sh
 
