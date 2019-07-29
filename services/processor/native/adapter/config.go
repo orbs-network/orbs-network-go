@@ -16,4 +16,5 @@ const MAX_WARM_UP_COMPILATION_TIME = 15 * time.Second
 
 type Config interface {
 	ProcessorArtifactPath() string
+	ProcessorPerformWarmUpCompilation() bool
 }

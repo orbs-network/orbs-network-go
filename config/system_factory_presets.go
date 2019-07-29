@@ -7,7 +7,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -85,6 +84,7 @@ func defaultProductionConfig() *MapBasedConfig {
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 60)
 
 	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
@@ -249,7 +249,8 @@ func TemplateForGamma(
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts", fmt.Sprintf("%d", time.Now().Unix())))
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
 
 	return cfg
 }
