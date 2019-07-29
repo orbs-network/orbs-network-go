@@ -124,8 +124,7 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 	defer t.clientConnections.Unlock()
 
 	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-		idForLogs := peer.HexOrbsAddress()[:6]
-		client := newClientConnection(idForLogs, peer, t.logger, t.metricRegistry, t.metrics, t.config)
+		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config)
 
 		t.clientConnections.peers[peerNodeAddress] = client
 
@@ -137,6 +136,38 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
 	t.config.GossipPeers()[address.KeyForMap()] = peer
 	t.connectForever(bgCtx, address.KeyForMap(), peer)
+}
+
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
+
+	oldConfig := t.config
+
+	peersToRemove, peersToAdd := peerDiff(oldConfig.GossipPeers(), newConfig.GossipPeers())
+
+	t.disconnectAllClients(bgCtx, peersToRemove)
+
+	t.config = newConfig
+	for peerNodeAddress, peer := range peersToAdd {
+		t.connectForever(bgCtx, peerNodeAddress, peer)
+	}
+}
+
+func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect gossipPeers) {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for key, peer := range peersToDisconnect {
+		if client, found := t.clientConnections.peers[key]; found {
+			select {
+			case <-client.disconnect():
+				delete(t.clientConnections.peers, key)
+			case <-ctx.Done():
+				t.logger.Info("system shutdown while waiting for clients to disconnect")
+			}
+		} else {
+			t.logger.Error("attempted to disconnect a client that was not connected", log.String("missing-peer", peer.HexOrbsAddress()))
+		}
+
+	}
 }
 
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
