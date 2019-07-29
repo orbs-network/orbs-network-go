@@ -18,6 +18,40 @@ import (
 	"time"
 )
 
+func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		server := newServerStub(t)
+		defer server.Close()
+
+		client := server.createClient(ctx, t, 20*time.Hour) // so that we don't send keep alives
+
+		waitForQueueEnabled(t, client)
+
+		client.disconnect()
+
+		waitForQueueDisabled(t, client)
+
+		require.Zero(t, server.readSomeBytes(), "client shouldn't have sent anything")
+	})
+}
+
+func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		server := newServerStub(t)
+		defer server.Close()
+
+		client := server.createClient(ctx, t, 10*time.Millisecond)
+		waitForQueueEnabled(t, client)
+
+		server.forceDisconnect(t)
+		server.reconnect(t)
+		waitForQueueEnabled(t, client)
+
+		require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
+		require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
+	})
+}
+
 type timeouts struct {
 	keepAliveInterval time.Duration
 }
@@ -90,38 +124,4 @@ func waitForQueueDisabled(t *testing.T, client *clientConnection) {
 	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
 		return client.queue.disabled
 	}), "client did not disable queue on disconnect")
-}
-
-func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		server := newServerStub(t)
-		defer server.Close()
-
-		client := server.createClient(ctx, t, 20*time.Hour) // so that we don't send keep alives
-
-		waitForQueueEnabled(t, client)
-
-		client.disconnect()
-
-		waitForQueueDisabled(t, client)
-
-		require.Zero(t, server.readSomeBytes(), "client shouldn't have sent anything")
-	})
-}
-
-func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		server := newServerStub(t)
-		defer server.Close()
-
-		client := server.createClient(ctx, t, 10*time.Millisecond)
-		waitForQueueEnabled(t, client)
-
-		server.forceDisconnect(t)
-		server.reconnect(t)
-		waitForQueueEnabled(t, client)
-
-		require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
-		require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
-	})
 }
