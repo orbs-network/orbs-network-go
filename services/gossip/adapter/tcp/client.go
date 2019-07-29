@@ -42,14 +42,16 @@ type clientConnection struct {
 	closed chan struct{}
 }
 
-func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig config.GossipTransportConfig) *clientConnection {
-	peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig clientConnectionConfig) *clientConnection {
+	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+	peerHexAddress := peer.HexOrbsAddress()[:6]
+
 	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
-	queue.networkAddress = peerAddress
+	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
 	client := &clientConnection{
-		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", peerAddress)),
+		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", networkAddress)),
 		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
 		config:          transportConfig,
