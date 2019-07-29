@@ -82,6 +82,7 @@ type NodeConfig interface {
 	// processor
 	ProcessorArtifactPath() string
 	ProcessorSanitizeDeployedContracts() bool
+	ProcessorPerformWarmUpCompilation() bool
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
