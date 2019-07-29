@@ -66,8 +66,8 @@ jobs:
           path: _reports
 
   e2e:
-    machine:
-      image: circleci/classic:201808-01
+    machine: 
+      image: ubuntu-1804:latest
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
