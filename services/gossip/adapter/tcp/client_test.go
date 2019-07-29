@@ -10,10 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -126,47 +123,5 @@ func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *te
 
 		require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
 		require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
-	})
-}
-
-func TestDirectOutgoing_AdapterSendsBroadcast(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-
-		h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
-		defer h.cleanupConnectedPeers()
-
-		err := h.transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      h.config.NodeAddress(),
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-			RecipientNodeAddresses: nil,
-			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
-		})
-		require.NoError(t, err, "adapter Send should not fail")
-
-		for i := 0; i < NETWORK_SIZE-1; i++ {
-			data, err := h.peerListenerReadTotal(i, 20)
-			require.NoError(t, err, "test peer server could not read from local transport")
-			require.Equal(t, exampleWireProtocolEncoding_Payloads_0x11_0x2233(), data)
-		}
-	})
-}
-
-func TestDirectOutgoing_AdapterSendsUnicast(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-
-		h := newDirectHarnessWithConnectedPeersWithoutKeepAlives(t, ctx)
-		defer h.cleanupConnectedPeers()
-
-		err := h.transport.Send(ctx, &adapter.TransportData{
-			SenderNodeAddress:      h.config.NodeAddress(),
-			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-			RecipientNodeAddresses: []primitives.NodeAddress{h.nodeAddressForPeer(1)},
-			Payloads:               [][]byte{{0x11}, {0x22, 0x33}},
-		})
-		require.NoError(t, err, "adapter Send should not fail")
-
-		data, err := h.peerListenerReadTotal(1, 20)
-		require.NoError(t, err, "test peer server could not read from local transport")
-		require.Equal(t, exampleWireProtocolEncoding_Payloads_0x11_0x2233(), data)
 	})
 }
