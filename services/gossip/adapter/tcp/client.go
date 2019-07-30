@@ -44,21 +44,21 @@ type clientConnection struct {
 
 func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig clientConnectionConfig) *clientConnection {
 	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-	peerHexAddress := peer.HexOrbsAddress()[:6]
+	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
 
-	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
+	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, hexAddressSliceForLogging)
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
 	client := &clientConnection{
-		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", networkAddress)),
+		logger:          parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress)),
 		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
 		config:          transportConfig,
 		queue:           queue,
-		peerHexAddress:  peerHexAddress,
-		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
-		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
+		peerHexAddress:  hexAddressSliceForLogging,
+		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
+		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
 
 		closed: make(chan struct{}),
 	}
