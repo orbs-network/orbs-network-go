@@ -52,9 +52,7 @@ func TestConfigLoader_CallsReconfigureOnFileChange(t *testing.T) {
 	defer cancel()
 
 	f1 := files.NewTempFileWithContent(t, `{"a":"b"}`)
-	defer files.RemoveSilently(f1)
 	f2 := files.NewTempFileWithContent(t, `{"c":"d"}`)
-	defer files.RemoveSilently(f2)
 
 	loader := NewFilePollingLoader(f1, f2)
 
@@ -67,7 +65,10 @@ func TestConfigLoader_CallsReconfigureOnFileChange(t *testing.T) {
 	_, err := loader.Load()
 	require.NoError(t, err, "failed initial loading of config file")
 
-	loader.ListenForChanges(ctx, log.DefaultTestingLogger(t), 1*time.Millisecond)
+	loader.ListenForChanges(ctx, log.DefaultTestingLogger(t), 1*time.Millisecond, func() {
+		files.RemoveSilently(f1)
+		files.RemoveSilently(f2)
+	})
 
 	require.NoError(t, ioutil.WriteFile(f1, []byte(`{"a":"b1"}`), 0644))
 	select {

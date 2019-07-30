@@ -74,14 +74,12 @@ func (l *filePollingLoader) OnConfigChanged(handler ChangeHandler) {
 	l.handlers = append(l.handlers, handler)
 }
 
-func (l *filePollingLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration) {
+func (l *filePollingLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration, onShutdown func()) {
 	synchronization.NewPeriodicalTrigger(ctx, pollInterval, logger, func() {
 		if err := l.pollForChangesAndMaybeNotify(); err != nil {
 			logger.Error("failed polling for config changes", log.Error(err))
 		}
-	}, func() {
-		// do nothing on purpose
-	})
+	}, onShutdown)
 }
 
 func (l *filePollingLoader) pollForChangesAndMaybeNotify() error {

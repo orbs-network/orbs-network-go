@@ -11,5 +11,5 @@ type ChangeHandler func(newConfig *MapBasedConfig)
 type Loader interface {
 	Load() (*MapBasedConfig, error)
 	OnConfigChanged(handler ChangeHandler)
-	ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration)
+	ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration, onShutdown func())
 }
