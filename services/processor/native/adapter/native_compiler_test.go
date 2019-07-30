@@ -10,7 +10,7 @@ package adapter
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/config/paths"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	defer cancel()
 
 	code := string(contracts.NativeSourceCodeForCounter(COUNTER_CONTRACT_START_FROM))
-	tmpDir := test.CreateTempDirForTest(t)
+	tmpDir := paths.CreateTempDirForTest(t)
 	defer os.RemoveAll(tmpDir)
 
 	t.Log("Build fresh artifacts")

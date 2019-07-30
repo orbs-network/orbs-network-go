@@ -8,6 +8,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/config/paths"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"os/exec"
@@ -44,7 +45,7 @@ func requireOneFailOnePass(t *testing.T, err1 error, err2 error) {
 }
 
 func createAdapterAndSleepInChildProcess(t *testing.T, dir string) func() error {
-	cmd := exec.Command("go", "run", filepath.Join(config.GetCurrentSourceFileDirPath(), "main", "create_adapter_and_sleep_main.go"), dir)
+	cmd := exec.Command("go", "run", filepath.Join(paths.GetCurrentSourceFileDirPath(), "main", "create_adapter_and_sleep_main.go"), dir)
 	err := cmd.Start()
 	require.NoError(t, err)
 	return func() error {

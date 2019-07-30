@@ -39,7 +39,12 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	return metricRegistry
 }
 
-func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
+func NewNode(configLoader config.Loader, logger log.Logger) Node {
+	nodeConfig, err := configLoader.Load()
+	if err != nil {
+		panic(err)
+	}
+
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
@@ -58,8 +63,17 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
+	registerForHotConfigChanges(ctx, configLoader, nodeLogger, transport)
+
 	return &node{
 		logic:       nodeLogic,
 		OrbsProcess: NewOrbsProcess(nodeLogger, ctxCancel, httpServer),
 	}
+}
+
+func registerForHotConfigChanges(ctx context.Context, configLoader config.Loader, nodeLogger log.Logger, transport *tcp.DirectTransport) {
+	configLoader.OnConfigChanged(func(newConfig *config.MapBasedConfig) {
+		transport.UpdateTopology(ctx, newConfig)
+	})
+	configLoader.ListenForChanges(ctx, nodeLogger, 1*time.Minute)
 }

@@ -4,24 +4,39 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package test
+package paths
 
 import (
-	"github.com/orbs-network/orbs-network-go/config"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func CreateTempDirForTest(t *testing.T) string {
 	prefix := strings.Replace(t.Name(), "/", "__", -1)
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+	dir := filepath.Join(GetCurrentSourceFileDirPath(), "_tmp")
 	os.MkdirAll(dir, 0700)
 	tmpDir, err := ioutil.TempDir(dir, prefix)
 	if err != nil {
 		panic("could not create temp dir for test")
 	}
 	return tmpDir
+}
+
+
+func GetProjectSourceRootPath() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(filename), "..")
+}
+
+func GetCurrentSourceFileDirPath() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return filepath.Dir(filename)
+}
+
+func GetProjectSourceTmpPath() string {
+	return filepath.Join(GetProjectSourceRootPath(), "_tmp")
 }

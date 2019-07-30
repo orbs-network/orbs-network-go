@@ -7,10 +7,12 @@
 package e2e
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/config/paths"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -45,6 +47,22 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	cleanBlockStorage()
 }
 
+type staticConfigLoader struct {
+	staticConfig *config.MapBasedConfig
+}
+
+func (s *staticConfigLoader) Load() (*config.MapBasedConfig, error) {
+	return s.staticConfig, nil
+}
+
+func (s *staticConfigLoader) OnConfigChanged(handler config.ChangeHandler) {
+
+}
+
+func (s *staticConfigLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration) {
+
+}
+
 func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
@@ -59,7 +77,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
 
-	_ = os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
+	_ = os.MkdirAll(paths.GetProjectSourceRootPath()+"/_logs", 0755)
 	console := log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
 
 	logger := log.GetLogger().WithTags(
@@ -72,7 +90,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		nodeKeyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
 
 		logFile, err := os.OpenFile(
-			fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)),
+			fmt.Sprintf("%s/_logs/node%d-%v.log", paths.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)),
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 			0644)
 		if err != nil {
@@ -98,7 +116,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 			)
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
-		node := bootstrap.NewNode(cfg, nodeLogger)
+		node := bootstrap.NewNode(&staticConfigLoader{cfg}, nodeLogger)
 
 		nodes = append(nodes, node)
 	}

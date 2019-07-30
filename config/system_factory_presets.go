@@ -7,6 +7,7 @@
 package config
 
 import (
+	"github.com/orbs-network/orbs-network-go/config/paths"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -88,7 +89,7 @@ func defaultProductionConfig() *MapBasedConfig {
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(paths.GetProjectSourceTmpPath(), "processor-artifacts"))
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 
@@ -124,7 +125,7 @@ func ForE2E(
 	ethereumEndpoint string,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-) NodeConfig {
+) *MapBasedConfig {
 	cfg := defaultProductionConfig()
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
@@ -249,7 +250,7 @@ func TemplateForGamma(
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(paths.GetProjectSourceTmpPath(), "processor-artifacts"))
 	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
 
 	return cfg

@@ -8,7 +8,7 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/config/paths"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"os"
@@ -44,7 +44,7 @@ func GetNodesDataDirs() ([]string, error) {
 }
 
 func getProcessorArtifactPath() (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+	dir := filepath.Join(paths.GetCurrentSourceFileDirPath(), "_tmp")
 	return filepath.Join(dir, "processor-artifacts"), dir
 }
 
@@ -62,7 +62,7 @@ func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 	if err != nil {
 		panic(fmt.Sprintf("could not create directory %s: %e", targetDir, err))
 	}
-	sourceBlocksFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "blocks")
+	sourceBlocksFilePath := filepath.Join(paths.GetCurrentSourceFileDirPath(), "_data", "blocks")
 	targetBlocksFilePath := filepath.Join(targetDir, "blocks")
 
 	logger.Info("copying blocks file", log.String("source", sourceBlocksFilePath), log.String("target", targetBlocksFilePath))

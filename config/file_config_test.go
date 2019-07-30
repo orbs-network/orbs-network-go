@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewFromMultipleFiles_HandlesEmptyFileList(t *testing.T) {
-	_, err := NewLoader().Load()
+	_, err := NewFilePollingLoader().Load()
 	require.NoError(t, err, "failed parsing config file")
 }
 
@@ -21,7 +21,7 @@ func TestNewFromMultipleFiles_MergesPropsFromBothFiles(t *testing.T) {
 	f2 := files.NewTempFileWithContent(t, `{"c":"d"}`)
 	defer files.RemoveSilently(f2)
 
-	cfg, err := NewLoader(f1, f2).Load()
+	cfg, err := NewFilePollingLoader(f1, f2).Load()
 	require.NoError(t, err, "failed reading config files")
 
 	require.Equal(t, "b", cfg.kv["A"].StringValue)
@@ -34,14 +34,14 @@ func TestNewFromMultipleFiles_OverridesCommonPropsAccordingToFileNameOrder(t *te
 	f2 := files.NewTempFileWithContent(t, `{"a":"c"}`)
 	defer files.RemoveSilently(f2)
 
-	cfg, err := NewLoader(f1, f2).Load()
+	cfg, err := NewFilePollingLoader(f1, f2).Load()
 	require.NoError(t, err, "failed reading config files")
 
 	require.Equal(t, "c", cfg.kv["A"].StringValue, "later config file did not override earlier config file's prop")
 }
 
 func TestNewFromMultipleFiles_ForE2E(t *testing.T) {
-	cfg, err := NewLoader("../docker/test/benchmark-config/node1.json").Load()
+	cfg, err := NewFilePollingLoader("../docker/test/benchmark-config/node1.json").Load()
 	require.NoError(t, err, "failed parsing config file")
 
 	require.EqualValues(t, "a328846cd5b4979d68a8c58a9bdfeee657b34de7", cfg.NodeAddress().String())
@@ -56,7 +56,7 @@ func TestConfigLoader_CallsReconfigureOnFileChange(t *testing.T) {
 	f2 := files.NewTempFileWithContent(t, `{"c":"d"}`)
 	defer files.RemoveSilently(f2)
 
-	loader := NewLoader(f1, f2)
+	loader := NewFilePollingLoader(f1, f2)
 
 	ch := make(chan *MapBasedConfig)
 	loader.OnConfigChanged(func(newConfig *MapBasedConfig) {
@@ -67,7 +67,7 @@ func TestConfigLoader_CallsReconfigureOnFileChange(t *testing.T) {
 	_, err := loader.Load()
 	require.NoError(t, err, "failed initial loading of config file")
 
-	loader.ListenForChanges(ctx, log.DefaultTestingLogger(t))
+	loader.ListenForChanges(ctx, log.DefaultTestingLogger(t), 1*time.Millisecond)
 
 	require.NoError(t, ioutil.WriteFile(f1, []byte(`{"a":"b1"}`), 0644))
 	select {

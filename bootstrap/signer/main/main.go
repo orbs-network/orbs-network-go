@@ -33,7 +33,7 @@ func main() {
 		return
 	}
 
-	cfg, err := config.NewLoader(configFiles...).Load()
+	cfg, err := config.NewFilePollingLoader(configFiles...).Load()
 	if err != nil {
 		fmt.Printf("%s \n", err)
 		os.Exit(1)

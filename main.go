@@ -31,7 +31,7 @@ func main() {
 		return
 	}
 
-	configLoader := config.NewLoader(configFiles...)
+	configLoader := config.NewFilePollingLoader(configFiles...)
 
 	cfg, err := configLoader.Load()
 	if err != nil {
@@ -44,7 +44,7 @@ func main() {
 	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg)
 
 	bootstrap.NewNode(
-		cfg,
+		configLoader,
 		logger,
 	).WaitUntilShutdown()
 }

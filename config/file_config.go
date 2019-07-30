@@ -30,22 +30,20 @@ func (i *ArrayFlags) Set(value string) error {
 	return nil
 }
 
-type configChangeHandler func(newConfig *MapBasedConfig)
-
-type Loader struct {
+type filePollingLoader struct {
 	sync.Mutex
 	files              []string
-	handlers           []configChangeHandler
+	handlers           []ChangeHandler
 	contentsForPolling map[string]primitives.Sha256
 }
 
-func NewLoader(configFiles ...string) *Loader {
-	l := &Loader{files: configFiles}
+func NewFilePollingLoader(configFiles ...string) *filePollingLoader {
+	l := &filePollingLoader{files: configFiles}
 	l.contentsForPolling = make(map[string]primitives.Sha256)
 	return l
 }
 
-func (l *Loader) Load() (*MapBasedConfig, error) {
+func (l *filePollingLoader) Load() (*MapBasedConfig, error) {
 	cfg := ForProduction("")
 
 	for _, configFile := range l.files {
@@ -70,14 +68,14 @@ func (l *Loader) Load() (*MapBasedConfig, error) {
 	return cfg, nil
 }
 
-func (l *Loader) OnConfigChanged(handler configChangeHandler) {
+func (l *filePollingLoader) OnConfigChanged(handler ChangeHandler) {
 	l.Lock()
 	defer l.Unlock()
 	l.handlers = append(l.handlers, handler)
 }
 
-func (l *Loader) ListenForChanges(ctx context.Context, logger log.Logger) {
-	synchronization.NewPeriodicalTrigger(ctx, 100*time.Millisecond, logger, func() {
+func (l *filePollingLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration) {
+	synchronization.NewPeriodicalTrigger(ctx, pollInterval, logger, func() {
 		if err := l.pollForChangesAndMaybeNotify(); err != nil {
 			logger.Error("failed polling for config changes", log.Error(err))
 		}
@@ -86,7 +84,7 @@ func (l *Loader) ListenForChanges(ctx context.Context, logger log.Logger) {
 	})
 }
 
-func (l *Loader) pollForChangesAndMaybeNotify() error {
+func (l *filePollingLoader) pollForChangesAndMaybeNotify() error {
 	for _, configFile := range l.files {
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
 			return errors.Wrapf(err, "could not open config file: %s", configFile)
@@ -109,7 +107,7 @@ func (l *Loader) pollForChangesAndMaybeNotify() error {
 	return nil
 }
 
-func (l *Loader) notifyHandlers(newConfig *MapBasedConfig) {
+func (l *filePollingLoader) notifyHandlers(newConfig *MapBasedConfig) {
 	l.Lock()
 	defer l.Unlock()
 	for i := range l.handlers {
@@ -118,13 +116,13 @@ func (l *Loader) notifyHandlers(newConfig *MapBasedConfig) {
 	}
 }
 
-func (l *Loader) hasChanged(fileName string, newContents []byte) bool {
+func (l *filePollingLoader) hasChanged(fileName string, newContents []byte) bool {
 	l.Lock()
 	defer l.Unlock()
 	return !l.contentsForPolling[fileName].Equal(hash.CalcSha256(newContents))
 }
 
-func (l *Loader) storeContents(fileName string, newContent []byte) {
+func (l *filePollingLoader) storeContents(fileName string, newContent []byte) {
 	l.Lock()
 	defer l.Unlock()
 	l.contentsForPolling[fileName] = hash.CalcSha256(newContent)
