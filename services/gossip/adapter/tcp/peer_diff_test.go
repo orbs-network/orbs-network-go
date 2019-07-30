@@ -52,7 +52,7 @@ func TestPeerDiff_ReturnsEmptyToAddAndToRemoveLists_WhenConfigIsNotChanged(t *te
 	require.Empty(t, toAdd)
 }
 
-func TestPeerDiff_Returns_CorrectLists_OnSignificantDiff(t *testing.T) {
+func TestPeerDiff_Returns_CorrectLists_WhenAPeerWasAddedAndAnotherWasRemoved(t *testing.T) {
 	oldPeers := make(gossipPeers)
 	newPeers := make(gossipPeers)
 

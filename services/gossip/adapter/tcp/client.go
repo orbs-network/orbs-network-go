@@ -46,12 +46,14 @@ func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metric
 	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
 
+	logger := parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress))
+
 	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, hexAddressSliceForLogging)
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
 	client := &clientConnection{
-		logger:          parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress)),
+		logger:          logger,
 		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
 		config:          transportConfig,
@@ -118,17 +120,20 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 			// got data from queue
 			err := c.sendToSocket(ctx, conn, data)
 			if err != nil {
+				logger.Info("connection closing due to socket error")
 				return c.reconnectAfterSocketError(logger, err)
 			} // else - continue looping
 
 		} else if shouldKeepAlive(ctx) {
 			err := c.sendKeepAlive(ctx, conn)
 			if err != nil {
+				logger.Info("connection closing due to keep alive error")
 				return c.reconnectAfterKeepAliveFailure(logger, err)
 			}
 
 		} else {
 			// parent ctx is closed, we're disconnecting
+			logger.Info("connection closing due to requested disconnect")
 			return c.onDisconnect(logger)
 		}
 	}
