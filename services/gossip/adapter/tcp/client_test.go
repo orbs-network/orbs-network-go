@@ -23,7 +23,7 @@ func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDi
 		server := newServerStub(t)
 		defer server.Close()
 
-		client := server.createClient(ctx, t, 20*time.Hour) // so that we don't send keep alives
+		client := server.createClientAndConnect(ctx, t, 20*time.Hour) // so that we don't send keep alives
 
 		waitForQueueEnabled(t, client)
 
@@ -40,11 +40,12 @@ func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *te
 		server := newServerStub(t)
 		defer server.Close()
 
-		client := server.createClient(ctx, t, 10*time.Millisecond)
+		client := server.createClientAndConnect(ctx, t, 10*time.Millisecond)
 		waitForQueueEnabled(t, client)
 
 		server.forceDisconnect(t)
-		server.reconnect(t)
+
+		server.acceptClientConnection(t)
 		waitForQueueEnabled(t, client)
 
 		require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
@@ -88,7 +89,7 @@ func (s *serverStub) Close() {
 	_ = s.listener.Close()
 }
 
-func (s *serverStub) reconnect(t testing.TB) {
+func (s *serverStub) acceptClientConnection(t testing.TB) {
 	conn, err := s.listener.Accept()
 	require.NoError(t, err, "test peer server could not accept connection")
 	_ = conn.SetReadDeadline(time.Now().Add(HARNESS_PEER_READ_TIMEOUT))
@@ -100,18 +101,18 @@ func (s *serverStub) readSomeBytes() int {
 	return bytesRead
 }
 
-func (s *serverStub) createClient(ctx context.Context, t testing.TB, keepAliveInterval time.Duration) *clientConnection {
+func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, keepAliveInterval time.Duration) *clientConnection {
 	logger := log.DefaultTestingLogger(t)
 	registry := metric.NewRegistry()
 	peer := config.NewHardCodedGossipPeer(s.port, "127.0.0.1", "012345")
 	client := newClientConnection(peer, logger, registry, getMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
 	client.connect(ctx)
-	s.reconnect(t)
+	s.acceptClientConnection(t)
 	return client
 }
 
 func (s *serverStub) forceDisconnect(t testing.TB) {
-	s.conn.Close()
+	require.NoError(t, s.conn.Close())
 }
 
 func waitForQueueEnabled(t *testing.T, client *clientConnection) {

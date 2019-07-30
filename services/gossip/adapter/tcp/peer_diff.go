@@ -9,13 +9,13 @@ func peerDiff(oldPeers gossipPeers, newPeers gossipPeers) (peersToRemove gossipP
 	peersToAdd = make(gossipPeers)
 
 	for a, n := range newPeers {
-		if o, ok := oldPeers[a]; !ok || !peerEquals(n, o) {
+		if o, peerExistsInOldList := oldPeers[a]; !peerExistsInOldList || peerHasChangedPortOrIPAddress(n, o) {
 			peersToAdd[a] = n
 		}
 	}
 
 	for a, o := range oldPeers {
-		if n, ok := newPeers[a]; !ok || !peerEquals(n, o) {
+		if n, peerExistsInNewList := newPeers[a]; !peerExistsInNewList || peerHasChangedPortOrIPAddress(n, o) {
 			peersToRemove[a] = o
 		}
 	}
@@ -23,6 +23,6 @@ func peerDiff(oldPeers gossipPeers, newPeers gossipPeers) (peersToRemove gossipP
 	return
 }
 
-func peerEquals(p1 config.GossipPeer, p2 config.GossipPeer) bool {
-	return p1.GossipEndpoint() == p2.GossipEndpoint() && p1.GossipPort() == p2.GossipPort()
+func peerHasChangedPortOrIPAddress(p1 config.GossipPeer, p2 config.GossipPeer) bool {
+	return p1.GossipEndpoint() != p2.GossipEndpoint() || p1.GossipPort() != p2.GossipPort()
 }
