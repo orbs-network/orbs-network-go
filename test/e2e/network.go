@@ -59,7 +59,7 @@ func (s *staticConfigLoader) OnConfigChanged(handler config.ChangeHandler) {
 
 }
 
-func (s *staticConfigLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration) {
+func (s *staticConfigLoader) ListenForChanges(ctx context.Context, logger log.Logger, pollInterval time.Duration, onShutdown func()) {
 
 }
 

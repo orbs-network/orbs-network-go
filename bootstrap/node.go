@@ -75,5 +75,7 @@ func registerForHotConfigChanges(ctx context.Context, configLoader config.Loader
 	configLoader.OnConfigChanged(func(newConfig *config.MapBasedConfig) {
 		transport.UpdateTopology(ctx, newConfig)
 	})
-	configLoader.ListenForChanges(ctx, nodeLogger, 1*time.Minute)
+	configLoader.ListenForChanges(ctx, nodeLogger, 1*time.Minute, func() {
+		// do nothing on purpose
+	})
 }
