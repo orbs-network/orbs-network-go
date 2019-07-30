@@ -62,7 +62,7 @@ func (m *namedMetric) Name() string {
 	return m.name
 }
 
-func NewRegistry() Registry {
+func NewRegistry() *inMemoryRegistry {
 	return &inMemoryRegistry{}
 }
 
@@ -81,9 +81,11 @@ func (r *inMemoryRegistry) Remove(m metric) {
 	s := r.mu.metrics
 	for i, existing := range s {
 		if existing.Name() == m.Name() {
-			s[i] = s[len(s)-1]
+			lastMetric := len(s) - 1
+			s[i] = s[lastMetric]
+			s[lastMetric] = nil // so that it gets garbage-collected, see here https://stackoverflow.com/questions/28832016/re-slicing-and-garbage-collection
 			// We do not need to put s[i] at the end, as it will be discarded anyway
-			r.mu.metrics = s[:len(s)-1]
+			r.mu.metrics = s[:lastMetric]
 			return
 		}
 	}
