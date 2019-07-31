@@ -34,7 +34,7 @@ func NewCommunication(logger log.Logger, gossip gossiptopics.LeanHelix) *communi
 }
 
 // LeanHelix lib sends its messages here
-func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets []lhprimitives.MemberId, consensusRawMessage *lh.ConsensusRawMessage) {
+func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets []lhprimitives.MemberId, consensusRawMessage *lh.ConsensusRawMessage) error {
 	targets := make([]primitives.NodeAddress, 0, len(lhtargets))
 	for _, lhtarget := range lhtargets {
 		targets = append(targets, primitives.NodeAddress(lhtarget))
@@ -58,5 +58,6 @@ func (comm *communication) SendConsensusMessage(ctx context.Context, lhtargets [
 			BlockPair: blockPair,
 		},
 	}
-	comm.gossip.SendLeanHelixMessage(ctx, message)
+	_, err := comm.gossip.SendLeanHelixMessage(ctx, message)
+	return err
 }

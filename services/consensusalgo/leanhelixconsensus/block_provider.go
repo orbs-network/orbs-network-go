@@ -51,7 +51,7 @@ func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
 
 type blockProvider struct {
 	logger           log.Logger
-	leanhelix        leanhelix.LeanHelix
+	leanhelix        leanhelix.MainLoop
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
 	nodeAddress      primitives.NodeAddress

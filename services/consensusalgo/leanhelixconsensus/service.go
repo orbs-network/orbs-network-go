@@ -39,7 +39,7 @@ type service struct {
 	logger           log.Logger
 	config           config.LeanHelixConsensusConfig
 	metrics          *metrics
-	leanHelix        *leanhelix.LeanHelix
+	leanHelix        *leanhelix.MainLoop
 	lastCommitTime   time.Time
 	lastElectionTime time.Time
 }
@@ -96,22 +96,18 @@ func NewLeanHelixConsensusAlgo(
 		leanHelix:     nil,
 	}
 
-	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
-	electionTrigger := NewExponentialBackoffElectionTrigger(logger, config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
-	logger.Info("Election trigger set the first time", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
-
 	leanHelixConfig := &lh.Config{
-		InstanceId:      instanceId,
-		Communication:   com,
-		Membership:      membership,
-		BlockUtils:      provider,
-		KeyManager:      mgr,
-		ElectionTrigger: electionTrigger,
-		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
+		InstanceId:    instanceId,
+		Communication: com,
+		Membership:    membership,
+		BlockUtils:    provider,
+		KeyManager:    mgr,
+		Logger:        NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix() (not starting its goroutine yet)")
-	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
+	// TODO Add a consensus round callback for metrics
+	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
