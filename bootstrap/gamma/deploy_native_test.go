@@ -49,6 +49,7 @@ func testDeployNativeContractWithConfig(jsonConfig string) func(t *testing.T) {
 	}
 }
 
+// TODO FAILS 31-JUL-2019
 func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")

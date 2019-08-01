@@ -130,6 +130,7 @@ func ForE2E(
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 
