@@ -135,6 +135,7 @@ func TestSetGossipPeers(t *testing.T) {
 	node1 := &hardCodedGossipPeer{
 		gossipEndpoint: "192.168.199.2",
 		gossipPort:     4400,
+		hexOrbsAddress: "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
 	}
 
 	require.EqualValues(t, node1, cfg.GossipPeers()[keyPair.NodeAddress().KeyForMap()])

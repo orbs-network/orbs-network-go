@@ -19,41 +19,46 @@ import (
 	"time"
 )
 
-func testDeployNativeContractWithConfig(jsonConfig string) func(t *testing.T) {
-	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
-			network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), nil, jsonConfig)
-			contract := callcontract.NewContractClient(network)
+func testDeployNativeContractWithConfig(t *testing.T, jsonConfig string) {
+	test.WithContext(func(ctx context.Context) {
+		network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), nil, jsonConfig)
+		contract := callcontract.NewContractClient(network)
 
-			counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
+		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 
-			t.Log("deploying contract")
+		t.Log("deploying contract")
 
-			contract.DeployNativeCounterContract(ctx, 1, 0) // for benchmark: leader is nodeIndex 0, validator is nodeIndex 1
+		contract.DeployNativeCounterContract(ctx, 1, 0) // for benchmark: leader is nodeIndex 0, validator is nodeIndex 1
 
-			require.True(t, test.Eventually(3*time.Second, func() bool {
-				return counterStart == contract.CounterGet(ctx, 0)
+		require.True(t, test.Eventually(3*time.Second, func() bool {
+			return counterStart == contract.CounterGet(ctx, 0)
 
-			}), "expected counter value to equal it's initial value")
+		}), "expected counter value to equal it's initial value")
 
-			t.Log("transacting with contract")
+		t.Log("transacting with contract")
 
-			contract.CounterAdd(ctx, 1, 17)
+		contract.CounterAdd(ctx, 1, 17)
 
-			require.True(t, test.Eventually(3*time.Second, func() bool {
-				return counterStart+17 == contract.CounterGet(ctx, 0)
-			}), "expected counter value to be incremented by transaction")
+		require.True(t, test.Eventually(3*time.Second, func() bool {
+			return counterStart+17 == contract.CounterGet(ctx, 0)
+		}), "expected counter value to be incremented by transaction")
 
-		})
-		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
-	}
+	})
+	time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 }
 
-func TestNonLeaderDeploysNativeContract(t *testing.T) {
+func TestNonLeaderDeploysNativeContract_Benchmark(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
 
-	t.Run("Benchmark", testDeployNativeContractWithConfig(""))
-	t.Run("LeanHelix", testDeployNativeContractWithConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	testDeployNativeContractWithConfig(t, "")
+}
+
+func TestNonLeaderDeploysNativeContract_LeanHelix(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping compilation of contracts in short mode")
+	}
+
+	testDeployNativeContractWithConfig(t, fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX))
 }
