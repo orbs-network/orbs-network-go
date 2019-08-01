@@ -9,7 +9,6 @@ package leanhelixconsensus
 import (
 	"bytes"
 	"context"
-	"github.com/orbs-network/lean-helix-go"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -51,7 +50,6 @@ func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
 
 type blockProvider struct {
 	logger           log.Logger
-	leanhelix        leanhelix.MainLoop
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
 	nodeAddress      primitives.NodeAddress
