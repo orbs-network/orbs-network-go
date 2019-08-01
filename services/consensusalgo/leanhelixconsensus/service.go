@@ -112,6 +112,7 @@ func NewLeanHelixConsensusAlgo(
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
+			// TODO THIS RETURNS IMMEDIATELY SO tryOnce() freaks out and runs it a million times!
 			s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
@@ -178,6 +179,10 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 }
 
 func (s *service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
 	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
 		// ignore results - we only execute the transactions so that logs are printed in an audit node

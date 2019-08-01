@@ -27,6 +27,7 @@ const MAX_LEAK_BYTES = 5 * 1024 * 1024
 // All the consensus messages from these 100 future terms are stored in the lean helix future cache.
 // This can will eventually consume all memory and cause the node to crash.
 
+// TODO FAILS 31-JUL-2019
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness(0).start(t, ctx)

@@ -127,6 +127,9 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 func (s *service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
 
+	if ctx.Err() != nil {
+		return errors.New("context canceled")
+	}
 	if err := validLeanHelixBlockPair(blockPair); err != nil {
 		return errors.Wrapf(err, "validateBlockConsensus(): error when sending blockPair to validLeanHelixBlockPair()")
 	}

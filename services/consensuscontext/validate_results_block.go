@@ -216,6 +216,10 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 	}
 
 	for _, v := range validators {
+		if ctx.Err() != nil {
+			return &services.ValidateResultsBlockOutput{}, errors.New("context canceled")
+		}
+
 		if err := v(ctx, vcrx); err != nil {
 			return &services.ValidateResultsBlockOutput{}, err
 		}

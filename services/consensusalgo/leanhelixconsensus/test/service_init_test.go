@@ -44,6 +44,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 	})
 }
 
+// TODO FAILS 31-JUL-2019
 func TestService_LeaderProposesBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness(0).start(t, ctx)

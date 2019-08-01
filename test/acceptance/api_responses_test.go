@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// TODO FAILS 31-JUL-2019
 func TestResponseForTransactionOnValidContract(t *testing.T) {
 	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
