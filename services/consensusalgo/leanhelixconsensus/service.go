@@ -112,7 +112,6 @@ func NewLeanHelixConsensusAlgo(
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
 		supervised.GoForever(ctx, logger, func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
-			// TODO THIS RETURNS IMMEDIATELY SO tryOnce() freaks out and runs it a million times!
 			<-s.leanHelix.Run(ctx)
 		})
 		gossip.RegisterLeanHelixHandler(s)
