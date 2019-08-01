@@ -97,15 +97,16 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	leanHelixConfig := &lh.Config{
-		InstanceId:    instanceId,
-		Communication: com,
-		Membership:    membership,
-		BlockUtils:    provider,
-		KeyManager:    mgr,
-		Logger:        NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
+		InstanceId:          instanceId,
+		Communication:       com,
+		Membership:          membership,
+		BlockUtils:          provider,
+		KeyManager:          mgr,
+		ElectionTimeoutOnV0: config.LeanHelixConsensusRoundTimeoutInterval(),
+		Logger:              NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
-	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix() (not starting its goroutine yet)")
+	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix()", log.String("election-timeout", leanHelixConfig.ElectionTimeoutOnV0.String()))
 	// TODO Add a consensus round callback for metrics
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
