@@ -1,7 +1,10 @@
 FROM golang:1.12.6-alpine
 
-RUN apk add --no-cache gcc musl-dev
+RUN apk add --no-cache gcc musl-dev git
 
+RUN mkdir -p /src/_tmp/processor-artifacts/native-src/ && \
+    cd /src/_tmp/processor-artifacts/native-src/ && \
+    go mod init native-src && go get github.com/orbs-network/orbs-contract-sdk@v1.0.0
 ADD ./_bin/orbs-node /opt/orbs/
 
 VOLUME /usr/local/var/orbs/

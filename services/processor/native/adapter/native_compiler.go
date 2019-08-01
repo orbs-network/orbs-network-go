@@ -11,12 +11,6 @@ package adapter
 import (
 	"context"
 	"encoding/hex"
-	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/orbs-network/scribe/log"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -26,6 +20,13 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
 var LogTag = log.String("adapter", "processor-native")
@@ -154,6 +155,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
+		"GO111MODULE=on",
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	out, err := cmd.CombinedOutput()
