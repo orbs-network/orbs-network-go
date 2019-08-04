@@ -19,13 +19,15 @@ import (
 
 type TamperingInMemoryBlockPersistence interface {
 	adapter.BlockPersistence
-	FailNextBlocks()
+	ResetTampering()
+	FailBlockWrites(ch chan *protocol.BlockPairContainer)
 	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
 type tamperingBlockPersistence struct {
 	memory.InMemoryBlockPersistence
-	failNextBlocks bool
+	writeTamperingEnabled bool
+	writeTamperedBlocks   chan *protocol.BlockPairContainer
 
 	txTracker *txTracker
 }
@@ -42,12 +44,21 @@ func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txH
 	return bp.txTracker.waitForTransaction(ctx, txHash)
 }
 
-func (bp *tamperingBlockPersistence) FailNextBlocks() {
-	bp.failNextBlocks = true
+func (bp *tamperingBlockPersistence) ResetTampering() {
+	bp.writeTamperingEnabled = false
+	bp.writeTamperedBlocks = nil
+}
+
+func (bp *tamperingBlockPersistence) FailBlockWrites(ch chan *protocol.BlockPairContainer) {
+	bp.writeTamperedBlocks = ch
+	bp.writeTamperingEnabled = true
 }
 
 func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
-	if bp.failNextBlocks {
+	if bp.writeTamperingEnabled {
+		if ch := bp.writeTamperedBlocks; ch != nil {
+			ch <- blockPair
+		}
 		return false, 0, errors.New("could not write a block")
 	}
 
