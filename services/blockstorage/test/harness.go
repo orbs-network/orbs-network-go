@@ -200,7 +200,7 @@ func (d *harness) withNodeAddress(address primitives.NodeAddress) *harness {
 }
 
 func (d *harness) failNextBlocks() {
-	d.storageAdapter.FailNextBlocks()
+	d.storageAdapter.FailBlockWrites(nil)
 }
 
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
