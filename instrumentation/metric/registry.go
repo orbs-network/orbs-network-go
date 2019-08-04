@@ -38,6 +38,7 @@ type Registry interface {
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
+	Remove(metric metric)
 }
 
 type exportedMetric interface {
@@ -61,7 +62,7 @@ func (m *namedMetric) Name() string {
 	return m.name
 }
 
-func NewRegistry() Registry {
+func NewRegistry() *inMemoryRegistry {
 	return &inMemoryRegistry{}
 }
 
@@ -72,6 +73,25 @@ type inMemoryRegistry struct {
 		sync.Mutex
 		metrics []metric
 	}
+}
+
+func (r *inMemoryRegistry) Remove(m metric) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s := r.mu.metrics
+	for i, existing := range s {
+		if existing.Name() == m.Name() {
+			lastMetric := len(s) - 1
+			s[i] = s[lastMetric]
+			s[lastMetric] = nil // so that it gets garbage-collected, see here https://stackoverflow.com/questions/28832016/re-slicing-and-garbage-collection
+			// We do not need to put s[i] at the end, as it will be discarded anyway
+			r.mu.metrics = s[:lastMetric]
+			return
+		}
+	}
+
+	err := errors.Errorf("a metric with name %s cannot be removed as it is not registered", m.Name())
+	panic(err)
 }
 
 func (r *inMemoryRegistry) register(m metric) {

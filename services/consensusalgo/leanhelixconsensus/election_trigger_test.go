@@ -66,6 +66,7 @@ func TestCallbackTriggerOnce(t *testing.T) {
 }
 
 func TestCallbackTriggerTwiceInARow(t *testing.T) {
+	t.Skip("Remove this entirely, when all code copied to LH. This code+tests are redundant")
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, t, time.Millisecond)
 

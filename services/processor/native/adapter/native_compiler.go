@@ -57,14 +57,19 @@ func createNativeCompilerMetrics(factory metric.Factory) *nativeCompilerMetrics 
 	}
 }
 
-func NewNativeCompiler(config Config, logger log.Logger, factory metric.Factory) Compiler {
+func NewNativeCompiler(config Config, parent log.Logger, factory metric.Factory) Compiler {
+	logger := parent.WithTags(LogTag)
 	c := &nativeCompiler{
 		config:  config,
-		logger:  logger.WithTags(LogTag),
+		logger:  logger,
 		metrics: createNativeCompilerMetrics(factory),
 	}
 
-	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
+	if config.ProcessorPerformWarmUpCompilation() {
+		c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
+	} else {
+		logger.Info("skipping warm-up compilation")
+	}
 
 	return c
 }

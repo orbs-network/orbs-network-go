@@ -25,7 +25,11 @@ type Transfer struct {
 }
 
 func mirrorDelegationByTransfer(hexEncodedEthTxHash string) {
-	_mirrorPeriodValidator()
+	_initCurrentElection()
+	if hasProcessingStarted() == 1 {
+		panic(fmt.Errorf("proccessing has started cannot mirror now, resubmit next election"))
+	}
+
 	e := &Transfer{}
 	eventBlockNumber, eventBlockTxIndex := ethereum.GetTransactionLog(getTokenEthereumContractAddress(), getTokenAbi(), hexEncodedEthTxHash, DELEGATION_BY_TRANSFER_NAME, e)
 
@@ -33,7 +37,7 @@ func mirrorDelegationByTransfer(hexEncodedEthTxHash string) {
 		panic(fmt.Errorf("mirrorDelegateByTransfer from %v to %v failed since %d is wrong delegation value", e.From, e.To, e.Value.Uint64()))
 	}
 
-	_mirrorDelegationData(e.From[:], e.To[:], eventBlockNumber, eventBlockTxIndex, DELEGATION_BY_TRANSFER_NAME)
+	_mirrorDelegateImpl(e.From[:], e.To[:], eventBlockNumber, eventBlockTxIndex, DELEGATION_BY_TRANSFER_NAME)
 }
 
 type Delegate struct {
@@ -42,19 +46,40 @@ type Delegate struct {
 }
 
 func mirrorDelegation(hexEncodedEthTxHash string) {
-	_mirrorPeriodValidator()
+	_initCurrentElection()
+	if hasProcessingStarted() == 1 {
+		panic(fmt.Errorf("proccessing has started cannot mirror now, resubmit next election"))
+	}
+
 	e := &Delegate{}
 	eventBlockNumber, eventBlockTxIndex := ethereum.GetTransactionLog(getVotingEthereumContractAddress(), getVotingAbi(), hexEncodedEthTxHash, DELEGATION_NAME, e)
 
-	_mirrorDelegationData(e.Delegator[:], e.To[:], eventBlockNumber, eventBlockTxIndex, DELEGATION_NAME)
+	_mirrorDelegateImpl(e.Delegator[:], e.To[:], eventBlockNumber, eventBlockTxIndex, DELEGATION_NAME)
+}
+
+func _mirrorDelegateImpl(delegator []byte, agent []byte, eventBlockNumber uint64, eventBlockTxIndex uint32, eventName string) {
+	if _isMirrorDelegationDataAfterElection(eventBlockNumber) {
+		panic(fmt.Errorf("delegate with medthod %s from %v to %v failed since it happened in block number %d which is after election date, resubmit next election",
+			eventName, delegator, agent, eventBlockNumber))
+	}
+	_mirrorDelegationData(delegator, agent, eventBlockNumber, eventBlockTxIndex, eventName)
+}
+
+func _isMirrorDelegationDataAfterElection(eventBlockNumber uint64) bool {
+	if _isTimeBasedElections() {
+		if ethereum.GetBlockTimeByNumber(eventBlockNumber) > getCurrentElectionTimeInNanos() {
+			return true
+		}
+	} else {
+		temp := getCurrentElectionBlockNumber()
+		if eventBlockNumber > temp {
+			return true
+		}
+	}
+	return false
 }
 
 func _mirrorDelegationData(delegator []byte, agent []byte, eventBlockNumber uint64, eventBlockTxIndex uint32, eventName string) {
-	electionBlockNumber := _getCurrentElectionBlockNumber()
-	if eventBlockNumber > electionBlockNumber {
-		panic(fmt.Errorf("delegate with medthod %s from %v to %v failed since it happened in block number %d which is after election date (%d), resubmit next election",
-			eventName, delegator, agent, eventBlockNumber, electionBlockNumber))
-	}
 	stateMethod := state.ReadString(_formatDelegatorMethod(delegator))
 	stateBlockNumber := uint64(0)
 	if stateMethod == DELEGATION_NAME && eventName == DELEGATION_BY_TRANSFER_NAME {
@@ -66,7 +91,6 @@ func _mirrorDelegationData(delegator []byte, agent []byte, eventBlockNumber uint
 		stateBlockNumber = state.ReadUint64(_formatDelegatorBlockNumberKey(delegator))
 		stateBlockTxIndex := state.ReadUint32(_formatDelegatorBlockTxIndexKey(delegator))
 		if stateBlockNumber > eventBlockNumber || (stateBlockNumber == eventBlockNumber && stateBlockTxIndex >= eventBlockTxIndex) {
-			fmt.Println(" mirror error ")
 			panic(fmt.Errorf("delegate from %v to %v with block-height %d and tx-index %d failed since current delegation is from block-height %d and tx-index %d",
 				delegator, agent, eventBlockNumber, eventBlockTxIndex, stateBlockNumber, stateBlockTxIndex))
 		}

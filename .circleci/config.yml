@@ -7,7 +7,9 @@ jobs:
     steps:
       - checkout
       - run: go get -u github.com/orbs-network/go-junit-report
-      - run: ./test.sh
+      - run:
+          command: ./test.sh
+          no_output_timeout: 15m
       - store_artifacts:
           path: _out
           destination: test-output
@@ -67,7 +69,7 @@ jobs:
           path: _reports
 
   e2e:
-    machine: 
+    machine:
       image: ubuntu-1604:201903-01
     steps:
       - checkout

@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -154,7 +155,7 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	for _, t1 := range transports {
 		for i, t2 := range transports {
 			if t1 != t2 {
-				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.GetServerPort(), "127.0.0.1"))
+				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i])))
 			}
 		}
 	}

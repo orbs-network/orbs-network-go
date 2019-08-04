@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -27,8 +28,7 @@ type transportQueue struct {
 		bytesLeft int
 	}
 	usagePercentageMetric *metric.Gauge
-	sendErrors            *metric.Gauge
-	sendQueueErrors       *metric.Gauge
+	logger                log.Logger
 }
 
 func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory, peerNodeAddress string) *transportQueue {
@@ -40,8 +40,6 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	q.protected.bytesLeft = maxSizeBytes
 
 	q.usagePercentageMetric = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
-	q.sendErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerNodeAddress))
-	q.sendQueueErrors = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerNodeAddress))
 
 	return q
 }
@@ -93,6 +91,11 @@ func (q *transportQueue) Disable() {
 
 func (q *transportQueue) Enable() {
 	q.disabled = false
+}
+
+func (q *transportQueue) OnNewConnection(ctx context.Context) {
+	q.Clear(ctx)
+	q.Enable()
 }
 
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {

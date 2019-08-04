@@ -89,7 +89,12 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		}
 
 		// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
-		go server.httpServer.Serve(TcpKeepAliveListener{listener.(*net.TCPListener)})
+		go func() {
+			err = server.httpServer.Serve(TcpKeepAliveListener{listener.(*net.TCPListener)})
+			if err != nil && err != http.ErrServerClosed {
+				logger.Error("failed serving http requests", log.Error(err))
+			}
+		}()
 	}
 
 	logger.Info("started http server", log.String("address", server.config.HttpAddress()))

@@ -7,7 +7,9 @@
 package test
 
 import (
+	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
@@ -34,6 +36,18 @@ func Eventually(timeout time.Duration, f func() bool) bool {
 	return false
 }
 
+func RetryAndLog(timeout time.Duration, logger log.Logger, f func() error) error {
+	var err error
+	for i := 0; i < eventuallyIterations; i++ {
+		if err = tryButDontPanic(f); err == nil {
+			return nil
+		}
+		logger.Info(fmt.Sprintf("attempt %d out of %d failed with error", i, eventuallyIterations), log.Error(err))
+		time.Sleep(timeout / eventuallyIterations)
+	}
+	return err
+}
+
 func Consistently(timeout time.Duration, f func() bool) bool {
 	for i := 0; i < consistentlyIterations; i++ {
 		if !testButDontPanic(f) {
@@ -45,6 +59,11 @@ func Consistently(timeout time.Duration, f func() bool) bool {
 }
 
 func testButDontPanic(f func() bool) bool {
+	defer func() { recover() }()
+	return f()
+}
+
+func tryButDontPanic(f func() error) error {
 	defer func() { recover() }()
 	return f()
 }
