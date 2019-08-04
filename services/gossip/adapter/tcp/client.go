@@ -28,30 +28,41 @@ type clientConnectionConfig interface {
 }
 
 type clientConnection struct {
-	logger          log.Logger
-	config          clientConnectionConfig
-	sharedMetrics   *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
-	queue           *transportQueue
-	peerNodeAddress string
-	disconnect      context.CancelFunc
+	logger         log.Logger
+	metricRegistry metric.Registry
+	config         clientConnectionConfig
+	sharedMetrics  *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
+	queue          *transportQueue
+	peerHexAddress string
+	cancel         context.CancelFunc
 
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
+
+	closed chan struct{}
 }
 
-func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig config.GossipTransportConfig) *clientConnection {
-	peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
-	queue.networkAddress = peerAddress
+func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig clientConnectionConfig) *clientConnection {
+	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
+
+	logger := parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress))
+
+	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, hexAddressSliceForLogging)
+	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
 	client := &clientConnection{
-		logger:          parentLogger.WithTags(log.String("peer-node-address", peerHexAddress), log.String("peer-network-address", peerAddress)),
+		logger:          logger,
 		sharedMetrics:   sharedMetrics,
+		metricRegistry:  metricFactory,
 		config:          transportConfig,
 		queue:           queue,
-		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
-		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
+		peerHexAddress:  hexAddressSliceForLogging,
+		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
+		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
+
+		closed: make(chan struct{}),
 	}
 
 	return client
@@ -59,16 +70,21 @@ func newClientConnection(peerHexAddress string, peer config.GossipPeer, parentLo
 
 func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
-	c.disconnect = cancel
+	c.cancel = cancel
 
 	supervised.GoForever(ctx, c.logger, func() {
 		c.clientMainLoop(ctx)
 	})
 }
 
+func (c *clientConnection) disconnect() chan struct{} {
+	c.cancel()
+	return c.closed
+}
+
 func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
 	for {
-		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerNodeAddress))
+		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")
@@ -104,17 +120,20 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 			// got data from queue
 			err := c.sendToSocket(ctx, conn, data)
 			if err != nil {
+				logger.Info("connection closing due to socket error")
 				return c.reconnectAfterSocketError(logger, err)
 			} // else - continue looping
 
 		} else if shouldKeepAlive(ctx) {
 			err := c.sendKeepAlive(ctx, conn)
 			if err != nil {
+				logger.Info("connection closing due to keep alive error")
 				return c.reconnectAfterKeepAliveFailure(logger, err)
 			}
 
 		} else {
 			// parent ctx is closed, we're disconnecting
+			logger.Info("connection closing due to requested disconnect")
 			return c.onDisconnect(logger)
 		}
 	}
@@ -134,6 +153,10 @@ func shouldKeepAlive(ctx context.Context) bool {
 
 func (c *clientConnection) onDisconnect(logger log.Logger) bool {
 	logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
+	c.metricRegistry.Remove(c.sendErrors)
+	c.metricRegistry.Remove(c.sendQueueErrors)
+	c.metricRegistry.Remove(c.queue.usagePercentageMetric)
+	close(c.closed)
 	return false
 }
 
