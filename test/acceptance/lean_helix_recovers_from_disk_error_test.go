@@ -32,7 +32,7 @@ func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
 			tamperedNode := r.Intn(len(network.Nodes))
 			t.Log("Tampering with node", tamperedNode)
 
-			if err := network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, 5); err != nil {
+			if err := network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, 3); err != nil {
 				t.Errorf("waiting for block on node %d failed: %s", tamperedNode, err)
 			}
 
@@ -40,7 +40,7 @@ func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
 			network.BlockPersistence(tamperedNode).FailBlockWrites(failedBlocks)
 
 			// wait for two block write failures to occur
-			tamperedBlock1 := <-failedBlocks // consensus
+			tamperedBlock1 := <-failedBlocks // consensus/sync
 			tamperedBlock2 := <-failedBlocks // sync
 
 			require.Equal(t, tamperedBlock1.ResultsBlock.Header.BlockHeight(), tamperedBlock2.ResultsBlock.Header.BlockHeight(), "expected the same height to be attempted after write failure")
@@ -57,7 +57,7 @@ func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
 
 			// TODO - instead of Eventually, increase the grace period and distance on block tracker
 			require.True(t, test.Eventually(30*time.Second, func() bool {
-				err = network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, topHeight+5)
+				err = network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, topHeight+3)
 				return err == nil
 			}), fmt.Sprintf("waiting for block on node %d failed: %s", tamperedNode, err))
 		})
