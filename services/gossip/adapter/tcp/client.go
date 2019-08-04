@@ -9,12 +9,12 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
@@ -72,7 +72,7 @@ func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
-	supervised.GoForever(ctx, c.logger, func() {
+	govnr.GoForever(ctx, c.logger, func() {
 		c.clientMainLoop(ctx)
 	})
 }
