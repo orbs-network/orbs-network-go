@@ -7,9 +7,11 @@
 package native
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"reflect"
 )
@@ -53,6 +55,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	}
 
 	// execute the call
+	s.logger.Info("Calling method ", log.String("method-instance", fmt.Sprintf("%+v", methodInstance)))
 	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 
 	// create output args

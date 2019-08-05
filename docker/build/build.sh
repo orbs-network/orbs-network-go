@@ -22,9 +22,6 @@ docker run --name orbs_build orbs:build sleep 1
 rm -rf _bin
 docker cp orbs_build:/src/_bin .
 
-git clone git@github.com:orbs-network/orbs-contract-sdk.git || echo "Orbs contract sdk already exists"
-cd orbs-contract-sdk && git checkout v1.0.0 && cd ..
-
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .

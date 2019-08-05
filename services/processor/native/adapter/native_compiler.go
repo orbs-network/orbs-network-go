@@ -11,6 +11,7 @@ package adapter
 import (
 	"context"
 	"encoding/hex"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -88,6 +89,7 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 }
 
 func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	c.metrics.sourceSize.Record(int64(len(code)))
 	start := time.Now()
 	defer c.metrics.totalCompileTime.RecordSince(start)
@@ -95,6 +97,7 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 	artifactsPath := c.config.ProcessorArtifactPath()
 	hashOfCode := getHashOfCode(code)
 
+	logger.Info("writing source code to disk", log.String("artifact-path", artifactsPath), log.String("hash-of-code", hashOfCode))
 	writeTime := time.Now()
 	sourceCodeFilePath, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
 	c.metrics.writeToDiskTime.RecordSince(writeTime)
@@ -103,6 +106,7 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 		return nil, errors.Wrap(err, "could not write source code to disk")
 	}
 
+	logger.Info("building shared object", log.String("source-path", sourceCodeFilePath))
 	buildTime := time.Now()
 	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePath, artifactsPath)
 	c.metrics.buildTime.RecordSince(buildTime)
@@ -110,9 +114,13 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 		return nil, errors.Wrap(err, "could not build a shared object")
 	}
 
+	logger.Info("loading shared object", log.String("so-path", soFilePath))
 	loadSoTime := time.Now()
 	so, err := loadSharedObject(soFilePath)
+
 	c.metrics.loadTime.RecordSince(loadSoTime)
+
+	logger.Info("loaded shared object", log.String("so-path", soFilePath))
 
 	return so, err
 }

@@ -97,7 +97,7 @@ func (c *validationContext) validateSignatureType(transaction *protocol.SignedTr
 func (c *validationContext) validateNodeIsInSync(currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	threshold := primitives.TimestampNano(currentTime.Add(c.nodeSyncRejectInterval * -1).UnixNano())
 	if lastCommittedBlockTimestamp < threshold {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, logfields.TimestampNano("min-timestamp", threshold), logfields.TimestampNano("last-committed-block-timestamp", lastCommittedBlockTimestamp)}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_NODE_OUT_OF_SYNC, log.Timestamp("current-time", currentTime), logfields.TimestampNano("last-committed-block-timestamp", lastCommittedBlockTimestamp)}
 	}
 	return nil
 }

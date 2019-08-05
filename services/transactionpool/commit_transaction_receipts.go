@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
@@ -64,6 +65,7 @@ func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *pro
 	s.lastCommitted.blockHeight = header.BlockHeight()
 	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
+	s.metrics.lastCommittedBlockTimeStamp.Update(time.Unix(0, int64(s.lastCommitted.timestamp)).Format(time.RubyDate))
 
 	logger.Info("transaction pool reached block height", logfields.BlockHeight(header.BlockHeight()))
 

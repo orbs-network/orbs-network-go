@@ -1,11 +1,13 @@
 #!/bin/bash -e
 
-export CONSENSUSALGO=${CONSENSUSALGO-benchmark}
-
 rm -rf _logs
+
+[[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
 
 export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
+
+docker-compose -f ./docker/test/docker-compose.yml down
 
 # prepare persistent blocks for docker tests
 
@@ -20,7 +22,7 @@ cp ./test/e2e/_data/blocks _tmp/blocks/node4
 # run docker-reliant tests
 docker-compose -f ./docker/test/docker-compose.yml up -d
 
-export API_ENDPOINT=http://localhost:8082/api/v1/ \
+export API_ENDPOINT=http://localhost:8080/api/v1/ \
       STRESS_TEST_NUMBER_OF_TRANSACTIONS=5000 \
       STRESS_TEST_FAILURE_RATE=20 \
       STRESS_TEST_TARGET_TPS=100 \
