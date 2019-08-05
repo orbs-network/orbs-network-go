@@ -96,18 +96,13 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 }
 
 func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
-	code, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	results := []string{code}
 	codeParts, err := s.getCodeParts(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := uint32(1); i <= codeParts; i++ {
+	var results []string
+	for i := uint32(0); i < codeParts; i++ {
 		part, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
 		if err != nil {
 			return nil, err
@@ -120,7 +115,7 @@ func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, exe
 
 func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PART)
 
 	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),

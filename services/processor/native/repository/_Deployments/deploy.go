@@ -28,13 +28,25 @@ func getInfo(serviceName string) uint32 {
 	return processorType
 }
 
-func getCode(serviceName string, index uint32) []byte {
-	res := _readCode(serviceName, index)
-	return res
+func getCode(serviceName string) []byte {
+	return getCodePart(serviceName, 0)
+}
+
+func getCodePart(serviceName string, index uint32) []byte {
+	code := _readCode(serviceName, index)
+	if len(code) == 0 {
+		panic("contract code not available")
+	}
+
+	return code
 }
 
 func getCodeParts(serviceName string) uint32 {
-	return _codeCounter(serviceName)
+	processorType := _readProcessor(serviceName)
+	if processorType == 0 {
+		panic("contract not deployed")
+	}
+	return _codeCounter(serviceName) + 1
 }
 
 func deployService(serviceName string, processorType uint32, code ...[]byte) {
@@ -100,10 +112,14 @@ func _codeKey(serviceName string, index uint32) []byte {
 }
 
 func _codeCounter(serviceName string) uint32 {
-	return state.ReadUint32([]byte(serviceName + ".CodeParts"))
+	return state.ReadUint32(_codeCounterKey(serviceName))
 }
 
 func _codeCounterIncrement(serviceName string) {
 	counter := _codeCounter(serviceName)
-	state.WriteUint32([]byte(serviceName+".CodeParts"), counter+1)
+	state.WriteUint32(_codeCounterKey(serviceName), counter+1)
+}
+
+func _codeCounterKey(serviceName string) []byte {
+	return []byte(serviceName + ".CodeParts")
 }
