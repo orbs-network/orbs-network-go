@@ -224,7 +224,7 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 	defer t.clientConnections.RUnlock()
 
 	for _, client := range t.clientConnections.peers {
-		if client.queue.disabled {
+		if client.queue.disabled() {
 			return false
 		}
 	}

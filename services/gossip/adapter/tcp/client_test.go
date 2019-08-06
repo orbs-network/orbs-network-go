@@ -117,12 +117,12 @@ func (s *serverStub) forceDisconnect(t testing.TB) {
 
 func waitForQueueEnabled(t *testing.T, client *clientConnection) {
 	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-		return !client.queue.disabled
+		return !client.queue.disabled()
 	}), "client did not connect to server within timeout")
 }
 
 func waitForQueueDisabled(t *testing.T, client *clientConnection) {
 	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-		return client.queue.disabled
+		return client.queue.disabled()
 	}), "client did not disable queue on disconnect")
 }
