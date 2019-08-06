@@ -29,7 +29,25 @@ then
 
     echo "Downloading the current testnet Boyar config.json"
     curl -O $BOOTSTRAP_URL
-    echo "Done downloading!"
+    echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs which already closed"
+
+    ./.circleci/testnet-cleanup-mark.sh
+
+    echo "Copying the newly updated config.json to S3 (with networks to remove)"
+    aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
+    echo "Done!"
+
+    sleep 60
+    echo "Verifying the networks are being cleaned.."
+    node .circleci/testnet-poll-disabled-chain.js
+
+    echo "Refreshing config.json and removing the dead networks from it.."
+    rm -f config.json && curl -O $BOOTSTRAP_URL
+    node .circleci/testnet-remove-disabled-chains.js
+
+    echo "Copying the newly updated config.json to S3.."
+    aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
+    echo "Done!"
 
     echo "Creating a network for this PR within the config.json file.."
     PR_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH)
