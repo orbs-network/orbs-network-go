@@ -43,6 +43,7 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 	return func(t *testing.T) {
 		test.WithContext(func(ctx context.Context) {
 			c := makeContext(ctx, t)
+			defer c.testOutput.TestTerminated()
 
 			data := &adapter.TransportData{
 				SenderNodeAddress: c.nodeAddresses[3],
@@ -56,6 +57,8 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
 	}
 }
@@ -64,6 +67,7 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 	return func(t *testing.T) {
 		test.WithContext(func(ctx context.Context) {
 			c := makeContext(ctx, t)
+			defer c.testOutput.TestTerminated()
 
 			data := &adapter.TransportData{
 				SenderNodeAddress:      c.nodeAddresses[3],
@@ -78,6 +82,8 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
 	}
 }
@@ -86,6 +92,7 @@ type transportContractContext struct {
 	nodeAddresses []primitives.NodeAddress
 	transports    []adapter.Transport
 	listeners     []*testkit.MockTransportListener
+	testOutput    *log.TestOutput
 }
 
 func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractContext {
@@ -96,8 +103,8 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	for _, address := range res.nodeAddresses {
 		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 	}
-
-	logger := log.DefaultTestingLogger(tb).WithTags(log.String("adapter", "transport"))
+	res.testOutput = log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(res.testOutput).WithTags(log.String("adapter", "transport"))
 
 	transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
@@ -128,7 +135,8 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		config.ForGossipAdapterTests(res.nodeAddresses[3], 0, gossipPeers),
 	}
 
-	logger := log.DefaultTestingLogger(tb)
+	res.testOutput = log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+	logger := log.GetLogger().WithOutput(res.testOutput).WithTags(log.String("adapter", "transport"))
 
 	transports := []*tcp.DirectTransport{
 		tcp.NewDirectTransport(ctx, configs[0], logger, metric.NewRegistry()),
