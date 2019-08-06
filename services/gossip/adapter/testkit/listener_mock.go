@@ -8,6 +8,7 @@ package testkit
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -56,4 +57,8 @@ func (l *MockTransportListener) ExpectTracingContextToPropagate(t *testing.T, or
 		require.NotEmpty(t, propagatedTracingContext.NestedFields())
 		require.Equal(t, propagatedTracingContext.NestedFields(), originalTracingContext.NestedFields())
 	}).Times(1)
+}
+
+func (l *MockTransportListener) String() string {
+	return fmt.Sprintf("a MockTransportListener")
 }

@@ -26,6 +26,7 @@ type Transport interface {
 }
 
 type TransportListener interface {
+	fmt.Stringer
 	OnTransportMessageReceived(ctx context.Context, payloads [][]byte)
 }
 

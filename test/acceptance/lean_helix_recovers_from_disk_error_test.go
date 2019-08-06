@@ -8,9 +8,9 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,6 @@ import (
 )
 
 func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
-	t.Skipf("Failing test - will pass when LH is fixed. see issue https://github.com/orbs-network/orbs-network-go/issues/1253")
 	newHarness().
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
@@ -36,29 +35,36 @@ func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
 				t.Errorf("waiting for block on node %d failed: %s", tamperedNode, err)
 			}
 
-			failedBlocks := make(chan *protocol.BlockPairContainer, 100)
-			network.BlockPersistence(tamperedNode).FailBlockWrites(failedBlocks)
+			blocksWhichFailedToPersist := make(chan *protocol.BlockPairContainer, 100) // large buffer
+			network.BlockPersistence(tamperedNode).TamperWithBlockWrites(blocksWhichFailedToPersist)
 
 			// wait for two block write failures to occur
-			tamperedBlock1 := <-failedBlocks // consensus/sync
-			tamperedBlock2 := <-failedBlocks // sync
+			tamperedBlock1 := waitForTamperedBlock(ctx, t, blocksWhichFailedToPersist) // consensus/sync
+			tamperedBlock2 := waitForTamperedBlock(ctx, t, blocksWhichFailedToPersist) // sync
 
-			require.Equal(t, tamperedBlock1.ResultsBlock.Header.BlockHeight(), tamperedBlock2.ResultsBlock.Header.BlockHeight(), "expected the same height to be attempted after write failure")
-
-			// how far consensus advanced meanwhile
-			healthyNode := (tamperedNode + 1) % len(network.Nodes)
-			topHeight, err := network.BlockPersistence(healthyNode).GetLastBlockHeight()
-			require.NoError(t, err)
-			require.Condition(t, func() (success bool) {
-				return topHeight > tamperedBlock2.ResultsBlock.Header.BlockHeight()
-			}, "expected tampered node to fall behind the pack")
+			require.Equal(t, heightOf(tamperedBlock1), heightOf(tamperedBlock2), "expected the same height to be attempted after write failure")
 
 			network.BlockPersistence(tamperedNode).ResetTampering()
 
 			// TODO - instead of Eventually, increase the grace period and distance on block tracker
-			require.True(t, test.Eventually(30*time.Second, func() bool {
-				err = network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, topHeight+3)
+			var err error
+			require.Truef(t, test.Eventually(30*time.Second, func() bool {
+				err = network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, heightOf(tamperedBlock2)+3)
 				return err == nil
-			}), fmt.Sprintf("waiting for block on node %d failed: %s", tamperedNode, err))
+			}), "waiting for block on node %d failed: %s", tamperedNode, err)
 		})
+}
+
+func waitForTamperedBlock(ctx context.Context, t testing.TB, failedBlocks chan *protocol.BlockPairContainer) *protocol.BlockPairContainer {
+	select {
+	case tamperedBlock := <-failedBlocks:
+		return tamperedBlock
+	case <-ctx.Done():
+		t.Fatal("Timed out waiting for block to fail writing")
+		return nil
+	}
+}
+
+func heightOf(blockPairContainer *protocol.BlockPairContainer) primitives.BlockHeight {
+	return blockPairContainer.ResultsBlock.Header.BlockHeight()
 }
