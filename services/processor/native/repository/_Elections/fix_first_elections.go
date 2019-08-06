@@ -37,7 +37,7 @@ func _firstElectionFixRewards() {
 
 		}
 
-		electionValidatorIntroduction := safeuint64.Div(safeuint64.Mul(ELECTION_VALIDATOR_INTRODUCTION_REWARD, 100), ANNUAL_TO_ELECTION_FACTOR)
+		electionValidatorIntroduction := safeuint64.Div(safeuint64.Mul(ELECTION_VALIDATOR_INTRODUCTION_REWARD, 100), ANNUAL_TO_ELECTION_FACTOR_BLOCKBASED)
 		validators := _getValidators()
 		for _, validator := range validators {
 			reward := getCumulativeValidatorReward(validator[:])
