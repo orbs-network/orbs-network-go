@@ -1,12 +1,17 @@
 #!/bin/bash -e
-rm -rf _logs
 
 # Important note: trying to run the stress test locally? you will need to increase your max allowed sockets open / open files
 # as shown in this stack overflow URL:
 # https://stackoverflow.com/questions/7578594/how-to-increase-limits-on-sockets-on-osx-for-load-testing
 
+echo "Cleaning up all containers, if any are running"
+docker ps -a
+docker ps -aq | xargs docker rm -fv
+sleep 3
+
+rm -rf _logs
+
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
-#docker-compose -f ./docker/test/docker-compose.yml down
 
 export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)

@@ -81,12 +81,14 @@ jobs:
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Benchmark Consensus"
           environment:
             CONSENSUSALGO: benchmark
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
       - run: ./.circleci/release-internal.sh
