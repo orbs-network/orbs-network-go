@@ -74,7 +74,7 @@ jobs:
     working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: pwd && echo $GOPATH
+      - run: ./install-go.sh
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
       # Update docker-compose
