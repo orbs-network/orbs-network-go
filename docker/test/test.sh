@@ -42,7 +42,7 @@ echo "Sleeping to allow the network to start closing new blocks.."
 echo "(So that the txpool won't throw our calls to the bin)"
 sleep 10
 
-echo "Running E2E tests w/consensus algo: ${CONSENSUSALGO}"
+echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 go test -count=1 -v ./test/e2e/...
 
 echo "Running Ethereum Connector tests w/consensus algo: ${CONSENSUSALGO}"

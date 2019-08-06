@@ -73,6 +73,7 @@ jobs:
     machine: true
     steps:
       - checkout
+      - run: pwd && echo $GOPATH
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
       # Update docker-compose
