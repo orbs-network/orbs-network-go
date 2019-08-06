@@ -39,7 +39,7 @@ then
 
     sleep 60
     echo "Verifying the networks are being cleaned.."
-    node .circleci/testnet-poll-disabled-chain.js
+    node .circleci/testnet-poll-disabled-chains.js
 
     echo "Refreshing config.json and removing the dead networks from it.."
     rm -f config.json && curl -O $BOOTSTRAP_URL
