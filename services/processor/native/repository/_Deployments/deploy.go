@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"strconv"
 )
 
 func getInfo(serviceName string) uint32 {
@@ -28,14 +29,27 @@ func getInfo(serviceName string) uint32 {
 }
 
 func getCode(serviceName string) []byte {
-	code := _readCode(serviceName)
+	return getCodePart(serviceName, 0)
+}
+
+func getCodePart(serviceName string, index uint32) []byte {
+	code := _readCode(serviceName, index)
 	if len(code) == 0 {
 		panic("contract code not available")
 	}
+
 	return code
 }
 
-func deployService(serviceName string, processorType uint32, code []byte) {
+func getCodeParts(serviceName string) uint32 {
+	processorType := _readProcessor(serviceName)
+	if processorType == 0 {
+		panic("contract not deployed")
+	}
+	return _codeCounter(serviceName) + 1
+}
+
+func deployService(serviceName string, processorType uint32, code ...[]byte) {
 	if processorType == uint32(protocol.PROCESSOR_TYPE_NATIVE) {
 		_validateNativeDeploymentLock()
 	}
@@ -49,10 +63,13 @@ func deployService(serviceName string, processorType uint32, code []byte) {
 
 	_writeProcessor(serviceName, processorType)
 
-	if len(code) != 0 {
-		_writeCode(serviceName, code)
+	if len(code) > 0 {
+		for i, c := range code {
+			_writeCode(serviceName, c, uint32(i))
+		}
+	} else {
+		panic("contract doesn't have any code")
 	}
-
 	service.CallMethod(serviceName, "_init")
 }
 
@@ -76,10 +93,33 @@ func _writeProcessor(serviceName string, processorType uint32) {
 	state.WriteUint32([]byte(serviceName+".Processor"), processorType)
 }
 
-func _readCode(serviceName string) []byte {
-	return state.ReadBytes([]byte(serviceName + ".Code"))
+func _readCode(serviceName string, index uint32) []byte {
+	return state.ReadBytes(_codeKey(serviceName, index))
 }
 
-func _writeCode(serviceName string, code []byte) {
-	state.WriteBytes([]byte(serviceName+".Code"), code)
+func _writeCode(serviceName string, code []byte, index uint32) {
+	state.WriteBytes(_codeKey(serviceName, index), code)
+	if index > 0 { // backwards compatibility
+		_codeCounterIncrement(serviceName)
+	}
+}
+
+func _codeKey(serviceName string, index uint32) []byte {
+	if index == 0 { // backwards compatibility
+		return []byte(serviceName + ".Code")
+	}
+	return []byte(serviceName + ".Code." + strconv.FormatInt(int64(index), 10))
+}
+
+func _codeCounter(serviceName string) uint32 {
+	return state.ReadUint32(_codeCounterKey(serviceName))
+}
+
+func _codeCounterIncrement(serviceName string) {
+	counter := _codeCounter(serviceName)
+	state.WriteUint32(_codeCounterKey(serviceName), counter+1)
+}
+
+func _codeCounterKey(serviceName string) []byte {
+	return []byte(serviceName + ".CodeParts")
 }
