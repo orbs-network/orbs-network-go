@@ -71,6 +71,7 @@ jobs:
 
   e2e:
     machine: true
+    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: pwd && echo $GOPATH
