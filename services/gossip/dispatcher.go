@@ -8,12 +8,12 @@ package gossip
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"time"
 )
 
 type handlerFunc func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)
@@ -24,20 +24,27 @@ type gossipMessage struct {
 }
 
 type meteredTopicChannel struct {
-	ch      chan gossipMessage
-	size    *metric.Gauge
-	inQueue *metric.Gauge
-	name    string
+	ch              chan gossipMessage
+	size            *metric.Gauge
+	inQueue         *metric.Gauge
+	droppedMessages *metric.Gauge
+	name            string
 }
 
-func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) error {
+	grace, cancel := context.WithTimeout(ctx, 5*time.Millisecond) // TODO remove grace timeout when buffer size increased to a significant size
+	defer cancel()
+
 	select {
-	case <-ctx.Done():
-		if ctx.Err() == context.DeadlineExceeded {
-			panic(fmt.Sprintf("timed out dispatching gossip message to \"%s\" handler. there are currently %v messages in queue", c.name, len(c.ch)))
+	case <-grace.Done(): // TODO replace with default: when buffer size increased to a significant size
+		if grace.Err() == context.DeadlineExceeded {
+			c.droppedMessages.Add(1)
+			return errors.Errorf("buffer full")
 		}
+		return nil
 	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
 		c.updateMetrics()
+		return nil
 	}
 }
 
@@ -78,14 +85,15 @@ func (c *meteredTopicChannel) flushChannelAfterContextDone(expiredContext contex
 }
 
 func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
-	bufferSize := 100 // TODO - when this is reduced TestLeanHelix_RecoversFromDiskError fails - whats the correct buffer size?
+	bufferSize := 10 // TODO increase significantly once main peer socket size is reduced
 	sizeGauge := registry.NewGauge("Gossip.Topic." + name + ".QueueSize")
 	sizeGauge.Update(int64(bufferSize))
 	return &meteredTopicChannel{
-		ch:      make(chan gossipMessage, bufferSize),
-		size:    sizeGauge,
-		inQueue: registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
-		name:    name,
+		ch:              make(chan gossipMessage, bufferSize),
+		size:            sizeGauge,
+		inQueue:         registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
+		droppedMessages: registry.NewGauge("Gossip.Topic." + name + ".DroppedMessages"),
+		name:            name,
 	}
 }
 
@@ -116,7 +124,10 @@ func (d *gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logge
 		return
 	}
 
-	ch.send(ctx, header, payloads)
+	err = ch.send(ctx, header, payloads)
+	if err != nil {
+		logger.Info("message dropped", log.Error(err), log.Stringable("header", header))
+	}
 }
 
 func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) {
