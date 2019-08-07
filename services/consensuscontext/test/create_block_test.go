@@ -15,7 +15,7 @@ import (
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		h := newHarness(t, false)
 		txCount := uint32(2)
 
 		h.expectTxPoolToReturnXTransactions(txCount)
@@ -36,7 +36,7 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 // Presently if the latter fails, this test will fail too
 func TestCreateBlock_HappyFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		h := newHarness(t, false)
 		txCount := 2
 
 		h.expectTxPoolToReturnXTransactions(uint32(txCount))
@@ -48,6 +48,26 @@ func TestCreateBlock_HappyFlow(t *testing.T) {
 		rxBlock, err := h.requestResultsBlock(ctx, txBlock)
 		require.Nil(t, err, "request results block failed")
 		require.Equal(t, txCount, len(rxBlock.TransactionReceipts))
+		h.verifyTransactionsRequestedFromTransactionPool(t)
+	})
+}
+
+func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		h := newHarness(t, true)
+		txCount := uint32(2)
+		txCountWithTrigger := txCount + 1
+
+		h.expectTxPoolToReturnXTransactions(txCount)
+
+		txBlock, err := h.requestTransactionsBlock(ctx)
+		if err != nil {
+			t.Fatal("request transactions block failed:", err)
+		}
+		if uint32(len(txBlock.SignedTransactions)) != txCountWithTrigger {
+			t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCountWithTrigger)
+		}
+
 		h.verifyTransactionsRequestedFromTransactionPool(t)
 	})
 }

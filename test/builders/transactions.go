@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	triggers_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -150,6 +151,18 @@ func (t *TransactionBuilder) WithVirtualChainId(virtualChainId primitives.Virtua
 func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.ArgumentArrayArgumentsIterator {
 	argsArray := protocol.ArgumentArrayReader(t.RawInputArgumentArrayWithHeader())
 	return argsArray.ArgumentsIterator()
+}
+
+func TriggerTransaction(pv primitives.ProtocolVersion, vid primitives.VirtualChainId) *protocol.SignedTransaction {
+	return (&protocol.SignedTransactionBuilder{
+		Transaction: &protocol.TransactionBuilder{
+			ProtocolVersion: pv,
+			VirtualChainId:  vid,
+			ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
+			MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),
+			Timestamp:       primitives.TimestampNano(time.Now().UnixNano()),
+		},
+	}).Build()
 }
 
 type NonSignedTransactionBuilder struct {

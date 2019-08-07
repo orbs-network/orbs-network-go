@@ -8,10 +8,13 @@ package consensuscontext
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -20,8 +23,7 @@ import (
 )
 
 func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext {
-
-	block := testValidators.AStructurallyValidBlock()
+	block := builders.BlockPairBuilder().Build()
 	prevBlockHashCopy := make([]byte, 32)
 	copy(prevBlockHashCopy, block.TransactionsBlock.Header.PrevBlockHashPtr())
 
@@ -41,12 +43,8 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 }
 
 func TestTransactionsBlockValidators(t *testing.T) {
-	cfg := config.ForConsensusContextTests(nil)
+	cfg := config.ForConsensusContextTests(nil, false)
 	hash2 := hash.CalcSha256([]byte{2})
-	falsyValidateTransactionOrdering := func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (
-		*services.ValidateTransactionsForOrderingOutput, error) {
-		return &services.ValidateTransactionsForOrderingOutput{}, errors.New("Some error")
-	}
 
 	t.Run("should return error for transaction block with incorrect protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
@@ -85,23 +83,167 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		require.Equal(t, ErrMismatchedPrevBlockHash, errors.Cause(err), "validation should fail on incorrect prev block hash", err)
 	})
 
-	t.Run("should return error for transaction block with failing tx ordering validation", func(t *testing.T) {
-		vctx := toTxValidatorContext(cfg)
-		vctx.txOrderValidator = falsyValidateTransactionOrdering
-		err := validateTxTransactionOrdering(context.Background(), vctx)
-		require.Equal(t, ErrFailedTransactionOrdering, errors.Cause(err), "validation should fail on failing tx ordering validation", err)
-	})
-
 	t.Run("should return error for invalid timestamp of block", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
 		err := validateTxTransactionsBlockTimestamp(context.Background(), vctx)
 		require.Equal(t, ErrInvalidBlockTimestamp, errors.Cause(err), "validation should fail on invalid timestamp of block", err)
 	})
-
 }
 
-func TestIsValidBlockTimestamp(t *testing.T) {
+func TestConsensusContextValidateTransactionsBlockTriggerTransactionNotForwardedToPreOrder(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		block := builders.BlockPairBuilder().Build()
+		cfg := config.ForConsensusContextTests(nil, true)
+		txPool := &services.MockTransactionPool{}
+		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) {
+			require.True(t, len(input.SignedTransactions) == len(block.TransactionsBlock.SignedTransactions)-1)
+		}).Return(nil, nil)
+		s := &service{txPool, nil, nil, cfg, nil, nil}
+		err := s.validateTxTransactionOrdering(ctx, block.TransactionsBlock)
+		require.NoError(t, err)
 
+		ok, err := txPool.Verify()
+		require.True(t, ok)
+		require.NoError(t, err)
+	})
+}
+
+func TestConsensusContextValidateTransactionsBlockTriggerDisabledTransactionNotRemovedForForwardedToPreOrder(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
+		txPool := &services.MockTransactionPool{}
+		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) {
+			require.True(t, len(input.SignedTransactions) == len(block.TransactionsBlock.SignedTransactions))
+		}).Return(nil, nil)
+		s := &service{txPool, nil, nil, cfg, nil, nil}
+		err := s.validateTxTransactionOrdering(ctx, block.TransactionsBlock)
+		require.NoError(t, err)
+
+		ok, err := txPool.Verify()
+		require.True(t, ok)
+		require.NoError(t, err)
+	})
+}
+
+func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
+		txPool := &services.MockTransactionPool{}
+		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, errors.New("random error"))
+		s := &service{txPool, nil, nil, cfg, nil, nil}
+		err := s.validateTxTransactionOrdering(ctx, block.TransactionsBlock)
+		require.Error(t, err)
+
+		ok, err := txPool.Verify()
+		require.True(t, ok)
+		require.NoError(t, err)
+	})
+}
+
+func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		tempcfg := config.ForConsensusContextTests(nil, false)
+		tx := builders.TransferTransaction().Build()
+		triggerTx := builders.TriggerTransaction(tempcfg.ProtocolVersion(), tempcfg.VirtualChainId())
+		tests := []struct {
+			name           string
+			triggerEnabled bool
+			txs            []*protocol.SignedTransaction
+			expectedToPass bool
+			errorCause     error
+		}{
+			{
+				"trigger disabled - empty block",
+				false,
+				[]*protocol.SignedTransaction{},
+				true,
+				nil,
+			},
+			{
+				"trigger disabled - regular txs",
+				false,
+				[]*protocol.SignedTransaction{tx},
+				true,
+				nil,
+			},
+			{
+				"trigger disabled - trigger at end",
+				false,
+				[]*protocol.SignedTransaction{tx, triggerTx},
+				false,
+				ErrTriggerDisabledAndTriggerExists,
+			},
+			{
+				"trigger disabled - trigger not at end",
+				false,
+				[]*protocol.SignedTransaction{tx, triggerTx, tx},
+				false,
+				ErrTriggerDisabledAndTriggerExists,
+			},
+			{
+				"trigger enabled - empty block",
+				true,
+				[]*protocol.SignedTransaction{},
+				false,
+				ErrTriggerEnabledAndTriggerMissing,
+			},
+			{
+				"trigger enabled - only regular txs",
+				true,
+				[]*protocol.SignedTransaction{tx, tx},
+				false,
+				ErrTriggerEnabledAndTriggerMissing,
+			},
+			{
+				"trigger enabled - trigger is not last",
+				true,
+				[]*protocol.SignedTransaction{triggerTx, tx},
+				false,
+				ErrTriggerEnabledAndTriggerMissing,
+			},
+			{
+				"trigger enabled - more than one trigger",
+				true,
+				[]*protocol.SignedTransaction{triggerTx, tx, triggerTx},
+				false,
+				ErrTriggerEnabledAndTriggerNotLast,
+			},
+			{
+				"trigger enabled - only one tx, is trigger",
+				true,
+				[]*protocol.SignedTransaction{triggerTx},
+				true,
+				nil,
+			},
+			{
+				"trigger enabled - good block",
+				true,
+				[]*protocol.SignedTransaction{tx, tx, triggerTx},
+				true,
+				nil,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cfg := config.ForConsensusContextTests(nil, tt.triggerEnabled)
+				err := validateTransactionsBlockTriggerCompliance(ctx, cfg, tt.txs)
+				if tt.expectedToPass {
+					require.NoError(t, err, tt.name)
+				} else {
+					require.Error(t, err, tt.name)
+					require.Equal(t, tt.errorCause, errors.Cause(err), "validation should fail error", err)
+				}
+			})
+		}
+	})
+}
+
+//err := validateTxTransactionsBlockTriggerCompliance(ctx, vctx)
+//require.Equal(t, ErrInvalidBlockTriggerTransaction, errors.Cause(err), "validation should fail on missing trigger tx", err)
+
+func TestIsValidBlockTimestamp(t *testing.T) {
 	jitter := 2 * time.Second
 	tests := []struct {
 		name                        string
