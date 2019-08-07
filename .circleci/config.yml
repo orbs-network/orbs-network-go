@@ -143,7 +143,6 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
-      - run: ./.circleci/chain_on_pr_cleanup.sh
       - run: ./.circleci/chain_on_pr.sh
 
   release:
