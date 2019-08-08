@@ -59,7 +59,7 @@ func TestTRun_GoOnce_PanicsAfterSubTestPasses(t *testing.T) {
 		Passed, BeforeLoggerCreated, LoggedWithLogger, PanicOhNo,
 	}
 	unexpectedLogsOnPanic := []string{
-		Failed, AfterCallPanic, MustNotShow,
+		AfterCallPanic, MustNotShow,
 	}
 	executeGoTestRunner(t, expectedLogsOnPanic, unexpectedLogsOnPanic)
 }
