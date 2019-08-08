@@ -23,7 +23,7 @@ jobs:
       - store_test_results:
           path: _reports
 
-  race:
+  races:
     docker:
       - image: circleci/golang:1.11.4
     resource_class: large
@@ -175,6 +175,8 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+
+      - races
 
       - deploy_new_chain_pr_only:
           requires:
