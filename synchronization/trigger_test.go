@@ -111,9 +111,9 @@ func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // send a cancelled context to reduce chances of trigger being called even once
 	x := 0
 	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
-	cancel()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
 	p.Stop()
