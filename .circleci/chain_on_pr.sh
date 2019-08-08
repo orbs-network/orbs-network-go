@@ -31,7 +31,7 @@ then
     curl -O $BOOTSTRAP_URL
     echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs which already closed"
 
-    ./.circleci/testnet-cleanup-mark.sh
+    node ./.circleci/testnet-cleanup-mark.js
 
     echo "Copying the newly updated config.json to S3 (with networks to remove)"
     aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
