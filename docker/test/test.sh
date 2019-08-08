@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 # Important note: trying to run the stress test locally? you will need to increase your max allowed sockets open / open files
 # as shown in this stack overflow URL:
@@ -13,19 +13,27 @@ rm -rf _logs
 
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
 
+# Only in Lean Helix disable the initial block height test for now
+if [[ $CONSENSUSALGO == "leanhelix" ]]; then
+ export REMOTE_ENV="true"
+fi
+
 export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 # prepare persistent blocks for docker tests
-
 rm -rf _tmp/blocks
+
+# At the moment Lean Helix doesn't deal well with an existing blocks file
+if [[ $CONSENSUSALGO == "benchmark" ]]; then
 mkdir -p _tmp/blocks/node{1..4}
 
 cp ./test/e2e/_data/blocks _tmp/blocks/node1
 cp ./test/e2e/_data/blocks _tmp/blocks/node2
 cp ./test/e2e/_data/blocks _tmp/blocks/node3
 cp ./test/e2e/_data/blocks _tmp/blocks/node4
+fi
 
 # run docker-reliant tests
 docker-compose -f ./docker/test/docker-compose.yml up -d
