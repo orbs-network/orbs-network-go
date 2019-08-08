@@ -5,6 +5,7 @@
 // The above notice should be included in all copies or substantial portions of the software.
 
 //+build !nonativecompiler
+//+build !race
 
 package adapter
 
