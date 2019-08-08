@@ -69,7 +69,7 @@ func TestTRun_GoOnce_LogsErrorAfterSubTestPasses(t *testing.T) {
 		Passed, BeforeLoggerCreated, LoggedWithLogger, ErrorWithLogger,
 	}
 	unexpectedLogsOnLogError := []string{
-		Failed, MustNotShow,
+		MustNotShow,
 	}
 	executeGoTestRunner(t, expectedLogsOnLogError, unexpectedLogsOnLogError)
 }
