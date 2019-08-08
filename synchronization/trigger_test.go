@@ -123,11 +123,12 @@ func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
-	x := 0
-	synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, func() { x = 20 })
+	ch := make(chan struct{})
+	synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() {}, func() { close(ch) })
 	cancel()
 	time.Sleep(time.Millisecond) // yield
-	require.Equal(t, 20, x, "expected x to have the stop value")
+	_, ok := <-ch
+	require.False(t, ok, "expected trigger stop action to close the channel")
 }
 
 func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
