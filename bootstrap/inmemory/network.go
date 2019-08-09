@@ -35,6 +35,7 @@ import (
 
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
+	synchronization.TreeSupervisor
 	Nodes          []*Node
 	Logger         log.Logger
 	Transport      adapter.Transport
@@ -92,6 +93,8 @@ func NewNetworkWithNumOfNodes(
 
 		network.addNode(fmt.Sprintf("%s", validatorNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
 	}
+
+	network.Supervise(transport)
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
@@ -163,6 +166,8 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			}
 			wg.Done()
 		}(node)
+
+		n.Supervise(node.nodeLogic)
 	}
 
 	wg.Wait()

@@ -22,11 +22,12 @@ import (
 )
 
 type Server struct {
-	synchronization.OSShutdownListener
+	synchronization.TreeSupervisor
 	network    *inmemory.Network
 	clock      *adapter.AdjustableClock
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
+	logger     log.Logger
 }
 
 type ServerConfig struct {
@@ -69,9 +70,13 @@ func StartGammaServer(config ServerConfig) *Server {
 		clock:      clock,
 		cancelFunc: cancel,
 		httpServer: httpServer,
+		logger:     rootLogger,
 	}
 
 	s.addGammaHandlers(httpServer.Router())
+
+	s.Supervise(httpServer)
+	s.Supervise(network)
 
 	return s
 }
@@ -79,10 +84,6 @@ func StartGammaServer(config ServerConfig) *Server {
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
 	s.cancelFunc()
 	synchronization.ShutdownAllGracefully(shutdownContext, s.httpServer)
-}
-
-func (s *Server) WaitUntilShutdown() {
-	synchronization.WaitForAllToShutdown(s.httpServer)
 }
 
 var (
@@ -110,7 +111,7 @@ func Main() {
 		Silent:             false,
 	})
 
-	synchronization.NewShutdownListener(gamma.Logger, gamma)
+	synchronization.NewShutdownListener(gamma.logger, gamma).ListenToOSShutdownSignal()
 
 	gamma.WaitUntilShutdown()
 }
