@@ -29,6 +29,8 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), 20*time.Hour, 1*time.Second)
 	test.WithContext(func(ctx context.Context) {
 		transport := NewDirectTransport(ctx, cfg, log.DefaultTestingLogger(t), metric.NewRegistry())
+		defer transport.GracefulShutdown(ctx)
+
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 			return transport.IsServerListening()
 		}), "server did not start")
@@ -41,6 +43,7 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
+		defer shutdownAll(ctx, node1, node2)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
 
@@ -70,6 +73,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
 		node4 := aNode(ctx, logger)
+		defer shutdownAll(ctx, node1, node2, node3, node4)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
 
@@ -125,6 +129,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
+		defer shutdownAll(ctx, node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3)
 
@@ -228,4 +233,11 @@ func aTopologyContaining(nodes ...*nodeHarness) config.GossipTransportConfig {
 		peers[node.address.KeyForMap()] = node.toGossipPeer()
 	}
 	return config.ForDirectTransportTests(peers, keepAliveInterval, 1*time.Second)
+}
+
+func shutdownAll(ctx context.Context, nodes ...*nodeHarness) {
+	for _, node := range nodes {
+		node.transport.GracefulShutdown(ctx)
+		node.transport.WaitUntilShutdown()
+	}
 }

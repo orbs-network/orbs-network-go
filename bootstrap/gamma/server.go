@@ -11,10 +11,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"os"
 	"strconv"
 
-	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -22,11 +22,11 @@ import (
 )
 
 type Server struct {
-	bootstrap.OSShutdownListener
+	synchronization.OSShutdownListener
 	network    *inmemory.Network
 	clock      *adapter.AdjustableClock
 	cancelFunc context.CancelFunc
-	waiters    []bootstrap.ShutdownWaiter
+	waiters    []synchronization.ShutdownWaiter
 }
 
 type ServerConfig struct {
@@ -68,7 +68,7 @@ func StartGammaServer(config ServerConfig) *Server {
 		network:    network,
 		clock:      clock,
 		cancelFunc: cancel,
-		waiters:    []bootstrap.ShutdownWaiter{httpServer},
+		waiters:    []synchronization.ShutdownWaiter{httpServer},
 	}
 
 	s.addGammaHandlers(httpServer.Router())
@@ -78,11 +78,11 @@ func StartGammaServer(config ServerConfig) *Server {
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
 	s.cancelFunc()
-	bootstrap.ShutdownAllGracefully(shutdownContext, s.waiters...)
+	synchronization.ShutdownAllGracefully(shutdownContext, s.waiters...)
 }
 
 func (s *Server) WaitUntilShutdown() {
-	bootstrap.WaitForAllToShutdown(s.waiters...)
+	synchronization.WaitForAllToShutdown(s.waiters...)
 }
 
 var (
@@ -110,7 +110,7 @@ func Main() {
 		Silent:             false,
 	})
 
-	bootstrap.NewShutdownListener(gamma.Logger, gamma)
+	synchronization.NewShutdownListener(gamma.Logger, gamma)
 
 	gamma.WaitUntilShutdown()
 }

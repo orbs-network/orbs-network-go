@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"os"
 )
 
@@ -44,7 +45,7 @@ func main() {
 		logger,
 	)
 
-	bootstrap.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
+	synchronization.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
 
 	node.WaitUntilShutdown()
 }

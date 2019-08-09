@@ -1,7 +1,7 @@
 package gamma
 
 import (
-	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"net/http"
 	"strconv"
 	"time"
@@ -20,7 +20,7 @@ func (s *Server) shutdownHandler(writer http.ResponseWriter, request *http.Reque
 
 	writer.Write([]byte(`{"status":"shutting down"}`))
 
-	bootstrap.ShutdownGracefully(s, 1*time.Second)
+	synchronization.ShutdownGracefully(s, 1*time.Second)
 }
 
 func (s *Server) incrementTime(writer http.ResponseWriter, request *http.Request) {

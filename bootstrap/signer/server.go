@@ -8,8 +8,8 @@ package signer
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/services/signer"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
@@ -52,9 +52,9 @@ func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
 }
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
-	bootstrap.ShutdownAllGracefully(shutdownContext, s.httpServer)
+	synchronization.ShutdownAllGracefully(shutdownContext, s.httpServer)
 }
 
 func (s *Server) WaitUntilShutdown() {
-	bootstrap.WaitForAllToShutdown(s.httpServer)
+	synchronization.WaitForAllToShutdown(s.httpServer)
 }
