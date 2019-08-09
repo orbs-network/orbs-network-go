@@ -102,7 +102,8 @@ func NewNodeLogic(
 
 	node.Supervise(gossipService)
 	node.Supervise(blockStorageService)
-
+	node.Supervise(benchmarkConsensusAlgo)
+	node.Supervise(leanHelixAlgo)
 	node.SuperviseChan(metric.NewSystemReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metricRegistry.PeriodicallyRotate(ctx, logger))

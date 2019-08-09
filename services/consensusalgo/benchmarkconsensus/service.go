@@ -37,7 +37,8 @@ type Config interface {
 	BenchmarkConsensusRequiredQuorumPercentage() uint32
 }
 
-type service struct {
+type Service struct {
+	supervised.TreeSupervisor
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
@@ -84,11 +85,11 @@ func NewBenchmarkConsensusAlgo(
 	parentLogger log.Logger,
 	config Config,
 	metricFactory metric.Factory,
-) services.ConsensusAlgoBenchmark {
+) *Service {
 
 	logger := parentLogger.WithTags(LogTag)
 
-	s := &service{
+	s := &Service{
 		gossip:           gossip,
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
@@ -111,26 +112,26 @@ func NewBenchmarkConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
 		logger.Info("NewBenchmarkConsensusAlgo() Benchmark Consensus is active algo, and this node is leader, starting goroutine now")
-		supervised.GoForever(ctx, logger, func() {
+		s.SuperviseChan(supervised.GoForever(ctx, logger, func() {
 			s.leaderConsensusRoundRunLoop(ctx)
-		})
+		}))
 	}
 
 	return s
 }
 
-func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 	return nil, s.handleBlockConsensusFromHandler(input.Mode, input.BlockType, input.BlockPair, input.PrevCommittedBlockPair)
 }
 
-func (s *service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
 	if !s.isLeader {
 		return nil, s.nonLeaderHandleCommit(ctx, input.Message.BlockPair)
 	}
 	return nil, nil
 }
 
-func (s *service) HandleBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	if s.isLeader {
 		return nil, s.leaderHandleCommittedVote(ctx, input.Message.Sender, input.Message.Status)
 	}
