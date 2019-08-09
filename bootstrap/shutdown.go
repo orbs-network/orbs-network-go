@@ -8,7 +8,6 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"os"
@@ -18,39 +17,54 @@ import (
 	"time"
 )
 
-type OrbsProcess struct {
-	CancelFunc   context.CancelFunc
-	Logger       log.Logger
-	HttpServer   httpserver.HttpServer
-	shutdownCond *sync.Cond
+type ShutdownWaiter interface {
+	GracefulShutdown(shutdownContext context.Context)
+	WaitUntilShutdown()
 }
 
-func NewOrbsProcess(logger log.Logger, cancelFunc context.CancelFunc, httpserver httpserver.HttpServer) OrbsProcess {
-	return OrbsProcess{
-		shutdownCond: sync.NewCond(&sync.Mutex{}),
-		Logger:       logger,
-		CancelFunc:   cancelFunc,
-		HttpServer:   httpserver,
+func ShutdownGracefully(waiter ShutdownWaiter, timeout time.Duration) {
+	shutdownContext, cancel := context.WithTimeout(context.Background(), timeout) // give system some time to gracefully finish
+	defer cancel()
+	waiter.GracefulShutdown(shutdownContext)
+}
+
+func WaitForAllToShutdown(waiters ...ShutdownWaiter) {
+	for _, w := range waiters {
+		w.WaitUntilShutdown()
 	}
 }
 
-func (n *OrbsProcess) GracefulShutdown(timeout time.Duration) {
-	n.CancelFunc()
-	n.HttpServer.GracefulShutdown(timeout)
-	n.shutdownCond.Broadcast()
+func ShutdownAllGracefully(shutdownCtx context.Context, waiters ...ShutdownWaiter) {
+	for _, w := range waiters {
+		w.GracefulShutdown(shutdownCtx)
+	}
 }
 
-func (n *OrbsProcess) WaitUntilShutdown() {
+type OSShutdownListener struct {
+	Logger       log.Logger
+	shutdownCond *sync.Cond
+	waiter       ShutdownWaiter
+}
+
+func NewShutdownListener(logger log.Logger, waiter ShutdownWaiter) *OSShutdownListener {
+	return &OSShutdownListener{
+		shutdownCond: sync.NewCond(&sync.Mutex{}),
+		Logger:       logger,
+		waiter:     waiter,
+	}
+}
+
+func (n *OSShutdownListener) ListenToOSShutdownSignal() {
 	// if waiting for shutdown, listen for sigint and sigterm
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	supervised.GoOnce(n.Logger, func() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
-		n.GracefulShutdown(0)
+
+		ShutdownGracefully(n.waiter, 100 * time.Millisecond)
 	})
 
-	n.shutdownCond.L.Lock()
-	n.shutdownCond.Wait()
-	n.shutdownCond.L.Unlock()
 }
+
+

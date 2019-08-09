@@ -15,17 +15,18 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-type SignerServer struct {
-	bootstrap.OrbsProcess
-	service services.Vault
+type Server struct {
+	service    services.Vault
+	cancelFunc context.CancelFunc
+	httpServer *httpServer
 }
 
-type SignerServerConfig interface {
+type ServerConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	HttpAddress() string
 }
 
-func StartSignerServer(cfg SignerServerConfig, logger log.Logger) *SignerServer {
+func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
 	_, cancel := context.WithCancel(context.Background())
 
 	service := signer.NewService(cfg, logger)
@@ -41,10 +42,19 @@ func StartSignerServer(cfg SignerServerConfig, logger log.Logger) *SignerServer 
 
 	httpServer.Router().HandleFunc("/sign", api.SignHandler)
 
-	s := &SignerServer{
-		OrbsProcess: bootstrap.NewOrbsProcess(logger, cancel, httpServer),
-		service:     service,
+	s := &Server{
+		service:    service,
+		cancelFunc: cancel,
+		httpServer: httpServer,
 	}
 
 	return s
+}
+
+func (s *Server) GracefulShutdown(shutdownContext context.Context) {
+	bootstrap.ShutdownAllGracefully(shutdownContext, s.httpServer)
+}
+
+func (s *Server) WaitUntilShutdown() {
+	bootstrap.WaitForAllToShutdown(s.httpServer)
 }

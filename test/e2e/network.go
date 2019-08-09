@@ -7,6 +7,7 @@
 package e2e
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
@@ -38,7 +39,7 @@ func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
-		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
+		bootstrap.ShutdownAllGracefully(context.TODO(), node)
 	}
 
 	cleanNativeProcessorCache()

@@ -62,6 +62,7 @@ type DirectTransport struct {
 
 	metrics        *metrics
 	metricRegistry metric.Registry
+	serverClosed   chan struct{}
 }
 
 func getMetrics(registry metric.Registry) *metrics {
@@ -88,6 +89,8 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		server:            newDirectTransportServer(),
 
 		metrics: getMetrics(registry),
+
+		serverClosed: make(chan struct{}),
 	}
 
 	// server goroutine

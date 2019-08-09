@@ -9,8 +9,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -24,13 +22,15 @@ import (
 )
 
 type Node interface {
-	GracefulShutdown(timeout time.Duration)
+	GracefulShutdown(shutdownContext context.Context)
 	WaitUntilShutdown()
 }
 
 type node struct {
-	OrbsProcess
-	logic NodeLogic
+	logic      NodeLogic
+	cancelFunc context.CancelFunc
+	httpServer httpserver.HttpServer
+	waiters    []ShutdownWaiter
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -59,7 +59,16 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
 	return &node{
-		logic:       nodeLogic,
-		OrbsProcess: NewOrbsProcess(nodeLogger, ctxCancel, httpServer),
+		cancelFunc: ctxCancel,
+		waiters:    []ShutdownWaiter{httpServer},
 	}
+}
+
+func (n node) GracefulShutdown(shutdownContext context.Context) {
+	n.cancelFunc()
+	ShutdownAllGracefully(shutdownContext, n.waiters...)
+}
+
+func (n node) WaitUntilShutdown() {
+	WaitForAllToShutdown(n.waiters...)
 }

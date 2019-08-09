@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"net"
 	"net/http"
-	"time"
 )
 
 type httpServer struct {
@@ -20,10 +19,11 @@ type httpServer struct {
 	port   int
 	logger log.Logger
 	router *http.ServeMux
+	closed chan struct{}
 }
 
 // TODO: unify with httpserver.HttpServer
-func NewHttpServer(address string, logger log.Logger) (httpserver.HttpServer, error) {
+func NewHttpServer(address string, logger log.Logger) (*httpServer, error) {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, err
@@ -40,6 +40,7 @@ func NewHttpServer(address string, logger log.Logger) (httpserver.HttpServer, er
 		port:   listener.Addr().(*net.TCPAddr).Port,
 		logger: logger,
 		router: router,
+		closed: make(chan struct{}),
 	}
 
 	// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
@@ -48,16 +49,15 @@ func NewHttpServer(address string, logger log.Logger) (httpserver.HttpServer, er
 	return s, nil
 }
 
-func (s *httpServer) GracefulShutdown(timeout time.Duration) {
-	ctx := context.Background()
-	if timeout > 0 {
-		var cancel func()
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
+func (s *httpServer) GracefulShutdown(shutdownContext context.Context) {
+	if err := s.server.Shutdown(shutdownContext); err != nil {
+		close(s.closed)
+		s.logger.Error("failed to stop http HttpServer gracefully", log.Error(err))
 	}
-	if err := s.server.Shutdown(ctx); err != nil {
-		s.logger.Error("failed to stop http server gracefully", log.Error(err))
-	}
+}
+
+func (s *httpServer) WaitUntilShutdown() {
+	<-s.closed
 }
 
 func (s *httpServer) Port() int {

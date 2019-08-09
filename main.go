@@ -39,8 +39,12 @@ func main() {
 
 	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg)
 
-	bootstrap.NewNode(
+	node := bootstrap.NewNode(
 		cfg,
 		logger,
-	).WaitUntilShutdown()
+	)
+
+	bootstrap.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
+
+	node.WaitUntilShutdown()
 }
