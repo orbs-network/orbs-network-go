@@ -21,13 +21,15 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-type GammaServer struct {
-	bootstrap.OrbsProcess
-	network *inmemory.Network
-	clock   *adapter.AdjustableClock
+type Server struct {
+	bootstrap.OSShutdownListener
+	network    *inmemory.Network
+	clock      *adapter.AdjustableClock
+	cancelFunc context.CancelFunc
+	waiters    []bootstrap.ShutdownWaiter
 }
 
-type GammaServerConfig struct {
+type ServerConfig struct {
 	ServerAddress      string
 	Profiling          bool
 	OverrideConfigJson string
@@ -50,7 +52,7 @@ func getLogger(silent bool) log.Logger {
 		)
 }
 
-func StartGammaServer(config GammaServerConfig) *GammaServer {
+func StartGammaServer(config ServerConfig) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	rootLogger := getLogger(config.Silent)
 
@@ -62,10 +64,11 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
 		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
 
-	s := &GammaServer{
-		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
-		network:     network,
-		clock:       clock,
+	s := &Server{
+		network:    network,
+		clock:      clock,
+		cancelFunc: cancel,
+		waiters:    []bootstrap.ShutdownWaiter{httpServer},
 	}
 
 	s.addGammaHandlers(httpServer.Router())
@@ -73,8 +76,13 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	return s
 }
 
-func (n *GammaServer) Port() int {
-	return n.HttpServer.Port()
+func (s *Server) GracefulShutdown(shutdownContext context.Context) {
+	s.cancelFunc()
+	bootstrap.ShutdownAllGracefully(shutdownContext, s.waiters...)
+}
+
+func (s *Server) WaitUntilShutdown() {
+	bootstrap.WaitForAllToShutdown(s.waiters...)
 }
 
 var (
@@ -95,10 +103,14 @@ func Main() {
 
 	var serverAddress = ":" + strconv.Itoa(*port)
 
-	StartGammaServer(GammaServerConfig{
+	gamma := StartGammaServer(ServerConfig{
 		ServerAddress:      serverAddress,
 		Profiling:          *profiling,
 		OverrideConfigJson: *overrideConfigJson,
 		Silent:             false,
-	}).WaitUntilShutdown()
+	})
+
+	bootstrap.NewShutdownListener(gamma.Logger, gamma)
+
+	gamma.WaitUntilShutdown()
 }
