@@ -42,10 +42,10 @@ type NodeLogic interface {
 }
 
 type nodeLogic struct {
+	synchronization.TreeSupervisor
 	publicApi       services.PublicApi
 	consensusAlgos  []services.ConsensusAlgo
 	transactionPool *transactionpool.Service
-	channelWaiter   *synchronization.ChannelClosedWaiter
 }
 
 func NewNodeLogic(
@@ -92,30 +92,26 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
-	channelWaiter := &synchronization.ChannelClosedWaiter{}
-	channelWaiter.Add(metric.NewSystemReporter(ctx, metricRegistry, logger))
-	channelWaiter.Add(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
-	channelWaiter.Add(metricRegistry.PeriodicallyRotate(ctx, logger))
-	if nodeConfig.NTPEndpoint() != "" {
-		channelWaiter.Add(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
-	}
-
 	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	logger.Info("Node started")
 
-	return &nodeLogic{
+	node := &nodeLogic{
 		publicApi:       publicApiService,
 		consensusAlgos:  consensusAlgos,
 		transactionPool: transactionPoolService,
-		channelWaiter:   channelWaiter,
 	}
+
+	node.SuperviseChan(metric.NewSystemReporter(ctx, metricRegistry, logger))
+	node.SuperviseChan(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.SuperviseChan(metricRegistry.PeriodicallyRotate(ctx, logger))
+	if nodeConfig.NTPEndpoint() != "" {
+		node.SuperviseChan(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+	}
+
+	return node
 }
 
 func (n *nodeLogic) PublicApi() services.PublicApi {
 	return n.publicApi
-}
-
-func (n *nodeLogic) WaitUntilShutdown() {
-	synchronization.WaitForAllToShutdown(n.transactionPool, n.channelWaiter)
 }

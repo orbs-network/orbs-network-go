@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -34,6 +35,7 @@ type httpErr struct {
 }
 
 type HttpServer struct {
+	synchronization.ChanWaiter
 	httpServer *http.Server
 	router     *http.ServeMux
 
@@ -42,8 +44,7 @@ type HttpServer struct {
 	metricRegistry metric.Registry
 	config         config.HttpServerConfig
 
-	port   int
-	closed chan struct{}
+	port int
 }
 
 type TcpKeepAliveListener struct {
@@ -72,7 +73,7 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		publicApi:      publicApi,
 		metricRegistry: metricRegistry,
 		config:         cfg,
-		closed:         make(chan struct{}),
+		ChanWaiter:     synchronization.NewChanWaiter(),
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
@@ -112,13 +113,9 @@ func (s *HttpServer) listen(addr string) (net.Listener, error) {
 
 func (s *HttpServer) GracefulShutdown(shutdownContext context.Context) {
 	if err := s.httpServer.Shutdown(shutdownContext); err != nil {
-		close(s.closed)
+		s.Shutdown()
 		s.logger.Error("failed to stop http HttpServer gracefully", log.Error(err))
 	}
-}
-
-func (s *HttpServer) WaitUntilShutdown() {
-	<-s.closed
 }
 
 func (s *HttpServer) createRouter() *http.ServeMux {

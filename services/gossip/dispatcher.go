@@ -37,8 +37,8 @@ func (c *meteredTopicChannel) updateMetrics() {
 	c.inQueue.Update(int64(len(c.ch)))
 }
 
-func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) {
-	supervised.GoForever(ctx, logger, func() {
+func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) supervised.ContextEndedChan {
+	return supervised.GoForever(ctx, logger, func() {
 		for {
 			select {
 			case <-ctx.Done():

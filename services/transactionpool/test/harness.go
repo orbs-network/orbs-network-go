@@ -31,7 +31,7 @@ import (
 )
 
 type harness struct {
-	txpool                  services.TransactionPool
+	txpool                  *transactionpool.Service
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
 	signer                  signer.Signer

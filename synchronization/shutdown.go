@@ -26,18 +26,42 @@ type GracefulShutdowner interface {
 	GracefulShutdown(shutdownContext context.Context)
 }
 
-type ChannelClosedWaiter struct {
-	chans []chan struct{}
+type ChanWaiter struct {
+	Closed chan struct{}
 }
 
-func (c *ChannelClosedWaiter) WaitUntilShutdown() {
-	for _, ch := range c.chans {
-		<-ch
+func (c *ChanWaiter) WaitUntilShutdown() {
+	<-c.Closed
+}
+
+func (c *ChanWaiter) Shutdown() {
+	close(c.Closed)
+}
+
+func chanWaiterFor(ch chan struct{}) *ChanWaiter {
+	return &ChanWaiter{Closed: ch}
+}
+
+func NewChanWaiter() ChanWaiter {
+	return ChanWaiter{Closed: make(chan struct{})}
+}
+
+type TreeSupervisor struct {
+	supervised []ShutdownWaiter
+}
+
+func (t *TreeSupervisor) WaitUntilShutdown() {
+	for _, w := range t.supervised {
+		w.WaitUntilShutdown()
 	}
 }
 
-func (c *ChannelClosedWaiter) Add(ch chan struct{}) {
-	c.chans = append(c.chans, ch)
+func (t *TreeSupervisor) Supervise(w ShutdownWaiter) {
+	t.supervised = append(t.supervised, w)
+}
+
+func (t *TreeSupervisor) SuperviseChan(ch chan struct{}) {
+	t.supervised = append(t.supervised, chanWaiterFor(ch))
 }
 
 func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {

@@ -26,6 +26,8 @@ type BlockHeightReporter interface {
 }
 
 type Service struct {
+	synchronization.TreeSupervisor
+
 	clock                      adapter.Clock
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
@@ -54,8 +56,7 @@ type Service struct {
 		commitCount *metric.Gauge
 	}
 
-	addCommitLock  sync.RWMutex
-	shutdownWaiter *synchronization.ChannelClosedWaiter
+	addCommitLock sync.RWMutex
 }
 
 func (s *Service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {

@@ -57,8 +57,6 @@ func NewTransactionPool(ctx context.Context,
 		transactionForwarder:                txForwarder,
 		transactionWaiter:                   waiter,
 		addNewTransactionConcurrencyLimiter: NewRequestConcurrencyLimiter(100),
-
-		shutdownWaiter: &synchronization.ChannelClosedWaiter{},
 	}
 
 	s.validationContext = s.createValidationContext()
@@ -70,9 +68,9 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	s.shutdownWaiter.Add(startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.shutdownWaiter.Add(startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.shutdownWaiter.Add(txForwarder.closed)
+	s.SuperviseChan(startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.SuperviseChan(startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.SuperviseChan(txForwarder.closed)
 
 	return s
 }
@@ -100,8 +98,4 @@ func (s *Service) onTransactionError(ctx context.Context, txHash primitives.Sha2
 			}
 		}
 	}
-}
-
-func (s *Service) WaitUntilShutdown() {
-	s.shutdownWaiter.WaitUntilShutdown()
 }

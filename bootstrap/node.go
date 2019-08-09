@@ -29,11 +29,11 @@ type Node interface {
 }
 
 type node struct {
-	logic         NodeLogic
-	cancelFunc    context.CancelFunc
-	httpServer    *httpserver.HttpServer
-	transport     *tcp.DirectTransport
-	channelWaiter *synchronization.ChannelClosedWaiter
+	synchronization.TreeSupervisor
+	logic      NodeLogic
+	cancelFunc context.CancelFunc
+	httpServer *httpserver.HttpServer
+	transport  *tcp.DirectTransport
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -61,23 +61,21 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
-	channelWaiter := &synchronization.ChannelClosedWaiter{}
-	channelWaiter.Add(ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
-
-	return &node{
-		cancelFunc:    ctxCancel,
-		channelWaiter: channelWaiter,
-		logic:         nodeLogic,
-		transport:     transport,
-		httpServer:    httpServer,
+	n := &node{
+		cancelFunc: ctxCancel,
+		logic:      nodeLogic,
+		transport:  transport,
+		httpServer: httpServer,
 	}
+
+	n.SuperviseChan(ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
+	n.Supervise(nodeLogic)
+	n.Supervise(transport)
+	n.Supervise(httpServer)
+	return n
 }
 
 func (n node) GracefulShutdown(shutdownContext context.Context) {
 	n.cancelFunc()
 	synchronization.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
-}
-
-func (n node) WaitUntilShutdown() {
-	synchronization.WaitForAllToShutdown(n.httpServer, n.logic, n.transport, n.channelWaiter)
 }
