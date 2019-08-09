@@ -30,19 +30,22 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type NodeLogic interface {
+	synchronization.ShutdownWaiter
 	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
-	publicApi      services.PublicApi
-	consensusAlgos []services.ConsensusAlgo
+	publicApi       services.PublicApi
+	consensusAlgos  []services.ConsensusAlgo
+	transactionPool *transactionpool.Service
+	channelWaiter   *synchronization.ChannelClosedWaiter
 }
 
 func NewNodeLogic(
@@ -89,23 +92,30 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
-	metric.NewSystemReporter(ctx, metricRegistry, logger)
-	metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint())
+	channelWaiter := &synchronization.ChannelClosedWaiter{}
+	channelWaiter.Add(metric.NewSystemReporter(ctx, metricRegistry, logger))
+	channelWaiter.Add(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	channelWaiter.Add(metricRegistry.PeriodicallyRotate(ctx, logger))
+	if nodeConfig.NTPEndpoint() != "" {
+		channelWaiter.Add(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+	}
 
-	metricRegistry.PeriodicallyRotate(ctx, logger)
 	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
-
-	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
 	return &nodeLogic{
-		publicApi:      publicApiService,
-		consensusAlgos: consensusAlgos,
+		publicApi:       publicApiService,
+		consensusAlgos:  consensusAlgos,
+		transactionPool: transactionPoolService,
+		channelWaiter:   channelWaiter,
 	}
 }
 
 func (n *nodeLogic) PublicApi() services.PublicApi {
 	return n.publicApi
+}
+
+func (n *nodeLogic) WaitUntilShutdown() {
+	synchronization.WaitForAllToShutdown(n.transactionPool, n.channelWaiter)
 }

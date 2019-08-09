@@ -18,14 +18,32 @@ import (
 )
 
 type ShutdownWaiter interface {
-	GracefulShutdown(shutdownContext context.Context)
 	WaitUntilShutdown()
 }
 
-func ShutdownGracefully(waiter ShutdownWaiter, timeout time.Duration) {
+type GracefulShutdowner interface {
+	ShutdownWaiter
+	GracefulShutdown(shutdownContext context.Context)
+}
+
+type ChannelClosedWaiter struct {
+	chans []chan struct{}
+}
+
+func (c *ChannelClosedWaiter) WaitUntilShutdown() {
+	for _, ch := range c.chans {
+		<-ch
+	}
+}
+
+func (c *ChannelClosedWaiter) Add(ch chan struct{}) {
+	c.chans = append(c.chans, ch)
+}
+
+func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), timeout) // give system some time to gracefully finish
 	defer cancel()
-	waiter.GracefulShutdown(shutdownContext)
+	s.GracefulShutdown(shutdownContext)
 }
 
 func WaitForAllToShutdown(waiters ...ShutdownWaiter) {
@@ -34,8 +52,8 @@ func WaitForAllToShutdown(waiters ...ShutdownWaiter) {
 	}
 }
 
-func ShutdownAllGracefully(shutdownCtx context.Context, waiters ...ShutdownWaiter) {
-	for _, w := range waiters {
+func ShutdownAllGracefully(shutdownCtx context.Context, shutdowners ...GracefulShutdowner) {
+	for _, w := range shutdowners {
 		w.GracefulShutdown(shutdownCtx)
 	}
 }
@@ -43,14 +61,14 @@ func ShutdownAllGracefully(shutdownCtx context.Context, waiters ...ShutdownWaite
 type OSShutdownListener struct {
 	Logger       log.Logger
 	shutdownCond *sync.Cond
-	waiter       ShutdownWaiter
+	shutdowner   GracefulShutdowner
 }
 
-func NewShutdownListener(logger log.Logger, waiter ShutdownWaiter) *OSShutdownListener {
+func NewShutdownListener(logger log.Logger, shutdowner GracefulShutdowner) *OSShutdownListener {
 	return &OSShutdownListener{
 		shutdownCond: sync.NewCond(&sync.Mutex{}),
 		Logger:       logger,
-		waiter:     waiter,
+		shutdowner:   shutdowner,
 	}
 }
 
@@ -62,9 +80,7 @@ func (n *OSShutdownListener) ListenToOSShutdownSignal() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
 
-		ShutdownGracefully(n.waiter, 100 * time.Millisecond)
+		ShutdownGracefully(n.shutdowner, 100*time.Millisecond)
 	})
 
 }
-
-

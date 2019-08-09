@@ -25,7 +25,7 @@ type BlockHeightReporter interface {
 	IncrementTo(height primitives.BlockHeight)
 }
 
-type service struct {
+type Service struct {
 	clock                      adapter.Clock
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
@@ -54,16 +54,17 @@ type service struct {
 		commitCount *metric.Gauge
 	}
 
-	addCommitLock sync.RWMutex
+	addCommitLock  sync.RWMutex
+	shutdownWaiter *synchronization.ChannelClosedWaiter
 }
 
-func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *Service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
 	s.lastCommitted.RLock()
 	defer s.lastCommitted.RUnlock()
 	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
-func (s *service) createValidationContext() *validationContext {
+func (s *Service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:           s.config.TransactionExpirationWindow(),
 		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),

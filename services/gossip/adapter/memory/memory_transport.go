@@ -111,20 +111,15 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		listener: make(chan adapter.TransportListener),
 		logger:   logger,
 		cancel:   cancel,
-		closed:   make(chan struct{}),
 	}
 
-	supervised.GoForever(ctx, logger, func() {
+	p.closed = supervised.GoForever(ctx, logger, func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
 			p.acceptUsing(ctx, l)
 		case <-ctx.Done():
 			// fall through
-		}
-
-		if ctx.Err() != nil { // so that it gets called regardless if ctx.Done fired
-			close(p.closed)
 		}
 	})
 

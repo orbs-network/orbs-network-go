@@ -26,7 +26,7 @@ type Server struct {
 	network    *inmemory.Network
 	clock      *adapter.AdjustableClock
 	cancelFunc context.CancelFunc
-	waiters    []synchronization.ShutdownWaiter
+	httpServer *httpserver.HttpServer
 }
 
 type ServerConfig struct {
@@ -68,7 +68,7 @@ func StartGammaServer(config ServerConfig) *Server {
 		network:    network,
 		clock:      clock,
 		cancelFunc: cancel,
-		waiters:    []synchronization.ShutdownWaiter{httpServer},
+		httpServer: httpServer,
 	}
 
 	s.addGammaHandlers(httpServer.Router())
@@ -78,11 +78,11 @@ func StartGammaServer(config ServerConfig) *Server {
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
 	s.cancelFunc()
-	synchronization.ShutdownAllGracefully(shutdownContext, s.waiters...)
+	synchronization.ShutdownAllGracefully(shutdownContext, s.httpServer)
 }
 
 func (s *Server) WaitUntilShutdown() {
-	synchronization.WaitForAllToShutdown(s.waiters...)
+	synchronization.WaitForAllToShutdown(s.httpServer)
 }
 
 var (

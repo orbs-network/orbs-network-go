@@ -61,8 +61,6 @@ func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metric
 		peerHexAddress:  hexAddressSliceForLogging,
 		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
 		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
-
-		closed: make(chan struct{}),
 	}
 
 	return client
@@ -72,7 +70,7 @@ func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
-	supervised.GoForever(ctx, c.logger, func() {
+	c.closed = supervised.GoForever(ctx, c.logger, func() {
 		c.clientMainLoop(ctx)
 	})
 }
@@ -156,7 +154,6 @@ func (c *clientConnection) onDisconnect(logger log.Logger) bool {
 	c.metricRegistry.Remove(c.sendErrors)
 	c.metricRegistry.Remove(c.sendQueueErrors)
 	c.metricRegistry.Remove(c.queue.usagePercentageMetric)
-	close(c.closed)
 	return false
 }
 

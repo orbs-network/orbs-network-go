@@ -22,7 +22,7 @@ type TransportData struct {
 }
 
 type Transport interface {
-	synchronization.ShutdownWaiter
+	synchronization.GracefulShutdowner
 	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
 	Send(ctx context.Context, data *TransportData) error // TODO don't return error. misleading meaning. use panics instead
 }

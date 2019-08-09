@@ -20,6 +20,7 @@ import (
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 type Node interface {
@@ -28,10 +29,11 @@ type Node interface {
 }
 
 type node struct {
-	logic      NodeLogic
-	cancelFunc context.CancelFunc
-	httpServer httpserver.HttpServer
-	waiters    []synchronization.ShutdownWaiter
+	logic         NodeLogic
+	cancelFunc    context.CancelFunc
+	httpServer    *httpserver.HttpServer
+	doneReporting chan struct{}
+	transport     *tcp.DirectTransport
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -60,16 +62,20 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
 	return &node{
-		cancelFunc: ctxCancel,
-		waiters:    []synchronization.ShutdownWaiter{httpServer, transport},
+		cancelFunc:    ctxCancel,
+		doneReporting: ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second),
+		logic:         nodeLogic,
+		transport:     transport,
+		httpServer:    httpServer,
 	}
 }
 
 func (n node) GracefulShutdown(shutdownContext context.Context) {
 	n.cancelFunc()
-	synchronization.ShutdownAllGracefully(shutdownContext, n.waiters...)
+	synchronization.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
 }
 
 func (n node) WaitUntilShutdown() {
-	synchronization.WaitForAllToShutdown(n.waiters...)
+	synchronization.WaitForAllToShutdown(n.httpServer, n.logic, n.transport)
+	<-n.doneReporting
 }
