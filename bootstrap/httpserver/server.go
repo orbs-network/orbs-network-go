@@ -73,7 +73,7 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		publicApi:      publicApi,
 		metricRegistry: metricRegistry,
 		config:         cfg,
-		ChanWaiter:     supervised.NewChanWaiter(),
+		ChanWaiter:     supervised.NewChanWaiter("NodeHttpServer"),
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
@@ -113,9 +113,10 @@ func (s *HttpServer) listen(addr string) (net.Listener, error) {
 
 func (s *HttpServer) GracefulShutdown(shutdownContext context.Context) {
 	if err := s.httpServer.Shutdown(shutdownContext); err != nil {
-		s.Shutdown()
 		s.logger.Error("failed to stop http HttpServer gracefully", log.Error(err))
 	}
+	s.Shutdown()
+
 }
 
 func (s *HttpServer) createRouter() *http.ServeMux {

@@ -110,5 +110,5 @@ func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.Validato
 
 func shutdown(ctx context.Context, transport *memoryTransport) {
 	transport.GracefulShutdown(ctx)
-	transport.WaitUntilShutdown()
+	transport.WaitUntilShutdown(ctx)
 }

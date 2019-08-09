@@ -238,6 +238,6 @@ func aTopologyContaining(nodes ...*nodeHarness) config.GossipTransportConfig {
 func shutdownAll(ctx context.Context, nodes ...*nodeHarness) {
 	for _, node := range nodes {
 		node.transport.GracefulShutdown(ctx)
-		node.transport.WaitUntilShutdown()
+		node.transport.WaitUntilShutdown(ctx)
 	}
 }

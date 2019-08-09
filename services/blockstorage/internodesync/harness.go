@@ -110,8 +110,8 @@ func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(logger log.Logger, c
 	return newBlockSyncHarnessWithTimers(logger, nil, nil, createTimer)
 }
 
-func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) {
-	bs.WaitUntilShutdown()
+func (h *blockSyncHarness) waitForShutdown(shutdownContext context.Context, bs *BlockSync) {
+	bs.WaitUntilShutdown(shutdownContext)
 }
 
 func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {

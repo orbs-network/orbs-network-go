@@ -160,10 +160,11 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		logger.Info("acceptance network running test")
 		f(tb, ctx, network)
 		cancel()
-		network.WaitUntilShutdown()
-	})
 
-	time.Sleep(10 * time.Millisecond) // give context dependent goroutines time to terminate gracefully
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancelShutdown()
+		network.WaitUntilShutdown(shutdownCtx)
+	})
 }
 
 func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {

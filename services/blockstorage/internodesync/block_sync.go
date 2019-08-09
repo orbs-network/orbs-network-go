@@ -100,7 +100,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
-	bs.SuperviseChan(supervised.GoForever(ctx, logger, func() {
+	bs.SuperviseChan("Node sync state machine", supervised.GoForever(ctx, logger, func() {
 		bs.syncLoop(ctx)
 	}))
 

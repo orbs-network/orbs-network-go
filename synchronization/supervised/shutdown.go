@@ -8,6 +8,7 @@ package supervised
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/scribe/log"
 	"os"
 	"os/signal"
@@ -17,7 +18,7 @@ import (
 )
 
 type ShutdownWaiter interface {
-	WaitUntilShutdown()
+	WaitUntilShutdown(shutdownContext context.Context)
 }
 
 type GracefulShutdowner interface {
@@ -26,32 +27,34 @@ type GracefulShutdowner interface {
 }
 
 type ChanWaiter struct {
-	Closed chan struct{}
+	Closed      chan struct{}
+	description string
 }
 
-func (c *ChanWaiter) WaitUntilShutdown() {
-	<-c.Closed
+func (c *ChanWaiter) WaitUntilShutdown(shutdownContext context.Context) {
+	select {
+	case <-c.Closed:
+	case <-shutdownContext.Done():
+		panic(fmt.Sprintf("failed to shutdown %s before timeout", c.description))
+	}
+
 }
 
 func (c *ChanWaiter) Shutdown() {
 	close(c.Closed)
 }
 
-func chanWaiterFor(ch chan struct{}) *ChanWaiter {
-	return &ChanWaiter{Closed: ch}
-}
-
-func NewChanWaiter() ChanWaiter {
-	return ChanWaiter{Closed: make(chan struct{})}
+func NewChanWaiter(description string) ChanWaiter {
+	return ChanWaiter{Closed: make(chan struct{}), description: description}
 }
 
 type TreeSupervisor struct {
 	supervised []ShutdownWaiter
 }
 
-func (t *TreeSupervisor) WaitUntilShutdown() {
+func (t *TreeSupervisor) WaitUntilShutdown(shutdownContext context.Context) {
 	for _, w := range t.supervised {
-		w.WaitUntilShutdown()
+		w.WaitUntilShutdown(shutdownContext)
 	}
 }
 
@@ -59,20 +62,14 @@ func (t *TreeSupervisor) Supervise(w ShutdownWaiter) {
 	t.supervised = append(t.supervised, w)
 }
 
-func (t *TreeSupervisor) SuperviseChan(ch chan struct{}) {
-	t.supervised = append(t.supervised, chanWaiterFor(ch))
+func (t *TreeSupervisor) SuperviseChan(description string, ch chan struct{}) {
+	t.supervised = append(t.supervised, &ChanWaiter{Closed: ch, description: description})
 }
 
 func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {
 	shutdownContext, cancel := context.WithTimeout(context.Background(), timeout) // give system some time to gracefully finish
 	defer cancel()
 	s.GracefulShutdown(shutdownContext)
-}
-
-func WaitForAllToShutdown(waiters ...ShutdownWaiter) {
-	for _, w := range waiters {
-		w.WaitUntilShutdown()
-	}
 }
 
 func ShutdownAllGracefully(shutdownCtx context.Context, shutdowners ...GracefulShutdowner) {

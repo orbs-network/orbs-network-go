@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
 	"testing"
+	"time"
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
@@ -28,7 +29,10 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	})
 
-	h.waitForShutdown(bs)
+	test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) {
+		h.waitForShutdown(ctx, bs)
+	})
+
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
@@ -63,5 +67,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	})
 
-	h.waitForShutdown(bs)
+	test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) {
+		h.waitForShutdown(ctx, bs)
+	})
 }

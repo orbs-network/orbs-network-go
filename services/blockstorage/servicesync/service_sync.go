@@ -21,7 +21,7 @@ import (
 
 type BlockPairCommitter interface {
 	commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (next primitives.BlockHeight, err error)
-	getServiceName() string
+	GetServiceName() string
 }
 
 type blockSource interface {
@@ -75,7 +75,7 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 }
 
 func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) supervised.ContextEndedChan {
-	ctx = trace.NewContext(ctx, committer.getServiceName())
+	ctx = trace.NewContext(ctx, committer.GetServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
 	return supervised.GoForever(ctx, logger, func() {

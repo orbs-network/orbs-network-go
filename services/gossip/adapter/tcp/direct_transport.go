@@ -242,6 +242,7 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 }
 
 func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
+	t.logger.Info("Shutting down")
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 	for _, client := range t.clientConnections.peers {
@@ -250,13 +251,21 @@ func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
 	t.cancelServer()
 }
 
-func (t *DirectTransport) WaitUntilShutdown() {
+func (t *DirectTransport) WaitUntilShutdown(shutdownContext context.Context) {
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 	for _, client := range t.clientConnections.peers {
-		<-client.closed
+		t.waitFor(shutdownContext, client.closed)
 	}
-	<-t.serverClosed
+	t.waitFor(shutdownContext, t.serverClosed)
+}
+
+func (t *DirectTransport) waitFor(shutdownContext context.Context, closed chan struct{}) {
+	select {
+	case <-closed:
+	case <-shutdownContext.Done():
+		t.logger.Error("failed shutting down within shutdown context")
+	}
 }
 
 func calcPaddingSize(size uint32) uint32 {

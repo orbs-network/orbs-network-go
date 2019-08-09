@@ -16,6 +16,7 @@ import (
 )
 
 type Server struct {
+	supervised.TreeSupervisor
 	service    services.Vault
 	cancelFunc context.CancelFunc
 	httpServer *httpServer
@@ -48,13 +49,11 @@ func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
 		httpServer: httpServer,
 	}
 
+	s.Supervise(httpServer)
+
 	return s
 }
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
 	supervised.ShutdownAllGracefully(shutdownContext, s.httpServer)
-}
-
-func (s *Server) WaitUntilShutdown() {
-	supervised.WaitForAllToShutdown(s.httpServer)
 }

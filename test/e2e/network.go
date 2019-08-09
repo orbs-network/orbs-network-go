@@ -28,26 +28,28 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 const LOCAL_NETWORK_SIZE = 4
 
 type inProcessE2ENetwork struct {
-	nodes []bootstrap.Node
+	supervised.TreeSupervisor
+	nodes []*bootstrap.Node
 }
 
 func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
-	return &inProcessE2ENetwork{bootstrapE2ENetwork()}
+	return bootstrapE2ENetwork()
 }
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
-		supervised.ShutdownAllGracefully(context.TODO(), node)
+		node.GracefulShutdown(context.TODO())
 	}
 
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 }
 
-func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
+func bootstrapE2ENetwork() *inProcessE2ENetwork {
+	net := &inProcessE2ENetwork{}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
@@ -101,8 +103,9 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger)
-
-		nodes = append(nodes, node)
+		net.Supervise(node)
+		net.nodes = append(net.nodes, node)
 	}
-	return nodes
+
+	return net
 }

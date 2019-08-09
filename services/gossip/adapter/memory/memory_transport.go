@@ -33,6 +33,7 @@ type message struct {
 
 type memoryTransport struct {
 	sync.RWMutex
+	supervised.TreeSupervisor
 	peers map[string]*peer
 }
 
@@ -43,7 +44,9 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
+		peer := newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
+		transport.peers[nodeAddress] = peer
+		transport.Supervise(peer)
 	}
 
 	return transport
@@ -54,12 +57,6 @@ func (p *memoryTransport) GracefulShutdown(shutdownContext context.Context) {
 	defer p.Unlock()
 	for _, peer := range p.peers {
 		peer.cancel()
-	}
-}
-
-func (p *memoryTransport) WaitUntilShutdown() {
-	for _, peer := range p.peers {
-		<-peer.closed
 	}
 }
 
@@ -92,11 +89,11 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 }
 
 type peer struct {
+	supervised.TreeSupervisor
 	socket   chan message
 	listener chan adapter.TransportListener
 	logger   log.Logger
 	cancel   context.CancelFunc
-	closed   chan struct{}
 }
 
 func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
@@ -113,7 +110,7 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		cancel:   cancel,
 	}
 
-	p.closed = supervised.GoForever(ctx, logger, func() {
+	p.SuperviseChan("In-memory transport peer", supervised.GoForever(ctx, logger, func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
@@ -121,7 +118,7 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		case <-ctx.Done():
 			// fall through
 		}
-	})
+	}))
 
 	return p
 }

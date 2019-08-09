@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
@@ -47,5 +48,5 @@ func main() {
 
 	supervised.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
 
-	node.WaitUntilShutdown()
+	node.WaitUntilShutdown(context.Background())
 }

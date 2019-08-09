@@ -82,6 +82,9 @@ func (c *clientConnection) disconnect() chan struct{} {
 
 func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
 	for {
+		if parentCtx.Err() != nil {
+			return // because otherwise the continue statement below could prevent us from ever shutting down
+		}
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 

@@ -83,8 +83,8 @@ func (t *TamperingTransport) GracefulShutdown(shutdownContext context.Context) {
 	t.nested.GracefulShutdown(shutdownContext)
 }
 
-func (t *TamperingTransport) WaitUntilShutdown() {
-	t.nested.WaitUntilShutdown()
+func (t *TamperingTransport) WaitUntilShutdown(shutdownContext context.Context) {
+	t.nested.WaitUntilShutdown(shutdownContext)
 }
 
 func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {

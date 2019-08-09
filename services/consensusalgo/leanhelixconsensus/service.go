@@ -115,7 +115,7 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		s.SuperviseChan(supervised.GoForever(ctx, logger, func() {
+		s.SuperviseChan("Lean Helix main loop", supervised.GoForever(ctx, logger, func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
 		}))

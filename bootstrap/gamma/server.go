@@ -113,5 +113,5 @@ func Main() {
 
 	supervised.NewShutdownListener(gamma.logger, gamma).ListenToOSShutdownSignal()
 
-	gamma.WaitUntilShutdown()
+	gamma.WaitUntilShutdown(context.Background())
 }

@@ -59,10 +59,10 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 		messageDispatcher: dispatcher,
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
-	s.SuperviseChan(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
-	s.SuperviseChan(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
-	s.SuperviseChan(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
-	s.SuperviseChan(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
+	s.SuperviseChan("Transaction Relay gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
+	s.SuperviseChan("Block Sync gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
+	s.SuperviseChan("Lean Helix gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
+	s.SuperviseChan("Benchmark Consensus gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
 
 	return s
 }

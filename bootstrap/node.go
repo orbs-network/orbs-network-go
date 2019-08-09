@@ -23,17 +23,13 @@ import (
 	"time"
 )
 
-type Node interface {
-	GracefulShutdown(shutdownContext context.Context)
-	WaitUntilShutdown()
-}
-
-type node struct {
+type Node struct {
 	supervised.TreeSupervisor
 	logic      NodeLogic
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
 	transport  *tcp.DirectTransport
+	logger     log.Logger
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -42,7 +38,7 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	return metricRegistry
 }
 
-func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
+func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
@@ -61,21 +57,23 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
-	n := &node{
+	n := &Node{
+		logger:     nodeLogger,
 		cancelFunc: ctxCancel,
 		logic:      nodeLogic,
 		transport:  transport,
 		httpServer: httpServer,
 	}
 
-	n.SuperviseChan(ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
+	n.SuperviseChan("Ethereum connector status reporter", ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
 	n.Supervise(nodeLogic)
 	n.Supervise(transport)
 	n.Supervise(httpServer)
 	return n
 }
 
-func (n node) GracefulShutdown(shutdownContext context.Context) {
+func (n Node) GracefulShutdown(shutdownContext context.Context) {
+	n.logger.Info("Shutting down")
 	n.cancelFunc()
 	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
 }
