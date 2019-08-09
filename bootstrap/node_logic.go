@@ -43,9 +43,8 @@ type NodeLogic interface {
 
 type nodeLogic struct {
 	synchronization.TreeSupervisor
-	publicApi       services.PublicApi
-	consensusAlgos  []services.ConsensusAlgo
-	transactionPool *transactionpool.Service
+	publicApi      services.PublicApi
+	consensusAlgos []services.ConsensusAlgo
 }
 
 func NewNodeLogic(
@@ -97,11 +96,11 @@ func NewNodeLogic(
 	logger.Info("Node started")
 
 	node := &nodeLogic{
-		publicApi:       publicApiService,
-		consensusAlgos:  consensusAlgos,
-		transactionPool: transactionPoolService,
+		publicApi:      publicApiService,
+		consensusAlgos: consensusAlgos,
 	}
 
+	node.Supervise(gossipService)
 	node.SuperviseChan(metric.NewSystemReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metricRegistry.PeriodicallyRotate(ctx, logger))

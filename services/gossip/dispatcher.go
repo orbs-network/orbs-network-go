@@ -105,13 +105,13 @@ func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmess
 
 }
 
-func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) {
+func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) supervised.ContextEndedChan {
 	topicChannel, err := d.get(topic)
 	if err != nil {
 		logger.Error("no message channel found", log.Error(err))
 		panic(err)
 	} else {
-		topicChannel.run(ctx, logger, handler)
+		return topicChannel.run(ctx, logger, handler)
 	}
 }
 
