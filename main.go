@@ -12,7 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"os"
 )
 
@@ -45,7 +45,7 @@ func main() {
 		logger,
 	)
 
-	synchronization.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
+	supervised.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
 
 	node.WaitUntilShutdown()
 }

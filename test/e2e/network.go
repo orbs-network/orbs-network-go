@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -40,7 +40,7 @@ func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
-		synchronization.ShutdownAllGracefully(context.TODO(), node)
+		supervised.ShutdownAllGracefully(context.TODO(), node)
 	}
 
 	cleanNativeProcessorCache()

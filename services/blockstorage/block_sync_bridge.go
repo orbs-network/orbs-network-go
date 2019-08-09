@@ -17,7 +17,7 @@ import (
 )
 
 // TODO(v1): this function should return an error
-func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
+func (s *Service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	// the source of truth for the last committed block is persistence
 	lastCommittedBlock, err := s.persistence.GetLastBlock()
@@ -45,14 +45,14 @@ func (s *service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 	}
 }
 
-func (s *service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.nodeSync != nil {
 		s.nodeSync.HandleBlockAvailabilityResponse(ctx, input)
 	}
 	return nil, nil
 }
 
-func (s *service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	if s.nodeSync != nil {
 		s.nodeSync.HandleBlockSyncResponse(ctx, input)
 	}

@@ -4,11 +4,10 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package synchronization
+package supervised
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"os"
 	"os/signal"
@@ -100,7 +99,7 @@ func (n *OSShutdownListener) ListenToOSShutdownSignal() {
 	// if waiting for shutdown, listen for sigint and sigterm
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	supervised.GoOnce(n.Logger, func() {
+	GoOnce(n.Logger, func() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
 

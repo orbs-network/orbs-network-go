@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
-	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -29,8 +28,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	})
 
-	shutdown := h.waitForShutdown(bs)
-	require.True(t, shutdown, "expecting state to be set to nil (=shutdown)")
+	h.waitForShutdown(bs)
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
@@ -65,6 +63,5 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 	})
 
-	shutdown := h.waitForShutdown(bs)
-	require.True(t, shutdown, "expecting state to be set to nil (=shutdown)")
+	h.waitForShutdown(bs)
 }

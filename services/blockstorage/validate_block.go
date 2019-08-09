@@ -19,7 +19,7 @@ import (
 )
 
 // TODO Implement optimization for full structural validation here (https://github.com/orbs-network/orbs-network-go/issues/684)
-func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+func (s *Service) ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if protocolVersionError := s.validateProtocolVersion(input.BlockPair); protocolVersionError != nil {
@@ -50,7 +50,7 @@ func (s *service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
-func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *protocol.TransactionsBlockHeader, rsBlockHeader *protocol.ResultsBlockHeader, lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
+func (s *Service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *protocol.TransactionsBlockHeader, rsBlockHeader *protocol.ResultsBlockHeader, lastCommittedBlock *protocol.BlockPairContainer) (bool, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	currentBlockHeight := getBlockHeight(lastCommittedBlock)
 	attemptedBlockHeight := txBlockHeader.BlockHeight()
@@ -86,7 +86,7 @@ func (s *service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *
 	return true, nil
 }
 
-func (s *service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
+func (s *Service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
 	expectedBlockHeight := getBlockHeight(lastCommittedBlock) + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
@@ -103,7 +103,7 @@ func (s *service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairCo
 	return nil
 }
 
-func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer) error {
+func (s *Service) validateProtocolVersion(blockPair *protocol.BlockPairContainer) error {
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
@@ -123,7 +123,7 @@ func (s *service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	return nil
 }
 
-func (s *service) notifyConsensusAlgos(
+func (s *Service) notifyConsensusAlgos(
 	ctx context.Context,
 	prevBlockPair *protocol.BlockPairContainer,
 	blockPair *protocol.BlockPairContainer,

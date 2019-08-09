@@ -30,19 +30,19 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 )
 
 type NodeLogic interface {
-	synchronization.ShutdownWaiter
+	supervised.ShutdownWaiter
 	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
-	synchronization.TreeSupervisor
+	supervised.TreeSupervisor
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -101,6 +101,8 @@ func NewNodeLogic(
 	}
 
 	node.Supervise(gossipService)
+	node.Supervise(blockStorageService)
+
 	node.SuperviseChan(metric.NewSystemReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
 	node.SuperviseChan(metricRegistry.PeriodicallyRotate(ctx, logger))

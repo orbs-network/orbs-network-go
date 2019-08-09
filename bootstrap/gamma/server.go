@@ -11,7 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"os"
 	"strconv"
 
@@ -22,7 +22,7 @@ import (
 )
 
 type Server struct {
-	synchronization.TreeSupervisor
+	supervised.TreeSupervisor
 	network    *inmemory.Network
 	clock      *adapter.AdjustableClock
 	cancelFunc context.CancelFunc
@@ -83,7 +83,7 @@ func StartGammaServer(config ServerConfig) *Server {
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {
 	s.cancelFunc()
-	synchronization.ShutdownAllGracefully(shutdownContext, s.httpServer)
+	supervised.ShutdownAllGracefully(shutdownContext, s.httpServer)
 }
 
 var (
@@ -111,7 +111,7 @@ func Main() {
 		Silent:             false,
 	})
 
-	synchronization.NewShutdownListener(gamma.logger, gamma).ListenToOSShutdownSignal()
+	supervised.NewShutdownListener(gamma.logger, gamma).ListenToOSShutdownSignal()
 
 	gamma.WaitUntilShutdown()
 }

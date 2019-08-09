@@ -18,7 +18,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"time"
 )
@@ -29,7 +29,7 @@ type Node interface {
 }
 
 type node struct {
-	synchronization.TreeSupervisor
+	supervised.TreeSupervisor
 	logic      NodeLogic
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
@@ -77,5 +77,5 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 
 func (n node) GracefulShutdown(shutdownContext context.Context) {
 	n.cancelFunc()
-	synchronization.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
+	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
 }
