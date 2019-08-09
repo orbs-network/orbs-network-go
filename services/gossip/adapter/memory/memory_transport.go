@@ -31,12 +31,6 @@ type message struct {
 	traceContext *trace.Context
 }
 
-type peer struct {
-	socket   chan message
-	listener chan adapter.TransportListener
-	logger   log.Logger
-}
-
 type memoryTransport struct {
 	sync.RWMutex
 	peers map[string]*peer
@@ -53,6 +47,20 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	}
 
 	return transport
+}
+
+func (p *memoryTransport) GracefulShutdown(shutdownContext context.Context) {
+	p.Lock()
+	defer p.Unlock()
+	for _, peer := range p.peers {
+		peer.cancel()
+	}
+}
+
+func (p *memoryTransport) WaitUntilShutdown() {
+	for _, peer := range p.peers {
+		<-peer.closed
+	}
 }
 
 func (p *memoryTransport) RegisterListener(listener adapter.TransportListener, nodeAddress primitives.NodeAddress) {
@@ -83,7 +91,16 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return nil
 }
 
-func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
+type peer struct {
+	socket   chan message
+	listener chan adapter.TransportListener
+	logger   log.Logger
+	cancel   context.CancelFunc
+	closed   chan struct{}
+}
+
+func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
+	ctx, cancel := context.WithCancel(parent)
 	p := &peer{
 		// channel is buffered on purpose, otherwise the whole network is synced on transport
 		// we also multiply by number of peers because we have one logical "socket" for combined traffic from all peers together
@@ -93,6 +110,8 @@ func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 		socket:   make(chan message, SEND_QUEUE_MAX_MESSAGES*totalPeers),
 		listener: make(chan adapter.TransportListener),
 		logger:   logger,
+		cancel:   cancel,
+		closed:   make(chan struct{}),
 	}
 
 	supervised.GoForever(ctx, logger, func() {
@@ -101,7 +120,11 @@ func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 		case l := <-p.listener:
 			p.acceptUsing(ctx, l)
 		case <-ctx.Done():
-			return
+			// fall through
+		}
+
+		if ctx.Err() != nil { // so that it gets called regardless if ctx.Done fired
+			close(p.closed)
 		}
 	})
 

@@ -9,6 +9,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 )
@@ -21,6 +22,7 @@ type TransportData struct {
 }
 
 type Transport interface {
+	synchronization.ShutdownWaiter
 	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
 	Send(ctx context.Context, data *TransportData) error // TODO don't return error. misleading meaning. use panics instead
 }

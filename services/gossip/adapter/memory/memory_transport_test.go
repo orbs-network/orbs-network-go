@@ -25,6 +25,8 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 	test.WithContext(func(parentContext context.Context) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(parentContext, log.DefaultTestingLogger(t), makeNetwork(address))
+		defer shutdown(parentContext, transport)
+
 		listener := testkit.ListenTo(transport, address)
 
 		childContext, cancel := context.WithCancel(parentContext) // this is required so that the parent context does not get polluted
@@ -48,6 +50,7 @@ func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
+		defer shutdown(ctx, transport)
 
 		// sending without a listener - nobody is receiving
 		transport.Send(ctx, &adapter.TransportData{
@@ -62,6 +65,7 @@ func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
+		defer shutdown(ctx, transport)
 
 		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
@@ -80,6 +84,7 @@ func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLoggerAllowingErrors(t, "memory transport send buffer is full"), makeNetwork(address))
+		defer shutdown(ctx, transport)
 
 		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
@@ -101,4 +106,9 @@ func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.Validato
 		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(address)
 	}
 	return genesisValidatorNodes
+}
+
+func shutdown(ctx context.Context, transport *memoryTransport) {
+	transport.GracefulShutdown(ctx)
+	transport.WaitUntilShutdown()
 }

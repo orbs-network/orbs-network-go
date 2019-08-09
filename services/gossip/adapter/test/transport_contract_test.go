@@ -56,6 +56,10 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			for _, t := range c.transports {
+				t.GracefulShutdown(ctx)
+			}
 		})
 	}
 }
@@ -78,6 +82,10 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			for _, t := range c.transports {
+				t.GracefulShutdown(ctx)
+			}
 		})
 	}
 }
