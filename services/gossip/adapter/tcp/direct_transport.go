@@ -63,6 +63,7 @@ type DirectTransport struct {
 	metrics        *metrics
 	metricRegistry metric.Registry
 	serverClosed   chan struct{}
+	cancelServer   context.CancelFunc
 }
 
 func getMetrics(registry metric.Registry) *metrics {
@@ -79,7 +80,9 @@ func getMetrics(registry metric.Registry) *metrics {
 	}
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *DirectTransport {
+func NewDirectTransport(parent context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *DirectTransport {
+	serverCtx, cancelServer := context.WithCancel(parent)
+
 	t := &DirectTransport{
 		config:         config,
 		logger:         logger.WithTags(LogTag),
@@ -91,16 +94,20 @@ func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig
 		metrics: getMetrics(registry),
 
 		serverClosed: make(chan struct{}),
+		cancelServer: cancelServer,
 	}
 
 	// server goroutine
-	supervised.GoForever(ctx, t.logger, func() {
-		t.serverMainLoop(ctx, t.config.GossipListenPort())
+	supervised.GoForever(serverCtx, t.logger, func() {
+		t.serverMainLoop(serverCtx, t.config.GossipListenPort())
+		if serverCtx.Err() != nil {
+			close(t.serverClosed) //TODO move loop to server struct
+		}
 	})
 
 	// client goroutines
 	for peerNodeAddress, peer := range t.config.GossipPeers() {
-		t.connectForever(ctx, peerNodeAddress, peer)
+		t.connectForever(parent, peerNodeAddress, peer)
 	}
 
 	return t
@@ -232,6 +239,24 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 		}
 	}
 	return true
+}
+
+func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for _, client := range t.clientConnections.peers {
+		client.disconnect()
+	}
+	t.cancelServer()
+}
+
+func (t *DirectTransport) WaitUntilShutdown() {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for _, client := range t.clientConnections.peers {
+		<-client.closed
+	}
+	<-t.serverClosed
 }
 
 func calcPaddingSize(size uint32) uint32 {

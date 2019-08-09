@@ -60,7 +60,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 
 	return &node{
 		cancelFunc: ctxCancel,
-		waiters:    []ShutdownWaiter{httpServer},
+		waiters:    []ShutdownWaiter{httpServer, transport},
 	}
 }
 
