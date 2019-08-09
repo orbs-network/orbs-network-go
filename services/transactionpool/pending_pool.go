@@ -190,7 +190,9 @@ func (p *pendingTxPool) clearTransactionsOlderThan(ctx context.Context, timestam
 
 		tx := e.Value.(*protocol.SignedTransaction)
 
+		p.lock.Lock()
 		e = e.Prev()
+		p.lock.Unlock()
 
 		if tx.Transaction().Timestamp() < timestamp {
 			p.remove(ctx, digest.CalcTxHash(tx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
