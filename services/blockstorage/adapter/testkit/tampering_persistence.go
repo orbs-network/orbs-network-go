@@ -8,24 +8,26 @@ package testkit
 
 import (
 	"context"
-	"errors"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
 type TamperingInMemoryBlockPersistence interface {
 	adapter.BlockPersistence
-	FailNextBlocks()
+	ResetTampering()
+	TamperWithBlockWrites(maybeWriteFailedBlocks chan<- *protocol.BlockPairContainer)
 	WaitForTransaction(ctx context.Context, txHash primitives.Sha256) primitives.BlockHeight
 }
 
 type tamperingBlockPersistence struct {
 	memory.InMemoryBlockPersistence
-	failNextBlocks bool
+	writeTamperingEnabled bool
+	maybeTamperedBlocks   chan<- *protocol.BlockPairContainer
 
 	txTracker *txTracker
 }
@@ -42,13 +44,22 @@ func (bp *tamperingBlockPersistence) WaitForTransaction(ctx context.Context, txH
 	return bp.txTracker.waitForTransaction(ctx, txHash)
 }
 
-func (bp *tamperingBlockPersistence) FailNextBlocks() {
-	bp.failNextBlocks = true
+func (bp *tamperingBlockPersistence) ResetTampering() {
+	bp.writeTamperingEnabled = false
+	bp.maybeTamperedBlocks = nil
+}
+
+func (bp *tamperingBlockPersistence) TamperWithBlockWrites(maybeTamperedBlocks chan<- *protocol.BlockPairContainer) {
+	bp.maybeTamperedBlocks = maybeTamperedBlocks
+	bp.writeTamperingEnabled = true
 }
 
 func (bp *tamperingBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
-	if bp.failNextBlocks {
-		return false, 0, errors.New("could not write a block")
+	if bp.writeTamperingEnabled {
+		if mtb := bp.maybeTamperedBlocks; mtb != nil {
+			mtb <- blockPair
+		}
+		return false, 0, errors.Errorf("intentionally failing (tampering with) WriteNextBlock() height %d", blockPair.ResultsBlock.Header.BlockHeight())
 	}
 
 	added, pHeight, err := bp.InMemoryBlockPersistence.WriteNextBlock(blockPair)
