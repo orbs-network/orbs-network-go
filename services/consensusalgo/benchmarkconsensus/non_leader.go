@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func (s *service) nonLeaderHandleCommit(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+func (s *Service) nonLeaderHandleCommit(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
 	err := s.nonLeaderValidateBlock(blockPair, lastCommittedBlockHeight, lastCommittedBlock)
@@ -34,7 +34,7 @@ func (s *service) nonLeaderHandleCommit(ctx context.Context, blockPair *protocol
 	return nil
 }
 
-func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) error {
+func (s *Service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) error {
 	// block height
 	blockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 	if blockHeight != blockPair.ResultsBlock.Header.BlockHeight() {
@@ -58,7 +58,7 @@ func (s *service) nonLeaderValidateBlock(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-func (s *service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protocol.BlockPairContainer, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) error {
+func (s *Service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protocol.BlockPairContainer, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// save the block to block storage

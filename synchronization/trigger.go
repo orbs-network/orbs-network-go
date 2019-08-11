@@ -14,17 +14,12 @@ import (
 	"time"
 )
 
-type Trigger interface {
-	TimesTriggered() uint64
-	Stop()
-}
-
 type Telemetry struct {
 	timesTriggered uint64
 }
 
 // the trigger is coupled with supervized package, this feels okay for now
-type periodicalTrigger struct {
+type PeriodicalTrigger struct {
 	d       time.Duration
 	f       func()
 	s       func()
@@ -33,11 +28,12 @@ type periodicalTrigger struct {
 	ticker  *time.Ticker
 	metrics *Telemetry
 	wgSync  sync.WaitGroup
+	Closed  supervised.ContextEndedChan
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.Errorer, trigger func(), onStop func()) Trigger {
+func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
-	t := &periodicalTrigger{
+	t := &PeriodicalTrigger{
 		ticker:  nil,
 		d:       interval,
 		f:       trigger,
@@ -51,13 +47,13 @@ func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger su
 	return t
 }
 
-func (t *periodicalTrigger) TimesTriggered() uint64 {
+func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 	return atomic.LoadUint64(&t.metrics.timesTriggered)
 }
 
-func (t *periodicalTrigger) run(ctx context.Context) {
+func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	supervised.GoForever(ctx, t.logger, func() {
+	t.Closed = supervised.GoForever(ctx, t.logger, func() {
 		t.wgSync.Add(1)
 		defer t.wgSync.Done()
 		for {
@@ -76,7 +72,7 @@ func (t *periodicalTrigger) run(ctx context.Context) {
 	})
 }
 
-func (t *periodicalTrigger) Stop() {
+func (t *PeriodicalTrigger) Stop() {
 	t.cancel()
 	// we want ticker stop to process before we return
 	t.wgSync.Wait()

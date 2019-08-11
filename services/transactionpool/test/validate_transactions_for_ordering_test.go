@@ -18,8 +18,9 @@ import (
 )
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		require.NoError(t,
 			h.validateTransactionsForOrdering(ctx, 2, builders.Transaction().Build(), builders.Transaction().Build()),
@@ -28,8 +29,9 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 }
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
@@ -48,8 +50,9 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 
@@ -63,8 +66,9 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		invalidTx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
@@ -79,8 +83,9 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 }
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		require.EqualErrorf(t,
 			h.validateTransactionsForOrdering(ctx, 666, builders.Transaction().Build()),

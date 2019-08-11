@@ -17,6 +17,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -31,7 +32,8 @@ import (
 )
 
 type harness struct {
-	txpool                  services.TransactionPool
+	supervised.TreeSupervisor
+	txpool                  *transactionpool.Service
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
 	signer                  signer.Signer
@@ -237,6 +239,7 @@ func (h *harness) start(ctx context.Context) *harness {
 	service.RegisterTransactionResultsHandler(h.trh)
 	h.txpool = service
 	h.fastForwardTo(ctx, 1)
+	h.Supervise(service)
 	return h
 }
 
