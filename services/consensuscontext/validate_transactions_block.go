@@ -215,11 +215,11 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		}
 	}
 
-	if err := validateTransactionsBlockTriggerCompliance(ctx, s.config, input.TransactionsBlock); err != nil {
+	if err := validateTransactionsBlockTriggerCompliance(ctx, s.config, input.TransactionsBlock); err != nil { // trigger validator must be before ordering validator
 		return nil, err
 	}
 
-	if err := validateTxTransactionOrdering(ctx, s.config, s.transactionPool.ValidateTransactionsForOrdering, input.TransactionsBlock); err != nil {
+	if err := validateTxTransactionOrdering(ctx, s.config, s.transactionPool.ValidateTransactionsForOrdering, input.TransactionsBlock); err != nil { // trigger validator must be before ordering validtaor
 		return nil, err
 	}
 
