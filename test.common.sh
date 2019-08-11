@@ -61,5 +61,11 @@ go_test_junit_report () {
         fi
 
         exit $EXIT_CODE
+    else
+        echo "**************************"
+        echo "Tests passed!"
+        echo "JUnit-style XML for this run generated at: ${OUT_DIR}/results.xml"
+        echo "Go test output saved for reference at: ${OUT_DIR}/test.out"
+        echo "**************************"
     fi
 }
