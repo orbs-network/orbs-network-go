@@ -136,7 +136,9 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 		if blockPair == nil {
 			return nil
 		}
-		if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
+		incomingBlockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+		if incomingBlockHeight > lastCommittedBlockHeight {
+			s.logger.Info("updating last committed block height from HandleBlockConsensus", logfields.BlockHeight(incomingBlockHeight))
 			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
 			if err != nil {
 				return err
