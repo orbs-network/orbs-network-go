@@ -24,7 +24,9 @@ import (
 )
 
 func (s *Service) leaderConsensusRoundRunLoop(parent context.Context) {
-	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
+	if _, block := s.getLastCommittedBlock(); block == nil {
+		s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
+	}
 	for {
 		start := time.Now()
 		ctx := trace.NewContext(parent, "BenchmarkConsensus.Tick")
