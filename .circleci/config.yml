@@ -153,7 +153,7 @@ jobs:
 
   deploy_new_chain_pr_only:
     docker:
-    - image: circleci/golang:1.11.4
+    - image: itamararjuan/golang_with_node_aws
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
@@ -186,6 +186,9 @@ workflows:
           requires:
             - e2e
             - tests
+          filters:
+            branches:
+              ignore: master
       - e2e:
           filters:
             tags:
