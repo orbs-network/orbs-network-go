@@ -162,7 +162,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 		f(tb, ctx, network)
 		cancel()
 
-		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 1000*time.Millisecond)
 		defer cancelShutdown()
 		network.WaitUntilShutdown(shutdownCtx)
 	})
