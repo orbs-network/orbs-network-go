@@ -9,6 +9,8 @@ package supervised
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/scribe/log"
 	"os"
 	"os/signal"
@@ -109,7 +111,7 @@ func (n *OSShutdownListener) ListenToOSShutdownSignal() {
 	// if waiting for shutdown, listen for sigint and sigterm
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	GoOnce(n.Logger, func() {
+	govnr.GoOnce(logfields.GovnrErrorer(n.Logger), func() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
 

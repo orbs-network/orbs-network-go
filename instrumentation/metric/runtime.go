@@ -8,8 +8,8 @@ package metric
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"runtime"
 	"time"
@@ -35,7 +35,7 @@ type runtimeReporter struct {
 
 const RUNTIME_QUERY_INTERVAL = 5 * time.Second
 
-func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) supervised.ContextEndedChan {
+func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) govnr.ContextEndedChan {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
 			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc.Bytes"),
@@ -55,7 +55,7 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.L
 	return r.startReporting(ctx, logger)
 }
 
-func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) supervised.ContextEndedChan {
+func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ContextEndedChan {
 	return synchronization.NewPeriodicalTrigger(ctx, RUNTIME_QUERY_INTERVAL, logger, func() {
 		r.reportRuntimeMetrics()
 	}, nil).Closed
