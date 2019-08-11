@@ -9,7 +9,6 @@ package synchronization
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -27,8 +26,8 @@ type PeriodicalTrigger struct {
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 	metrics *Telemetry
-	wgSync  sync.WaitGroup
 	Closed  supervised.ContextEndedChan
+	stopped chan struct{}
 }
 
 func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger supervised.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
@@ -41,6 +40,7 @@ func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger su
 		cancel:  cancel,
 		logger:  logger,
 		metrics: &Telemetry{},
+		stopped: make(chan struct{}),
 	}
 
 	t.run(subCtx)
@@ -54,8 +54,6 @@ func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
 	t.Closed = supervised.GoForever(ctx, t.logger, func() {
-		t.wgSync.Add(1)
-		defer t.wgSync.Done()
 		for {
 			select {
 			case <-t.ticker.C:
@@ -63,6 +61,7 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 				atomic.AddUint64(&t.metrics.timesTriggered, 1)
 			case <-ctx.Done():
 				t.ticker.Stop()
+				close(t.stopped)
 				if t.s != nil {
 					go t.s()
 				}
@@ -75,5 +74,5 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 func (t *PeriodicalTrigger) Stop() {
 	t.cancel()
 	// we want ticker stop to process before we return
-	t.wgSync.Wait()
+	<-t.stopped
 }
