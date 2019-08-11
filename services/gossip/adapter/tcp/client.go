@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -70,7 +71,7 @@ func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
-	c.closed = govnr.GoForever(ctx, c.logger, func() {
+	c.closed = govnr.GoForever(ctx, logfields.GovnrErrorer(c.logger), func() {
 		c.clientMainLoop(ctx)
 	})
 }

@@ -9,6 +9,7 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -40,7 +41,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
-	govnr.GoOnce(logger, func() {
+	govnr.GoOnce(logfields.GovnrErrorer(logger), func() {
 		shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
 		defer cancel()
 		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)

@@ -95,7 +95,7 @@ func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransactio
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
-	f.closed = govnr.GoForever(parent, f.logger, func() {
+	f.closed = govnr.GoForever(parent, logfields.GovnrErrorer(f.logger), func() {
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())

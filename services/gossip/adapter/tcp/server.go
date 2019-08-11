@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/scribe/log"
@@ -79,7 +80,7 @@ func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort u
 			continue
 		}
 		t.metrics.incomingConnectionAcceptSuccesses.Inc()
-		govnr.GoOnce(t.logger, func() {
+		govnr.GoOnce(logfields.GovnrErrorer(t.logger), func() {
 			t.serverHandleIncomingConnection(ctx, conn)
 		})
 	}

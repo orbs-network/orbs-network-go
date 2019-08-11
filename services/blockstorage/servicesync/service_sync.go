@@ -78,7 +78,7 @@ func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSou
 	ctx = trace.NewContext(ctx, committer.GetServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
-	return govnr.GoForever(ctx, logger, func() {
+	return govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
 		var height primitives.BlockHeight
 		var err error
 		for err == nil {
