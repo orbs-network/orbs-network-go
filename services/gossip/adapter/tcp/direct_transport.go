@@ -103,6 +103,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	supervised.GoForever(serverCtx, t.logger, func() {
 		t.serverMainLoop(serverCtx, config.GossipListenPort())
 		if serverCtx.Err() != nil {
+			t.logger.Info("TCP transport server has shut down")
 			close(t.serverClosed) //TODO move loop to server struct
 		}
 	})

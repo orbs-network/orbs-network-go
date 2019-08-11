@@ -58,10 +58,7 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
 
-			for _, t := range c.transports {
-				t.GracefulShutdown(ctx)
-				t.WaitUntilShutdown(ctx)
-			}
+			c.shutdownAll(ctx)
 
 			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
@@ -88,10 +85,7 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
 
-			for _, t := range c.transports {
-				t.GracefulShutdown(ctx)
-				t.WaitUntilShutdown(ctx)
-			}
+			c.shutdownAll(ctx)
 
 			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
@@ -215,4 +209,13 @@ func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, 
 		return true
 
 	})
+}
+
+func (c *transportContractContext) shutdownAll(ctx context.Context) {
+	for _, t := range c.transports {
+		t.GracefulShutdown(ctx)
+	}
+	for _, t := range c.transports {
+		t.WaitUntilShutdown(ctx)
+	}
 }
