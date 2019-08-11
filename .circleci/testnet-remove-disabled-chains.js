@@ -15,9 +15,7 @@ const fs = require('fs');
 const configFilePath = path.join(process.cwd(), 'config.json');
 const configuration = require(configFilePath);
 
-configuration.chains = configuration.chains.filter(chain => {
-    return !'Disabled' in chain;
-});
+configuration.chains = configuration.chains.filter(chain => !chain.Disabled);
 
 fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
 
