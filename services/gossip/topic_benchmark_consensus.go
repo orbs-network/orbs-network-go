@@ -18,14 +18,14 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
+func (s *Service) RegisterBenchmarkConsensusHandler(handler gossiptopics.BenchmarkConsensusHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
 	s.handlers.benchmarkConsensusHandlers = append(s.handlers.benchmarkConsensusHandlers, handler)
 }
 
-func (s *service) receivedBenchmarkConsensusMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBenchmarkConsensusMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BenchmarkConsensus() {
 	case consensus.BENCHMARK_CONSENSUS_COMMIT:
 		s.receivedBenchmarkConsensusCommit(ctx, header, payloads)
@@ -34,7 +34,7 @@ func (s *service) receivedBenchmarkConsensusMessage(ctx context.Context, header 
 	}
 }
 
-func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommitInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:              gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus: consensus.BENCHMARK_CONSENSUS_COMMIT,
@@ -54,7 +54,7 @@ func (s *service) BroadcastBenchmarkConsensusCommit(ctx context.Context, input *
 	})
 }
 
-func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBenchmarkConsensusCommit(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	message, err := codec.DecodeBenchmarkConsensusCommitMessage(payloads)
 	if err != nil {
@@ -73,7 +73,7 @@ func (s *service) receivedBenchmarkConsensusCommit(ctx context.Context, header *
 	}
 }
 
-func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) SendBenchmarkConsensusCommitted(ctx context.Context, input *gossiptopics.BenchmarkConsensusCommittedInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS,
 		BenchmarkConsensus:     consensus.BENCHMARK_CONSENSUS_COMMITTED,
@@ -94,7 +94,7 @@ func (s *service) SendBenchmarkConsensusCommitted(ctx context.Context, input *go
 	})
 }
 
-func (s *service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBenchmarkConsensusCommitted(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBenchmarkConsensusCommittedMessage(payloads)
 	if err != nil {
 		return

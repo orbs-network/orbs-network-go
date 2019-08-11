@@ -11,23 +11,26 @@ import (
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"os"
 	"strconv"
 
-	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
 )
 
-type GammaServer struct {
-	bootstrap.OrbsProcess
-	network *inmemory.Network
-	clock   *adapter.AdjustableClock
+type Server struct {
+	supervised.TreeSupervisor
+	network    *inmemory.Network
+	clock      *adapter.AdjustableClock
+	cancelFunc context.CancelFunc
+	httpServer *httpserver.HttpServer
+	logger     log.Logger
 }
 
-type GammaServerConfig struct {
+type ServerConfig struct {
 	ServerAddress      string
 	Profiling          bool
 	OverrideConfigJson string
@@ -50,7 +53,7 @@ func getLogger(silent bool) log.Logger {
 		)
 }
 
-func StartGammaServer(config GammaServerConfig) *GammaServer {
+func StartGammaServer(config ServerConfig) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	rootLogger := getLogger(config.Silent)
 
@@ -62,19 +65,25 @@ func StartGammaServer(config GammaServerConfig) *GammaServer {
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
 		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
 
-	s := &GammaServer{
-		OrbsProcess: bootstrap.NewOrbsProcess(rootLogger, cancel, httpServer),
-		network:     network,
-		clock:       clock,
+	s := &Server{
+		network:    network,
+		clock:      clock,
+		cancelFunc: cancel,
+		httpServer: httpServer,
+		logger:     rootLogger,
 	}
 
 	s.addGammaHandlers(httpServer.Router())
 
+	s.Supervise(httpServer)
+	s.Supervise(network)
+
 	return s
 }
 
-func (n *GammaServer) Port() int {
-	return n.HttpServer.Port()
+func (s *Server) GracefulShutdown(shutdownContext context.Context) {
+	s.cancelFunc()
+	supervised.ShutdownAllGracefully(shutdownContext, s.httpServer)
 }
 
 var (
@@ -99,14 +108,17 @@ func Main(listening chan<- int) {
 	}
 	var serverAddress = ":" + requestedPort
 
-	server := StartGammaServer(GammaServerConfig{
+	gamma := StartGammaServer(ServerConfig{
 		ServerAddress:      serverAddress,
 		Profiling:          *profiling,
 		OverrideConfigJson: *overrideConfigJson,
 		Silent:             false,
 	})
+
+	supervised.NewShutdownListener(gamma.logger, gamma).ListenToOSShutdownSignal()
 	if listening != nil {
-		listening <- server.Port()
+		listening <- gamma.httpServer.Port()
 	}
-	server.WaitUntilShutdown()
+	gamma.WaitUntilShutdown(context.Background())
+
 }

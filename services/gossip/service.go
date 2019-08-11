@@ -11,9 +11,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 	"sync"
@@ -34,7 +34,9 @@ type gossipListeners struct {
 	blockSyncHandlers          []gossiptopics.BlockSyncHandler
 }
 
-type service struct {
+type Service struct {
+	supervised.TreeSupervisor
+
 	config          Config
 	logger          log.Logger
 	transport       adapter.Transport
@@ -44,28 +46,28 @@ type service struct {
 	messageDispatcher *gossipMessageDispatcher
 }
 
-func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) services.Gossip {
+func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *Service {
 	logger := parent.WithTags(LogTag)
-	s := &service{
+	dispatcher := newMessageDispatcher(metricRegistry)
+	s := &Service{
 		transport:       transport,
 		config:          config,
 		logger:          logger,
 		handlers:        gossipListeners{},
 		headerValidator: newHeaderValidator(config, parent),
 
-		messageDispatcher: newMessageDispatcher(metricRegistry),
+		messageDispatcher: dispatcher,
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
-
-	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage)
-	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage)
-	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage)
-	s.messageDispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage)
+	s.SuperviseChan("Transaction Relay gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
+	s.SuperviseChan("Block Sync gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
+	s.SuperviseChan("Lean Helix gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
+	s.SuperviseChan("Benchmark Consensus gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
 
 	return s
 }
 
-func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
+func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
 	select {
 	case <-ctx.Done():
 		return
