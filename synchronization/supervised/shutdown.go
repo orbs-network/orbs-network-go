@@ -26,44 +26,58 @@ type GracefulShutdowner interface {
 	GracefulShutdown(shutdownContext context.Context)
 }
 
-type ChanWaiter struct {
-	Closed      chan struct{}
+type ChanShutdownWaiter struct {
+	closed      chan struct{}
 	description string
 }
 
-func (c *ChanWaiter) WaitUntilShutdown(shutdownContext context.Context) {
+func (c *ChanShutdownWaiter) WaitUntilShutdown(shutdownContext context.Context) {
 	select {
-	case <-c.Closed:
+	case <-c.closed:
 	case <-shutdownContext.Done():
-		panic(fmt.Sprintf("failed to shutdown %s before timeout", c.description))
+		if shutdownContext.Err() == context.DeadlineExceeded {
+			panic(fmt.Sprintf("failed to shutdown %s before timeout", c.description))
+		}
 	}
 
 }
 
-func (c *ChanWaiter) Shutdown() {
-	close(c.Closed)
+func (c *ChanShutdownWaiter) Shutdown() {
+	close(c.closed)
 }
 
-func NewChanWaiter(description string) ChanWaiter {
-	return ChanWaiter{Closed: make(chan struct{}), description: description}
+func NewChanWaiter(description string) ChanShutdownWaiter {
+	return ChanShutdownWaiter{closed: make(chan struct{}), description: description}
 }
 
 type TreeSupervisor struct {
-	supervised []ShutdownWaiter
+	supervised            []ShutdownWaiter
+	waitForShutdownCalled struct {
+		sync.Mutex
+		called bool
+	}
 }
 
 func (t *TreeSupervisor) WaitUntilShutdown(shutdownContext context.Context) {
+	t.waitForShutdownCalled.Lock()
+	defer t.waitForShutdownCalled.Unlock()
+	t.waitForShutdownCalled.called = true
 	for _, w := range t.supervised {
 		w.WaitUntilShutdown(shutdownContext)
 	}
 }
 
 func (t *TreeSupervisor) Supervise(w ShutdownWaiter) {
+	t.waitForShutdownCalled.Lock()
+	defer t.waitForShutdownCalled.Unlock()
+	if t.waitForShutdownCalled.called {
+		panic("Can't call Supervise() after WaitUntilShutdown has been called")
+	}
 	t.supervised = append(t.supervised, w)
 }
 
 func (t *TreeSupervisor) SuperviseChan(description string, ch chan struct{}) {
-	t.supervised = append(t.supervised, &ChanWaiter{Closed: ch, description: description})
+	t.Supervise(&ChanShutdownWaiter{closed: ch, description: description})
 }
 
 func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {

@@ -16,7 +16,7 @@ import (
 )
 
 type httpServer struct {
-	supervised.ChanWaiter
+	supervised.ChanShutdownWaiter
 	server *http.Server
 	port   int
 	logger log.Logger
@@ -35,7 +35,7 @@ func NewHttpServer(address string, logger log.Logger) (*httpServer, error) {
 	router := http.NewServeMux()
 
 	s := &httpServer{
-		ChanWaiter: supervised.NewChanWaiter("SignerHttpServer"),
+		ChanShutdownWaiter: supervised.NewChanWaiter("SignerHttpServer"),
 		server: &http.Server{
 			Handler: router,
 		},

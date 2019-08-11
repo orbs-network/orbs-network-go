@@ -35,7 +35,7 @@ type httpErr struct {
 }
 
 type HttpServer struct {
-	supervised.ChanWaiter
+	supervised.ChanShutdownWaiter
 	httpServer *http.Server
 	router     *http.ServeMux
 
@@ -69,11 +69,11 @@ func (ln TcpKeepAliveListener) Accept() (net.Conn, error) {
 
 func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) *HttpServer {
 	server := &HttpServer{
-		logger:         logger.WithTags(LogTag),
-		publicApi:      publicApi,
-		metricRegistry: metricRegistry,
-		config:         cfg,
-		ChanWaiter:     supervised.NewChanWaiter("NodeHttpServer"),
+		logger:             logger.WithTags(LogTag),
+		publicApi:          publicApi,
+		metricRegistry:     metricRegistry,
+		config:             cfg,
+		ChanShutdownWaiter: supervised.NewChanWaiter("NodeHttpServer"),
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
