@@ -29,7 +29,7 @@ const configuration = require(configFilePath);
     console.log('Total networks to remove: ', removeCounter);
 
     if (removeCounter > 0) {
-        fs.writeFileSync(configFilePath, JSON.stringify(updatedConfiguration, 2, 2));
+        fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
     }
 
     process.exit(0);
