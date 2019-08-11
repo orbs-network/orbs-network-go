@@ -6,7 +6,7 @@ echo "Cleaning up all containers, if any are running"
 # This is here so that in CI we would be able to see what was cleaned. 
 docker ps -a
 echo "Cleaned the following containers:"
-docker ps -aq | xargs docker rm -fv
+(docker ps -aq | xargs docker rm -fv) || echo "No containers to clean! Good!"
 sleep 3
 
 echo "Spinning a Ganache instance.."
