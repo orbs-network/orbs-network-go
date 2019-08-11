@@ -85,3 +85,7 @@ func _calculateProcessCurrentElectionValues() {
 		fmt.Printf("elections %10d: set %s election parameters: time is %d, block is %d, earliest valid vote block is %d\n", electionBlockNumber, label, electionBlockTime, electionBlockNumber, earliestValidVoteBlockNumber)
 	}
 }
+
+func processTrigger() {
+	fmt.Printf("elections : processTrigger called\n")
+}

@@ -9,10 +9,11 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
@@ -79,7 +80,7 @@ func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort u
 			continue
 		}
 		t.metrics.incomingConnectionAcceptSuccesses.Inc()
-		supervised.GoOnce(t.logger, func() {
+		govnr.GoOnce(logfields.GovnrErrorer(t.logger), func() {
 			t.serverHandleIncomingConnection(ctx, conn)
 		})
 	}

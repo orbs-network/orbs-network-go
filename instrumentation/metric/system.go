@@ -10,8 +10,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/c9s/goprocinfo/linux"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"os"
 	"time"
@@ -26,7 +26,7 @@ type systemReporter struct {
 	metrics systemMetrics
 }
 
-func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Logger) supervised.ContextEndedChan {
+func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Logger) govnr.ContextEndedChan {
 	r := &systemReporter{
 		metrics: systemMetrics{
 			rssBytes:       metricFactory.NewGauge("OS.Process.Memory.Bytes"),
@@ -37,7 +37,7 @@ func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Lo
 	return r.startReporting(ctx, logger)
 }
 
-func (r *systemReporter) startReporting(ctx context.Context, logger log.Logger) supervised.ContextEndedChan {
+func (r *systemReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ContextEndedChan {
 	return synchronization.NewPeriodicalTrigger(ctx, 3*time.Second, logger, func() {
 		r.reportSystemMetrics(logger)
 	}, nil).Closed

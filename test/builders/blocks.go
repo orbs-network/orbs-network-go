@@ -9,9 +9,11 @@ package builders
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
 )
 
@@ -152,6 +154,12 @@ func (b *blockPair) WithMetadataHash(metadataHash primitives.Sha256) *blockPair 
 	return b
 }
 
+func (b *blockPair) WithTransactionsArray(txs []*protocol.SignedTransaction) *blockPair {
+	b.transactions = txs
+	b.txHeader.NumSignedTransactions = uint32(len(txs))
+	return b
+}
+
 func (b *blockPair) WithTransactions(num uint32) *blockPair {
 	b.transactions = make([]*protocol.SignedTransaction, 0, num)
 	for i := uint32(0); i < num; i++ {
@@ -204,18 +212,19 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 	return b
 }
 
-func (b *blockPair) WithTimestampNow() *blockPair {
-	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
-	b.txHeader.Timestamp = timeToUse
-	b.rxHeader.Timestamp = timeToUse
+func (b *blockPair) WithTimestamp(timeToUse time.Time) *blockPair {
+	tNano := primitives.TimestampNano(timeToUse.UnixNano())
+	b.txHeader.Timestamp = tNano
+	b.rxHeader.Timestamp = tNano
 	return b
 }
 
+func (b *blockPair) WithTimestampNow() *blockPair {
+	return b.WithTimestamp(time.Now())
+}
+
 func (b *blockPair) WithTimestampAheadBy(duration time.Duration) *blockPair {
-	timeToUse := primitives.TimestampNano(time.Now().UnixNano() + duration.Nanoseconds())
-	b.txHeader.Timestamp = timeToUse
-	b.rxHeader.Timestamp = timeToUse
-	return b
+	return b.WithTimestamp(time.Now().Add(duration))
 }
 
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
@@ -280,4 +289,86 @@ func (c *corruptBlockPair) WithEmptyTransactionsBlock() *corruptBlockPair {
 func (c *corruptBlockPair) WithEmptyResultsBlock() *corruptBlockPair {
 	c.rxContainer = &protocol.ResultsBlockContainer{}
 	return c
+}
+
+type blockPairBuilder struct {
+	protocolVersion    primitives.ProtocolVersion
+	virtualChainId     primitives.VirtualChainId
+	currentBlockHeight primitives.BlockHeight
+	tiggerEnabled      bool
+}
+
+func BlockPairBuilder() *blockPairBuilder {
+	return &blockPairBuilder{
+		protocolVersion:    DEFAULT_TEST_PROTOCOL_VERSION,
+		virtualChainId:     DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+		currentBlockHeight: 1000,
+		tiggerEnabled:      true,
+	}
+}
+
+func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
+	blockTime := time.Now()
+	validPrevBlock := BlockPair().WithHeight(b.currentBlockHeight - 1).Build()
+	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
+	transaction := TransferTransaction().WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6)).Build()
+	transactionArray := []*protocol.SignedTransaction{transaction}
+	if b.tiggerEnabled {
+		transactionArray = append(transactionArray, TriggerTransaction().WithTimestamp(blockTime).WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).Build())
+	}
+	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
+	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot(transactionArray)
+	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
+
+	block := BlockPair().
+		WithHeight(b.currentBlockHeight).
+		WithProtocolVersion(b.protocolVersion).
+		WithVirtualChainId(b.virtualChainId).
+		WithTransactionsArray(transactionArray).
+		WithPrevBlock(validPrevBlock).
+		WithPrevBlockHash(validPrevBlockHash).
+		WithMetadata(txMetadata).
+		WithMetadataHash(validMetadataHash).
+		WithTransactionsRootHash(txRootHashForValidBlock).
+		WithTimestamp(blockTime).
+		Build()
+
+	txBlockHashPtr := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
+	receiptMerkleRoot, _ := digest.CalcReceiptsMerkleRoot(block.ResultsBlock.TransactionReceipts)
+	stateDiffHash, _ := digest.CalcStateDiffHash(block.ResultsBlock.ContractStateDiffs)
+	preExecutionRootHash := &services.GetStateHashOutput{
+		StateMerkleRootHash: hash.CalcSha256([]byte{1, 2, 3, 4, 5}),
+	}
+
+	block.ResultsBlock.Header.MutateTransactionsBlockHashPtr(txBlockHashPtr)
+	block.ResultsBlock.Header.MutateReceiptsMerkleRootHash(receiptMerkleRoot)
+	block.ResultsBlock.Header.MutateStateDiffHash(stateDiffHash)
+	block.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(preExecutionRootHash.StateMerkleRootHash)
+
+	return block
+}
+
+type blockPairBuilderConfig interface {
+	ProtocolVersion() primitives.ProtocolVersion
+	VirtualChainId() primitives.VirtualChainId
+	ConsensusContextTriggersEnabled() bool
+}
+
+func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder {
+	b.protocolVersion = cfg.ProtocolVersion()
+	b.virtualChainId = cfg.VirtualChainId()
+	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
+	return b
+}
+
+func MockCalcReceiptsMerkleRootThatReturns(root primitives.Sha256, err error) func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+	return func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error) {
+		return root, err
+	}
+}
+
+func MockCalcStateDiffHashThatReturns(root primitives.Sha256, err error) func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+	return func(stateDiffs []*protocol.ContractStateDiff) (primitives.Sha256, error) {
+		return root, err
+	}
 }
