@@ -35,7 +35,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		printTestTime(t, "send deploy - start", &lt)
 
-		h.eventuallyDeploy(t, OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		//h.eventuallyDeploy(t, OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		h.eventuallyDeploy(t, OwnerOfAllSupply, contractName,
+			[]byte(contracts.NativeSourceCodeForCounterPart1(counterStart)),
+			[]byte(contracts.NativeSourceCodeForCounterPart2(counterStart)))
 		printTestTime(t, "send deploy - end", &lt)
 
 		// check counter
