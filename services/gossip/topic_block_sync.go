@@ -8,11 +8,11 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -32,13 +32,13 @@ func (s *Service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 func (s *Service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
-		supervised.GoOnce(s.logger, func() {
+		govnr.GoOnce(s.logger, func() {
 			s.receivedBlockSyncAvailabilityRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
 		s.receivedBlockSyncAvailabilityResponse(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_REQUEST:
-		supervised.GoOnce(s.logger, func() {
+		govnr.GoOnce(s.logger, func() {
 			s.receivedBlockSyncRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_RESPONSE:

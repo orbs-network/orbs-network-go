@@ -8,9 +8,9 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -138,7 +138,7 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 	logger, testOutput := b.makeLogger(tb, testId)
 
-	supervised.Recover(logger, func() {
+	govnr.Recover(logger, func() {
 		defer testOutput.TestTerminated() // this will suppress test failures from goroutines after test terminates
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 

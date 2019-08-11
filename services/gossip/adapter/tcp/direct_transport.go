@@ -8,10 +8,10 @@ package tcp
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -98,7 +98,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	}
 
 	// server goroutine
-	supervised.GoForever(serverCtx, t.logger, func() {
+	govnr.GoForever(serverCtx, t.logger, func() {
 		t.serverMainLoop(serverCtx, t.config.GossipListenPort())
 		if serverCtx.Err() != nil {
 			close(t.serverClosed) //TODO move loop to server struct

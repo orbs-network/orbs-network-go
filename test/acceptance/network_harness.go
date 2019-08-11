@@ -9,6 +9,7 @@ package acceptance
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -24,7 +25,6 @@ import (
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -51,7 +51,7 @@ type NetworkHarness struct {
 func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, network *NetworkHarness)) {
 	logger := log.DefaultTestingLogger(tb)
 	ctx, cancel := context.WithCancel(context.Background())
-	supervised.Recover(logger, func() {
+	govnr.Recover(logger, func() {
 		defer cancel()
 		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, nil)
 		network.CreateAndStartNodes(ctx, 2)
