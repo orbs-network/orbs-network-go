@@ -41,7 +41,9 @@ func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.blockTracker.IncrementTo(newBh)
 	s.blockHeightReporter.IncrementTo(newBh)
 
-	c.notify(ctx, s.transactionResultsHandlers...)
+	s.transactionResultsHandlers.RLock()
+	c.notify(ctx, s.transactionResultsHandlers.handlers...)
+	s.transactionResultsHandlers.RUnlock()
 
 	transactionReceiptsCount := len(input.TransactionReceipts)
 	s.metrics.commitRate.Measure(int64(transactionReceiptsCount))
