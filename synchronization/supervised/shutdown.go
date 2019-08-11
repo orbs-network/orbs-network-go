@@ -39,7 +39,6 @@ func (c *ChanShutdownWaiter) WaitUntilShutdown(shutdownContext context.Context) 
 			panic(fmt.Sprintf("failed to shutdown %s before timeout", c.description))
 		}
 	}
-
 }
 
 func (c *ChanShutdownWaiter) Shutdown() {

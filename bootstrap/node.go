@@ -72,7 +72,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	return n
 }
 
-func (n Node) GracefulShutdown(shutdownContext context.Context) {
+func (n *Node) GracefulShutdown(shutdownContext context.Context) {
 	n.logger.Info("Shutting down")
 	n.cancelFunc()
 	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
