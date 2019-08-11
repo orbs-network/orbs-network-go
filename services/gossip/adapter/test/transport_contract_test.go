@@ -60,6 +60,7 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 
 			for _, t := range c.transports {
 				t.GracefulShutdown(ctx)
+				t.WaitUntilShutdown(ctx)
 			}
 
 			test.RequireNoUnexpectedErrors(t, c.testOutput)
@@ -89,6 +90,7 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 
 			for _, t := range c.transports {
 				t.GracefulShutdown(ctx)
+				t.WaitUntilShutdown(ctx)
 			}
 
 			test.RequireNoUnexpectedErrors(t, c.testOutput)
