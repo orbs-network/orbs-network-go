@@ -16,7 +16,9 @@ const configFilePath = path.join(process.cwd(), 'config.json');
 
 const configuration = require(configFilePath);
 const nodes = configuration.network.filter(({ ip }) => ip !== '54.149.67.22');
-const chainIds = configuration.chains.map(({ id }) => id);
+const chainIds = configuration.chains
+    .filter(chain => chain.Disabled === true)
+    .map(({ Id }) => Id);
 
 function pollNetworkRemovalByIP({ ip, chainId }) {
     let attempts = 0; const maxAttempts = 60; // 5 minutes
