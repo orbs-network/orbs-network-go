@@ -101,10 +101,10 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
 
     const cbResults = await Promise.all(chains.map((chainId) => eventuallyClosingBlocks({ chainId, nodes })));
     if (cbResults.filter(r => r.ok === true).length === chains.length) {
-        console.log('Blocks are being closed on all chains in the testnet!');
+        console.log(`Blocks are being closed on chain ${targetChainId} in the testnet!`);
         process.exit(0);
     } else {
-        console.error('Not all chains are closing blocks after the new version was deployed within the defined 15 minutes window, quiting..');
+        console.error('Chain not closing blocks within the defined 15 minutes window, quiting..');
         process.exit(3);
     }
 })();

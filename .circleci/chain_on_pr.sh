@@ -8,6 +8,8 @@ nvm use $NODE_VERSION
 
 cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
 
+. ./test.common.sh
+
 COMMIT_HASH=$(./docker/hash.sh)
 
 # Determine if we have an active PR
@@ -64,7 +66,7 @@ then
 
     echo "Starting E2E tests against network ($PR_CHAIN_ID)"
     export VCHAIN=$PR_CHAIN_ID
-    go test ./test/e2e/... -v
+    time go_test_junit_report e2e_against_$PR_CHAIN_ID -timeout 10m -count=1 ./test/e2e/...
 
     echo "Disabling the $PR_CHAIN_ID network..."
     rm -f config.json && curl -O $BOOTSTRAP_URL
