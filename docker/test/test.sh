@@ -4,8 +4,11 @@
 # as shown in this stack overflow URL:
 # https://stackoverflow.com/questions/7578594/how-to-increase-limits-on-sockets-on-osx-for-load-testing
 
+. ./test.common.sh
+
 echo "Cleaning up all containers, if any are running"
 docker ps -a
+echo "Cleaned the following containers:"
 docker ps -aq | xargs docker rm -fv
 sleep 3
 
@@ -56,10 +59,4 @@ echo "(So that the txpool won't throw our calls to the bin)"
 sleep 10
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
-go test -count=1 -v ./test/e2e/...
-
-echo "Running Ethereum Connector tests w/consensus algo: ${CONSENSUSALGO}"
-go test -count=1 -v ./services/crosschainconnector/ethereum/adapter/...
-
-echo "Running Gamma tests w/consensus algo: ${CONSENSUSALGO}"
-go test -count=1 -v ./bootstrap/gamma/e2e/...
+time go_test_junit_report standard -timeout 10m -count=1 ./test/e2e/...

@@ -115,6 +115,15 @@ jobs:
       - run: ./.circleci/set-aws-credentials.sh
       - run: ./.circleci/deploy-testnet.sh
 
+  ganache_related_tests:
+    machine: true
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./.circleci/install-go.sh
+      - run: ./git-submodule-checkout.sh
+      - run: ./docker/test/ganache-related-test.sh
+    
   e2e_testnet_benchmark:
     docker:
       - image: circleci/golang:1.11.4
@@ -173,6 +182,7 @@ workflows:
             tags:
               only: /^v.*/
       - flakiness
+      - ganache_related_tests
       - success:
           requires:
             - tests
