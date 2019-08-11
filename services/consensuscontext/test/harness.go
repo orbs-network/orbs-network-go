@@ -123,7 +123,7 @@ func (h *harness) expectStateHashToReturn(hash []byte) {
 
 }
 
-func newHarness(tb testing.TB) *harness {
+func newHarness(tb testing.TB, enableTriggers bool) *harness {
 	log := log.DefaultTestingLogger(tb)
 
 	txPool := &services.MockTransactionPool{}
@@ -134,7 +134,7 @@ func newHarness(tb testing.TB) *harness {
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 	}
 
-	cfg := config.ForConsensusContextTests(genesisValidatorNodes)
+	cfg := config.ForConsensusContextTests(genesisValidatorNodes, enableTriggers)
 
 	metricFactory := metric.NewRegistry()
 
