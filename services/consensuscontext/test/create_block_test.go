@@ -17,16 +17,12 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newHarness(t, false)
 		txCount := uint32(2)
-
 		h.expectTxPoolToReturnXTransactions(txCount)
 
 		txBlock, err := h.requestTransactionsBlock(ctx)
-		if err != nil {
-			t.Fatal("request transactions block failed:", err)
-		}
-		if uint32(len(txBlock.SignedTransactions)) != txCount {
-			t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCount)
-		}
+
+		require.NoError(t, err, "request transactions block failed")
+		require.Len(t, txBlock.SignedTransactions, int(txCount), "wrong number of txs")
 
 		h.verifyTransactionsRequestedFromTransactionPool(t)
 	})
@@ -57,16 +53,12 @@ func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testi
 		h := newHarness(t, true)
 		txCount := uint32(2)
 		txCountWithTrigger := txCount + 1
-
 		h.expectTxPoolToReturnXTransactions(txCount)
 
 		txBlock, err := h.requestTransactionsBlock(ctx)
-		if err != nil {
-			t.Fatal("request transactions block failed:", err)
-		}
-		if uint32(len(txBlock.SignedTransactions)) != txCountWithTrigger {
-			t.Fatalf("returned %d instead of %d", len(txBlock.SignedTransactions), txCountWithTrigger)
-		}
+
+		require.NoError(t, err, "request transactions block failed")
+		require.Len(t, txBlock.SignedTransactions, int(txCountWithTrigger), "wrong number of txs")
 
 		h.verifyTransactionsRequestedFromTransactionPool(t)
 	})

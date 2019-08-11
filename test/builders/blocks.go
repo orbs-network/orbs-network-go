@@ -8,7 +8,6 @@ package builders
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -213,18 +212,19 @@ func (b *blockPair) WithStateDiffs(num uint32) *blockPair {
 	return b
 }
 
-func (b *blockPair) WithTimestampNow() *blockPair {
-	timeToUse := primitives.TimestampNano(time.Now().UnixNano())
-	b.txHeader.Timestamp = timeToUse
-	b.rxHeader.Timestamp = timeToUse
+func (b *blockPair) WithTimestamp(timeToUse time.Time) *blockPair {
+	tNano := primitives.TimestampNano(timeToUse.UnixNano())
+	b.txHeader.Timestamp = tNano
+	b.rxHeader.Timestamp = tNano
 	return b
 }
 
+func (b *blockPair) WithTimestampNow() *blockPair {
+	return b.WithTimestamp(time.Now())
+}
+
 func (b *blockPair) WithTimestampAheadBy(duration time.Duration) *blockPair {
-	timeToUse := primitives.TimestampNano(time.Now().UnixNano() + duration.Nanoseconds())
-	b.txHeader.Timestamp = timeToUse
-	b.rxHeader.Timestamp = timeToUse
-	return b
+	return b.WithTimestamp(time.Now().Add(duration))
 }
 
 func (b *blockPair) WithReceiptProofHash(hash primitives.Sha256) *blockPair {
@@ -308,12 +308,13 @@ func BlockPairBuilder() *blockPairBuilder {
 }
 
 func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
+	blockTime := time.Now()
 	validPrevBlock := BlockPair().WithHeight(b.currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
 	transaction := TransferTransaction().WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6)).Build()
 	transactionArray := []*protocol.SignedTransaction{transaction}
 	if b.tiggerEnabled {
-		transactionArray = append(transactionArray, TriggerTransaction(b.protocolVersion, b.virtualChainId))
+		transactionArray = append(transactionArray, TriggerTransaction().WithTimestamp(blockTime).WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).Build())
 	}
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot(transactionArray)
@@ -329,6 +330,7 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 		WithMetadata(txMetadata).
 		WithMetadataHash(validMetadataHash).
 		WithTransactionsRootHash(txRootHashForValidBlock).
+		WithTimestamp(blockTime).
 		Build()
 
 	txBlockHashPtr := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
@@ -346,7 +348,13 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 	return block
 }
 
-func (b *blockPairBuilder) WithCfg(cfg config.ConsensusContextConfig) *blockPairBuilder {
+type blockPairBuilderConfig interface {
+	ProtocolVersion() primitives.ProtocolVersion
+	VirtualChainId() primitives.VirtualChainId
+	ConsensusContextTriggersEnabled() bool
+}
+
+func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder {
 	b.protocolVersion = cfg.ProtocolVersion()
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()

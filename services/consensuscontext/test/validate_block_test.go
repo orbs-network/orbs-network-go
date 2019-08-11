@@ -10,12 +10,9 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -35,44 +32,22 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 
 func TestValidateTransactionsBlockOnValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		log := log.DefaultTestingLogger(t)
-		metricFactory := metric.NewRegistry()
-		cfg := config.ForConsensusContextTests(nil, true)
-		txPool := &services.MockTransactionPool{}
-		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
+		s := newHarness(t, true)
+		s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
+		input := txInputs(s.config)
 
-		s := consensuscontext.NewConsensusContext(
-			txPool,
-			&services.MockVirtualMachine{},
-			&services.MockStateStorage{},
-			cfg,
-			log,
-			metricFactory)
-
-		input := txInputs(cfg)
-		_, err := s.ValidateTransactionsBlock(ctx, input)
+		_, err := s.service.ValidateTransactionsBlock(ctx, input)
 		require.NoError(t, err, "validation should succeed on valid block")
 	})
 }
 
 func TestValidateTransactionsBlockOnValidBlockWithoutTrigger(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		log := log.DefaultTestingLogger(t)
-		metricFactory := metric.NewRegistry()
-		cfg := config.ForConsensusContextTests(nil, false)
-		txPool := &services.MockTransactionPool{}
-		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
+		s := newHarness(t, false)
+		s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
+		input := txInputs(s.config)
 
-		s := consensuscontext.NewConsensusContext(
-			txPool,
-			&services.MockVirtualMachine{},
-			&services.MockStateStorage{},
-			cfg,
-			log,
-			metricFactory)
-
-		input := txInputs(cfg)
-		_, err := s.ValidateTransactionsBlock(ctx, input)
+		_, err := s.service.ValidateTransactionsBlock(ctx, input)
 		require.NoError(t, err, "validation should fail when missing trigger")
 	})
 }
@@ -93,37 +68,23 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 
 func TestValidateResultsBlockOnValidBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		log := log.DefaultTestingLogger(t)
-		metricFactory := metric.NewRegistry()
-		cfg := config.ForConsensusContextTests(nil, false)
-		txPool := &services.MockTransactionPool{}
-		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
+		s := newHarness(t, false)
 
-		input := rxInputs(cfg)
+		input := rxInputs(s.config)
+		s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
 
-		vm := &services.MockVirtualMachine{}
 		output := &services.ProcessTransactionSetOutput{
 			TransactionReceipts: input.ResultsBlock.TransactionReceipts,
 			ContractStateDiffs:  input.ResultsBlock.ContractStateDiffs,
 		}
+		s.virtualMachine.When("ProcessTransactionSet", mock.Any, mock.Any).Return(output, nil)
 
-		vm.When("ProcessTransactionSet", mock.Any, mock.Any).Return(output, nil)
-
-		stateStorage := &services.MockStateStorage{}
 		stateHashOutput := &services.GetStateHashOutput{
 			StateMerkleRootHash: input.ResultsBlock.Header.PreExecutionStateMerkleRootHash(),
 		}
-		stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
+		s.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
 
-		s := consensuscontext.NewConsensusContext(
-			txPool,
-			vm,
-			stateStorage,
-			cfg,
-			log,
-			metricFactory)
-
-		_, err := s.ValidateResultsBlock(ctx, input)
+		_, err := s.service.ValidateResultsBlock(ctx, input)
 		require.NoError(t, err, "validation should succeed on valid block")
 	})
 }

@@ -61,17 +61,21 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	return txBlock, nil
 }
 
+func (s *service) createTriggerTransaction(blockTime primitives.TimestampNano) *protocol.SignedTransaction {
+	return (&protocol.SignedTransactionBuilder{
+		Transaction: &protocol.TransactionBuilder{
+			ProtocolVersion: s.config.ProtocolVersion(),
+			VirtualChainId:  s.config.VirtualChainId(),
+			Timestamp:       blockTime,
+			ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
+			MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),
+		},
+	}).Build()
+}
+
 func (s *service) updateTransactions(txs []*protocol.SignedTransaction, blockTime primitives.TimestampNano) []*protocol.SignedTransaction {
 	if s.config.ConsensusContextTriggersEnabled() {
-		txs = append(txs, (&protocol.SignedTransactionBuilder{
-			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: s.config.ProtocolVersion(),
-				VirtualChainId:  s.config.VirtualChainId(),
-				Timestamp:       blockTime,
-				ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
-				MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),
-			},
-		}).Build())
+		txs = append(txs, s.createTriggerTransaction(blockTime))
 	}
 	return txs
 }
