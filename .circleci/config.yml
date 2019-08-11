@@ -76,6 +76,7 @@ jobs:
       - checkout
       - run: ./.circleci/install-go.sh
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
@@ -122,6 +123,7 @@ jobs:
       - checkout
       - run: ./.circleci/install-go.sh
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/test/ganache-related-test.sh
     
   e2e_testnet_benchmark:
