@@ -19,13 +19,8 @@ type cleaner interface {
 }
 
 func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, lastBlockHeightAndTime func() (primitives.BlockHeight, primitives.TimestampNano), logger log.Logger) chan struct{} {
-	stopped := make(chan struct{})
-	synchronization.NewPeriodicalTrigger(ctx, tickInterval(), logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, tickInterval(), logger, func() {
 		_, lastCommittedBlockTime := lastBlockHeightAndTime()
 		c.clearTransactionsOlderThan(ctx, lastCommittedBlockTime-primitives.TimestampNano(expiration().Nanoseconds()))
-	}, func() {
-		close(stopped)
-	})
-
-	return stopped
+	}, nil).Closed
 }

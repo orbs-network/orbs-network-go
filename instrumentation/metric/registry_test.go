@@ -19,3 +19,13 @@ func TestInMemoryRegistry_ExportAll(t *testing.T) {
 	gaugeValue := registry.ExportAll()["hello"].(gaugeExport)
 	require.EqualValues(t, gaugeValue.Value, 1)
 }
+
+func TestInMemoryRegistry_Remove(t *testing.T) {
+	registry := NewRegistry()
+	gauge := registry.NewGauge("hello")
+	registry.Remove(gauge)
+
+	registry.mu.Lock()
+	require.Empty(t, registry.mu.metrics)
+	registry.mu.Unlock()
+}

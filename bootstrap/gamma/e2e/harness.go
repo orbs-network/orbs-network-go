@@ -9,6 +9,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -16,37 +18,38 @@ import (
 	"time"
 )
 
-const WAIT_FOR_BLOCK_TIMEOUT = 10 * time.Second
+const WAIT_FOR_BLOCK_TIMEOUT = 20 * time.Second
 
 type metrics map[string]map[string]interface{}
 
-func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) func() bool {
-	return func() bool {
+func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) func() error {
+	return func() error {
 		res, err := http.Get(endpoint + "/metrics")
 		if err != nil {
-			fmt.Println(err)
-			return false
+			return err
 		}
 
 		readBytes, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			fmt.Println(err)
-			return false
+			return err
 		}
 		m := make(metrics)
 		json.Unmarshal(readBytes, &m)
 
 		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
-		return primitives.BlockHeight(blockHeight) >= targetBlockHeight
+		if primitives.BlockHeight(blockHeight) < targetBlockHeight {
+			return errors.Errorf("block %d is less than target block %d", int(blockHeight), targetBlockHeight)
+		}
+
+		return nil
 	}
 }
 
 func runGammaOnRandomPort(t testing.TB, overrideConfig string) string {
-	port := test.RandomPort()
+	port := gamma.RunMain(t, -1, overrideConfig)
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d", port)
-	t.Log(t.Name(), "running Gamma at", endpoint)
-	gamma.RunMain(t, port, overrideConfig)
-	require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 1)), "Gamma did not start ")
+	t.Log(t.Name(), "started Gamma at", endpoint)
+	require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 1)), "Gamma did not start ")
 
 	return endpoint
 }
@@ -82,4 +85,10 @@ func timeTravel(t *testing.T, endpoint string, delta time.Duration) {
 	res, err := http.Post(fmt.Sprintf("%s/debug/gamma/inc-time?seconds-to-add=%.0f", endpoint, delta.Seconds()), "text/plain", nil)
 	require.NoError(t, err, "failed incrementing next block time")
 	require.EqualValues(t, 200, res.StatusCode, "http call to increment time failed")
+}
+
+func shutdown(t *testing.T, endpoint string) {
+	res, err := http.Post(fmt.Sprintf("%s/debug/gamma/shutdown", endpoint), "text/plain", nil)
+	require.NoError(t, err, "failed sending shutdown call")
+	require.EqualValues(t, 200, res.StatusCode, "failed sending shutdown call")
 }

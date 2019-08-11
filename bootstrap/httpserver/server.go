@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -25,7 +26,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-var LogTag = log.String("adapter", "http-server")
+var LogTag = log.String("adapter", "http-HttpServer")
 
 type httpErr struct {
 	code     int
@@ -33,13 +34,8 @@ type httpErr struct {
 	message  string
 }
 
-type HttpServer interface {
-	GracefulShutdown(timeout time.Duration)
-	Port() int
-	Router() *http.ServeMux
-}
-
-type server struct {
+type HttpServer struct {
+	supervised.ChanShutdownWaiter
 	httpServer *http.Server
 	router     *http.ServeMux
 
@@ -71,16 +67,17 @@ func (ln TcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) HttpServer {
-	server := &server{
-		logger:         logger.WithTags(LogTag),
-		publicApi:      publicApi,
-		metricRegistry: metricRegistry,
-		config:         cfg,
+func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) *HttpServer {
+	server := &HttpServer{
+		logger:             logger.WithTags(LogTag),
+		publicApi:          publicApi,
+		metricRegistry:     metricRegistry,
+		config:             cfg,
+		ChanShutdownWaiter: supervised.NewChanWaiter("NodeHttpServer"),
 	}
 
 	if listener, err := server.listen(server.config.HttpAddress()); err != nil {
-		panic(fmt.Sprintf("failed to start http server: %s", err.Error()))
+		panic(fmt.Sprintf("failed to start http HttpServer: %s", err.Error()))
 	} else {
 		server.port = listener.Addr().(*net.TCPAddr).Port
 		server.router = server.createRouter()
@@ -89,39 +86,40 @@ func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi ser
 		}
 
 		// We prefer not to use `HttpServer.ListenAndServe` because we want to block until the socket is listening or exit immediately
-		go server.httpServer.Serve(TcpKeepAliveListener{listener.(*net.TCPListener)})
+		go func() {
+			err = server.httpServer.Serve(TcpKeepAliveListener{listener.(*net.TCPListener)})
+			if err != nil && err != http.ErrServerClosed {
+				logger.Error("failed serving http requests", log.Error(err))
+			}
+		}()
 	}
 
-	logger.Info("started http server", log.String("address", server.config.HttpAddress()))
+	logger.Info("started http HttpServer", log.String("address", server.config.HttpAddress()))
 
 	return server
 }
 
-func (s *server) Port() int {
+func (s *HttpServer) Port() int {
 	return s.port
 }
 
-func (s *server) Router() *http.ServeMux {
+func (s *HttpServer) Router() *http.ServeMux {
 	return s.router
 }
 
-func (s *server) listen(addr string) (net.Listener, error) {
+func (s *HttpServer) listen(addr string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
 }
 
-func (s *server) GracefulShutdown(timeout time.Duration) {
-	ctx := context.Background()
-	if timeout > 0 {
-		var cancel func()
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
+func (s *HttpServer) GracefulShutdown(shutdownContext context.Context) {
+	if err := s.httpServer.Shutdown(shutdownContext); err != nil {
+		s.logger.Error("failed to stop http HttpServer gracefully", log.Error(err))
 	}
-	if err := s.httpServer.Shutdown(ctx); err != nil {
-		s.logger.Error("failed to stop http server gracefully", log.Error(err))
-	}
+	s.Shutdown()
+
 }
 
-func (s *server) createRouter() *http.ServeMux {
+func (s *HttpServer) createRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
 	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
@@ -185,7 +183,7 @@ func translateRequestStatusToHttpCode(responseCode protocol.RequestStatus) int {
 	return http.StatusNotImplemented
 }
 
-func (s *server) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, requestResult *client.RequestResult, errorForVerbosity error) {
+func (s *HttpServer) writeMembuffResponse(w http.ResponseWriter, message membuffers.Message, requestResult *client.RequestResult, errorForVerbosity error) {
 	httpCode := translateRequestStatusToHttpCode(requestResult.RequestStatus())
 	w.Header().Set("Content-Type", "application/membuffers")
 	w.Header().Set("X-ORBS-REQUEST-RESULT", requestResult.RequestStatus().String())
@@ -206,7 +204,7 @@ func sprintfTimestamp(timestamp primitives.TimestampNano) string {
 	return time.Unix(0, int64(timestamp)).UTC().Format(time.RFC3339Nano)
 }
 
-func (s *server) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {
+func (s *HttpServer) writeErrorResponseAndLog(w http.ResponseWriter, m *httpErr) {
 	if m.logField == nil {
 		s.logger.Info(m.message)
 	} else {

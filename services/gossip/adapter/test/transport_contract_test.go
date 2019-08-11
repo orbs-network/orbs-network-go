@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -55,6 +56,10 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			for _, t := range c.transports {
+				t.GracefulShutdown(ctx)
+			}
 		})
 	}
 }
@@ -77,6 +82,10 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
+
+			for _, t := range c.transports {
+				t.GracefulShutdown(ctx)
+			}
 		})
 	}
 }
@@ -128,13 +137,12 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	}
 
 	logger := log.DefaultTestingLogger(tb)
-	registry := metric.NewRegistry()
 
 	transports := []*tcp.DirectTransport{
-		tcp.NewDirectTransport(ctx, configs[0], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[1], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[2], logger, registry),
-		tcp.NewDirectTransport(ctx, configs[3], logger, registry),
+		tcp.NewDirectTransport(ctx, configs[0], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[1], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[2], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[3], logger, metric.NewRegistry()),
 	}
 
 	test.Eventually(1*time.Second, func() bool {
@@ -155,7 +163,7 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	for _, t1 := range transports {
 		for i, t2 := range transports {
 			if t1 != t2 {
-				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.GetServerPort(), "127.0.0.1"))
+				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i])))
 			}
 		}
 	}

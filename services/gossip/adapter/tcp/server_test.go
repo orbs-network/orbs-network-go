@@ -18,6 +18,7 @@ import (
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := newDirectHarnessWithConnectedPeers(t, ctx)
+	defer h.transport.GracefulShutdown(ctx)
 
 	connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
 	require.NoError(t, err, "test peer should be able connect to local transport")
@@ -47,6 +48,7 @@ func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
@@ -65,6 +67,7 @@ func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		h.expectTransportListenerNotCalled()
 
@@ -82,6 +85,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerNotCalled()
@@ -104,6 +108,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerNotCalled()
@@ -126,6 +131,7 @@ func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		h.transport.RegisterListener(h.listenerMock, nil)
 		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
@@ -151,6 +157,7 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 
 		h := newDirectHarnessWithConnectedPeers(t, ctx)
 		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
 		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()[:6] // only 6 out of 20 bytes transferred
 		written, err := h.peerTalkerConnection.Write(buffer)
