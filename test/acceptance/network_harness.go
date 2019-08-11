@@ -125,7 +125,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	harness := &NetworkHarness{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
 		ethereumConnection:                 sharedEthereumSimulator,
 		fakeCompiler:                       sharedCompiler,
@@ -204,5 +204,11 @@ func (n *NetworkHarness) Size() int {
 func (n *NetworkHarness) DumpState() {
 	for i := range n.Nodes {
 		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
+	}
+}
+
+func (n *NetworkHarness) WaitForBlock(ctx context.Context, height primitives.BlockHeight) {
+	for _, tracker := range n.transactionPoolBlockHeightTrackers {
+		tracker.WaitForBlock(ctx, height)
 	}
 }

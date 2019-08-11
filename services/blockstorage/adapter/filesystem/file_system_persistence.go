@@ -26,14 +26,14 @@ import (
 )
 
 type metrics struct {
-	size *metric.Gauge
+	sizeOnDisk *metric.Gauge
 }
 
 const blocksFilename = "blocks"
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		size: m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		sizeOnDisk: m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
 	}
 }
 
@@ -84,7 +84,21 @@ func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersist
 		codec:        codec,
 	}
 
+	if size, err := getBlockFileSize(file); err != nil {
+		return adapter, err
+	} else {
+		adapter.metrics.sizeOnDisk.Add(size)
+	}
+
 	return adapter, nil
+}
+
+func getBlockFileSize(file *os.File) (int64, error) {
+	if fi, err := file.Stat(); err != nil {
+		return 0, errors.Wrap(err, "unable to read file size for metrics")
+	} else {
+		return fi.Size(), nil
+	}
 }
 
 func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (*os.File, int64, error) {
@@ -247,7 +261,7 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	}
 
 	f.blockTracker.IncrementTo(bh)
-	f.metrics.size.Add(int64(n))
+	f.metrics.sizeOnDisk.Add(int64(n))
 
 	return true, bh, nil
 }

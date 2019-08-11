@@ -21,8 +21,9 @@ import (
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx := builders.TransferTransaction().Build()
 
@@ -38,8 +39,9 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 		h.expectNoTransactionsToBeForwarded()
@@ -52,8 +54,9 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder").start(ctx)
+	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -82,8 +85,9 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testin
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder").start(ctx)
+	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -112,8 +116,9 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *tes
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool").start(ctx)
+	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -130,8 +135,9 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -152,8 +158,9 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding transaction to pending pool").start(ctx)
+	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding transaction to pending pool")
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		h.expectNoTransactionsToBeForwarded()
 

@@ -73,7 +73,7 @@ func TestOrbsVotingContract_guardians_setTwiceWithEmptyList(t *testing.T) {
 }
 
 func TestOrbsVotingContract_processVote_clearGuardians(t *testing.T) {
-	h := newHarness()
+	h := newHarnessBlockBased()
 	h.electionBlock = uint64(60000)
 
 	var g1 = h.addGuardian(100)
@@ -82,11 +82,10 @@ func TestOrbsVotingContract_processVote_clearGuardians(t *testing.T) {
 		_init()
 
 		// prepare
-		h.setupOrbsStateBeforeProcess()
+		h.setupOrbsStateBeforeProcessMachine()
 		_setCandidates(g1.address[:], [][20]byte{{0xdd}})
 		_setGuardianStake(g1.address[:], 100)
 		_setGuardianVoteBlockNumber(g1.address[:], h.electionBlock)
-		_setCurrentElectionBlockNumber(h.electionBlock)
 
 		// call
 		_clearGuardians()
@@ -97,7 +96,42 @@ func TestOrbsVotingContract_processVote_clearGuardians(t *testing.T) {
 		require.EqualValues(t, 0, _getNumberOfGuardians())
 		require.EqualValues(t, 0, getGuardianStake(g1.address[:]))
 		require.EqualValues(t, 0, _getGuardianVoteBlockNumber(g1.address[:]))
+		require.EqualValues(t, 0, getGuardianVotingWeight(g1.address[:]))
 		require.EqualValues(t, 0, len(guardians))
 		require.EqualValues(t, [][20]byte{}, _getCandidates(g1.address[:]))
+	})
+}
+
+func TestOrbsVotingContract_processVote_clearGuardians_AfterOneElection(t *testing.T) {
+	// setup a minimal election
+	h := newHarnessBlockBased()
+	h.electionBlock = uint64(60000)
+	var v1 = h.addValidator()
+	h.addValidator()
+
+	var g1 = h.addGuardian(100)
+	g1.vote(h.electionBlock-1, v1)
+	h.addDelegator(500, g1.address)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+
+		// prepare
+		h.setupOrbsStateBeforeProcessMachine()
+		h.setupEthereumStateBeforeProcess(m)
+
+		expectedNumOfStateTransitions := len(h.guardians) + len(h.delegators) + len(h.validators) + 2
+		elected, _ := h.runProcessVoteMachineNtimes(expectedNumOfStateTransitions)
+
+		// check election was "done"
+		require.EqualValues(t, "", _getVotingProcessState())
+		require.NotEmpty(t, elected)
+		require.True(t, 0 != getGuardianVotingWeight(g1.address[:]))
+
+		// call
+		_clearGuardians() // this is usually called in begininng of new election cycle
+
+		// assert
+		require.EqualValues(t, 0, getGuardianVotingWeight(g1.address[:]))
 	})
 }

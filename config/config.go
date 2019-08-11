@@ -82,6 +82,7 @@ type NodeConfig interface {
 	// processor
 	ProcessorArtifactPath() string
 	ProcessorSanitizeDeployedContracts() bool
+	ProcessorPerformWarmUpCompilation() bool
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
@@ -233,6 +234,7 @@ type ValidatorNode interface {
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
+	HexOrbsAddress() string
 }
 
 type HttpServerConfig interface {

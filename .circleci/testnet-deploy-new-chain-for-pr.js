@@ -17,6 +17,13 @@ $ testnet-deploy-new-chain-for-pr.js https://github.com/orbs-network/orbs-networ
 const path = require('path');
 const fs = require('fs');
 
+const {
+    newChainConfiguration,
+    getBoyarChainConfigurationById,
+    updateChainConfiguration,
+    newVacantTCPPort,
+} = require('./boyar-lib');
+
 const githubPRLink = process.argv[2];
 const targetTag = process.argv[3];
 const configFilePath = path.join(process.cwd(), 'config.json');
@@ -33,29 +40,32 @@ if (!targetTag) {
 
 // The namespace 100000 is PR chains teritory
 const prLinkParts = githubPRLink.split('/');
-const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]) + 100000;
+const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
+const chainNumber = prNumber + 100000;
+let chain;
 
+// Read the Boyar config from file
 const configuration = require(configFilePath);
+chain = getBoyarChainConfigurationById(configuration, chainNumber);
 
-const chainIndex = configuration.chains.findIndex(chain => chain.Id === prNumber);
-
-if (chainIndex !== -1) {
-    // This means we already have a chain in the config, let's just update it's version ref
-    configuration.chains[chainIndex].DockerConfig.Tag = targetTag;
+// This means we already have a chain in the config, let's just update it's version ref and refresh ports
+if (chain !== false) {
+    chain.DockerConfig.Tag = targetTag;
+    chain.HttpPort = newVacantTCPPort(configuration);
+    chain.GossipPort = newVacantTCPPort(configuration);
 } else {
-    const lastChain = configuration.chains[configuration.chains.length - 1];
+    // We need to spawn a new chain for this PR
+    let Id = chainNumber;
+    let HttpPort = newVacantTCPPort(configuration);
+    let GossipPort = newVacantTCPPort(configuration);
+    let Tag = targetTag;
 
-    // Clone the last chain and make modifications on top of it.
-    const newChain = Object.assign({}, lastChain);
-    newChain.DockerConfig.Tag = targetTag;
-    newChain.Id = prNumber;
-    newChain.HttpPort = newChain.HttpPort + 2;
-    newChain.GossipPort = newChain.GossipPort + 2;
-
-    configuration.chains.push(newChain);
+    chain = newChainConfiguration({ Id, HttpPort, GossipPort, Tag });
 }
 
-fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
+const updatedConfiguration = updateChainConfiguration(configuration, chain);
 
-console.log(prNumber);
+fs.writeFileSync(configFilePath, JSON.stringify(updatedConfiguration, 2, 2));
+
+console.log(chainNumber);
 process.exit(0);

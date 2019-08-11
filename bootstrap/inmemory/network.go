@@ -20,7 +20,9 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
+	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -34,10 +36,12 @@ import (
 
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
+	supervised.TreeSupervisor
 	Nodes          []*Node
 	Logger         log.Logger
 	Transport      adapter.Transport
 	VirtualChainId primitives.VirtualChainId
+	MaybeClock     txPoolAdapter.Clock
 }
 
 type NodeDependencies struct {
@@ -57,12 +61,14 @@ func NewNetworkWithNumOfNodes(
 	parent log.Logger,
 	cfgTemplate config.OverridableConfig,
 	transport adapter.Transport,
+	maybeClock txPoolAdapter.Clock,
 	provider nodeDependencyProvider,
 ) *Network {
 
 	network := &Network{
 		Logger:         parent,
 		Transport:      transport,
+		MaybeClock:     maybeClock,
 		VirtualChainId: cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
@@ -88,6 +94,8 @@ func NewNetworkWithNumOfNodes(
 
 		network.addNode(fmt.Sprintf("%s", validatorNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
 	}
+
+	network.Supervise(transport)
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
@@ -127,13 +135,14 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *
 }
 
 func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	for i, node := range n.Nodes {
 		if i >= numOfNodesToStart {
 			break
 		}
 		wg.Add(1)
 
+		nodeLogger := n.Logger.WithTags(log.Node(node.name))
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
@@ -141,19 +150,27 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.statePersistence,
 			node.stateBlockHeightReporter,
 			node.transactionPoolBlockTracker,
+			n.MaybeClock,
 			node.nativeCompiler,
-			n.Logger.WithTags(log.Node(node.name)),
+			nodeLogger,
 			node.metricRegistry,
 			node.config,
 			node.ethereumConnection,
 		)
 		go func(nx *Node) { // nodes should not block each other from executing wait
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
-				panic(fmt.Sprintf("node %v did not reach block 1", node.name))
+				msg := fmt.Sprintf("node %v did not reach block 1", node.name)
+				nodeLogger.Error(msg)
+				panic(msg)
+			} else {
+				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", node.name))
 			}
 			wg.Done()
 		}(node)
+
+		n.Supervise(node.nodeLogic)
 	}
+
 	wg.Wait()
 }
 

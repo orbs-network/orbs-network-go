@@ -16,7 +16,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type rejectedTransaction struct {
@@ -80,7 +79,7 @@ func newTransactionBatch(logger log.Logger, transactions Transactions) *transact
 	}
 }
 
-func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	//TODO(v1) fail if requested block height is in the past
 	logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
@@ -89,7 +88,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	if input.CurrentBlockHeight == 1 {
 		return &services.GetTransactionsForOrderingOutput{
 			SignedTransactions:     nil,
-			ProposedBlockTimestamp: proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp),
+			ProposedBlockTimestamp: s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp),
 		}, nil
 	}
 
@@ -118,14 +117,14 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp)
 	}
 
-	proposedBlockTimestamp := proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
+	proposedBlockTimestamp := s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 	batch, err := runBatch(proposedBlockTimestamp)
 	for !batch.hasEnoughTransactions(1) && timeoutCtx.Err() == nil {
 		logger.Info("not enough transactions in batch, waiting for more")
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
 			logger.Info("got a new transaction, re-running batch")
 			// propose a new time since we've been waiting
-			proposedBlockTimestamp = proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
+			proposedBlockTimestamp = s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
 			batch, err = runBatch(proposedBlockTimestamp)
 		}
 	}
@@ -141,8 +140,8 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	return out, err
 }
 
-func proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
-	return digest.CalcNewBlockTimestamp(prevBlockTimestamp, primitives.TimestampNano(time.Now().UnixNano()))
+func (s *Service) proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
+	return digest.CalcNewBlockTimestamp(prevBlockTimestamp, primitives.TimestampNano(s.clock.CurrentTime().UnixNano()))
 }
 
 func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker, proposedBlockTimestamp primitives.TimestampNano) {

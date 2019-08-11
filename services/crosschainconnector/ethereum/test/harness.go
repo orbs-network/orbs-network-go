@@ -60,7 +60,7 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) error {
+func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) {
 	c, err := rpc.Dial(h.config.endpoint)
 	require.NoError(t, err, "failed creating Ethereum rpc client")
 	//start := time.Now()
@@ -69,7 +69,6 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
 
-	return nil
 }
 
 func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigForTests) *harness {
@@ -109,25 +108,3 @@ func (h *harness) packInputArgumentsForSampleStorage(method string, args []inter
 		return ethereum.ABIPackFunctionInputArguments(parsedABI, method, args)
 	}
 }
-
-//type mockFinality struct {
-//	mock.Mock
-//}
-//
-//func (s *mockFinality) GetFinalitySafeBlockNumber(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*timestampfinder.BlockNumberAndTime, error) {
-//	ret := s.Called(ctx, referenceTimestampNano)
-//	if out := ret.Get(0); out != nil {
-//		return out.(*timestampfinder.BlockNumberAndTime), ret.Error(1)
-//	} else {
-//		return nil, ret.Error(1)
-//	}
-//}
-//
-//func (s *mockFinality) VerifyBlockNumberIsFinalitySafe(ctx context.Context, blockNumber uint64, referenceTimestamp primitives.TimestampNano) error {
-//	ret := s.Called(ctx, blockNumber, referenceTimestamp)
-//	if out := ret.Get(0); out != nil {
-//		return ret.Error(1)
-//	} else {
-//		return ret.Error(1)
-//	}
-//}

@@ -28,18 +28,21 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
+	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type NodeLogic interface {
+	supervised.ShutdownWaiter
 	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
+	supervised.TreeSupervisor
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -51,6 +54,7 @@ func NewNodeLogic(
 	statePersistence stateStorageAdapter.StatePersistence,
 	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
 	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
+	maybeClock txPoolAdapter.Clock,
 	nativeCompiler nativeProcessorAdapter.Compiler,
 	logger log.Logger,
 	metricRegistry metric.Registry,
@@ -74,7 +78,7 @@ func NewNodeLogic(
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
-	transactionPoolService := transactionpool.NewTransactionPool(ctx, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
+	transactionPoolService := transactionpool.NewTransactionPool(ctx, maybeClock, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
@@ -87,21 +91,27 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
-	metric.NewSystemReporter(ctx, metricRegistry, logger)
-	metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint())
-
-	metricRegistry.PeriodicallyRotate(ctx, logger)
 	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
-
-	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
-	return &nodeLogic{
+	node := &nodeLogic{
 		publicApi:      publicApiService,
 		consensusAlgos: consensusAlgos,
 	}
+
+	node.Supervise(gossipService)
+	node.Supervise(blockStorageService)
+	node.Supervise(benchmarkConsensusAlgo)
+	node.Supervise(leanHelixAlgo)
+	node.SuperviseChan("OS metric reporter", metric.NewSystemReporter(ctx, metricRegistry, logger))
+	node.SuperviseChan("Go runtime metric reporter", metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.SuperviseChan("Metric registry", metricRegistry.PeriodicallyRotate(ctx, logger))
+	if nodeConfig.NTPEndpoint() != "" {
+		node.SuperviseChan("NTP metric reporter", metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+	}
+
+	return node
 }
 
 func (n *nodeLogic) PublicApi() services.PublicApi {

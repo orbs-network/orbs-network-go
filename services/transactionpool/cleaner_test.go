@@ -18,7 +18,6 @@ var tickInterval = func() time.Duration { return 1 * time.Millisecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
 func TestStopsWhenContextIsCancelled(t *testing.T) {
-	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := aCleaner()
@@ -30,7 +29,6 @@ func TestStopsWhenContextIsCancelled(t *testing.T) {
 }
 
 func TestTicksOnSchedule(t *testing.T) {
-	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ts := primitives.TimestampNano(time.Now().UnixNano())

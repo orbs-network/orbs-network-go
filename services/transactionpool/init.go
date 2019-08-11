@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,13 +22,14 @@ import (
 )
 
 func NewTransactionPool(ctx context.Context,
+	maybeClock adapter.Clock,
 	gossip gossiptopics.TransactionRelay,
 	virtualMachine services.VirtualMachine,
 	signer signer.Signer,
 	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.Logger,
-	metricFactory metric.Factory) services.TransactionPool {
+	metricFactory metric.Factory) *Service {
 
 	if blockHeightReporter == nil {
 		blockHeightReporter = synchronization.NopHeightReporter{}
@@ -41,7 +43,8 @@ func NewTransactionPool(ctx context.Context,
 
 	txForwarder := NewTransactionForwarder(ctx, logger, signer, config, gossip)
 
-	s := &service{
+	s := &Service{
+		clock:          createClockIfNeeded(maybeClock),
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
 		config:         config,
@@ -65,13 +68,22 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger)
-	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger)
+	s.SuperviseChan("Committed tx pool cleaner", startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.SuperviseChan("Pending tx pool cleaner", startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.SuperviseChan("Transaction forwarder", txForwarder.closed)
 
 	return s
 }
 
-func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
+	if maybeClock == nil {
+		return adapter.NewSystemClock()
+	}
+
+	return maybeClock
+}
+
+func (s *Service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
 	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		for _, trh := range s.transactionResultsHandlers {

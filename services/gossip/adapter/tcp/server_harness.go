@@ -14,8 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -23,7 +21,6 @@ import (
 	"time"
 )
 
-const NETWORK_SIZE = 3
 const TEST_KEEP_ALIVE_INTERVAL = 20 * time.Millisecond
 const TEST_NETWORK_TIMEOUT = 1 * time.Second
 
@@ -34,51 +31,25 @@ type directHarness struct {
 	config    config.GossipTransportConfig
 	transport *DirectTransport
 
-	peersListeners            []net.Listener
-	peersListenersConnections []net.Conn
 	peerTalkerConnection      net.Conn
 	listenerMock              *testkit.MockTransportListener
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	keepAliveInterval := TEST_KEEP_ALIVE_INTERVAL
-	networkTimeout := TEST_NETWORK_TIMEOUT
-	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval, networkTimeout)
-}
+	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
+	transport := makeTransport(ctx, t, cfg)
 
-func newDirectHarnessWithConnectedPeersWithoutKeepAlives(t *testing.T, ctx context.Context) *directHarness {
-	keepAliveInterval := 20 * time.Hour // High value to disable keep alive
-	networkTimeout := TEST_NETWORK_TIMEOUT
-	return newDirectHarnessWithConnectedPeersWithTimeouts(t, ctx, keepAliveInterval, networkTimeout)
-}
-
-func newDirectHarnessWithConnectedPeersWithTimeouts(t *testing.T, ctx context.Context, keepAliveInterval time.Duration, networkTimeout time.Duration) *directHarness {
-
-	// order matters here
-	gossipPeers, peersListeners := makePeers(t)                                           // step 1: create the peer server listeners to reserve random TCP ports
-	cfg := config.ForDirectTransportTests(gossipPeers, keepAliveInterval, networkTimeout) // step 2: create the config given the peer pk/port pairs
-	transport := makeTransport(ctx, t, cfg)                                               // step 3: create the transport; it will attempt to establish connections with the peer servers repeatedly until they start accepting connections
-	// end of section where order matters
-
-	peerTalkerConnection := establishPeerClient(t, transport.serverPort)           // establish connection from test to server port ( test harness ==> SUT )
-	peersListenersConnections := establishPeerServerConnections(t, peersListeners) // establish connection from transport clients to peer servers ( SUT ==> test harness)
+	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort())      // establish connection from test to server port ( test harness ==> SUT )
 
 	h := &directHarness{
 		config:                    cfg,
 		transport:                 transport,
 		listenerMock:              &testkit.MockTransportListener{},
 		peerTalkerConnection:      peerTalkerConnection,
-		peersListenersConnections: peersListenersConnections,
-		peersListeners:            peersListeners,
 	}
 
-	// prevents race condition where client loop still did not flip the outgoing queue's `disabled` flag after successfully "dialing" to the harness
-	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
-		return h.allOutgoingQueuesEnabled()
-	}), "expected all outgoing queues to become enabled after successfully connecting to peersListeners")
+	return h}
 
-	return h
-}
 
 func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *DirectTransport {
 	log := log.DefaultTestingLogger(tb)
@@ -97,75 +68,8 @@ func establishPeerClient(t *testing.T, serverPort int) net.Conn {
 	return peerTalkerConnection
 }
 
-func establishPeerServerConnections(t *testing.T, peersListeners []net.Listener) []net.Conn {
-	peersListenersConnections := make([]net.Conn, NETWORK_SIZE-1)
-	for i := 0; i < NETWORK_SIZE-1; i++ {
-		conn, err := peersListeners[i].Accept()
-		require.NoError(t, err, "test peer server could not accept connection from local transport")
-
-		peersListenersConnections[i] = conn
-	}
-	return peersListenersConnections
-}
-
-func makePeers(t *testing.T) (map[string]config.GossipPeer, []net.Listener) {
-	gossipPeers := make(map[string]config.GossipPeer)
-	peersListeners := make([]net.Listener, NETWORK_SIZE-1)
-
-	for i := 0; i < NETWORK_SIZE-1; i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i + 1).NodeAddress()
-
-		conn, err := net.Listen("tcp", "127.0.0.1:0")
-		require.NoError(t, err, "test peer server could not listen")
-
-		peersListeners[i] = conn
-		port := conn.Addr().(*net.TCPAddr).Port
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(port, "127.0.0.1")
-	}
-	return gossipPeers, peersListeners
-}
-
-func (h *directHarness) peerListenerReadTotal(peerIndex int, totalSize int) ([]byte, error) {
-	buffer := make([]byte, totalSize)
-	totalRead := 0
-	for totalRead < totalSize {
-		conn := h.peersListenersConnections[peerIndex]
-		err := conn.SetReadDeadline(time.Now().Add(HARNESS_PEER_READ_TIMEOUT)) // apply an arbitrary read timeout
-		read, err := conn.Read(buffer[totalRead:])
-		if err != nil {
-			return nil, err
-		}
-		totalRead += read
-		if totalRead == totalSize {
-			break
-		}
-	}
-	return buffer, nil
-}
-
 func (h *directHarness) cleanupConnectedPeers() {
 	h.peerTalkerConnection.Close()
-	for i := 0; i < NETWORK_SIZE-1; i++ {
-		h.peersListenersConnections[i].Close()
-		h.peersListeners[i].Close()
-	}
-}
-
-func (h *directHarness) reconnect(listenerIndex int) error {
-	h.peersListenersConnections[listenerIndex].Close()    // disconnect transport forcefully
-	conn, err := h.peersListeners[listenerIndex].Accept() // reconnect transport forcefully
-	h.peersListenersConnections[listenerIndex] = conn
-
-	return err
-}
-
-func (h *directHarness) nodeAddressForPeer(index int) primitives.NodeAddress {
-	return testKeys.EcdsaSecp256K1KeyPairForTests(index + 1).NodeAddress()
-}
-
-func (h *directHarness) portForPeer(index int) int {
-	peerPublicKey := h.nodeAddressForPeer(index)
-	return h.config.GossipPeers()[peerPublicKey.KeyForMap()].GossipPort()
 }
 
 func (h *directHarness) expectTransportListenerCalled(payloads [][]byte) {
@@ -184,15 +88,6 @@ func (h *directHarness) expectTransportListenerNotCalled() {
 func (h *directHarness) verifyTransportListenerNotCalled(t *testing.T) {
 	err := test.ConsistentlyVerify(test.CONSISTENTLY_ADAPTER_TIMEOUT, h.listenerMock)
 	require.NoError(t, err, "transport listener mock should be called as expected")
-}
-
-func (h *directHarness) allOutgoingQueuesEnabled() bool {
-	for _, queue := range h.transport.outgoingPeerQueues {
-		if queue.disabled {
-			return false
-		}
-	}
-	return true
 }
 
 func concatSlices(slices ...[]byte) []byte {

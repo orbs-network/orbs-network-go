@@ -11,6 +11,7 @@ package adapter
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -56,14 +57,19 @@ func createNativeCompilerMetrics(factory metric.Factory) *nativeCompilerMetrics 
 	}
 }
 
-func NewNativeCompiler(config Config, logger log.Logger, factory metric.Factory) Compiler {
+func NewNativeCompiler(config Config, parent log.Logger, factory metric.Factory) Compiler {
+	logger := parent.WithTags(LogTag)
 	c := &nativeCompiler{
 		config:  config,
-		logger:  logger.WithTags(LogTag),
+		logger:  logger,
 		metrics: createNativeCompilerMetrics(factory),
 	}
 
-	c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
+	if config.ProcessorPerformWarmUpCompilation() {
+		c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
+	} else {
+		logger.Info("skipping warm-up compilation")
+	}
 
 	return c
 }
@@ -81,7 +87,7 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 	}
 }
 
-func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
+func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
 	c.metrics.sourceSize.Record(int64(len(code)))
 	start := time.Now()
 	defer c.metrics.totalCompileTime.RecordSince(start)
@@ -90,15 +96,18 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 	hashOfCode := getHashOfCode(code)
 
 	writeTime := time.Now()
-	sourceCodeFilePath, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
+	sourceCodeFilePaths, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
 	c.metrics.writeToDiskTime.RecordSince(writeTime)
-	defer os.Remove(sourceCodeFilePath)
+	for _, sourceCodeFilePath := range sourceCodeFilePaths {
+		defer os.Remove(sourceCodeFilePath)
+	}
+
 	if err != nil {
 		return nil, errors.Wrap(err, "could not write source code to disk")
 	}
 
 	buildTime := time.Now()
-	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePath, artifactsPath)
+	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePaths, artifactsPath)
 	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build a shared object")
@@ -111,27 +120,37 @@ func (c *nativeCompiler) Compile(ctx context.Context, code string) (*sdkContext.
 	return so, err
 }
 
-func getHashOfCode(code string) string {
-	return hex.EncodeToString(hash.CalcSha256([]byte(code)))
+func getHashOfCode(code []string) string {
+	var buffer string
+	for _, c := range code {
+		buffer += c
+	}
+
+	return hex.EncodeToString(hash.CalcSha256([]byte(buffer)))
 }
 
-func writeSourceCodeToDisk(filenamePrefix string, code string, artifactsPath string) (string, error) {
-	dir := filepath.Join(artifactsPath, SOURCE_CODE_PATH)
+func writeSourceCodeToDisk(filenamePrefix string, code []string, artifactsPath string) ([]string, error) {
+	dir := filepath.Join(artifactsPath, SOURCE_CODE_PATH, filenamePrefix)
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
-		return "", err
-	}
-	sourceFilePath := filepath.Join(dir, filenamePrefix) + ".go"
-
-	err = ioutil.WriteFile(sourceFilePath, []byte(code), 0600)
-	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return sourceFilePath, nil
+	var sourceFilePaths []string
+	for i, c := range code {
+		sourceFilePath := filepath.Join(dir, fmt.Sprintf("contract.%d.go", i))
+		sourceFilePaths = append(sourceFilePaths, sourceFilePath)
+
+		err = ioutil.WriteFile(sourceFilePath, []byte(c), 0600)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return sourceFilePaths, nil
 }
 
-func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePath string, artifactsPath string) (string, error) {
+func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePaths []string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
@@ -149,7 +168,9 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 
 	// compile
 	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
-	cmd := exec.CommandContext(ctx, goCmd, "build", "-buildmode=plugin", "-o", soFilePath, sourceFilePath)
+	cmdArgs := []string{"build", "-buildmode=plugin", "-o", soFilePath}
+	cmdArgs = append(cmdArgs, sourceFilePaths...)
+	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),

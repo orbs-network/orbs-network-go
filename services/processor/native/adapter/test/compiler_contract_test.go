@@ -48,7 +48,17 @@ func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*t
 		compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
 		t.Logf("Compilation time: %d ms", compilationTimeMs)
 
-		require.NoError(t, err, "compile should succeed")
+		require.NoError(t, err, "compilation should succeed")
+		require.NotNil(t, contractInfo, "loaded object should not be nil")
+
+		codePart1 := string(contracts.NativeSourceCodeForCounterPart1(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		codePart2 := string(contracts.NativeSourceCodeForCounterPart2(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		compilationStartTime = time.Now().UnixNano()
+		contractInfo, err = h.compiler.Compile(ctx, codePart1, codePart2)
+		compilationTimeMs = (time.Now().UnixNano() - compilationStartTime) / 1000000
+		t.Logf("Compilation time: %d ms", compilationTimeMs)
+
+		require.NoError(t, err, "compilation of multiple files should succeed")
 		require.NotNil(t, contractInfo, "loaded object should not be nil")
 
 		// instantiate the "start()" function of the contract and call it
@@ -87,6 +97,10 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 	compiler := fake.NewCompiler()
 	code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 	compiler.ProvideFakeContract(contracts.MockForCounter(), code)
+
+	codePart1 := string(contracts.NativeSourceCodeForCounterPart1(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+	compiler.ProvideFakeContract(contracts.MockForCounter(), codePart1)
+
 	return &compilerContractHarness{
 		compiler: compiler,
 		cleanup:  func() {},
@@ -95,6 +109,10 @@ func aFakeCompiler(t *testing.T) *compilerContractHarness {
 
 type hardcodedConfig struct {
 	artifactPath string
+}
+
+func (c *hardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
+	return true
 }
 
 func (c *hardcodedConfig) ProcessorArtifactPath() string {

@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
+func (s *Service) AddNewTransaction(ctx context.Context, input *services.AddNewTransactionInput) (*services.AddNewTransactionOutput, error) {
 	// too many concurrent AddNewTransaction goroutines from clients may choke the txPool and prevent CommitTransactionReceipts from being handled
 	s.addNewTransactionConcurrencyLimiter.RequestSlot()
 	defer s.addNewTransactionConcurrencyLimiter.ReleaseSlot()
@@ -60,7 +60,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	return s.addTransactionOutputFor(nil, protocol.TRANSACTION_STATUS_PENDING), nil
 }
 
-func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.Logger) (*services.AddNewTransactionOutput, error) {
+func (s *Service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTransaction, txHash primitives.Sha256, logger log.Logger) (*services.AddNewTransactionOutput, error) {
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/1020): improve addCommitLock workaround
 	s.addCommitLock.RLock()
 	defer s.addCommitLock.RUnlock()
@@ -79,7 +79,7 @@ func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTran
 	return nil, nil
 }
 
-func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
+func (s *Service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
 	lastCommittedBlockHeight, _ := s.lastCommittedBlockHeightAndTime()
 
 	// the real pre order checks will run during consensus on some future new block, try to estimate its height and timestamp as closely as possible
@@ -106,7 +106,7 @@ func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, tran
 	return nil
 }
 
-func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
+func (s *Service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
 	bh, ts := s.lastCommittedBlockHeightAndTime()
 	return &services.AddNewTransactionOutput{
 		TransactionReceipt: maybeReceipt,

@@ -68,7 +68,7 @@ func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidator
 	allowedTimestampJitter := vctx.allowedTimestampJitter
 	now := time.Now()
 	if err := isValidBlockTimestamp(currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter); err != nil {
-		return errors.Wrapf(ErrInvalidBlockTimestamp, "currentTimestamp %v prevTimestamp %v now %v allowed jitter %v, err=%v",
+		return errors.Wrapf(ErrInvalidBlockTimestamp, "currentBlockTimestamp=%d prevBlockTimestamp=%d now=%s allowed_jitter=%s, err=%s",
 			currentBlockTimestamp, prevBlockTimestamp, now, allowedTimestampJitter, err)
 	}
 	return nil
@@ -134,25 +134,30 @@ func isValidBlockTimestamp(currentBlockTimestamp primitives.TimestampNano, prevB
 		panic("allowedTimestampJitter cannot be negative")
 	}
 
-	upperJitterLimit := now.Add(allowedTimestampJitter).UnixNano()
-	lowerJitterLimit := now.Add(-allowedTimestampJitter).UnixNano()
+	upperJitterLimit := now.Add(allowedTimestampJitter)
+	upperJitterLimitNano := upperJitterLimit.UnixNano()
+	lowerJitterLimit := now.Add(-allowedTimestampJitter)
+	lowerJitterLimitNano := lowerJitterLimit.UnixNano()
 
-	if upperJitterLimit < 0 {
+	prevBlockTimestampTime := time.Unix(0, int64(prevBlockTimestamp))
+	currentBlockTimestampTime := time.Unix(0, int64(currentBlockTimestamp))
+
+	if upperJitterLimitNano < 0 {
 		panic("upperJitterLimit cannot be negative")
 	}
-	if lowerJitterLimit < 0 {
+	if lowerJitterLimitNano < 0 {
 		panic("lowerJitterLimit cannot be negative")
 	}
 
 	if prevBlockTimestamp >= currentBlockTimestamp {
-		return errors.Errorf("prevBlockTimestamp >= currentBlockTimestamp: prevBlockTimestamp=%s currentBlockTimestamp=%s", prevBlockTimestamp, currentBlockTimestamp)
+		return errors.Errorf("the previous block's timestamp is same or later than current block's timestamp: prevBlockTimestamp=%d (%s) currentBlockTimestamp=%d (%s)", prevBlockTimestamp, prevBlockTimestampTime, currentBlockTimestamp, currentBlockTimestampTime)
 	}
-	if uint64(currentBlockTimestamp) > uint64(upperJitterLimit) {
-		return errors.Errorf("currentBlockTimestamp is later upperJitterLimit: currentBlockTimestamp=%d upperJitterLimit=%d", uint64(currentBlockTimestamp), uint64(upperJitterLimit))
+	if uint64(currentBlockTimestamp) > uint64(upperJitterLimitNano) {
+		return errors.Errorf("current block's timestamp is later than latest timestamp allowed (upper jitter limit): currentBlockTimestamp=%d (%s) upperJitterLimitNano=%d (%s)", uint64(currentBlockTimestamp), currentBlockTimestampTime, uint64(upperJitterLimitNano), upperJitterLimit)
 	}
 
-	if uint64(currentBlockTimestamp) < uint64(lowerJitterLimit) {
-		return errors.Errorf("currentBlockTimestamp is before lowerJitterLimit: currentBlockTimestamp=%d lowerJitterLimit=%d", uint64(currentBlockTimestamp), uint64(lowerJitterLimit))
+	if uint64(currentBlockTimestamp) < uint64(lowerJitterLimitNano) {
+		return errors.Errorf("current block's timestamp is earlier than earliest timestamp allowed (lower jitter limit): currentBlockTimestamp=%d (%s) lowerJitterLimitNano=%d (%s)", uint64(currentBlockTimestamp), currentBlockTimestampTime, uint64(lowerJitterLimitNano), lowerJitterLimit)
 	}
 	return nil
 }

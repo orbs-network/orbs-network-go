@@ -11,7 +11,9 @@ jobs:
       - run: go get -u github.com/orbs-network/go-junit-report
       - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
       - run: sudo apt-get install -y nodejs
-      - run: ./test.sh
+      - run:
+          command: ./test.sh
+          no_output_timeout: 15m
       - store_artifacts:
           path: _out
           destination: test-output
@@ -69,20 +71,24 @@ jobs:
 
   e2e:
     machine: true
+    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
+      - run: ./.circleci/install-go.sh
       - run: ./git-submodule-checkout.sh
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Benchmark Consensus"
           environment:
             CONSENSUSALGO: benchmark
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
       - run: ./.circleci/release-internal.sh
@@ -131,13 +137,13 @@ jobs:
 
   deploy_new_chain_pr_only:
     docker:
-    - image: circleci/golang:1.11.4
+    - image: itamararjuan/golang_with_node_aws
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
       BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
       TESTNET_NODE_IP: "35.161.123.97"
-      TESTNET_IGNORE_IPS: "54.149.67.22"
+      TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
@@ -160,7 +166,11 @@ workflows:
 
       - deploy_new_chain_pr_only:
           requires:
+            - e2e
             - tests
+          filters:
+            branches:
+              ignore: master
       - e2e:
           filters:
             tags:

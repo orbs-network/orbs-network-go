@@ -54,7 +54,7 @@ func algoExtendAbove(ctx context.Context, referenceTimestampNano primitives.Time
 		return nil, errors.New("ethereum timestamp finder received nil as latest block from getter")
 	}
 	if referenceTimestampNano >= latest.BlockTimeNano {
-		return nil, errors.Errorf("the latest ethereum block %d at %d is not newer than the reference timestamp %d", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano)
+		return nil, errors.Errorf("the latest ethereum block %d at %d is not newer than the reference timestamp %d; delta is %d", latest.BlockNumber, latest.BlockTimeNano, referenceTimestampNano, referenceTimestampNano-latest.BlockTimeNano)
 	}
 	return latest, nil
 }
