@@ -70,6 +70,9 @@ type pendingTxPool struct {
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNodeAddress primitives.NodeAddress) (primitives.Sha256, *ErrTransactionRejected) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	size := sizeOfSignedTransaction(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
@@ -78,8 +81,6 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNode
 
 	key := digest.CalcTxHash(transaction.Transaction())
 
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	if _, exists := p.transactionsByHash[key.KeyForMap()]; exists {
 		return nil, &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 	}
