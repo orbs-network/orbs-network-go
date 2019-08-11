@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	PeriodicallyRotate(ctx context.Context, logger log.Logger)
+	PeriodicallyRotate(ctx context.Context, logger log.Logger) supervised.ContextEndedChan
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
@@ -161,8 +162,8 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) {
-	synchronization.NewPeriodicalTrigger(ctx, ROTATE_INTERVAL, logger, func() {
+func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) supervised.ContextEndedChan {
+	return synchronization.NewPeriodicalTrigger(ctx, ROTATE_INTERVAL, logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {
@@ -171,7 +172,7 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 				m.(*Histogram).Rotate()
 			}
 		}
-	}, nil)
+	}, nil).Closed
 }
 
 func (r *inMemoryRegistry) ExportPrometheus() string {

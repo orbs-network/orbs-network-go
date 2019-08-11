@@ -167,6 +167,6 @@ func (stm *blockPairCommitterMock) commitBlockPair(ctx context.Context, committe
 	return ret.Get(0).(primitives.BlockHeight), ret.Error(1)
 }
 
-func (stm *blockPairCommitterMock) getServiceName() string {
+func (stm *blockPairCommitterMock) GetServiceName() string {
 	return "mock-committer"
 }

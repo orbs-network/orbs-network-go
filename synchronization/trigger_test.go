@@ -85,6 +85,7 @@ func TestPeriodicalTrigger_Stop(t *testing.T) {
 	p.Stop()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
+	<-p.Closed
 }
 
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
@@ -96,16 +97,20 @@ func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	xValueOnStop := x
 	time.Sleep(time.Millisecond * 5)
 	require.Equal(t, xValueOnStop, x, "expected one tick due to stop")
+	<-p.Closed
+
 }
 
 func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	x := 0
-	synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
+	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
 	cancel()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
+	<-p.Closed
+
 }
 
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
@@ -118,16 +123,20 @@ func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 	require.Equal(t, 0, x, "expected no ticks")
 	p.Stop()
 	require.Equal(t, 0, x, "expected stop to not block")
+	<-p.Closed
+
 }
 
 func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	x := 0
-	synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, func() { x = 20 })
+	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, func() { x = 20 })
 	cancel()
 	time.Sleep(time.Millisecond) // yield
 	require.Equal(t, 20, x, "expected x to have the stop value")
+	<-p.Closed
+
 }
 
 func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
@@ -145,6 +154,8 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 	p.Stop()
 	<-latch // wait for stop to happen...
 	require.Equal(t, 20, x, "expected x to have the stop value")
+	<-p.Closed
+
 }
 
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
@@ -167,4 +178,6 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 	p.Stop()
 
 	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
+	<-p.Closed
+
 }
