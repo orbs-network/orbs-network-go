@@ -39,15 +39,17 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 	return statusMetrics
 }
 
-func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) {
+func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) chan struct{} {
 	statusMetrics := createConnectionStatusMetrics(registry)
 	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
-	synchronization.NewPeriodicalTrigger(ctx, frequency, logger, func() {
+	t := synchronization.NewPeriodicalTrigger(ctx, frequency, logger, func() {
 		if err := c.updateConnectionStatus(ctx, statusMetrics); err != nil {
 			logger.Info("ethereum rpc connection status check failed", log.Error(err))
 		}
 	}, nil)
+
+	return t.Closed
 }
 
 func (c *EthereumRpcConnection) updateConnectionStatus(ctx context.Context, m *metrics) error {

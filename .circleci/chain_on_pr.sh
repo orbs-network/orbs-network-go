@@ -1,23 +1,5 @@
 #!/bin/bash -e
-
-#touch $BASH_ENV
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-nvm install v10.14.1
 cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
-
-# Installing aws cli
-echo "Installing AWS CLI"
-sudo apt-get update
-sudo apt-get install -y python-dev
-sudo apt-get install -y python-pip
-sudo pip install awscli
-
-aws --version
 
 COMMIT_HASH=$(./docker/hash.sh)
 

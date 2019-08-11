@@ -8,6 +8,7 @@ package e2e
 
 import (
 	"fmt"
+	"golang.org/x/net/context"
 	"os"
 	"testing"
 	"time"
@@ -25,6 +26,10 @@ func TestMain(m *testing.M) {
 
 		exitCode = m.Run()
 		n.GracefulShutdownAndWipeDisk()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		n.WaitUntilShutdown(shutdownCtx)
 
 	} else {
 		exitCode = m.Run()

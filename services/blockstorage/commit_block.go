@@ -19,15 +19,15 @@ import (
 	"time"
 )
 
-func (s *service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *Service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	return s.commitBlock(ctx, input, false)
 }
 
-func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *Service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	return s.commitBlock(ctx, input, true)
 }
 
-func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
+func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	proposedBlockHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()

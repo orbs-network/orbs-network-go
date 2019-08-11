@@ -22,7 +22,7 @@ type IndexResponse struct {
 }
 
 // Serves both index and 404 because router is built that way
-func (s *server) Index(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) Index(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -42,7 +42,7 @@ func (s *server) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) robots(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) robots(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	_, err := w.Write([]byte("User-agent: *\nDisallow: /\n"))
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *server) robots(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) filterOn(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) filterOn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -66,7 +66,7 @@ func (s *server) filterOn(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("filter on"))
 }
 
-func (s *server) filterOff(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) filterOff(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -82,7 +82,7 @@ func (s *server) filterOff(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("filter off"))
 }
 
-func (s *server) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
 	_, err := w.Write(bytes)
@@ -91,7 +91,7 @@ func (s *server) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) dumpMetricsAsPrometheus(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) dumpMetricsAsPrometheus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	prometheusMetrics := s.metricRegistry.ExportPrometheus()
 
@@ -101,7 +101,7 @@ func (s *server) dumpMetricsAsPrometheus(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) sendTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -114,7 +114,7 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	s.logger.Info("http server received send-transaction", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received send-transaction", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransaction(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
@@ -123,7 +123,7 @@ func (s *server) sendTransactionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (s *server) sendTransactionAsyncHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) sendTransactionAsyncHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -136,7 +136,7 @@ func (s *server) sendTransactionAsyncHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	s.logger.Info("http server received send-transaction-async", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received send-transaction-async", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.SendTransactionAsync(r.Context(), &services.SendTransactionInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
@@ -145,7 +145,7 @@ func (s *server) sendTransactionAsyncHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (s *server) runQueryHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) runQueryHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -158,7 +158,7 @@ func (s *server) runQueryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.logger.Info("http server received run-query", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received run-query", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.RunQuery(r.Context(), &services.RunQueryInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
@@ -167,7 +167,7 @@ func (s *server) runQueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) getTransactionStatusHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -180,7 +180,7 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	s.logger.Info("http server received get-transaction-status", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received get-transaction-status", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionStatus(r.Context(), &services.GetTransactionStatusInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
@@ -189,7 +189,7 @@ func (s *server) getTransactionStatusHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) getTransactionReceiptProofHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -202,7 +202,7 @@ func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	s.logger.Info("http server received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received get-transaction-receipt-proof", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetTransactionReceiptProof(r.Context(), &services.GetTransactionReceiptProofInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
@@ -211,7 +211,7 @@ func (s *server) getTransactionReceiptProofHandler(w http.ResponseWriter, r *htt
 	}
 }
 
-func (s *server) getBlockHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) getBlockHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, e := readInput(r)
 	if e != nil {
 		s.writeErrorResponseAndLog(w, e)
@@ -224,7 +224,7 @@ func (s *server) getBlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.logger.Info("http server received get-block", log.Stringable("request", clientRequest))
+	s.logger.Info("http HttpServer received get-block", log.Stringable("request", clientRequest))
 	result, err := s.publicApi.GetBlock(r.Context(), &services.GetBlockInput{ClientRequest: clientRequest})
 	if result != nil && result.ClientResponse != nil {
 		s.writeMembuffResponse(w, result.ClientResponse, result.ClientResponse.RequestResult(), err)
