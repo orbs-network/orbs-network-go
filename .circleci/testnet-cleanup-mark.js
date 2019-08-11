@@ -13,6 +13,7 @@ const configuration = require(configFilePath);
 (async function () {
     console.log('Querying closed github PRs...');
     const closedPRs = await getClosedPullRequests();
+
     let removeCounter = 0;
     let updatedConfiguration = configuration;
 
