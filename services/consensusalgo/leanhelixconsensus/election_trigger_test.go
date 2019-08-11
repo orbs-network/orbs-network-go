@@ -53,15 +53,16 @@ func TestCallbackTriggerOnce(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		et := buildElectionTrigger(ctx, t, time.Millisecond)
 
-		callCount := 0
+		ch := make(chan struct{})
 		cb := func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics)) {
-			callCount++
+			close(ch) // will panic if closed twice
 		}
 		et.RegisterOnElection(ctx, 10, 0, cb)
 
 		time.Sleep(250 * time.Millisecond)
 
-		require.Exactly(t, 1, callCount, "Trigger callback called more than once")
+		_, open := <-ch
+		require.False(t, open, "Trigger callback wasn't called")
 	})
 }
 
