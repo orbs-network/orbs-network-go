@@ -80,7 +80,7 @@ function removeChainConfigurationById(configuration, chainId) {
 function markChainForRemoval(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
     if (chainIndex !== -1) {
-        configuration.chains[chainIndex].Deleted = true;
+        configuration.chains[chainIndex].Disabled = true;
     }
     return configuration;
 }

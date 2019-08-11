@@ -14,14 +14,18 @@ const configuration = require(configFilePath);
     console.log('Querying closed github PRs...');
     const closedPRs = await getClosedPullRequests();
     let removeCounter = 0;
+    let updatedConfiguration = configuration;
 
     for (let key in closedPRs) {
         let aClosedPR = closedPRs[key];
         let aClosedPRChainId = 100000 + aClosedPR.number;
 
         if (getBoyarChainConfigurationById(configuration, aClosedPRChainId) !== false) {
-            console.log(`The chain for PR ${aClosedPR.number} (${aClosedPR.title} / ${aClosedPR.login}) exists and this PR is already closed - marking it for sweeping..`)
-            markChainForRemoval(configuration, aClosedPRChainId);
+            console.log(`Chain for PR ${aClosedPR.number} (${aClosedPR.title}) already closed`);
+            console.log(`PR User: ${aClosedPR.login}`)
+            console.log('--- MARKED for sweeping..');
+            console.log('');
+            updatedConfiguration = markChainForRemoval(configuration, aClosedPRChainId);
             removeCounter++;
         }
     }
@@ -29,7 +33,7 @@ const configuration = require(configFilePath);
     console.log('Total networks to remove: ', removeCounter);
 
     if (removeCounter > 0) {
-        fs.writeFileSync(configFilePath, JSON.stringify(configuration, 2, 2));
+        fs.writeFileSync(configFilePath, JSON.stringify(updatedConfiguration, 2, 2));
     }
 
     process.exit(0);
