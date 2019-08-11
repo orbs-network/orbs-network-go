@@ -51,6 +51,6 @@ func (tpc *transactionPoolCommitter) commitBlockPair(ctx context.Context, commit
 	return out.NextDesiredBlockHeight, err
 }
 
-func (sd *serviceDesc) getServiceName() string {
+func (sd *serviceDesc) GetServiceName() string {
 	return sd.name
 }

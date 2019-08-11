@@ -16,8 +16,9 @@ import (
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
@@ -36,8 +37,9 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 }
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 		tx := builders.TransferTransaction().Build()
 
 		h.reportTransactionsAsCommitted(ctx, tx)

@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -25,7 +26,9 @@ type BlockHeightReporter interface {
 	IncrementTo(height primitives.BlockHeight)
 }
 
-type service struct {
+type Service struct {
+	supervised.TreeSupervisor
+
 	clock                      adapter.Clock
 	gossip                     gossiptopics.TransactionRelay
 	virtualMachine             services.VirtualMachine
@@ -57,13 +60,13 @@ type service struct {
 	addCommitLock sync.RWMutex
 }
 
-func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *Service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
 	s.lastCommitted.RLock()
 	defer s.lastCommitted.RUnlock()
 	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
-func (s *service) createValidationContext() *validationContext {
+func (s *Service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:           s.config.TransactionExpirationWindow(),
 		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),

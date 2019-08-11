@@ -31,14 +31,9 @@ type message struct {
 	traceContext *trace.Context
 }
 
-type peer struct {
-	socket   chan message
-	listener chan adapter.TransportListener
-	logger   log.Logger
-}
-
 type memoryTransport struct {
 	sync.RWMutex
+	supervised.TreeSupervisor
 	peers map[string]*peer
 }
 
@@ -49,10 +44,20 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		transport.peers[nodeAddress] = newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
+		peer := newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
+		transport.peers[nodeAddress] = peer
+		transport.Supervise(peer)
 	}
 
 	return transport
+}
+
+func (p *memoryTransport) GracefulShutdown(shutdownContext context.Context) {
+	p.Lock()
+	defer p.Unlock()
+	for _, peer := range p.peers {
+		peer.cancel()
+	}
 }
 
 func (p *memoryTransport) RegisterListener(listener adapter.TransportListener, nodeAddress primitives.NodeAddress) {
@@ -83,7 +88,16 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 	return nil
 }
 
-func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
+type peer struct {
+	supervised.TreeSupervisor
+	socket   chan message
+	listener chan adapter.TransportListener
+	logger   log.Logger
+	cancel   context.CancelFunc
+}
+
+func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
+	ctx, cancel := context.WithCancel(parent)
 	p := &peer{
 		// channel is buffered on purpose, otherwise the whole network is synced on transport
 		// we also multiply by number of peers because we have one logical "socket" for combined traffic from all peers together
@@ -93,17 +107,18 @@ func newPeer(ctx context.Context, logger log.Logger, totalPeers int) *peer {
 		socket:   make(chan message, SEND_QUEUE_MAX_MESSAGES*totalPeers),
 		listener: make(chan adapter.TransportListener),
 		logger:   logger,
+		cancel:   cancel,
 	}
 
-	supervised.GoForever(ctx, logger, func() {
+	p.SuperviseChan("In-memory transport peer", supervised.GoForever(ctx, logger, func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
 			p.acceptUsing(ctx, l)
 		case <-ctx.Done():
-			return
+			// fall through
 		}
-	})
+	}))
 
 	return p
 }

@@ -22,6 +22,7 @@ import (
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -35,6 +36,7 @@ import (
 
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
+	supervised.TreeSupervisor
 	Nodes          []*Node
 	Logger         log.Logger
 	Transport      adapter.Transport
@@ -92,6 +94,8 @@ func NewNetworkWithNumOfNodes(
 
 		network.addNode(fmt.Sprintf("%s", validatorNode.NodeAddress()[:3]), cfg, dep, metricRegistry, nodeLogger)
 	}
+
+	network.Supervise(transport)
 
 	return network // call network.CreateAndStartNodes to launch nodes in the network
 }
@@ -163,6 +167,8 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			}
 			wg.Done()
 		}(node)
+
+		n.Supervise(node.nodeLogic)
 	}
 
 	wg.Wait()
