@@ -84,7 +84,7 @@ var (
 	overrideConfigJson = flag.String("override-config", "{}", "JSON-formatted config overrides, same format as the file config")
 )
 
-func Main() {
+func Main(listening chan<- int) {
 
 	flag.Parse()
 
@@ -93,12 +93,20 @@ func Main() {
 		return
 	}
 
-	var serverAddress = ":" + strconv.Itoa(*port)
+	requestedPort := strconv.Itoa(*port)
+	if requestedPort == "-1" {
+		requestedPort = "0"
+	}
+	var serverAddress = ":" + requestedPort
 
-	StartGammaServer(GammaServerConfig{
+	server := StartGammaServer(GammaServerConfig{
 		ServerAddress:      serverAddress,
 		Profiling:          *profiling,
 		OverrideConfigJson: *overrideConfigJson,
 		Silent:             false,
-	}).WaitUntilShutdown()
+	})
+	if listening != nil {
+		listening <- server.Port()
+	}
+	server.WaitUntilShutdown()
 }
