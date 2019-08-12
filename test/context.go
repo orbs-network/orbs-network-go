@@ -18,6 +18,14 @@ func WithContext(f func(ctx context.Context)) {
 	f(ctx)
 }
 
+func WithSupervision(f func(ctx context.Context, supervisor *govnr.TreeSupervisor)) {
+	supervisor := &govnr.TreeSupervisor{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer shutdown(supervisor)
+	defer cancel()
+	f(ctx, supervisor)
+}
+
 func WithContextAndShutdown(waiter govnr.ShutdownWaiter, f func(ctx context.Context)) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer shutdown(waiter)

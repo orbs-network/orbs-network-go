@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -67,7 +68,7 @@ func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, 
 
 func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -75,6 +76,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 		require.NoError(t, err)
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
+		s.Supervise(txForwarder.handle)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -92,7 +94,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -100,6 +102,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 		require.NoError(t, err)
 
 		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
+		s.Supervise(txForwarder.handle)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -117,7 +120,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 }
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -127,6 +130,7 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 
 		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
 		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
+		s.Supervise(txForwarder.handle)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
