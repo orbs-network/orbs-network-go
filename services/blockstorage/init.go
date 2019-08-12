@@ -8,12 +8,12 @@ package blockstorage
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/servicesync"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -30,7 +30,7 @@ const (
 var LogTag = log.Service("block-storage")
 
 type Service struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync

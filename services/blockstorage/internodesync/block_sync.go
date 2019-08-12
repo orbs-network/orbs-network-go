@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -63,7 +62,7 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 }
 
 type BlockSync struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	logger  log.Logger
 	factory *stateFactory
 	gossip  gossiptopics.BlockSync

@@ -80,7 +80,7 @@ func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort u
 			continue
 		}
 		t.metrics.incomingConnectionAcceptSuccesses.Inc()
-		govnr.GoOnce(logfields.GovnrErrorer(t.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(t.logger), func() {
 			t.serverHandleIncomingConnection(ctx, conn)
 		})
 	}

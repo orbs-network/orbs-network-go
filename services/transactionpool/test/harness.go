@@ -11,13 +11,13 @@ import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -32,7 +32,7 @@ import (
 )
 
 type harness struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	txpool                  *transactionpool.Service
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine

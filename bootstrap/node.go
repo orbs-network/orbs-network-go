@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -24,7 +25,7 @@ import (
 )
 
 type Node struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	logic      NodeLogic
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
