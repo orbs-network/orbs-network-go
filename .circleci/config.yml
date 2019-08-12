@@ -99,6 +99,7 @@ jobs:
       - checkout
       - run: ./.circleci/install-go.sh
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
@@ -115,6 +116,8 @@ jobs:
           environment:
             CONSENSUSALGO: leanhelix
       - run: ./.circleci/release-internal.sh
+      - store_test_results:
+          path: _reports
       - store_artifacts:
           path: _logs
 
@@ -131,6 +134,18 @@ jobs:
       - run: ./.circleci/set-aws-credentials.sh
       - run: ./.circleci/deploy-testnet.sh
 
+  ganache_related_tests:
+    machine: true
+    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./.circleci/install-go.sh
+      - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
+      - run: ./docker/test/ganache-related-test.sh
+      - store_test_results:
+          path: _reports
+    
   e2e_testnet_benchmark:
     docker:
       - image: circleci/golang:1.11.4
@@ -194,6 +209,7 @@ workflows:
             tags:
               only: /^v.*/
       - flakiness
+      - ganache_related_tests
       - success:
           requires:
             - tests

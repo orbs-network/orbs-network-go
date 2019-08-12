@@ -9,8 +9,8 @@ package metric
 import (
 	"context"
 	"github.com/beevik/ntp"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"time"
 )
@@ -26,7 +26,7 @@ type ntpReporter struct {
 
 const NTP_QUERY_INTERVAL = 30 * time.Second
 
-func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logger, ntpServerAddress string) supervised.ContextEndedChan {
+func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logger, ntpServerAddress string) govnr.ContextEndedChan {
 	r := &ntpReporter{
 		metrics: ntpMetrics{
 			drift: metricFactory.NewGauge("OS.Time.Drift.Millis"),
@@ -37,7 +37,7 @@ func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logge
 	return r.startReporting(ctx, logger)
 }
 
-func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) supervised.ContextEndedChan {
+func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ContextEndedChan {
 	return synchronization.NewPeriodicalTrigger(ctx, NTP_QUERY_INTERVAL, logger, func() {
 		response, err := ntp.Query(r.address)
 

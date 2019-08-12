@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"strconv"
 )
@@ -78,6 +79,7 @@ func _isImplicitlyDeployed(serviceName string) bool {
 	case
 		CONTRACT_NAME,
 		info_systemcontract.CONTRACT_NAME,
+		triggers_systemcontract.CONTRACT_NAME,
 		elections_systemcontract.CONTRACT_NAME,
 		globalpreorder_systemcontract.CONTRACT_NAME:
 		return true

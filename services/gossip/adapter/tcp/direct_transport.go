@@ -8,10 +8,11 @@ package tcp
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -100,7 +101,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	t.atomicConfig.Store(config)
 
 	// server goroutine
-	supervised.GoForever(serverCtx, t.logger, func() {
+	govnr.GoForever(serverCtx, logfields.GovnrErrorer(t.logger), func() {
 		t.serverMainLoop(serverCtx, config.GossipListenPort())
 		if serverCtx.Err() != nil {
 			t.logger.Info("TCP transport server has shut down")

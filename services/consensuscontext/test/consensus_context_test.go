@@ -15,7 +15,7 @@ import (
 )
 
 func TestRequestOrderingCommittee(t *testing.T) {
-	h := newHarness(t)
+	h := newHarness(t, false)
 	blockHeight := primitives.BlockHeight(1)
 	genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
 
