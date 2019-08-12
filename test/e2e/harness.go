@@ -139,7 +139,7 @@ func (h *harness) getMetrics() metrics {
 
 	readBytes, _ := ioutil.ReadAll(res.Body)
 	m := make(metrics)
-	json.Unmarshal(readBytes, &m)
+	_ = json.Unmarshal(readBytes, &m)
 
 	return m
 }
@@ -197,7 +197,8 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+		fmt.Println("received from the ENV the following: ", apiEndpoint)
+		baseUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 

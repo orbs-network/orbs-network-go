@@ -166,6 +166,8 @@ jobs:
       - run: ./.circleci/chain_on_pr.sh
       - store_test_results:
           path: _reports
+      - store_artifacts:
+          path: _out
 
   release:
     machine: true
