@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"encoding/hex"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -39,10 +40,10 @@ func TestContract_SendToAllButList(t *testing.T) {
 	t.Skipf("implement") // TODO(v1)
 }
 
-func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
+func broadcastTest(makeContext func(ctx context.Context, s govnr.Supervisor, tb testing.TB) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
-			c := makeContext(ctx, t)
+		test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+			c := makeContext(ctx, s, t)
 
 			data := &adapter.TransportData{
 				SenderNodeAddress: c.nodeAddresses[3],
@@ -64,10 +65,10 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 	}
 }
 
-func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
+func sendToListTest(makeContext func(ctx context.Context, s govnr.Supervisor, tb testing.TB) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
-			c := makeContext(ctx, t)
+		test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+			c := makeContext(ctx, s, t)
 
 			data := &adapter.TransportData{
 				SenderNodeAddress:      c.nodeAddresses[3],
@@ -96,7 +97,7 @@ type transportContractContext struct {
 	listeners     []*testkit.MockTransportListener
 }
 
-func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractContext {
+func aMemoryTransport(ctx context.Context, s govnr.Supervisor, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
@@ -116,10 +117,12 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
 	}
 
+	s.Supervise(transport)
+
 	return res
 }
 
-func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
+func aDirectTransport(ctx context.Context, s govnr.Supervisor, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
 	gossipPeers := make(map[string]config.GossipPeer)
@@ -169,6 +172,8 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	}
 
 	for _, t := range transports {
+		s.Supervise(t)
+
 		res.transports = append(res.transports, t)
 	}
 

@@ -8,6 +8,7 @@ package memory
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -22,10 +23,11 @@ import (
 )
 
 func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
-	test.WithContext(func(parentContext context.Context) {
+	test.WithSupervision(func(parentContext context.Context, s govnr.Supervisor) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(parentContext, log.DefaultTestingLogger(t), makeNetwork(address))
-		defer shutdown(parentContext, transport)
+		s.Supervise(transport)
+		defer transport.GracefulShutdown(parentContext)
 
 		listener := testkit.ListenTo(transport, address)
 
@@ -47,10 +49,11 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 }
 
 func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
-		defer shutdown(ctx, transport)
+		s.Supervise(transport)
+		defer transport.GracefulShutdown(ctx)
 
 		// sending without a listener - nobody is receiving
 		transport.Send(ctx, &adapter.TransportData{
@@ -62,10 +65,11 @@ func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
 }
 
 func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLogger(t), makeNetwork(address))
-		defer shutdown(ctx, transport)
+		s.Supervise(transport)
+		defer transport.GracefulShutdown(ctx)
 
 		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
@@ -81,10 +85,11 @@ func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 }
 
 func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, log.DefaultTestingLoggerAllowingErrors(t, "memory transport send buffer is full"), makeNetwork(address))
-		defer shutdown(ctx, transport)
+		s.Supervise(transport)
+		defer transport.GracefulShutdown(ctx)
 
 		listener := testkit.ListenTo(transport, address)
 		listener.BlockReceive()
@@ -106,9 +111,4 @@ func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.Validato
 		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(address)
 	}
 	return genesisValidatorNodes
-}
-
-func shutdown(ctx context.Context, transport *memoryTransport) {
-	transport.GracefulShutdown(ctx)
-	transport.WaitUntilShutdown(ctx)
 }

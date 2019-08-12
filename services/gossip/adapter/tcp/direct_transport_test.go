@@ -9,6 +9,7 @@ package tcp
 import (
 	"context"
 	"encoding/hex"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -27,8 +28,9 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	// High value to disable keep alive
 
 	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), 20*time.Hour, 1*time.Second)
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		transport := NewDirectTransport(ctx, cfg, log.DefaultTestingLogger(t), metric.NewRegistry())
+		s.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
 
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
@@ -40,9 +42,10 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 
 	logger := log.DefaultTestingLogger(t)
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
+		superviseAll(s, node1, node2)
 		defer shutdownAll(ctx, node1, node2)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
@@ -68,11 +71,12 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 	logger := log.DefaultTestingLogger(t)
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
 		node4 := aNode(ctx, logger)
+		superviseAll(s, node1, node2, node3, node4)
 		defer shutdownAll(ctx, node1, node2, node3, node4)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
@@ -125,10 +129,11 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 	logger := log.DefaultTestingLogger(t)
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
+		superviseAll(s, node1, node2, node3)
 		defer shutdownAll(ctx, node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3)
@@ -238,6 +243,11 @@ func aTopologyContaining(nodes ...*nodeHarness) config.GossipTransportConfig {
 func shutdownAll(ctx context.Context, nodes ...*nodeHarness) {
 	for _, node := range nodes {
 		node.transport.GracefulShutdown(ctx)
-		node.transport.WaitUntilShutdown(ctx)
+	}
+}
+
+func superviseAll(s govnr.Supervisor, nodes ...*nodeHarness) {
+	for _, node := range nodes {
+		s.Supervise(node.transport)
 	}
 }
