@@ -68,7 +68,7 @@ type transactionForwarder struct {
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
 	transactionAdded  chan uint16
-	closed            chan struct{}
+	handle            *govnr.ForeverHandle
 }
 
 func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer signer.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
@@ -95,7 +95,7 @@ func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransactio
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
-	f.closed = govnr.GoForever(parent, logfields.GovnrErrorer(f.logger), func() {
+	f.handle = govnr.Forever(parent, "transaction forwarder", logfields.GovnrErrorer(f.logger), func() {
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())

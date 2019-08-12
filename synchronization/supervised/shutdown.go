@@ -77,8 +77,9 @@ func (t *TreeSupervisor) Supervise(w ShutdownWaiter) {
 	t.supervised = append(t.supervised, w)
 }
 
-func (t *TreeSupervisor) SuperviseChan(description string, ch chan struct{}) {
-	t.Supervise(&ChanShutdownWaiter{closed: ch, description: description})
+func (t *TreeSupervisor) SuperviseForeverHandle(handle *govnr.ForeverHandle) {
+	handle.MarkSupervised()
+	t.Supervise(handle)
 }
 
 func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {

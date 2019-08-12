@@ -30,9 +30,11 @@ type PeriodicalTrigger struct {
 	metrics *Telemetry
 	wgSync  sync.WaitGroup
 	Closed  govnr.ContextEndedChan
+	Handle  *govnr.ForeverHandle
+	name    string
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
+func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &PeriodicalTrigger{
 		ticker:  nil,
@@ -41,6 +43,7 @@ func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger lo
 		s:       onStop,
 		cancel:  cancel,
 		logger:  logger,
+		name:    name,
 		metrics: &Telemetry{},
 	}
 
@@ -54,7 +57,7 @@ func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	t.Closed = govnr.GoForever(ctx, logfields.GovnrErrorer(t.logger), func() {
+	t.Handle = govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
 		t.wgSync.Add(1)
 		defer t.wgSync.Done()
 		for {
@@ -71,6 +74,7 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 			}
 		}
 	})
+	t.Closed = t.Handle.Done()
 }
 
 func (t *PeriodicalTrigger) Stop() {

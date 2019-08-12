@@ -45,7 +45,7 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 		}
 	}
 	tickTime := time.Microsecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, trigger, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
 	<-fromTrigger // test will block if the trigger did not happen
 
@@ -65,7 +65,7 @@ func TestTriggerInternalMetrics(t *testing.T) {
 		}
 	}
 	tickTime := time.Microsecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, trigger, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
 	// wait for three triggers
 	for i := 0; i < 3; i++ {
@@ -81,7 +81,7 @@ func TestTriggerInternalMetrics(t *testing.T) {
 func TestPeriodicalTrigger_Stop(t *testing.T) {
 	logger := mockLogger()
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(), time.Millisecond*2, logger, func() { x++ }, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond*2, logger, func() { x++ }, nil)
 	p.Stop()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
@@ -91,7 +91,7 @@ func TestPeriodicalTrigger_Stop(t *testing.T) {
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 	logger := mockLogger()
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(), time.Millisecond, logger, func() { x++ }, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, logger, func() { x++ }, nil)
 	time.Sleep(time.Microsecond * 1100)
 	p.Stop()
 	xValueOnStop := x
@@ -105,7 +105,7 @@ func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
+	p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, logger, func() { x++ }, nil)
 	cancel()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
@@ -117,7 +117,7 @@ func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
+	p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, logger, func() { x++ }, nil)
 	cancel()
 	time.Sleep(3 * time.Millisecond)
 	require.Equal(t, 0, x, "expected no ticks")
@@ -131,7 +131,7 @@ func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 	logger := mockLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, func() { x = 20 })
+	p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, logger, func() { x++ }, func() { x = 20 })
 	cancel()
 	time.Sleep(time.Millisecond) // yield
 	require.Equal(t, 20, x, "expected x to have the stop value")
@@ -143,14 +143,10 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 	logger := mockLogger()
 	latch := make(chan struct{})
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(),
-		time.Second,
-		logger,
-		func() { x++ },
-		func() {
-			x = 20
-			latch <- struct{}{}
-		})
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Second, logger, func() { x++ }, func() {
+		x = 20
+		latch <- struct{}{}
+	})
 	p.Stop()
 	<-latch // wait for stop to happen...
 	require.Equal(t, 20, x, "expected x to have the stop value")
@@ -161,14 +157,10 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 	logger := mockLogger()
 	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(),
-		time.Millisecond,
-		logger,
-		func() {
-			x++
-			panic("we should not see this other than the logs")
-		},
-		nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, logger, func() {
+		x++
+		panic("we should not see this other than the logs")
+	}, nil)
 
 	// more than one error means more than one panic means it recovers correctly
 	for i := 0; i < 2; i++ {

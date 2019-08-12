@@ -114,7 +114,7 @@ func NewBenchmarkConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
 		logger.Info("NewBenchmarkConsensusAlgo() Benchmark Consensus is active algo, and this node is leader, starting goroutine now")
-		s.SuperviseChan("Benchmark consensus main loop", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+		s.SuperviseForeverHandle(govnr.Forever(ctx, "Benchmark consensus main loop", logfields.GovnrErrorer(logger), func() {
 			s.leaderConsensusRoundRunLoop(ctx)
 		}))
 	}

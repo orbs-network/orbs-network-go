@@ -65,7 +65,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		httpServer: httpServer,
 	}
 
-	n.SuperviseChan("Ethereum connector status reporter", ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
+	n.SuperviseForeverHandle(ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
 	n.Supervise(nodeLogic)
 	n.Supervise(transport)
 	n.Supervise(httpServer)
