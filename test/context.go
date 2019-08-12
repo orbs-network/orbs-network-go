@@ -26,13 +26,6 @@ func WithSupervision(f func(ctx context.Context, supervisor *govnr.TreeSuperviso
 	f(ctx, supervisor)
 }
 
-func WithContextAndShutdown(waiter govnr.ShutdownWaiter, f func(ctx context.Context)) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer shutdown(waiter)
-	defer cancel()
-	f(ctx)
-}
-
 func shutdown(waiter govnr.ShutdownWaiter) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

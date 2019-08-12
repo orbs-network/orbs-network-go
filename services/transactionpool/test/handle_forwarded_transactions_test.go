@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -20,7 +21,8 @@ import (
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		ctrlRand := rand.NewControlledRand(t)
 		h.start(ctx)
 
@@ -46,7 +48,8 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		tx1 := builders.TransferTransaction().Build()
@@ -60,7 +63,8 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
 	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding forwarded transaction to pending pool")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		tx1 := builders.TransferTransaction().Build()

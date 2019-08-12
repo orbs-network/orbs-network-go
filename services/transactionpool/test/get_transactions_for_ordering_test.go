@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -19,7 +20,8 @@ import (
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
@@ -34,7 +36,8 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		// init a cancelled child context for the exercise
@@ -53,7 +56,8 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCan
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		h.assumeBlockStorageAtHeight(1)
@@ -76,7 +80,8 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		ch := make(chan *services.GetTransactionsForOrderingOutput)
@@ -98,7 +103,8 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 
 func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
 	h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		// init a cancelled child context for the exercise
@@ -114,7 +120,8 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 
 func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
@@ -132,7 +139,8 @@ func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *test
 
 func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 

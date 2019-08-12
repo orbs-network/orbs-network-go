@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -19,7 +20,8 @@ import (
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 		h.ignoringForwardMessages()
 
@@ -61,7 +63,8 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{

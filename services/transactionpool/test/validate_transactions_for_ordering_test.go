@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -19,7 +20,8 @@ import (
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		require.NoError(t,
@@ -30,7 +32,8 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		h.ignoringForwardMessages()
@@ -51,7 +54,8 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
@@ -67,7 +71,8 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		invalidTx := builders.TransferTransaction().Build()
@@ -84,7 +89,8 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
 	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		h.start(ctx)
 
 		require.EqualErrorf(t,

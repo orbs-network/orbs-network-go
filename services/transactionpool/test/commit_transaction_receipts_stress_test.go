@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -20,7 +21,8 @@ import (
 
 func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *testing.T) {
 	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		supervisor.Supervise(h)
 		const CONCURRENCY_COUNT = 500
 		duplicateStatuses := []protocol.TransactionStatus{
 			protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,
