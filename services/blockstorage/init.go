@@ -77,7 +77,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	for _, bpr := range blockPairReceivers {
-		s.SuperviseForeverHandle(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))
+		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))
 	}
 	s.Supervise(s.nodeSync)
 

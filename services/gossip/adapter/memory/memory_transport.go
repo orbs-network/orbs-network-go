@@ -111,7 +111,7 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		cancel:   cancel,
 	}
 
-	p.SuperviseForeverHandle(govnr.Forever(ctx, "In-memory transport peer", logfields.GovnrErrorer(logger), func() {
+	p.Supervise(govnr.Forever(ctx, "In-memory transport peer", logfields.GovnrErrorer(logger), func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:

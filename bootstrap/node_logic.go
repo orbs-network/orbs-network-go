@@ -104,11 +104,11 @@ func NewNodeLogic(
 	node.Supervise(blockStorageService)
 	node.Supervise(benchmarkConsensusAlgo)
 	node.Supervise(leanHelixAlgo)
-	node.SuperviseForeverHandle(metric.NewSystemReporter(ctx, metricRegistry, logger))
-	node.SuperviseForeverHandle(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
-	node.SuperviseForeverHandle(metricRegistry.PeriodicallyRotate(ctx, logger))
+	node.Supervise(metric.NewSystemReporter(ctx, metricRegistry, logger))
+	node.Supervise(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.Supervise(metricRegistry.PeriodicallyRotate(ctx, logger))
 	if nodeConfig.NTPEndpoint() != "" {
-		node.SuperviseForeverHandle(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+		node.Supervise(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
 	}
 
 	return node

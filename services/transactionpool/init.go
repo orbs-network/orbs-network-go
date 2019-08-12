@@ -68,9 +68,9 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	s.SuperviseForeverHandle(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.SuperviseForeverHandle(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.SuperviseForeverHandle(txForwarder.handle)
+	s.Supervise(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.Supervise(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.Supervise(txForwarder.handle)
 
 	return s
 }
