@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -23,11 +24,11 @@ import (
 
 // TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blocks := []*protocol.BlockPairContainer{
 			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
@@ -76,14 +77,14 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 }
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(3 * time.Millisecond).
 			expectValidateConsensusAlgos()
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(2)
 
-		harness.start(ctx)
+		harness.start(ctx, supervisor)
 
 		harness.verifyMocks(t, 2)
 	})
@@ -94,12 +95,12 @@ func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
-			withSyncNoCommitTimeout(5 * time.Millisecond).
+			withSyncNoCommitTimeout(5*time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(10).
-			start(ctx)
+			start(ctx, supervisor)
 
 		// we do not assume anything about the implementation, commit a block/ms and see if the sync tries to broadcast
 		latch := make(chan struct{})

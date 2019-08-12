@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
@@ -73,7 +74,7 @@ func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
 type harness struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
-	blockStorage   services.BlockStorage
+	blockStorage   *blockstorage.Service
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
@@ -265,11 +266,13 @@ func (d *harness) allowingErrorsMatching(pattern string) *harness {
 	return d
 }
 
-func (d *harness) start(ctx context.Context) *harness {
+func (d *harness) start(ctx context.Context, testSupervisor govnr.Supervisor) *harness {
 	registry := metric.NewRegistry()
 
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
+
+	testSupervisor.Supervise(d.blockStorage)
 
 	return d
 }

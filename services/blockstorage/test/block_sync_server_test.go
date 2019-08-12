@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -20,13 +21,13 @@ import (
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
 		harness := newBlockStorageHarness(t).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		harness.commitSomeBlocks(ctx, 3)
 		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
@@ -66,11 +67,11 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -88,11 +89,11 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
 
@@ -107,11 +108,12 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
+
 		harness.commitSomeBlocks(ctx, 3)
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
@@ -129,14 +131,14 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 }
 
 func TestSourceRespondsWithChunks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		batchSize := uint32(10)
 		harness := newBlockStorageHarness(t).
 			withBatchSize(batchSize).
 			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		lastBlock := 12
 		harness.commitSomeBlocks(ctx, lastBlock)
@@ -172,7 +174,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 }
 
 func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		lastBlock := 10
 		firstHeight := primitives.BlockHeight(lastBlock + 1)
 		lastHeight := primitives.BlockHeight(lastBlock)
@@ -185,7 +187,7 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 		harness.commitSomeBlocks(ctx, lastBlock)
 
 		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)

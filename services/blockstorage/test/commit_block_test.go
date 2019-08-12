@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -17,11 +18,11 @@ import (
 )
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -43,11 +44,11 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -71,12 +72,12 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			allowingErrorsMatching("protocol version mismatch in transactions block header").
-			start(ctx)
+			start(ctx, supervisor)
 
 		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
 
@@ -85,11 +86,11 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 		block1 := builders.BlockPair().WithHeight(1).Build()
 		block2 := builders.BlockPair().WithHeight(2).Build()
 
@@ -111,12 +112,12 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -131,12 +132,12 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -153,12 +154,12 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockPair := builders.BlockPair()
 		harness.commitBlock(ctx, blockPair.Build())
@@ -175,11 +176,11 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T
 }
 
 func TestCommitBlockReturnsErrorIfBlockInFuture(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		now := time.Now()
 		block1 := builders.BlockPair().WithHeight(1).WithTransactions(1).WithBlockCreated(now).Build()

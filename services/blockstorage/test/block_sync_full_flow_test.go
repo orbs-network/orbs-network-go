@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -22,7 +23,7 @@ import (
 )
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(200 * time.Millisecond).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
@@ -50,7 +51,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			return nil, nil
 		})
 
-		harness.start(ctx)
+		harness.start(ctx, supervisor)
 
 		passed := test.Eventually(2*time.Second, func() bool { // wait for sync flow to complete successfully:
 			resultsForVerification.Lock()

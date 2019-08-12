@@ -9,6 +9,7 @@ package test
 import (
 	"bytes"
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -22,11 +23,11 @@ import (
 )
 
 func TestGenerateProof(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)
@@ -57,11 +58,11 @@ func TestGenerateProof(t *testing.T) {
 }
 
 func TestGenerateProof_WrongTxHash(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx)
+			start(ctx, supervisor)
 
 		blockCreated := time.Now()
 		blockHeight := primitives.BlockHeight(1)

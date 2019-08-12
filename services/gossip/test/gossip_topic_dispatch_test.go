@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -33,7 +34,7 @@ func (c *conf) VirtualChainId() primitives.VirtualChainId {
 }
 
 func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
 		logger := log.DefaultTestingLogger(t)
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
@@ -44,6 +45,9 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 		}
 		transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
 		g := gossip.NewGossip(ctx, transport, cfg, logger, metric.NewRegistry())
+
+		supervisor.Supervise(transport)
+		supervisor.Supervise(g)
 
 		trh := &gossiptopics.MockTransactionRelayHandler{}
 		bsh := &gossiptopics.MockBlockSyncHandler{}
