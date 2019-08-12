@@ -20,7 +20,7 @@ import (
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -36,7 +36,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -56,7 +56,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCan
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -80,7 +80,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -103,7 +103,7 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 
 func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
 	h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -120,7 +120,7 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 
 func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
@@ -139,7 +139,7 @@ func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *test
 
 func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())

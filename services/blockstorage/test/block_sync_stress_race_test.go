@@ -23,7 +23,7 @@ import (
 )
 
 func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).

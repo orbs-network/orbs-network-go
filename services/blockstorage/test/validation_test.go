@@ -17,7 +17,7 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withValidateConsensusAlgos(1).
@@ -30,7 +30,7 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("protocol version mismatch in.*").
 			withSyncBroadcast(1).
@@ -59,7 +59,7 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
@@ -76,7 +76,7 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).

@@ -24,7 +24,7 @@ import (
 // BlockSync calls ConsensusAlgo.HandleBlockConsensus() when sync wakes up.
 // ConsensusAlgo calls BlockStorage.CommitBlock() when a new block is closed.
 func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 

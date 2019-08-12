@@ -34,7 +34,7 @@ func (c *conf) VirtualChainId() primitives.VirtualChainId {
 }
 
 func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		logger := log.DefaultTestingLogger(t)
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}

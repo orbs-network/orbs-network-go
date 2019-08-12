@@ -21,7 +21,7 @@ import (
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
 		harness := newBlockStorageHarness(t).
 			withNodeAddress(sourceAddress).
@@ -67,7 +67,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -89,7 +89,7 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -108,7 +108,7 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -131,7 +131,7 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 }
 
 func TestSourceRespondsWithChunks(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		batchSize := uint32(10)
 		harness := newBlockStorageHarness(t).
 			withBatchSize(batchSize).
@@ -174,7 +174,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 }
 
 func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		lastBlock := 10
 		firstHeight := primitives.BlockHeight(lastBlock + 1)
 		lastHeight := primitives.BlockHeight(lastBlock)

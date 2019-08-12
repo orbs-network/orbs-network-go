@@ -20,7 +20,7 @@ import (
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -32,7 +32,7 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -54,7 +54,7 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -71,7 +71,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -89,7 +89,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 

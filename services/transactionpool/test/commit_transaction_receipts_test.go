@@ -18,7 +18,7 @@ import (
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -40,7 +40,7 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		tx := builders.TransferTransaction().Build()

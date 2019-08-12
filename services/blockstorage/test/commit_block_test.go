@@ -18,7 +18,7 @@ import (
 )
 
 func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -44,7 +44,7 @@ func TestCommitBlockSavesToPersistentStorage(t *testing.T) {
 }
 
 func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -72,7 +72,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 }
 
 func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -86,7 +86,7 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 }
 
 func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -112,7 +112,7 @@ func TestCommitBlockDiscardsBlockIfAlreadyExists(t *testing.T) {
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch").
 			withSyncBroadcast(1).
@@ -132,7 +132,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTimestamp(t *testing
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, transaction block header mismatch").
 			withSyncBroadcast(1).
@@ -154,7 +154,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentTxBlock(t *testing.T
 }
 
 func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			allowingErrorsMatching("FORK!! block already in storage, results block header mismatch").
 			withSyncBroadcast(1).
@@ -176,7 +176,7 @@ func TestCommitBlockReturnsErrorIfBlockExistsButHasDifferentRxBlock(t *testing.T
 }
 
 func TestCommitBlockReturnsErrorIfBlockInFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().

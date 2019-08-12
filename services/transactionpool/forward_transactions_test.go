@@ -68,7 +68,7 @@ func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, 
 
 func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
-	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -94,7 +94,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -120,7 +120,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 }
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, s *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}

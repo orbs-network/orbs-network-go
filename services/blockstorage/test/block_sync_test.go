@@ -24,7 +24,7 @@ import (
 
 // TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -77,7 +77,7 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 }
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(3 * time.Millisecond).
 			expectValidateConsensusAlgos()
@@ -95,7 +95,7 @@ func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncNoCommitTimeout(5*time.Millisecond).
 			withSyncBroadcast(1).

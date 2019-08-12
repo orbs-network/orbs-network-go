@@ -19,7 +19,7 @@ import (
 )
 
 func TestReturnBlockPair(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness, block := generateAndCommitOneBlock(ctx, t, supervisor)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1})
@@ -30,7 +30,7 @@ func TestReturnBlockPair(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeight0(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 0})
@@ -41,7 +41,7 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1000})
 
@@ -51,7 +51,7 @@ func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
 
 		childCtx, cancel := context.WithTimeout(ctx, time.Millisecond)

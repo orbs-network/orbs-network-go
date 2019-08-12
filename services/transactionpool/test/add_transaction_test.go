@@ -23,7 +23,7 @@ import (
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -42,7 +42,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -58,7 +58,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testing.T) {
 	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		tx := builders.TransferTransaction().Build()
@@ -90,7 +90,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testin
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *testing.T) {
 	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		tx := builders.TransferTransaction().Build()
@@ -122,7 +122,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *tes
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -142,7 +142,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -166,7 +166,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 

@@ -16,7 +16,7 @@ import (
 )
 
 func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -33,7 +33,7 @@ func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 }
 
 func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).withSyncBroadcast(1).expectValidateConsensusAlgos()
 		now := harness.setupCustomBlocksForInit()
 		harness.start(ctx, supervisor)

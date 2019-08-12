@@ -20,7 +20,7 @@ import (
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 		h.ignoringForwardMessages()
@@ -63,7 +63,7 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 

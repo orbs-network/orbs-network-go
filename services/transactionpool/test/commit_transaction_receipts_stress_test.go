@@ -21,7 +21,7 @@ import (
 
 func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *testing.T) {
 	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		const CONCURRENCY_COUNT = 500
 		duplicateStatuses := []protocol.TransactionStatus{

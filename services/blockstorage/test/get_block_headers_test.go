@@ -18,7 +18,7 @@ import (
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
@@ -38,7 +38,7 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
@@ -68,7 +68,7 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
@@ -99,7 +99,7 @@ func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testi
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
@@ -119,7 +119,7 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
@@ -151,7 +151,7 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).

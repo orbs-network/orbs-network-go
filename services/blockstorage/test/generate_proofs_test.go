@@ -23,7 +23,7 @@ import (
 )
 
 func TestGenerateProof(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -58,7 +58,7 @@ func TestGenerateProof(t *testing.T) {
 }
 
 func TestGenerateProof_WrongTxHash(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().

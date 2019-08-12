@@ -21,7 +21,7 @@ import (
 )
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
@@ -44,7 +44,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 }
 
 func TestReturnTransactionReceipt(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		harness := newBlockStorageHarness(t).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).

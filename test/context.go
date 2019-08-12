@@ -18,7 +18,7 @@ func WithContext(f func(ctx context.Context)) {
 	f(ctx)
 }
 
-func WithSupervision(f func(ctx context.Context, supervisor *govnr.TreeSupervisor)) {
+func WithSupervision(f func(ctx context.Context, supervisor govnr.Supervisor)) {
 	supervisor := &govnr.TreeSupervisor{}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer shutdown(supervisor)

@@ -22,7 +22,7 @@ func TestStress_GetTransactionsForOrderingWhenFirstTxAdded(t *testing.T) {
 	const ITERATIONS = 1000
 	for i := 0; i < ITERATIONS; i++ {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-		test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+		test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 			supervisor.Supervise(h)
 			h.start(ctx)
 			h.ignoringForwardMessages()

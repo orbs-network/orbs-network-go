@@ -21,7 +21,7 @@ var tickInterval = func() time.Duration { return 1 * time.Millisecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
 func TestTicksOnSchedule(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		ts := primitives.TimestampNano(time.Now().UnixNano())
 
 		m := aCleaner()

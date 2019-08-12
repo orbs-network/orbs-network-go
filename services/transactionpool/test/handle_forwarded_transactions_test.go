@@ -21,7 +21,7 @@ import (
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		ctrlRand := rand.NewControlledRand(t)
 		h.start(ctx)
@@ -48,7 +48,7 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
@@ -63,7 +63,7 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
 	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding forwarded transaction to pending pool")
-	test.WithSupervision(func(ctx context.Context, supervisor *govnr.TreeSupervisor) {
+	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
 		supervisor.Supervise(h)
 		h.start(ctx)
 
