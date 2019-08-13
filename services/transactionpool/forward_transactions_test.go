@@ -119,6 +119,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("error signing transactions")
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -137,14 +138,14 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		txForwarder.submit(tx)
 		txForwarder.submit(anotherTx)
 
-		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
+		require.NoError(t, test.ConsistentlyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
 		sig, _ := signer.Sign(ctx, oneBigHash)
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
 		signer.Reset()
-		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil)
+		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil).Times(1)
 
 		txForwarder.drainQueueAndForward(ctx)
 
