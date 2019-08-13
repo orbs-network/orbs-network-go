@@ -33,7 +33,9 @@ type TransactionForwarderConfig interface {
 }
 
 func (s *Service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
-	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
+	s.transactionResultsHandlers.Lock()
+	defer s.transactionResultsHandlers.Unlock()
+	s.transactionResultsHandlers.handlers = append(s.transactionResultsHandlers.handlers, handler)
 }
 
 func (s *Service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {

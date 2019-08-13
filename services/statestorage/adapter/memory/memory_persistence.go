@@ -109,6 +109,9 @@ func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, prim
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {
+	sp.mutex.RLock()
+	defer sp.mutex.RUnlock()
+
 	output := strings.Builder{}
 	output.WriteString("{")
 	output.WriteString(fmt.Sprintf("height: %v, data: {", sp.height))

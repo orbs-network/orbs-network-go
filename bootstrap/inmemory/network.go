@@ -159,11 +159,11 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		)
 		go func(nx *Node) { // nodes should not block each other from executing wait
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
-				msg := fmt.Sprintf("node %v did not reach block 1", node.name)
+				msg := fmt.Sprintf("node %v did not reach block 1", nx.name)
 				nodeLogger.Error(msg)
 				panic(msg)
 			} else {
-				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", node.name))
+				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", nx.name))
 			}
 			wg.Done()
 		}(node)

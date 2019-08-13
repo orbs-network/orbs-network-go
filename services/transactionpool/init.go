@@ -86,7 +86,9 @@ func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
 func (s *Service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
 	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
-		for _, trh := range s.transactionResultsHandlers {
+		s.transactionResultsHandlers.RLock()
+		defer s.transactionResultsHandlers.RUnlock()
+		for _, trh := range s.transactionResultsHandlers.handlers {
 			_, err := trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: removalReason,

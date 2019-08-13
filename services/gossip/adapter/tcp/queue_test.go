@@ -153,7 +153,7 @@ func TestQueue_DisableThenEnable(t *testing.T) {
 		q.Disable()
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
-		require.NoError(t, err)
+		require.Error(t, err)
 
 		q.Enable()
 
@@ -166,7 +166,7 @@ func TestQueue_DisableThenEnable(t *testing.T) {
 		q.Disable()
 
 		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x04}})
-		require.NoError(t, err)
+		require.Error(t, err)
 	})
 }
 

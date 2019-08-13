@@ -1,0 +1,39 @@
+//+build race
+// Copyright 2019 the orbs-network-go authors
+// This file is part of the orbs-network-go library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
+package metric
+
+import (
+	"time"
+)
+
+type Histogram struct {
+	namedMetric
+}
+
+func newHistogram(name string, max int64, n int) *Histogram {
+	return &Histogram{
+		namedMetric: namedMetric{name: name},
+	}
+}
+
+func (h Histogram) String() string {
+	return "unimplemented - race detector active"
+}
+
+func (h Histogram) Export() exportedMetric {
+	return &histogramExport{}
+}
+
+func (h *Histogram) Rotate() {
+}
+
+func (h *Histogram) RecordSince(t time.Time) {
+}
+
+func (h *Histogram) Record(measurement int64) {
+}

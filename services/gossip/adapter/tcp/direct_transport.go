@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
+	"sync/atomic"
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
@@ -54,8 +55,8 @@ type lockableTransportServer struct {
 }
 
 type DirectTransport struct {
-	config config.GossipTransportConfig
-	logger log.Logger
+	atomicConfig atomic.Value
+	logger       log.Logger
 
 	clientConnections *lockableClientConnections
 
@@ -85,7 +86,6 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	serverCtx, cancelServer := context.WithCancel(parent)
 
 	t := &DirectTransport{
-		config:         config,
 		logger:         logger.WithTags(LogTag),
 		metricRegistry: registry,
 
@@ -97,15 +97,17 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 		cancelServer: cancelServer,
 	}
 
+	t.atomicConfig.Store(config)
+
 	// server goroutine
 	handle := govnr.Forever(serverCtx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
-		t.serverMainLoop(serverCtx, t.config.GossipListenPort())
+		t.serverMainLoop(serverCtx, config.GossipListenPort())
 	})
 	t.serverClosed = handle.Done()
 	handle.MarkSupervised() // TODO use real supervision
 
 	// client goroutines
-	for peerNodeAddress, peer := range t.config.GossipPeers() {
+	for peerNodeAddress, peer := range config.GossipPeers() {
 		t.connectForever(parent, peerNodeAddress, peer)
 	}
 
@@ -126,14 +128,23 @@ func newLockableClientConnections() *lockableClientConnections {
 	}
 }
 
+func (t *DirectTransport) config() config.GossipTransportConfig {
+	if c, ok := t.atomicConfig.Load().(config.GossipTransportConfig); ok {
+		return c
+	}
+
+	return nil
+}
+
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
 func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 
-	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config)
+	config := t.config()
+	if peerNodeAddress != config.NodeAddress().KeyForMap() {
+		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, config)
 
 		t.clientConnections.peers[peerNodeAddress] = client
 
@@ -143,19 +154,19 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 }
 
 func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
-	t.config.GossipPeers()[address.KeyForMap()] = peer
+	t.config().GossipPeers()[address.KeyForMap()] = peer
 	t.connectForever(bgCtx, address.KeyForMap(), peer)
 }
 
 func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
 
-	oldConfig := t.config
+	oldConfig := t.config()
 
 	peersToRemove, peersToAdd := peerDiff(oldConfig.GossipPeers(), newConfig.GossipPeers())
 
 	t.disconnectAllClients(bgCtx, peersToRemove)
 
-	t.config = newConfig
+	t.atomicConfig.Store(newConfig)
 	for peerNodeAddress, peer := range peersToAdd {
 		t.connectForever(bgCtx, peerNodeAddress, peer)
 	}
@@ -233,7 +244,7 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 	defer t.clientConnections.RUnlock()
 
 	for _, client := range t.clientConnections.peers {
-		if client.queue.disabled {
+		if client.queue.disabled() {
 			return false
 		}
 	}

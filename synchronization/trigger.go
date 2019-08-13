@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -28,7 +27,6 @@ type PeriodicalTrigger struct {
 	cancel  context.CancelFunc
 	ticker  *time.Ticker
 	metrics *Telemetry
-	wgSync  sync.WaitGroup
 	Closed  govnr.ContextEndedChan
 	Handle  *govnr.ForeverHandle
 	name    string
@@ -58,8 +56,6 @@ func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
 	t.Handle = govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
-		t.wgSync.Add(1)
-		defer t.wgSync.Done()
 		for {
 			select {
 			case <-t.ticker.C:
@@ -80,5 +76,5 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 func (t *PeriodicalTrigger) Stop() {
 	t.cancel()
 	// we want ticker stop to process before we return
-	t.wgSync.Wait()
+	<-t.Closed
 }

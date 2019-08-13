@@ -121,6 +121,9 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
+		defer testOutput.TestTerminated()
+		logger := log.GetLogger().WithOutput(testOutput).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -128,7 +131,6 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		signer := &FaultySigner{}
 		signer.When("Sign", mock.Any, mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
 
-		logger := log.DefaultTestingLogger(t).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
 		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
 		s.Supervise(txForwarder.handle)
 
