@@ -20,6 +20,7 @@ type Telemetry struct {
 
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
+	govnr.TreeSupervisor
 	d       time.Duration
 	f       func()
 	s       func()
@@ -28,7 +29,6 @@ type PeriodicalTrigger struct {
 	ticker  *time.Ticker
 	metrics *Telemetry
 	Closed  govnr.ContextEndedChan
-	Handle  *govnr.ForeverHandle
 	name    string
 }
 
@@ -55,7 +55,7 @@ func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	t.Handle = govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
+	h := govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
 		for {
 			select {
 			case <-t.ticker.C:
@@ -70,7 +70,8 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 			}
 		}
 	})
-	t.Closed = t.Handle.Done()
+	t.Closed = h.Done()
+	t.Supervise(h)
 }
 
 func (t *PeriodicalTrigger) Stop() {

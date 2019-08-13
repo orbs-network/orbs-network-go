@@ -40,7 +40,7 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 	return statusMetrics
 }
 
-func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) *govnr.ForeverHandle {
+func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) govnr.ShutdownWaiter {
 	statusMetrics := createConnectionStatusMetrics(registry)
 	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
@@ -50,7 +50,7 @@ func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, regi
 		}
 	}, nil)
 
-	return t.Handle
+	return t
 }
 
 func (c *EthereumRpcConnection) updateConnectionStatus(ctx context.Context, m *metrics) error {

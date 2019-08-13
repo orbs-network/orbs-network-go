@@ -35,7 +35,7 @@ type runtimeReporter struct {
 
 const RUNTIME_QUERY_INTERVAL = 5 * time.Second
 
-func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) *govnr.ForeverHandle {
+func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) govnr.ShutdownWaiter {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
 			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc.Bytes"),
@@ -55,10 +55,10 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.L
 	return r.startReporting(ctx, logger)
 }
 
-func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) *govnr.ForeverHandle {
+func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
 	return synchronization.NewPeriodicalTrigger(ctx, "Golang runtime metric reporter", RUNTIME_QUERY_INTERVAL, logger, func() {
 		r.reportRuntimeMetrics()
-	}, nil).Handle
+	}, nil)
 }
 
 func (r *runtimeReporter) reportRuntimeMetrics() {

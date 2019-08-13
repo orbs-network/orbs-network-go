@@ -172,7 +172,7 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 				m.(*Histogram).Rotate()
 			}
 		}
-	}, nil).Handle
+	}, nil)
 }
 
 func (r *inMemoryRegistry) ExportPrometheus() string {

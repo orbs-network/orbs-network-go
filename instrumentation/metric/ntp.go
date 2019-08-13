@@ -26,7 +26,7 @@ type ntpReporter struct {
 
 const NTP_QUERY_INTERVAL = 30 * time.Second
 
-func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logger, ntpServerAddress string) *govnr.ForeverHandle {
+func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logger, ntpServerAddress string) govnr.ShutdownWaiter {
 	r := &ntpReporter{
 		metrics: ntpMetrics{
 			drift: metricFactory.NewGauge("OS.Time.Drift.Millis"),
@@ -37,7 +37,7 @@ func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logge
 	return r.startReporting(ctx, logger)
 }
 
-func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) *govnr.ForeverHandle {
+func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
 	return synchronization.NewPeriodicalTrigger(ctx, "NTP metric reporter", NTP_QUERY_INTERVAL, logger, func() {
 		response, err := ntp.Query(r.address)
 
@@ -47,5 +47,5 @@ func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) *go
 			driftInMillis := response.ClockOffset.Nanoseconds() / 1000000
 			r.metrics.drift.Update(driftInMillis)
 		}
-	}, nil).Handle
+	}, nil)
 }
