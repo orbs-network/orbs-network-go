@@ -29,7 +29,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 
 	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), 20*time.Hour, 1*time.Second)
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-		transport := NewDirectTransport(ctx, cfg, log.DefaultTestingLogger(t), metric.NewRegistry())
+		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
 
@@ -41,13 +41,9 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 
 func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 
-	testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(testOutput).WithTags(log.String("adapter", "transport"))
-
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-		defer testOutput.TestTerminated()
-		node1 := aNode(ctx, logger)
-		node2 := aNode(ctx, logger)
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
 		superviseAll(harness, node1, node2)
 		defer shutdownAll(ctx, node1, node2)
 
@@ -68,20 +64,15 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 
 		node1.requireSendsSuccessfullyTo(t, ctx, node2)
 		node2.requireSendsSuccessfullyTo(t, ctx, node1)
-
-		test.RequireNoUnexpectedErrors(t, testOutput)
 	})
 }
 
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
-	testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(testOutput).WithTags(log.String("adapter", "transport"))
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-		defer testOutput.TestTerminated()
-		node1 := aNode(ctx, logger)
-		node2 := aNode(ctx, logger)
-		node3 := aNode(ctx, logger)
-		node4 := aNode(ctx, logger)
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
+		node3 := aNode(ctx, harness.Logger)
+		node4 := aNode(ctx, harness.Logger)
 		superviseAll(harness, node1, node2, node3, node4)
 		defer shutdownAll(ctx, node1, node2, node3, node4)
 
@@ -129,17 +120,14 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 			RecipientNodeAddresses: []primitives.NodeAddress{node3.address},
 			Payloads:               aMessage(),
 		}), "node 2 was able to send a message to node 3 which is no longer a part of its topology")
-
-		test.RequireNoUnexpectedErrors(t, testOutput)
 	})
 }
 
 func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
-	logger := log.DefaultTestingLogger(t)
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-		node1 := aNode(ctx, logger)
-		node2 := aNode(ctx, logger)
-		node3 := aNode(ctx, logger)
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
+		node3 := aNode(ctx, harness.Logger)
 		superviseAll(harness, node1, node2, node3)
 		defer shutdownAll(ctx, node1, node2, node3)
 
