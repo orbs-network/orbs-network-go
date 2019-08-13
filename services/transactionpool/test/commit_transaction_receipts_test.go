@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,10 +16,8 @@ import (
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		supervisor.Supervise(h)
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
@@ -39,13 +36,13 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 }
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
-	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		supervisor.Supervise(h)
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+
 		tx := builders.TransferTransaction().Build()
 
-		h.reportTransactionsAsCommitted(ctx, tx)
+		_, err := h.reportTransactionsAsCommitted(ctx, tx)
+		require.NoError(t, err)
 
 		output, err := h.getTxReceipt(ctx, tx)
 		require.NoError(t, err, "could not get output for tx committed without adding it to pending pool")

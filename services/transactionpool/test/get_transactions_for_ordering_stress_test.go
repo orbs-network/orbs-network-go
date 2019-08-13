@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/stretchr/testify/require"
@@ -21,10 +20,9 @@ import (
 func TestStress_GetTransactionsForOrderingWhenFirstTxAdded(t *testing.T) {
 	const ITERATIONS = 1000
 	for i := 0; i < ITERATIONS; i++ {
-		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t)
-		test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-			supervisor.Supervise(h)
-			h.start(ctx)
+		test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+			h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
+
 			h.ignoringForwardMessages()
 
 			ch := make(chan int)

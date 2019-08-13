@@ -8,7 +8,6 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -21,12 +20,11 @@ var tickInterval = func() time.Duration { return 1 * time.Millisecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
 func TestTicksOnSchedule(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		ts := primitives.TimestampNano(time.Now().UnixNano())
 
 		m := aCleaner()
-		handle := startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, log.DefaultTestingLogger(t))
-		supervisor.Supervise(handle)
+		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, log.DefaultTestingLogger(t)))
 
 		// waiting multiple times to assert that ticker is looping :)
 		for i := 0; i < 3; i++ {

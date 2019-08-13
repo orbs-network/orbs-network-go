@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"time"
 )
 
@@ -16,21 +15,6 @@ func WithContext(f func(ctx context.Context)) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f(ctx)
-}
-
-func WithSupervision(f func(ctx context.Context, supervisor govnr.Supervisor)) {
-	supervisor := &govnr.TreeSupervisor{}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer shutdown(supervisor)
-	defer cancel()
-	f(ctx, supervisor)
-}
-
-func shutdown(waiter govnr.ShutdownWaiter) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	waiter.WaitUntilShutdown(ctx)
 }
 
 func WithContextWithTimeout(d time.Duration, f func(ctx context.Context)) {

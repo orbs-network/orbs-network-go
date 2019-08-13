@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -19,20 +18,23 @@ import (
 )
 
 func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
-	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		supervisor.Supervise(h)
-		h.start(ctx)
+
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 		h.ignoringForwardMessages()
 
 		tx1 := builders.Transaction().Build()
 		tx2 := builders.Transaction().Build()
-		h.addNewTransaction(ctx, tx1)
-		h.addNewTransaction(ctx, tx2)
+		_, err := h.addNewTransaction(ctx, tx1)
+		require.NoError(t, err)
+		_, err = h.addNewTransaction(ctx, tx2)
+		require.NoError(t, err)
 
 		h.assumeBlockStorageAtHeight(1)
 		h.ignoringTransactionResults()
-		h.reportTransactionsAsCommitted(ctx, tx2)
+		_, err = h.reportTransactionsAsCommitted(ctx, tx2)
+		require.NoError(t, err)
+
 		blockHeightContainingTxs := h.lastBlockHeight
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{
@@ -62,9 +64,8 @@ func TestGetTransactionReceiptFromPendingPoolAndCommittedPool(t *testing.T) {
 }
 
 func TestGetTransactionReceiptWhenTransactionNotFound(t *testing.T) {
-	h := newHarness(t)
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		supervisor.Supervise(h)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 		h.start(ctx)
 
 		out, err := h.txpool.GetCommittedTransactionReceipt(ctx, &services.GetCommittedTransactionReceiptInput{

@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,12 +17,12 @@ import (
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -38,12 +37,12 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -68,13 +67,13 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -99,13 +98,13 @@ func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testi
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -119,13 +118,13 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -151,13 +150,13 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)

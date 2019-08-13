@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -21,13 +20,13 @@ import (
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
 		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
@@ -67,11 +66,11 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 
 		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -89,11 +88,11 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
 
@@ -108,11 +107,11 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
 
@@ -131,14 +130,14 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 }
 
 func TestSourceRespondsWithChunks(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		batchSize := uint32(10)
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withBatchSize(batchSize).
 			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 
 		lastBlock := 12
 		harness.commitSomeBlocks(ctx, lastBlock)
@@ -174,7 +173,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 }
 
 func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		lastBlock := 10
 		firstHeight := primitives.BlockHeight(lastBlock + 1)
 		lastHeight := primitives.BlockHeight(lastBlock)
@@ -184,10 +183,10 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			WithLastCommittedBlockHeight(lastHeight).
 			Build()
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 		harness.commitSomeBlocks(ctx, lastBlock)
 
 		harness.gossip.Never("SendBlockSyncResponse", mock.Any, mock.Any)

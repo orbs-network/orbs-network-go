@@ -62,6 +62,7 @@ func (s *Service) HandleForwardedTransactions(ctx context.Context, input *gossip
 }
 
 type transactionForwarder struct {
+	govnr.TreeSupervisor
 	logger log.Logger
 	config TransactionForwarderConfig
 	gossip gossiptopics.TransactionRelay
@@ -70,7 +71,6 @@ type transactionForwarder struct {
 	forwardQueueMutex *sync.Mutex
 	forwardQueue      []*protocol.SignedTransaction
 	transactionAdded  chan uint16
-	handle            *govnr.ForeverHandle
 }
 
 func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer signer.Signer, config TransactionForwarderConfig, gossip gossiptopics.TransactionRelay) *transactionForwarder {
@@ -97,7 +97,7 @@ func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransactio
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
-	f.handle = govnr.Forever(parent, "transaction forwarder", logfields.GovnrErrorer(f.logger), func() {
+	f.Supervise(govnr.Forever(parent, "transaction forwarder", logfields.GovnrErrorer(f.logger), func() {
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
@@ -114,7 +114,7 @@ func (f *transactionForwarder) start(parent context.Context) {
 				f.drainQueueAndForward(ctx)
 			}
 		}
-	})
+	}))
 }
 
 func (f *transactionForwarder) drainQueueAndForward(ctx context.Context) {

@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -24,8 +23,8 @@ import (
 // BlockSync calls ConsensusAlgo.HandleBlockConsensus() when sync wakes up.
 // ConsensusAlgo calls BlockStorage.CommitBlock() when a new block is closed.
 func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 		updateConsensusAlgoHeight := make(chan struct{})
@@ -42,7 +41,7 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 			return nil, nil
 		}).AtLeast(0)
 
-		harness.start(ctx, supervisor)
+		harness.start(ctx)
 		startFakeSingleThreadedConsensusAlgo(t, ctx, harness, targetBlockHeight, updateConsensusAlgoHeight)
 
 		waitUntilReachedBlockHeight(ctx, t, committedBlockHeights, targetBlockHeight)

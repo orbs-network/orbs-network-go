@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -16,7 +15,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -34,8 +32,7 @@ func (c *conf) VirtualChainId() primitives.VirtualChainId {
 }
 
 func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		logger := log.DefaultTestingLogger(t)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
 
@@ -43,11 +40,11 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 		for _, address := range nodeAddresses {
 			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 		}
-		transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
-		g := gossip.NewGossip(ctx, transport, cfg, logger, metric.NewRegistry())
+		transport := memory.NewTransport(ctx, harness.Logger, genesisValidatorNodes)
+		g := gossip.NewGossip(ctx, transport, cfg, harness.Logger, metric.NewRegistry())
 
-		supervisor.Supervise(transport)
-		supervisor.Supervise(g)
+		harness.Supervise(transport)
+		harness.Supervise(g)
 
 		trh := &gossiptopics.MockTransactionRelayHandler{}
 		bsh := &gossiptopics.MockBlockSyncHandler{}

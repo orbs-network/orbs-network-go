@@ -70,7 +70,7 @@ func NewTransactionPool(ctx context.Context,
 
 	s.Supervise(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
 	s.Supervise(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.Supervise(txForwarder.handle)
+	s.Supervise(txForwarder)
 
 	return s
 }

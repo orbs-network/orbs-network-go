@@ -28,9 +28,9 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	// High value to disable keep alive
 
 	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), 20*time.Hour, 1*time.Second)
-	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, log.DefaultTestingLogger(t), metric.NewRegistry())
-		s.Supervise(transport)
+		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
 
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
@@ -44,11 +44,11 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 	testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 	logger := log.GetLogger().WithOutput(testOutput).WithTags(log.String("adapter", "transport"))
 
-	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		defer testOutput.TestTerminated()
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
-		superviseAll(s, node1, node2)
+		superviseAll(harness, node1, node2)
 		defer shutdownAll(ctx, node1, node2)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
@@ -76,13 +76,13 @@ func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 	testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 	logger := log.GetLogger().WithOutput(testOutput).WithTags(log.String("adapter", "transport"))
-	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		defer testOutput.TestTerminated()
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
 		node4 := aNode(ctx, logger)
-		superviseAll(s, node1, node2, node3, node4)
+		superviseAll(harness, node1, node2, node3, node4)
 		defer shutdownAll(ctx, node1, node2, node3, node4)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
@@ -136,11 +136,11 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 	logger := log.DefaultTestingLogger(t)
-	test.WithSupervision(func(ctx context.Context, s govnr.Supervisor) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		node1 := aNode(ctx, logger)
 		node2 := aNode(ctx, logger)
 		node3 := aNode(ctx, logger)
-		superviseAll(s, node1, node2, node3)
+		superviseAll(harness, node1, node2, node3)
 		defer shutdownAll(ctx, node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3)

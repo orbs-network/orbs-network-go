@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -17,11 +16,11 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 		block := builders.BlockPair().Build()
 
 		_, err := harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
@@ -30,12 +29,12 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			allowingErrorsMatching("protocol version mismatch in.*").
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
-			start(ctx, supervisor)
+			start(ctx)
 		block := builders.BlockPair().Build()
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(998)
@@ -59,12 +58,12 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())
 
@@ -76,12 +75,12 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		harness.commitBlock(ctx, builders.BlockPair().Build())
 

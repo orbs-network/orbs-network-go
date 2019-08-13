@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,8 +18,8 @@ import (
 )
 
 func TestReturnBlockPair(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness, block := generateAndCommitOneBlock(ctx, t, supervisor)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness, block := generateAndCommitOneBlock(ctx, parent)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1})
 
@@ -30,8 +29,8 @@ func TestReturnBlockPair(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeight0(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness, _ := generateAndCommitOneBlock(ctx, parent)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 0})
 
@@ -41,8 +40,8 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness, _ := generateAndCommitOneBlock(ctx, parent)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1000})
 
 		require.NoError(t, err, "far future is not found but valid")
@@ -51,8 +50,8 @@ func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness, _ := generateAndCommitOneBlock(ctx, t, supervisor)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness, _ := generateAndCommitOneBlock(ctx, parent)
 
 		childCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
 		defer cancel()
@@ -63,12 +62,12 @@ func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
 	})
 }
 
-func generateAndCommitOneBlock(ctx context.Context, t *testing.T, supervisor govnr.Supervisor) (*harness, *protocol.BlockPairContainer) {
-	harness := newBlockStorageHarness(t).
+func generateAndCommitOneBlock(ctx context.Context, parent *test.ConcurrencyHarness) (*harness, *protocol.BlockPairContainer) {
+	harness := newBlockStorageHarness(parent).
 		withSyncBroadcast(1).
 		withCommitStateDiff(1).
 		withValidateConsensusAlgos(1).
-		start(ctx, supervisor)
+		start(ctx)
 
 	block := builders.BlockPair().Build()
 	harness.commitBlock(ctx, block)

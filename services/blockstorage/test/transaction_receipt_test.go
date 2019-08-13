@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -21,12 +20,12 @@ import (
 )
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		block := builders.BlockPair().Build()
 		harness.commitBlock(ctx, block)
@@ -44,12 +43,12 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 }
 
 func TestReturnTransactionReceipt(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
-			start(ctx, supervisor)
+			start(ctx)
 
 		txQueryGrace := harness.config.BlockStorageTransactionReceiptQueryTimestampGrace()
 		txExpirationWnd := harness.config.TransactionExpirationWindow()

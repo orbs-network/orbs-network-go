@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -23,8 +22,8 @@ import (
 )
 
 func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
-	test.WithSupervision(func(ctx context.Context, supervisor govnr.Supervisor) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
@@ -57,7 +56,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			return nil, nil
 		})
 
-		harness.start(ctx, supervisor)
+		harness.start(ctx)
 
 		select {
 		case <-done:
