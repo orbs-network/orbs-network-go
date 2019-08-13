@@ -24,7 +24,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 	newHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
@@ -66,7 +66,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 	newHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
@@ -101,7 +101,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	newHarness().
 		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
@@ -150,7 +150,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	newHarness().
 		WithNumNodes(7).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 

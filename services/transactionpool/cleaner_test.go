@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func TestTicksOnSchedule(t *testing.T) {
 		ts := primitives.TimestampNano(time.Now().UnixNano())
 
 		m := aCleaner()
-		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, log.DefaultTestingLogger(t)))
+		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, harness.Logger))
 
 		// waiting multiple times to assert that ticker is looping :)
 		for i := 0; i < 3; i++ {
