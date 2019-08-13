@@ -41,9 +41,7 @@ func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.blockTracker.IncrementTo(newBh)
 	s.blockHeightReporter.IncrementTo(newBh)
 
-	s.transactionResultsHandlers.RLock()
-	c.notify(ctx, s.transactionResultsHandlers.handlers...)
-	s.transactionResultsHandlers.RUnlock()
+	s.notifyHandlers(ctx, c)
 
 	transactionReceiptsCount := len(input.TransactionReceipts)
 	s.metrics.commitRate.Measure(int64(transactionReceiptsCount))
@@ -55,6 +53,13 @@ func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services
 		NextDesiredBlockHeight:   newBh + 1,
 		LastCommittedBlockHeight: newBh,
 	}, nil
+}
+
+func (s *Service) notifyHandlers(ctx context.Context, c *committer) {
+	s.transactionResultsHandlers.RLock()
+	defer s.transactionResultsHandlers.RUnlock()
+
+	c.notify(ctx, s.transactionResultsHandlers.handlers...)
 }
 
 func (s *Service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
