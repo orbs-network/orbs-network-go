@@ -98,7 +98,7 @@ func (h *harness) expectCommitBroadcastViaGossip(expectedBlockHeight primitives.
 	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.AnyIf(fmt.Sprintf("BlockHeight equals %d, block proof is BenchmarkConsensus and sender equals %s", expectedBlockHeight, expectedSender), commitSentMatcher)).AtLeast(1)
 }
 
-func (h *harness) verifyCommitBroadcastViaGossip(t *testing.T) {
+func (h *harness) verifyCommitBroadcastViaGossip(t testing.TB) {
 	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.gossip)
 	if err != nil {
 		t.Fatal("Did not broadcast block commit:", err)
@@ -109,7 +109,7 @@ func (h *harness) expectCommitNotSent() {
 	h.gossip.When("BroadcastBenchmarkConsensusCommit", mock.Any, mock.Any).Times(0)
 }
 
-func (h *harness) verifyCommitNotSent(t *testing.T) {
+func (h *harness) verifyCommitNotSent(t testing.TB) {
 	err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.gossip)
 	if err != nil {
 		t.Fatal("Did broadcast block commit:", err)
