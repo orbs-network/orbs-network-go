@@ -25,7 +25,9 @@ import (
 
 func (s *Service) leaderConsensusRoundRunLoop(parent context.Context) {
 	if _, block := s.getLastCommittedBlock(); block == nil {
+		s.mutex.Lock()
 		s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
+		s.mutex.Unlock()
 	}
 	for {
 		start := time.Now()
