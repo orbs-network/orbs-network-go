@@ -10,44 +10,33 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/scribe/log"
 	"testing"
-	"time"
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
-		return synchronization.NewTimerWithManualTick()
-	})
-
-	var bs *BlockSync
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(parent.Logger, func() *synchronization.Timer {
+			return synchronization.NewTimerWithManualTick()
+		})
 		h.expectSyncOnStart()
-
-		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
-
+		parent.Supervise(newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory))
 		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
 	})
-
-	test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) {
-		h.waitForShutdown(ctx, bs)
-	})
-
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	manualIdleStateTimeoutTimers := make(chan *synchronization.Timer)
-	h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
-		currentTimer := synchronization.NewTimerWithManualTick()
-		manualIdleStateTimeoutTimers <- currentTimer
-		return currentTimer
-	})
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		manualIdleStateTimeoutTimers := make(chan *synchronization.Timer)
+		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(parent.Logger, func() *synchronization.Timer {
+			currentTimer := synchronization.NewTimerWithManualTick()
+			manualIdleStateTimeoutTimers <- currentTimer
+			return currentTimer
+		})
 
-	var bs *BlockSync
-	test.WithContext(func(ctx context.Context) {
 		h.expectSyncOnStart()
 
-		bs = newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, h.logger, h.metricFactory)
+		bs := newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory)
+		parent.Supervise(bs)
 
 		firstIdleStateTimeoutTimer := <-manualIdleStateTimeoutTimers // reach first idle state
 		h.eventuallyVerifyMocks(t, 2)                                // short eventually                                            // confirm init sync attempt occurred (expected mock calls)
@@ -65,9 +54,5 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 		default:
 		}
 
-	})
-
-	test.WithContextWithTimeout(5*time.Second, func(ctx context.Context) {
-		h.waitForShutdown(ctx, bs)
 	})
 }
