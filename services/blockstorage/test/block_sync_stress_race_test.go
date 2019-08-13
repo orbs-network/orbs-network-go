@@ -68,9 +68,6 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			t.Fatalf("timed out waiting for sync flow to complete")
 		}
 	})
-
-	time.Sleep(10 * time.Millisecond) // wait for harness to shut down
-
 }
 
 // this would attempt to commit the same blocks at the same time from the sync flow and directly (simulating blocks arriving from consensus)
