@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -115,6 +116,7 @@ func NewLeanHelixConsensusAlgo(
 		s.SuperviseChan("Lean Helix main loop", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
+			s.leanHelix.WaitUntilShutdown(ctx)
 		}))
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
