@@ -112,7 +112,8 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		s.leanHelix.Run(ctx)
+		waiter := s.leanHelix.Run(ctx)
+		s.Supervise(waiter)
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
 		parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
