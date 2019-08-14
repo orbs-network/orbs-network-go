@@ -9,12 +9,13 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
@@ -61,8 +62,6 @@ func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metric
 		peerHexAddress:  hexAddressSliceForLogging,
 		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
 		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
-
-		closed: make(chan struct{}),
 	}
 
 	return client
@@ -72,7 +71,7 @@ func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
-	supervised.GoForever(ctx, c.logger, func() {
+	c.closed = govnr.GoForever(ctx, logfields.GovnrErrorer(c.logger), func() {
 		c.clientMainLoop(ctx)
 	})
 }
@@ -84,6 +83,9 @@ func (c *clientConnection) disconnect() chan struct{} {
 
 func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
 	for {
+		if parentCtx.Err() != nil {
+			return // because otherwise the continue statement below could prevent us from ever shutting down
+		}
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -156,7 +158,6 @@ func (c *clientConnection) onDisconnect(logger log.Logger) bool {
 	c.metricRegistry.Remove(c.sendErrors)
 	c.metricRegistry.Remove(c.sendQueueErrors)
 	c.metricRegistry.Remove(c.queue.usagePercentageMetric)
-	close(c.closed)
 	return false
 }
 

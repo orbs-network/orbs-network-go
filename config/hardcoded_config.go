@@ -63,6 +63,7 @@ const (
 
 	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
+	CONSENSUS_CONTEXT_TRIGGERS_ENABLED                = "CONSENSUS_CONTEXT_TRIGGERS_ENABLED"
 
 	STATE_STORAGE_HISTORY_SNAPSHOT_NUM = "STATE_STORAGE_HISTORY_SNAPSHOT_NUM"
 
@@ -269,6 +270,10 @@ func (c *config) ConsensusContextMaximumTransactionsInBlock() uint32 {
 
 func (c *config) ConsensusContextSystemTimestampAllowedJitter() time.Duration {
 	return c.kv[CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER].DurationValue
+}
+
+func (c *config) ConsensusContextTriggersEnabled() bool {
+	return c.kv[CONSENSUS_CONTEXT_TRIGGERS_ENABLED].BoolValue
 }
 
 func (c *config) StateStorageHistorySnapshotNum() uint32 {

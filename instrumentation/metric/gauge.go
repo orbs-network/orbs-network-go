@@ -26,7 +26,7 @@ type gaugeExport struct {
 func (g *Gauge) Export() exportedMetric {
 	return gaugeExport{
 		g.name,
-		g.value,
+		atomic.LoadInt64(&g.value),
 	}
 }
 

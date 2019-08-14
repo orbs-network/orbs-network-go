@@ -19,9 +19,10 @@ import (
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
 		ctrlRand := rand.NewControlledRand(t)
-		h := newHarness(t).start(ctx)
+		h.start(ctx)
 
 		invalidSig := make([]byte, 32)
 		ctrlRand.Read(invalidSig)
@@ -44,8 +45,9 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 }
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t).start(ctx)
+	h := newHarness(t)
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx1 := builders.TransferTransaction().Build()
 		tx2 := builders.TransferTransaction().Build()
@@ -57,8 +59,9 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 }
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding forwarded transaction to pending pool").start(ctx)
+	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding forwarded transaction to pending pool")
+	test.WithContextAndShutdown(h, func(ctx context.Context) {
+		h.start(ctx)
 
 		tx1 := builders.TransferTransaction().Build()
 

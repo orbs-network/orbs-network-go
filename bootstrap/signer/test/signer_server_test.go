@@ -18,7 +18,6 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 type signerServerConfig struct {
@@ -43,7 +42,8 @@ func TestSignerServer(t *testing.T) {
 		testLogger := log.GetLogger().WithOutput(testOutput)
 
 		server := signer.StartSignerServer(&signerServerConfig{pk, address}, testLogger)
-		defer server.GracefulShutdown(1 * time.Second)
+		defer server.GracefulShutdown(ctx)
+
 		c := crypto.NewSignerClient("http://" + address)
 
 		ctx = trace.NewContext(ctx, "test")

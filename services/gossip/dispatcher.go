@@ -8,12 +8,12 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type handlerFunc func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)
@@ -31,17 +31,10 @@ type meteredTopicChannel struct {
 	name            string
 }
 
-func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) error {
-	grace, cancel := context.WithTimeout(ctx, 5*time.Millisecond) // TODO remove grace timeout when buffer size increased to a significant size
-	defer cancel()
-
+func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) error {
 	select {
-	case <-grace.Done(): // TODO replace with default: when buffer size increased to a significant size
-		if grace.Err() == context.DeadlineExceeded {
-			c.droppedMessages.Add(1)
-			return errors.Errorf("buffer full")
-		}
-		return nil
+	default:
+		return errors.Errorf("buffer full")
 	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
 		c.updateMetrics()
 		return nil
@@ -52,12 +45,12 @@ func (c *meteredTopicChannel) updateMetrics() {
 	c.inQueue.Update(int64(len(c.ch)))
 }
 
-func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) {
-	supervised.GoForever(ctx, logger, func() {
+func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) govnr.ContextEndedChan {
+	return govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
 		for {
 			select {
 			case <-ctx.Done():
-				c.flushChannelAfterContextDone(ctx)
+				c.drain()
 				return
 			case message := <-c.ch:
 				handler(ctx, message.header, message.payloads)
@@ -68,24 +61,18 @@ func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handle
 
 }
 
-func (c *meteredTopicChannel) flushChannelAfterContextDone(expiredContext context.Context) {
-	if expiredContext.Err() == nil {
-		panic("function should be called only after context expiration")
-	}
-
-	var ok bool
-	ok = true
-	for ok { // stop when channel closed
+func (c *meteredTopicChannel) drain() {
+	for {
 		select {
-		case _, ok = <-c.ch: // empty buffer
+		case <-c.ch:
 		default:
-			return // stop when buffer empty and channel open
+			return
 		}
 	}
 }
 
 func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
-	bufferSize := 10 // TODO increase significantly once main peer socket size is reduced
+	bufferSize := 1000
 	sizeGauge := registry.NewGauge("Gossip.Topic." + name + ".QueueSize")
 	sizeGauge.Update(int64(bufferSize))
 	return &meteredTopicChannel{
@@ -117,26 +104,26 @@ func newMessageDispatcher(registry metric.Registry) (d *gossipMessageDispatcher)
 	return
 }
 
-func (d *gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
+func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
 	ch, err := d.get(header.Topic())
 	if err != nil {
 		logger.Error("no message channel found", log.Error(err))
 		return
 	}
 
-	err = ch.send(ctx, header, payloads)
+	err = ch.send(header, payloads)
 	if err != nil {
 		logger.Info("message dropped", log.Error(err), log.Stringable("header", header))
 	}
 }
 
-func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) {
+func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) govnr.ContextEndedChan {
 	topicChannel, err := d.get(topic)
 	if err != nil {
 		logger.Error("no message channel found", log.Error(err))
 		panic(err)
 	} else {
-		topicChannel.run(ctx, logger, handler)
+		return topicChannel.run(ctx, logger, handler)
 	}
 }
 

@@ -8,7 +8,12 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -27,6 +32,35 @@ func TestLeaderInit(t *testing.T) {
 
 		h.verifyHandlerRegistrations(t)
 		h.verifyNewBlockProposalNotRequested(t)
+	})
+}
+
+// this test protects against a rare race where we loaded blocks from storage and node sync didn't update followers before leader started
+// see https://circleci.com/gh/orbs-network/orbs-network-go/17275#tests/containers/2
+func TestLeaderInitWithExistingBlocks_DoesNotCreateGenesisBlock(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		block17 := builders.BlockPair().WithHeight(17).Build()
+
+		h := newHarness(t, true)
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitBroadcastViaGossip(17, h.config.NodeAddress())
+
+		// resetting because go-mock doesn't register later When() calls as taking precedence over older calls, and newHarness() stubs this same method with a no-op
+		h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Call(func(handler handlers.ConsensusBlocksHandler) {
+			// this recreates how block storage updates us on last committed block on init (via the call to RegisterConsensusBlocksHandler)
+			_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+				Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+				BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+				BlockPair:              block17,
+				PrevCommittedBlockPair: nil,
+			})
+			require.NoError(t, err, "failed calling HandleBlockConsensus")
+
+		}).Times(1)
+
+		h.createService(ctx)
+
+		h.verifyCommitBroadcastViaGossip(t)
 	})
 }
 

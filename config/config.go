@@ -58,6 +58,7 @@ type NodeConfig interface {
 	// consensus context
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
+	ConsensusContextTriggersEnabled() bool
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -165,6 +166,7 @@ type ConsensusContextConfig interface {
 	GenesisValidatorNodes() map[string]ValidatorNode
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
+	ConsensusContextTriggersEnabled() bool
 }
 
 type PublicApiConfig interface {

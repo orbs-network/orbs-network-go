@@ -23,8 +23,12 @@ import (
 	"time"
 )
 
-func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
-	s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
+func (s *Service) leaderConsensusRoundRunLoop(parent context.Context) {
+	if _, block := s.getLastCommittedBlock(); block == nil {
+		s.mutex.Lock()
+		s.lastCommittedBlockUnderMutex = s.leaderGenerateGenesisBlock(parent)
+		s.mutex.Unlock()
+	}
 	for {
 		start := time.Now()
 		ctx := trace.NewContext(parent, "BenchmarkConsensus.Tick")
@@ -51,7 +55,7 @@ func (s *service) leaderConsensusRoundRunLoop(parent context.Context) {
 	}
 }
 
-func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
+func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -92,7 +96,7 @@ func (s *service) leaderConsensusRoundTick(ctx context.Context) error {
 }
 
 // used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
-func (s *service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
+func (s *Service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
 		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
@@ -114,7 +118,7 @@ func (s *service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.Bloc
 	return blockPair
 }
 
-func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
+func (s *Service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommittedBlockHeight primitives.BlockHeight, lastCommittedBlock *protocol.BlockPairContainer) (*protocol.BlockPairContainer, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("generating new proposed block", logfields.BlockHeight(lastCommittedBlockHeight+1))
@@ -146,7 +150,7 @@ func (s *service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 	return s.leaderSignBlockProposal(ctx, txOutput.TransactionsBlock, rxOutput.ResultsBlock)
 }
 
-func (s *service) leaderSignBlockProposal(ctx context.Context, transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
+func (s *Service) leaderSignBlockProposal(ctx context.Context, transactionsBlock *protocol.TransactionsBlockContainer, resultsBlock *protocol.ResultsBlockContainer) (*protocol.BlockPairContainer, error) {
 	blockPair := &protocol.BlockPairContainer{
 		TransactionsBlock: transactionsBlock,
 		ResultsBlock:      resultsBlock,
@@ -182,7 +186,7 @@ func (s *service) leaderSignBlockProposal(ctx context.Context, transactionsBlock
 	return blockPair, nil
 }
 
-func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+func (s *Service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("broadcasting commit block", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 
@@ -202,7 +206,7 @@ func (s *service) leaderBroadcastCommittedBlock(ctx context.Context, blockPair *
 	return err
 }
 
-func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
+func (s *Service) leaderHandleCommittedVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus) error {
 	s.logger.Info("Got committed message", trace.LogFieldFrom(ctx))
 	lastCommittedBlockHeight, lastCommittedBlock := s.getLastCommittedBlock()
 
@@ -232,7 +236,7 @@ func (s *service) leaderHandleCommittedVote(ctx context.Context, sender *gossipm
 	return nil
 }
 
-func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, lastCommittedBlockHeight primitives.BlockHeight) error {
+func (s *Service) leaderValidateVote(sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, lastCommittedBlockHeight primitives.BlockHeight) error {
 	// block height
 	blockHeight := status.LastCommittedBlockHeight()
 	if blockHeight != lastCommittedBlockHeight {
@@ -252,7 +256,7 @@ func (s *service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	return nil
 }
 
-func (s *service) leaderAddVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
+func (s *Service) leaderAddVote(ctx context.Context, sender *gossipmessages.SenderSignature, status *gossipmessages.BenchmarkConsensusStatus, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) (bool, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	s.mutex.Lock()
