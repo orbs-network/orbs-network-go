@@ -19,7 +19,7 @@ import (
 func TestSubscriptionCheck_ValidSubscription(t *testing.T) {
 	newHarness().
 		WithVirtualChainId(42).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			sim := network.ethereumConnection
 			address, _, err := sim.DeployEthereumContract(sim.GetAuth(), subscription.SubscriptionABI, subscription.SubscriptionBin)
 			stringAddress := address.String()
@@ -42,7 +42,7 @@ func TestSubscriptionCheck_UnderpaidSubscription(t *testing.T) {
 	newHarness().
 		WithVirtualChainId(17).
 		AllowingErrors("error validating transaction for preorder").
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			sim := network.ethereumConnection
 			address, _, err := sim.DeployEthereumContract(sim.GetAuth(), subscription.SubscriptionABI, subscription.SubscriptionBin)
 			stringAddress := address.String()

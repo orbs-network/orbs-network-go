@@ -18,7 +18,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -33,7 +32,7 @@ import (
 var LogTag = log.Service("consensus-algo-lean-helix")
 
 type Service struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	blockStorage     services.BlockStorage
 	membership       *membership
 	com              *communication
@@ -116,7 +115,7 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		s.SuperviseChan("Lean Helix main loop", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+		s.Supervise(govnr.Forever(ctx, "Lean Helix main loop", logfields.GovnrErrorer(logger), func() {
 			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
 			s.leanHelix.Run(ctx)
 		}))

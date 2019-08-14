@@ -35,7 +35,7 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ContextEndedChan
+	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
@@ -162,8 +162,8 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ContextEndedChan {
-	return synchronization.NewPeriodicalTrigger(ctx, ROTATE_INTERVAL, logger, func() {
+func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
+	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", ROTATE_INTERVAL, logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {
@@ -172,7 +172,7 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 				m.(*Histogram).Rotate()
 			}
 		}
-	}, nil).Closed
+	}, nil)
 }
 
 func (r *inMemoryRegistry) ExportPrometheus() string {

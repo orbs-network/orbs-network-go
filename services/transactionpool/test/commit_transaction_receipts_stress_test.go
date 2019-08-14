@@ -19,8 +19,9 @@ import (
 )
 
 func TestStress_AddingSameTransactionMultipleTimesWhileReportingAsCommitted(t *testing.T) {
-	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent)
+		h.AllowErrorsMatching("error adding transaction to pending pool")
 		const CONCURRENCY_COUNT = 500
 		duplicateStatuses := []protocol.TransactionStatus{
 			protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED,

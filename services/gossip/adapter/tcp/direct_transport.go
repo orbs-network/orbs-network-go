@@ -94,20 +94,17 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 
 		metrics: getMetrics(registry),
 
-		serverClosed: make(chan struct{}),
 		cancelServer: cancelServer,
 	}
 
 	t.atomicConfig.Store(config)
 
 	// server goroutine
-	govnr.GoForever(serverCtx, logfields.GovnrErrorer(t.logger), func() {
+	handle := govnr.Forever(serverCtx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
 		t.serverMainLoop(serverCtx, config.GossipListenPort())
-		if serverCtx.Err() != nil {
-			t.logger.Info("TCP transport server has shut down")
-			close(t.serverClosed) //TODO move loop to server struct
-		}
 	})
+	t.serverClosed = handle.Done()
+	handle.MarkSupervised() // TODO use real supervision
 
 	// client goroutines
 	for peerNodeAddress, peer := range config.GossipPeers() {

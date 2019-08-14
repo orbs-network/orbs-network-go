@@ -21,7 +21,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
@@ -72,16 +71,16 @@ func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
 }
 
 type harness struct {
+	*test.ConcurrencyHarness
+
 	sync.Mutex
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
-	blockStorage   services.BlockStorage
+	blockStorage   *blockstorage.Service
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
 	config         *configForBlockStorageTests
-	logger         log.Logger
-	logOutput      *log.TestOutput
 }
 
 func (d *harness) withSyncBroadcast(times int) *harness {
@@ -236,16 +235,14 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	return cfg
 }
 
-func newBlockStorageHarness(tb testing.TB) *harness {
-	logOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(logOutput)
+func newBlockStorageHarness(parentHarness *test.ConcurrencyHarness) *harness {
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	cfg := createConfig(keyPair.NodeAddress())
 
 	registry := metric.NewRegistry()
-	d := &harness{config: cfg, logger: logger, logOutput: logOutput}
+	d := &harness{config: cfg, ConcurrencyHarness: parentHarness}
 	d.stateStorage = &services.MockStateStorage{}
-	d.storageAdapter = testkit.NewBlockPersistence(logger, nil, registry)
+	d.storageAdapter = testkit.NewBlockPersistence(d.Logger, nil, registry)
 
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
@@ -263,7 +260,7 @@ func newBlockStorageHarness(tb testing.TB) *harness {
 }
 
 func (d *harness) allowingErrorsMatching(pattern string) *harness {
-	d.logOutput.AllowErrorsMatching(pattern)
+	d.AllowErrorsMatching(pattern)
 	return d
 }
 
@@ -272,8 +269,10 @@ func (d *harness) start(ctx context.Context) *harness {
 	defer d.Unlock()
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.logger, registry, nil)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.Logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
+
+	d.Supervise(d.blockStorage)
 
 	return d
 }

@@ -21,9 +21,8 @@ import (
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().Build()
 
@@ -39,9 +38,8 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 		h.expectNoTransactionsToBeForwarded()
@@ -54,9 +52,9 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testing.T) {
-	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.AllowErrorsMatching("error validating transaction for preorder")
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -85,9 +83,9 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testin
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *testing.T) {
-	h := newHarness(t).allowingErrorsMatching("error validating transaction for preorder")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.AllowErrorsMatching("error validating transaction for preorder")
 		tx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(t *protocol.SignedTransaction) bool {
 			return t == tx
@@ -116,14 +114,15 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *tes
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	h := newHarness(t).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.AllowErrorsMatching("error adding transaction to pending pool")
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
 
-		h.addNewTransaction(ctx, tx)
+		_, err := h.addNewTransaction(ctx, tx)
+		require.NoError(t, err)
 
 		receipt, err := h.addNewTransaction(ctx, tx)
 
@@ -135,9 +134,8 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().Build()
 		h.ignoringForwardMessages()
@@ -158,10 +156,10 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
-	h := newHarnessWithSizeLimit(t, 1).allowingErrorsMatching("error adding transaction to pending pool")
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
 
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarnessWithSizeLimit(parent, 1).start(ctx)
+		h.AllowErrorsMatching("error adding transaction to pending pool")
 		h.expectNoTransactionsToBeForwarded()
 
 		tx := builders.TransferTransaction().Build()

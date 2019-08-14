@@ -9,6 +9,7 @@ package synchronization_test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -45,7 +46,7 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 		}
 	}
 	tickTime := time.Microsecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, trigger, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
 	<-fromTrigger // test will block if the trigger did not happen
 
@@ -65,7 +66,7 @@ func TestTriggerInternalMetrics(t *testing.T) {
 		}
 	}
 	tickTime := time.Microsecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), tickTime, logger, trigger, nil)
+	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
 	// wait for three triggers
 	for i := 0; i < 3; i++ {
@@ -79,105 +80,106 @@ func TestTriggerInternalMetrics(t *testing.T) {
 }
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
-	logger := mockLogger()
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(), time.Millisecond*2, logger, func() { x++ }, nil)
-	p.Stop()
-	time.Sleep(3 * time.Millisecond)
-	require.Equal(t, 0, x, "expected no ticks")
-	<-p.Closed
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
+		harness.Supervise(p)
+		p.Stop()
+		time.Sleep(3 * time.Millisecond)
+		require.Equal(t, 0, x, "expected no ticks")
+	})
 }
 
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
-	logger := mockLogger()
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(), time.Millisecond, logger, func() { x++ }, nil)
-	time.Sleep(time.Microsecond * 1100)
-	p.Stop()
-	xValueOnStop := x
-	time.Sleep(time.Millisecond * 5)
-	require.Equal(t, xValueOnStop, x, "expected one tick due to stop")
-	<-p.Closed
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, harness.Logger, func() { x++ }, nil)
+		harness.Supervise(p)
+		time.Sleep(time.Microsecond * 1100)
+		p.Stop()
+		xValueOnStop := x
+		time.Sleep(time.Millisecond * 5)
+		require.Equal(t, xValueOnStop, x, "expected one tick due to stop")
 
+	})
 }
 
 func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
-	logger := mockLogger()
-	ctx, cancel := context.WithCancel(context.Background())
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
-	cancel()
-	time.Sleep(3 * time.Millisecond)
-	require.Equal(t, 0, x, "expected no ticks")
-	<-p.Closed
-
+	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+		ctx, cancel := context.WithCancel(parent)
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
+		harness.Supervise(p)
+		cancel()
+		time.Sleep(3 * time.Millisecond)
+		require.Equal(t, 0, x, "expected no ticks")
+	})
 }
 
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
-	logger := mockLogger()
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // send a cancelled context to reduce chances of trigger being called even once
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() { x++ }, nil)
-	time.Sleep(3 * time.Millisecond)
-	require.Equal(t, 0, x, "expected no ticks")
-	p.Stop()
-	require.Equal(t, 0, x, "expected stop to not block")
-	<-p.Closed
+	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+		ctx, cancel := context.WithCancel(parent)
+		cancel() // send a cancelled context to reduce chances of trigger being called even once
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
+		harness.Supervise(p)
+		time.Sleep(3 * time.Millisecond)
+		require.Equal(t, 0, x, "expected no ticks")
+		p.Stop()
+		require.Equal(t, 0, x, "expected stop to not block")
 
+	})
 }
 
 func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
-	logger := mockLogger()
-	ctx, cancel := context.WithCancel(context.Background())
-	ch := make(chan struct{})
-	p := synchronization.NewPeriodicalTrigger(ctx, time.Millisecond*2, logger, func() {}, func() { close(ch) })
-	cancel()
-	time.Sleep(time.Millisecond) // yield
-	_, ok := <-ch
-	require.False(t, ok, "expected trigger stop action to close the channel")
-	<-p.Closed
+	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+		ctx, cancel := context.WithCancel(parent)
+		ch := make(chan struct{})
+		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() {}, func() { close(ch) })
+		harness.Supervise(p)
+		cancel()
+		time.Sleep(time.Millisecond) // yield
+		_, ok := <-ch
+		require.False(t, ok, "expected trigger stop action to close the channel")
+
+	})
 }
 
 func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
-	logger := mockLogger()
-	latch := make(chan struct{})
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(),
-		time.Second,
-		logger,
-		func() { x++ },
-		func() {
+	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+		latch := make(chan struct{})
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Second, harness.Logger, func() { x++ }, func() {
 			x = 20
 			latch <- struct{}{}
 		})
-	p.Stop()
-	<-latch // wait for stop to happen...
-	require.Equal(t, 20, x, "expected x to have the stop value")
-	<-p.Closed
+		harness.Supervise(p)
+		p.Stop()
+		<-latch // wait for stop to happen...
+		require.Equal(t, 20, x, "expected x to have the stop value")
 
+	})
 }
 
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
-	logger := mockLogger()
-	x := 0
-	p := synchronization.NewPeriodicalTrigger(context.Background(),
-		time.Millisecond,
-		logger,
-		func() {
+	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+
+		logger := mockLogger()
+		x := 0
+		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, logger, func() {
 			x++
 			panic("we should not see this other than the logs")
-		},
-		nil)
+		}, nil)
 
-	// more than one error means more than one panic means it recovers correctly
-	for i := 0; i < 2; i++ {
-		<-logger.errors
-	}
+		// more than one error means more than one panic means it recovers correctly
+		for i := 0; i < 2; i++ {
+			<-logger.errors
+		}
 
-	p.Stop()
+		p.Stop()
 
-	require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
-	<-p.Closed
+		require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
+
+	})
 
 }

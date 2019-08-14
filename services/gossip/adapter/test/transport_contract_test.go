@@ -39,11 +39,11 @@ func TestContract_SendToAllButList(t *testing.T) {
 	t.Skipf("implement") // TODO(v1)
 }
 
-func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
+func broadcastTest(makeContext func(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
-			c := makeContext(ctx, t)
-			defer c.testOutput.TestTerminated()
+		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+			c := makeContext(ctx, harness)
+			defer c.shutdownAll(ctx)
 
 			data := &adapter.TransportData{
 				SenderNodeAddress: c.nodeAddresses[3],
@@ -57,19 +57,15 @@ func broadcastTest(makeContext func(ctx context.Context, tb testing.TB) *transpo
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
-
-			c.shutdownAll(ctx)
-
-			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
 	}
 }
 
-func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transportContractContext) func(*testing.T) {
+func sendToListTest(makeContext func(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
-			c := makeContext(ctx, t)
-			defer c.testOutput.TestTerminated()
+		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+			c := makeContext(ctx, harness)
+			defer c.shutdownAll(ctx)
 
 			data := &adapter.TransportData{
 				SenderNodeAddress:      c.nodeAddresses[3],
@@ -84,10 +80,6 @@ func sendToListTest(makeContext func(ctx context.Context, tb testing.TB) *transp
 			c.listeners[3].ExpectNotReceive()
 
 			require.True(t, c.eventuallySendAndVerify(ctx, c.transports[3], data))
-
-			c.shutdownAll(ctx)
-
-			test.RequireNoUnexpectedErrors(t, c.testOutput)
 		})
 	}
 }
@@ -96,10 +88,9 @@ type transportContractContext struct {
 	nodeAddresses []primitives.NodeAddress
 	transports    []adapter.Transport
 	listeners     []*testkit.MockTransportListener
-	testOutput    *log.TestOutput
 }
 
-func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractContext {
+func aMemoryTransport(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext {
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
@@ -107,8 +98,7 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	for _, address := range res.nodeAddresses {
 		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
 	}
-	res.testOutput = log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(res.testOutput).WithTags(log.String("adapter", "transport"))
+	logger := harness.Logger.WithTags(log.String("adapter", "transport"))
 
 	transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
@@ -119,10 +109,12 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		testkit.ListenTo(res.transports[3], res.nodeAddresses[3]),
 	}
 
+	harness.Supervise(transport)
+
 	return res
 }
 
-func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
+func aDirectTransport(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext {
 	res := &transportContractContext{}
 
 	gossipPeers := make(map[string]config.GossipPeer)
@@ -139,8 +131,7 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		config.ForGossipAdapterTests(res.nodeAddresses[3], 0, gossipPeers),
 	}
 
-	res.testOutput = log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(res.testOutput).WithTags(log.String("adapter", "transport"))
+	logger := harness.Logger.WithTags(log.String("adapter", "transport"))
 
 	transports := []*tcp.DirectTransport{
 		tcp.NewDirectTransport(ctx, configs[0], logger, metric.NewRegistry()),
@@ -173,6 +164,8 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 	}
 
 	for _, t := range transports {
+		harness.Supervise(t)
+
 		res.transports = append(res.transports, t)
 	}
 
@@ -214,8 +207,5 @@ func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, 
 func (c *transportContractContext) shutdownAll(ctx context.Context) {
 	for _, t := range c.transports {
 		t.GracefulShutdown(ctx)
-	}
-	for _, t := range c.transports {
-		t.WaitUntilShutdown(ctx)
 	}
 }
