@@ -8,6 +8,7 @@ package gossip
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
@@ -91,4 +92,8 @@ func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
 		s.messageDispatcher.dispatch(logger, header, payloads[1:])
 	}
+}
+
+func (s *Service) String() string {
+	return fmt.Sprintf("Gossip service for node %s: %p", s.config.NodeAddress(), s)
 }
