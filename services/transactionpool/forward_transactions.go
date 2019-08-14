@@ -8,12 +8,12 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -33,7 +33,9 @@ type TransactionForwarderConfig interface {
 }
 
 func (s *Service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
-	s.transactionResultsHandlers = append(s.transactionResultsHandlers, handler)
+	s.transactionResultsHandlers.Lock()
+	defer s.transactionResultsHandlers.Unlock()
+	s.transactionResultsHandlers.handlers = append(s.transactionResultsHandlers.handlers, handler)
 }
 
 func (s *Service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
@@ -95,7 +97,7 @@ func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransactio
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
-	f.closed = supervised.GoForever(parent, f.logger, func() {
+	f.closed = govnr.GoForever(parent, logfields.GovnrErrorer(f.logger), func() {
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())

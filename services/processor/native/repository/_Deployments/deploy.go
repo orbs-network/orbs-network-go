@@ -12,12 +12,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"strconv"
 )
 
 func getInfo(serviceName string) uint32 {
-	if _isImplicitlyDeployed(serviceName) {
+	if IsImplicitlyDeployed(serviceName) {
 		return uint32(protocol.PROCESSOR_TYPE_NATIVE)
 	}
 
@@ -54,8 +55,11 @@ func deployService(serviceName string, processorType uint32, code ...[]byte) {
 		_validateNativeDeploymentLock()
 	}
 
-	// TODO(https://github.com/orbs-network/orbs-network-go/issues/571): sanitize serviceName
+	_validateServiceName(serviceName)
 
+	_addServiceName(serviceName)
+
+	// this read is for backwards compatibility if someone deployed a contract before service name sanitization was added
 	existingProcessorType := _readProcessor(serviceName)
 	if existingProcessorType != 0 {
 		panic("contract already deployed")
@@ -73,11 +77,13 @@ func deployService(serviceName string, processorType uint32, code ...[]byte) {
 	service.CallMethod(serviceName, "_init")
 }
 
-func _isImplicitlyDeployed(serviceName string) bool {
+// Function was made go "public" to allow testing, it is not public in the contract.
+func IsImplicitlyDeployed(serviceName string) bool {
 	switch serviceName {
 	case
 		CONTRACT_NAME,
 		info_systemcontract.CONTRACT_NAME,
+		triggers_systemcontract.CONTRACT_NAME,
 		elections_systemcontract.CONTRACT_NAME,
 		globalpreorder_systemcontract.CONTRACT_NAME:
 		return true

@@ -13,12 +13,14 @@ import (
 	"github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"math"
+	"sync"
 	"time"
 )
 
 var TIMEOUT_EXP_BASE = float64(2.0) // Modifying this value from 2.0 will affect its unit tests which are time-based
 
 type exponentialBackoffElectionTrigger struct {
+	sync.Mutex
 	electionChannel chan func(ctx context.Context)
 	minTimeout      time.Duration
 	view            primitives.View
@@ -40,6 +42,8 @@ func NewExponentialBackoffElectionTrigger(logger log.Logger, minTimeout time.Dur
 }
 
 func (e *exponentialBackoffElectionTrigger) RegisterOnElection(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, electionHandler func(ctx context.Context, blockHeight primitives.BlockHeight, view primitives.View, onElectionCB func(m lhmetrics.ElectionMetrics))) {
+	e.Lock()
+	defer e.Unlock()
 	if e.electionHandler == nil || e.view != view || e.blockHeight != blockHeight {
 		timeout := e.CalcTimeout(view)
 		e.view = view
@@ -80,6 +84,8 @@ func (e *exponentialBackoffElectionTrigger) trigger(ctx context.Context) {
 }
 
 func (e *exponentialBackoffElectionTrigger) sendTrigger() {
+	e.Lock()
+	defer e.Unlock()
 	e.logger.Info("election trigger triggered",
 		log.Uint64("lh-election-block-height", uint64(e.blockHeight)),
 		log.Uint64("lh-election-view", uint64(e.view)))

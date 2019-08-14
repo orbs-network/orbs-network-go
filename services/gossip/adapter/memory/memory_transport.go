@@ -12,7 +12,9 @@ package memory
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -110,7 +112,7 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		cancel:   cancel,
 	}
 
-	p.SuperviseChan("In-memory transport peer", supervised.GoForever(ctx, logger, func() {
+	p.SuperviseChan("In-memory transport peer", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
