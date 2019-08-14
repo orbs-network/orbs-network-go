@@ -21,6 +21,7 @@ const {
     newChainConfiguration,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
+    getPrChainNumber,
     newVacantTCPPort,
 } = require('./boyar-lib');
 
@@ -38,10 +39,9 @@ if (!targetTag) {
     process.exit(1);
 }
 
-// The namespace 100000 is PR chains teritory
 const prLinkParts = githubPRLink.split('/');
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-const chainNumber = prNumber + 100000;
+const chainNumber = getPrChainNumber(prNumber);
 let chain;
 
 // Read the Boyar config from file

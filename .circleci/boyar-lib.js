@@ -92,6 +92,10 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
+function getPrChainNumber(prNumber) {
+    return 100000 + prNumber;
+}
+
 async function getClosedPullRequests(page = 1) {
     const response = await fetch(`https://api.github.com/repos/orbs-network/orbs-network-go/pulls?state=closed&per_page=100&page=${page}`);
     const closedPRs = await response.json();
@@ -101,6 +105,7 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
+    getPrChainNumber,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,

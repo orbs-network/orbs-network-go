@@ -197,7 +197,6 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		fmt.Println("received from the ENV the following: ", apiEndpoint)
 		baseUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
