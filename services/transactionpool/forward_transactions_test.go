@@ -18,7 +18,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -67,14 +66,15 @@ func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, 
 
 func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
 		signer, err := signer.New(&signerConfig{keyPair})
 		require.NoError(t, err)
 
-		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, harness.Logger, signer, cfg, gossip)
+		harness.Supervise(txForwarder)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -92,14 +92,15 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
 		signer, err := signer.New(&signerConfig{keyPair})
 		require.NoError(t, err)
 
-		txForwarder := NewTransactionForwarder(ctx, log.DefaultTestingLogger(t), signer, cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, harness.Logger, signer, cfg, gossip)
+		harness.Supervise(txForwarder)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -117,11 +118,8 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 }
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
-		defer testOutput.TestTerminated()
-		logger := log.GetLogger().WithOutput(testOutput).WithFilters(log.IgnoreMessagesMatching("error signing transactions"))
-
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("error signing transactions")
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -129,7 +127,8 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		signer := &FaultySigner{}
 		signer.When("Sign", mock.Any, mock.Any).Return([]byte{}, fmt.Errorf("signer unavailable"))
 
-		txForwarder := NewTransactionForwarder(ctx, logger, signer, cfg, gossip)
+		txForwarder := NewTransactionForwarder(ctx, harness.Logger, signer, cfg, gossip)
+		harness.Supervise(txForwarder)
 
 		tx := builders.TransferTransaction().Build()
 		anotherTx := builders.TransferTransaction().Build()
@@ -139,14 +138,14 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		txForwarder.submit(tx)
 		txForwarder.submit(anotherTx)
 
-		require.NoError(t, test.EventuallyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
+		require.NoError(t, test.ConsistentlyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
 
 		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
 		sig, _ := signer.Sign(ctx, oneBigHash)
 		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
 
 		signer.Reset()
-		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil)
+		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil).Times(1)
 
 		txForwarder.drainQueueAndForward(ctx)
 

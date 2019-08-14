@@ -13,12 +13,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
+	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -26,13 +26,13 @@ import (
 const NETWORK_SIZE = 5
 
 type harness struct {
+	*test.ConcurrencyHarness
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
 	signer           signer.Signer
-	reporting        log.Logger
 	config           benchmarkconsensus.Config
-	service          services.ConsensusAlgoBenchmark
+	service          *benchmarkconsensus.Service
 	registry         metric.Registry
 }
 
@@ -48,7 +48,7 @@ func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
 	return testKeys.EcdsaSecp256K1KeyPairForTests(2)
 }
 
-func newHarness(tb testing.TB, isLeader bool) *harness {
+func newHarness(parent *test.ConcurrencyHarness, isLeader bool) *harness {
 
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for i := 0; i < NETWORK_SIZE; i++ {
@@ -61,9 +61,7 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 		nodeKeyPair = nonLeaderKeyPair()
 	}
 
-	//TODO(v1) don't use acceptance tests config! use a per-service config
 	cfg := config.ForBenchmarkConsensusTests(nodeKeyPair, leaderKeyPair(), genesisValidatorNodes)
-	log := log.DefaultTestingLogger(tb)
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
@@ -74,17 +72,17 @@ func newHarness(tb testing.TB, isLeader bool) *harness {
 	consensusContext := &services.MockConsensusContext{}
 
 	signer, err := signer.New(cfg)
-	require.NoError(tb, err)
+	require.NoError(parent.T, err)
 
 	return &harness{
-		gossip:           gossip,
-		blockStorage:     blockStorage,
-		consensusContext: consensusContext,
-		signer:           signer,
-		reporting:        log,
-		config:           cfg,
-		service:          nil,
-		registry:         metric.NewRegistry(),
+		ConcurrencyHarness: parent,
+		gossip:             gossip,
+		blockStorage:       blockStorage,
+		consensusContext:   consensusContext,
+		signer:             signer,
+		config:             cfg,
+		service:            nil,
+		registry:           metric.NewRegistry(),
 	}
 }
 
@@ -95,10 +93,11 @@ func (h *harness) createService(ctx context.Context) {
 		h.blockStorage,
 		h.consensusContext,
 		h.signer,
-		h.reporting,
+		h.Logger,
 		h.config,
 		h.registry,
 	)
+	h.Supervise(h.service)
 }
 
 func (h *harness) verifyHandlerRegistrations(t *testing.T) {

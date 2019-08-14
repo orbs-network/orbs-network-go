@@ -14,7 +14,7 @@ func BenchmarkHappyFlow1k(b *testing.B) {
 	numTransactions := 1000
 
 	rnd := rand.NewControlledRand(b)
-	newHarness().Start(b, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	newHarness().Start(b, func(t testing.TB, ctx context.Context, network *Network) {
 		for n := 0; n < b.N; n++ {
 			b.StartTimer()
 			transferDuration, waitDuration := sendTransfersAndAssertTotalBalance(ctx, network, t, numTransactions, rnd)
@@ -86,7 +86,7 @@ func BenchmarkHappyFlow1kWithOverrides(b *testing.B) {
 }`)
 		require.NoError(b, err)
 		return c
-	}).Start(b, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	}).Start(b, func(t testing.TB, ctx context.Context, network *Network) {
 		for n := 0; n < b.N; n++ {
 			b.StartTimer()
 			transferDuration, waitDuration := sendTransfersAndAssertTotalBalance(ctx, network, t, numTransactions, rnd)

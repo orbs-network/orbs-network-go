@@ -17,8 +17,8 @@ import (
 )
 
 func TestReturnTransactionBlockHeader(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -37,8 +37,8 @@ func TestReturnTransactionBlockHeader(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -67,8 +67,9 @@ func TestReturnTransactionBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -97,8 +98,9 @@ func TestReturnTransactionBlockHeaderFromNearFutureFailsWhenContextEnds(t *testi
 }
 
 func TestReturnResultsBlockHeader(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -116,8 +118,9 @@ func TestReturnResultsBlockHeader(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -147,8 +150,9 @@ func TestReturnResultsBlockHeaderFromNearFuture(t *testing.T) {
 }
 
 func TestReturnResultsBlockHeaderFromNearFutureFailsWhenContextEnds(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).

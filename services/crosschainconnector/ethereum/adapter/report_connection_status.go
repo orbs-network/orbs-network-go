@@ -9,6 +9,7 @@ package adapter
 import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
@@ -39,17 +40,17 @@ func createConnectionStatusMetrics(registry metric.Registry) *metrics {
 	return statusMetrics
 }
 
-func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) chan struct{} {
+func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context, registry metric.Registry, logger log.Logger, frequency time.Duration) govnr.ShutdownWaiter {
 	statusMetrics := createConnectionStatusMetrics(registry)
 	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
-	t := synchronization.NewPeriodicalTrigger(ctx, frequency, logger, func() {
+	t := synchronization.NewPeriodicalTrigger(ctx, "Ethereum connector status reporter", frequency, logger, func() {
 		if err := c.updateConnectionStatus(ctx, statusMetrics); err != nil {
 			logger.Info("ethereum rpc connection status check failed", log.Error(err))
 		}
 	}, nil)
 
-	return t.Closed
+	return t
 }
 
 func (c *EthereumRpcConnection) updateConnectionStatus(ctx context.Context, m *metrics) error {

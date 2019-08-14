@@ -28,7 +28,7 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
 		).
-		WithSetup(func(ctx context.Context, network *NetworkHarness) {
+		WithSetup(func(ctx context.Context, network *Network) {
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {
 				//blockPair := builders.LeanHelixBlockPair().
@@ -44,7 +44,7 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetLastBlockHeight()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
-		}).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		}).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

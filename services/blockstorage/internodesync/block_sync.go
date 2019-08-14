@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -63,7 +62,7 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 }
 
 type BlockSync struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	logger  log.Logger
 	factory *stateFactory
 	gossip  gossiptopics.BlockSync
@@ -102,7 +101,7 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
-	bs.SuperviseChan("Node sync state machine", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)
 	}))
 

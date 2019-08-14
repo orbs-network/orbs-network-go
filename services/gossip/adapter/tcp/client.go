@@ -71,9 +71,11 @@ func (c *clientConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
-	c.closed = govnr.GoForever(ctx, logfields.GovnrErrorer(c.logger), func() {
+	handle := govnr.Forever(ctx, fmt.Sprintf("TCP client for %s", c.peerHexAddress), logfields.GovnrErrorer(c.logger), func() {
 		c.clientMainLoop(ctx)
 	})
+	c.closed = handle.Done()
+	handle.MarkSupervised() //TODO use real supervision?
 }
 
 func (c *clientConnection) disconnect() chan struct{} {

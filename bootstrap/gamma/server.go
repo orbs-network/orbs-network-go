@@ -10,6 +10,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"os"
@@ -22,7 +23,7 @@ import (
 )
 
 type Server struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	network    *inmemory.Network
 	clock      *adapter.AdjustableClock
 	cancelFunc context.CancelFunc

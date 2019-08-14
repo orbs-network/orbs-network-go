@@ -1,0 +1,851 @@
+{
+  "network": [
+    {
+      "address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+      "ip": "35.161.123.97"
+    },
+    {
+      "address": "d27e2e7398e2582f63d0800330010b3e58952ff6",
+      "ip": "35.167.243.123"
+    },
+    {
+      "address": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+      "ip": "52.35.218.240"
+    },
+    {
+      "address": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+      "ip": "52.42.4.94"
+    },
+    {
+      "address": "e93269e5752cec83b758cbceaeddf4d40e1556c3",
+      "ip": "52.26.26.163"
+    }
+  ],
+  "orchestrator": {
+    "storage-driver": "local"
+  },
+  "services": {
+    "signer": {
+      "Port": 7777,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-node",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-signer",
+        "Tag": "feature-signing-service-poc",
+        "Pull": true
+      },
+      "Config": {
+        "api": "v1"
+      }
+    }
+  },
+  "chains": [
+    {
+      "Id": 42,
+      "HttpPort": 8080,
+      "GossipPort": 4400,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "feature-signing-service-poc",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17"
+        ],
+        "ethereum-endpoint": "http://ropsten.orbs.com:8545",
+        "ethereum-finality-blocks-component": 10,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7"
+      }
+    },
+    {
+      "Id": 2013,
+      "HttpPort": 8082,
+      "GossipPort": 4402,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "feature-signing-service-poc",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17"
+        ],
+        "ethereum-endpoint": "http://ropsten.orbs.com:8545",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false
+      }
+    },
+    {
+      "Id": 9999,
+      "HttpPort": 8083,
+      "GossipPort": 4403,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "feature-signing-service-poc",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false
+      }
+    },
+    {
+      "Id": 6666,
+      "HttpPort": 8084,
+      "GossipPort": 4404,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "feature-signing-service-poc",
+        "Pull": true,
+        "Volumes": {
+          "Blocks": 5,
+          "Logs": 1
+        }
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101274,
+      "HttpPort": 13586,
+      "GossipPort": 8432,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101208,
+      "HttpPort": 19746,
+      "GossipPort": 16487,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101210,
+      "HttpPort": 17551,
+      "GossipPort": 14099,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101211,
+      "HttpPort": 7192,
+      "GossipPort": 18356,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101212,
+      "HttpPort": 6684,
+      "GossipPort": 9158,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101222,
+      "HttpPort": 11147,
+      "GossipPort": 4580,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101228,
+      "HttpPort": 7637,
+      "GossipPort": 5558,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101231,
+      "HttpPort": 16538,
+      "GossipPort": 17837,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101235,
+      "HttpPort": 17927,
+      "GossipPort": 17434,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101241,
+      "HttpPort": 12245,
+      "GossipPort": 17009,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101251,
+      "HttpPort": 11491,
+      "GossipPort": 6621,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101254,
+      "HttpPort": 7850,
+      "GossipPort": 18047,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101255,
+      "HttpPort": 6243,
+      "GossipPort": 9194,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101257,
+      "HttpPort": 8840,
+      "GossipPort": 4826,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101258,
+      "HttpPort": 11391,
+      "GossipPort": 11995,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101261,
+      "HttpPort": 7346,
+      "GossipPort": 9419,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101267,
+      "HttpPort": 16880,
+      "GossipPort": 19390,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101268,
+      "HttpPort": 16965,
+      "GossipPort": 5374,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    },
+    {
+      "Id": 101270,
+      "HttpPort": 5899,
+      "GossipPort": 14030,
+      "Resources": {
+        "Limits": {
+          "Memory": 1024,
+          "CPUs": 1
+        },
+        "Reservations": {
+          "Memory": 1,
+          "CPUs": 0.001
+        }
+      },
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-v1",
+        "Tag": "96f2f823",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+          "d27e2e7398e2582f63d0800330010b3e58952ff6",
+          "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+          "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
+          "e93269e5752cec83b758cbceaeddf4d40e1556c3"
+        ],
+        "ethereum-endpoint": "http://ropsten.infura.io/v3/f4cc67780a124ad9a6953083ed3c5991",
+        "ethereum-finality-blocks-component": 10,
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "24h",
+        "profiling": true,
+        "processor-sanitize-deployed-contracts": false,
+        "reload": "1"
+      }
+    }
+  ]
+}

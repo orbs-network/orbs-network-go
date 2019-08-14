@@ -16,9 +16,8 @@ import (
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
 		out, err := h.reportTransactionsAsCommitted(ctx)
@@ -37,12 +36,13 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 }
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+
 		tx := builders.TransferTransaction().Build()
 
-		h.reportTransactionsAsCommitted(ctx, tx)
+		_, err := h.reportTransactionsAsCommitted(ctx, tx)
+		require.NoError(t, err)
 
 		output, err := h.getTxReceipt(ctx, tx)
 		require.NoError(t, err, "could not get output for tx committed without adding it to pending pool")
