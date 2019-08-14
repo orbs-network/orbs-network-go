@@ -14,7 +14,7 @@ import (
 
 var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumContractAddress, getVotingEthereumContractAddress, getValidatorsEthereumContractAddress, getValidatorsRegistryEthereumContractAddress,
 	mirrorDelegationByTransfer, mirrorDelegation,
-	processVoting, isProcessingPeriod, hasProcessingStarted,
+	processVoting, isProcessingPeriod, hasProcessingStarted, processTrigger,
 	getNumberOfElections, isElectionOverdue,
 	getElectionPeriodInNanos, getEffectiveElectionTimeInNanos, getCurrentElectionTimeInNanos, getNextElectionTimeInNanos,
 	getElectedValidatorsOrbsAddress, getElectedValidatorsEthereumAddress, getElectedValidatorsEthereumAddressByBlockNumber, getElectedValidatorsOrbsAddressByBlockHeight,

@@ -1,6 +1,7 @@
 {
   "node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
   "active-consensus-algo": 2,
+  "lean-helix-show-debug": true,
   "genesis-validator-addresses": [
     "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
     "d27e2e7398e2582f63d0800330010b3e58952ff6",

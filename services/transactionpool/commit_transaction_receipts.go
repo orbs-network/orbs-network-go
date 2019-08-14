@@ -17,7 +17,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -41,7 +41,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.blockTracker.IncrementTo(newBh)
 	s.blockHeightReporter.IncrementTo(newBh)
 
-	c.notify(ctx, s.transactionResultsHandlers...)
+	s.notifyHandlers(ctx, c)
 
 	transactionReceiptsCount := len(input.TransactionReceipts)
 	s.metrics.commitRate.Measure(int64(transactionReceiptsCount))
@@ -55,7 +55,14 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	}, nil
 }
 
-func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *Service) notifyHandlers(ctx context.Context, c *committer) {
+	s.transactionResultsHandlers.RLock()
+	defer s.transactionResultsHandlers.RUnlock()
+
+	c.notify(ctx, s.transactionResultsHandlers.handlers...)
+}
+
+func (s *Service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	s.lastCommitted.Lock()

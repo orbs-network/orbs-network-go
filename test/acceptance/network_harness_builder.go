@@ -8,9 +8,10 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -138,30 +139,32 @@ func (b *networkHarnessBuilder) runTest(tb testing.TB, consensusAlgo consensus.C
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 	logger, testOutput := b.makeLogger(tb, testId)
 
-	supervised.Recover(logger, func() {
+	govnr.Recover(logfields.GovnrErrorer(logger), func() {
 		defer testOutput.TestTerminated() // this will suppress test failures from goroutines after test terminates
 		// TODO: if we experience flakiness during system shutdown move TestTerminated to be under test.WithContextWithTimeout
 
-		test.WithContextWithTimeout(TEST_TIMEOUT_HARD_LIMIT, func(ctx context.Context) {
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+		ctx, cancel := context.WithTimeout(context.Background(), TEST_TIMEOUT_HARD_LIMIT)
+		network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
 
-			logger.Info("acceptance network created")
-			defer printTestIdOnFailure(tb, testId)
-			defer dumpStateOnFailure(tb, network)
-			defer test.RequireNoUnexpectedErrors(tb, testOutput)
+		logger.Info("acceptance network created")
+		defer printTestIdOnFailure(tb, testId)
+		defer dumpStateOnFailure(tb, network)
+		defer test.RequireNoUnexpectedErrors(tb, testOutput)
 
-			if b.setupFunc != nil {
-				b.setupFunc(ctx, network)
-			}
+		if b.setupFunc != nil {
+			b.setupFunc(ctx, network)
+		}
 
-			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
-			logger.Info("acceptance network started")
+		network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
+		logger.Info("acceptance network started")
 
-			logger.Info("acceptance network running test")
-			f(tb, ctx, network)
-		})
+		logger.Info("acceptance network running test")
+		f(tb, ctx, network)
+		cancel()
 
-		time.Sleep(10 * time.Millisecond) // give context dependent goroutines time to terminate gracefully
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 1000*time.Millisecond)
+		defer cancelShutdown()
+		network.WaitUntilShutdown(shutdownCtx)
 	})
 }
 

@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
+func (s *Service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	b, err := s.persistence.GetLastBlock()
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (s *service) GetLastCommittedBlockHeight(ctx context.Context, input *servic
 	}, nil
 }
 
-func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
+func (s *Service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*services.GetTransactionsBlockHeaderOutput, error) {
 	txBlock, err := s.persistence.GetTransactionsBlock(height)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (s *service) loadTransactionsBlockHeader(height primitives.BlockHeight) (*s
 	}, nil
 }
 
-func (s *service) GetTransactionsBlockHeader(ctx context.Context, input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
+func (s *Service) GetTransactionsBlockHeader(ctx context.Context, input *services.GetTransactionsBlockHeaderInput) (result *services.GetTransactionsBlockHeaderOutput, err error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
@@ -49,7 +49,7 @@ func (s *service) GetTransactionsBlockHeader(ctx context.Context, input *service
 	return nil, err
 }
 
-func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
+func (s *Service) loadResultsBlockHeader(height primitives.BlockHeight) (*services.GetResultsBlockHeaderOutput, error) {
 	txBlock, err := s.persistence.GetResultsBlock(height)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (s *service) loadResultsBlockHeader(height primitives.BlockHeight) (*servic
 	}, nil
 }
 
-func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
+func (s *Service) GetResultsBlockHeader(ctx context.Context, input *services.GetResultsBlockHeaderInput) (result *services.GetResultsBlockHeaderOutput, err error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
@@ -71,7 +71,7 @@ func (s *service) GetResultsBlockHeader(ctx context.Context, input *services.Get
 	return nil, err
 }
 
-func (s *service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
+func (s *Service) GetTransactionReceipt(ctx context.Context, input *services.GetTransactionReceiptInput) (*services.GetTransactionReceiptOutput, error) {
 	graceNano := s.config.BlockStorageTransactionReceiptQueryTimestampGrace().Nanoseconds()
 	txExpireNano := s.config.TransactionExpirationWindow().Nanoseconds()
 
@@ -99,7 +99,7 @@ func (s *service) GetTransactionReceipt(ctx context.Context, input *services.Get
 
 // Returns a slice of blocks containing first and last
 // TODO kill this method signature or use a larger page size without returning too many blocks
-func (s *service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
+func (s *Service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
 	blocks := make([]*protocol.BlockPairContainer, 0, last-first+1)
 	err := s.persistence.ScanBlocks(first, 1, func(firstInPage primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 		blocks = append(blocks, page...)
@@ -114,7 +114,7 @@ func (s *service) GetBlockSlice(first primitives.BlockHeight, last primitives.Bl
 	return blocks, first, first + primitives.BlockHeight(len(blocks)) - 1, nil
 }
 
-func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*services.GetTransactionReceiptOutput, error) {
+func (s *Service) createEmptyTransactionReceiptResult(ctx context.Context) (*services.GetTransactionReceiptOutput, error) {
 	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (s *service) createEmptyTransactionReceiptResult(ctx context.Context) (*ser
 	}, nil
 }
 
-func (s *service) GetBlockPair(ctx context.Context, input *services.GetBlockPairInput) (*services.GetBlockPairOutput, error) {
+func (s *Service) GetBlockPair(ctx context.Context, input *services.GetBlockPairInput) (*services.GetBlockPairOutput, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 

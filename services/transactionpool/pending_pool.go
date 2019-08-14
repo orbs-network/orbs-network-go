@@ -70,6 +70,9 @@ type pendingTxPool struct {
 }
 
 func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNodeAddress primitives.NodeAddress) (primitives.Sha256, *ErrTransactionRejected) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	size := sizeOfSignedTransaction(transaction)
 
 	if p.currentSizeInBytes+size > p.pendingPoolSizeInBytes() {
@@ -78,8 +81,6 @@ func (p *pendingTxPool) add(transaction *protocol.SignedTransaction, gatewayNode
 
 	key := digest.CalcTxHash(transaction.Transaction())
 
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	if _, exists := p.transactionsByHash[key.KeyForMap()]; exists {
 		return nil, &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING}
 	}
@@ -179,23 +180,25 @@ func (p *pendingTxPool) get(txHash primitives.Sha256) *protocol.SignedTransactio
 }
 
 func (p *pendingTxPool) clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano) {
-	p.lock.RLock()
-	e := p.transactionList.Back()
-	p.lock.RUnlock()
-
-	for {
-		if e == nil {
-			break
-		}
-
+	for e := p.lastTransaction(); e != nil; e = p.prevTransaction(e) {
 		tx := e.Value.(*protocol.SignedTransaction)
-
-		e = e.Prev()
 
 		if tx.Transaction().Timestamp() < timestamp {
 			p.remove(ctx, digest.CalcTxHash(tx.Transaction()), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED)
 		}
 	}
+}
+
+func (p *pendingTxPool) lastTransaction() *list.Element {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return p.transactionList.Back()
+}
+
+func (p *pendingTxPool) prevTransaction(e *list.Element) *list.Element {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	return e.Prev()
 }
 
 func (p *pendingTxPool) transactionPickedFromQueueUnderMutex(tx *protocol.SignedTransaction) {

@@ -11,5 +11,5 @@ import (
 )
 
 func main() {
-	gamma.Main()
+	gamma.Main(nil)
 }
