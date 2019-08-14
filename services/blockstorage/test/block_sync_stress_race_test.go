@@ -22,9 +22,8 @@ import (
 )
 
 func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
-	test.WithContext(func(parent context.Context) {
-		ctx, cancel := context.WithTimeout(parent, 25*time.Second)
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
@@ -33,7 +32,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 		done := make(chan struct{})
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-			respondToBroadcastAvailabilityRequest(t, ctx, harness, input, NUM_BLOCKS, 7)
+			respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7)
 			return nil, nil
 		})
 
@@ -62,8 +61,6 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 		select {
 		case <-done:
 			// test passed
-			cancel()
-			<-ctx.Done()
 		case <-ctx.Done():
 			t.Fatalf("timed out waiting for sync flow to complete")
 		}

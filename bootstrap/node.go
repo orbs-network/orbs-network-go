@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -24,7 +25,7 @@ import (
 )
 
 type Node struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	logic      NodeLogic
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
@@ -65,7 +66,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		httpServer: httpServer,
 	}
 
-	n.SuperviseChan("Ethereum connector status reporter", ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
+	n.Supervise(ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
 	n.Supervise(nodeLogic)
 	n.Supervise(transport)
 	n.Supervise(httpServer)

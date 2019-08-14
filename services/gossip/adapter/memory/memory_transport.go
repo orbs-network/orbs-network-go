@@ -17,7 +17,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -37,7 +36,7 @@ type message struct {
 
 type memoryTransport struct {
 	sync.RWMutex
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	peers map[string]*peer
 }
 
@@ -93,7 +92,7 @@ func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData)
 }
 
 type peer struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	socket   chan message
 	listener chan adapter.TransportListener
 	logger   log.Logger
@@ -114,7 +113,7 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		cancel:   cancel,
 	}
 
-	p.SuperviseChan("In-memory transport peer", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+	p.Supervise(govnr.Forever(ctx, "In-memory transport peer", logfields.GovnrErrorer(logger), func() {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:

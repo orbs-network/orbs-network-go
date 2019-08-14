@@ -120,6 +120,8 @@ jobs:
           path: _reports
       - store_artifacts:
           path: _logs
+      - store_artifacts:
+          path: _out
 
   success:
     machine: true
@@ -178,7 +180,12 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/chain_on_pr.sh
+      - store_test_results:
+          path: _reports
+      - store_artifacts:
+          path: _out
 
   release:
     machine: true

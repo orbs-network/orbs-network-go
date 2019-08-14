@@ -13,23 +13,23 @@ import (
 	"testing"
 )
 
-func newNonLeaderHarness(t *testing.T, ctx context.Context) *harness {
-	h := newHarness(t, false)
+func newNonLeaderHarness(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
+	h := newHarness(parent, false)
 	h.createService(ctx)
 	return h
 }
 
 func TestNonLeaderInit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 
 		h.verifyHandlerRegistrations(t)
 	})
 }
 
 func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, false)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent, false)
 		h.expectNewBlockProposalNotRequested()
 
 		h.createService(ctx)
@@ -38,8 +38,8 @@ func TestNonLeaderDoesNotProposeBlocks(t *testing.T) {
 }
 
 func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Leader commits height 0 (genesis), confirm height 0")
@@ -53,8 +53,8 @@ func TestNonLeaderRepliesToGenesisBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Leader commits height 1, confirm height 1")
@@ -76,8 +76,8 @@ func TestNonLeaderSavesAndRepliesToConsecutiveBlockCommits(t *testing.T) {
 }
 
 func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Leader commits height 1, confirm height 1")
@@ -106,8 +106,8 @@ func TestNonLeaderSavesAndRepliesToAnOldBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Leader commits height 1000, don't confirm")
@@ -121,8 +121,8 @@ func TestNonLeaderIgnoresFutureBlockCommit(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Leader commits height 1, confirm height 1")
@@ -144,8 +144,8 @@ func TestNonLeaderIgnoresBadPrevBlockHashPointer(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBadSignature(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 
 		t.Log("Leader commits height 1 with bad signature, don't confirm")
 
@@ -161,8 +161,8 @@ func TestNonLeaderIgnoresBadSignature(t *testing.T) {
 }
 
 func TestNonLeaderIgnoresBlocksFromNonLeader(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 
 		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderKeyPair())
 

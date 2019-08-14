@@ -32,13 +32,13 @@ func (s *Service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 func (s *Service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
-		govnr.GoOnce(logfields.GovnrErrorer(s.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(s.logger), func() {
 			s.receivedBlockSyncAvailabilityRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
 		s.receivedBlockSyncAvailabilityResponse(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_REQUEST:
-		govnr.GoOnce(logfields.GovnrErrorer(s.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(s.logger), func() {
 			s.receivedBlockSyncRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_RESPONSE:

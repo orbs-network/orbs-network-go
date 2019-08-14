@@ -19,12 +19,8 @@ import (
 	"time"
 )
 
-type ShutdownWaiter interface {
-	WaitUntilShutdown(shutdownContext context.Context)
-}
-
 type GracefulShutdowner interface {
-	ShutdownWaiter
+	govnr.ShutdownWaiter
 	GracefulShutdown(shutdownContext context.Context)
 }
 
@@ -49,36 +45,6 @@ func (c *ChanShutdownWaiter) Shutdown() {
 
 func NewChanWaiter(description string) ChanShutdownWaiter {
 	return ChanShutdownWaiter{closed: make(chan struct{}), description: description}
-}
-
-type TreeSupervisor struct {
-	supervised            []ShutdownWaiter
-	waitForShutdownCalled struct {
-		sync.Mutex
-		called bool
-	}
-}
-
-func (t *TreeSupervisor) WaitUntilShutdown(shutdownContext context.Context) {
-	t.waitForShutdownCalled.Lock()
-	defer t.waitForShutdownCalled.Unlock()
-	t.waitForShutdownCalled.called = true
-	for _, w := range t.supervised {
-		w.WaitUntilShutdown(shutdownContext)
-	}
-}
-
-func (t *TreeSupervisor) Supervise(w ShutdownWaiter) {
-	t.waitForShutdownCalled.Lock()
-	defer t.waitForShutdownCalled.Unlock()
-	if t.waitForShutdownCalled.called {
-		panic("Can't call Supervise() after WaitUntilShutdown has been called")
-	}
-	t.supervised = append(t.supervised, w)
-}
-
-func (t *TreeSupervisor) SuperviseChan(description string, ch chan struct{}) {
-	t.Supervise(&ChanShutdownWaiter{closed: ch, description: description})
 }
 
 func ShutdownGracefully(s GracefulShutdowner, timeout time.Duration) {
@@ -111,7 +77,7 @@ func (n *OSShutdownListener) ListenToOSShutdownSignal() {
 	// if waiting for shutdown, listen for sigint and sigterm
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	govnr.GoOnce(logfields.GovnrErrorer(n.Logger), func() {
+	govnr.Once(logfields.GovnrErrorer(n.Logger), func() {
 		<-signalChan
 		n.Logger.Info("terminating node gracefully due to os signal received")
 

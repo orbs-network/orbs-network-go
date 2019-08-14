@@ -108,7 +108,6 @@ func NewLeanHelixConsensusAlgo(
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix()", log.String("election-timeout", leanHelixConfig.ElectionTimeoutOnV0.String()))
-	// TODO Add a consensus round callback for metrics
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
@@ -178,9 +177,6 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 }
 
 func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
-	if ctx.Err() != nil {
-		return
-	}
 	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
 	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
 		// ignore results - we only execute the transactions so that logs are printed in an audit node

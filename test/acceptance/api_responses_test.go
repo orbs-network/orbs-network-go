@@ -19,7 +19,7 @@ import (
 
 // TODO FAILS 31-JUL-2019
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -32,7 +32,7 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -45,7 +45,7 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -58,7 +58,7 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -71,7 +71,7 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -86,7 +86,7 @@ func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
 func TestResponseForTransactionWithBadSignature(t *testing.T) {
 	newHarness().
 		AllowingErrors("error validating transaction for preorder").
-		Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 

@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -30,19 +31,18 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 )
 
 type NodeLogic interface {
-	supervised.ShutdownWaiter
+	govnr.ShutdownWaiter
 	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -104,11 +104,11 @@ func NewNodeLogic(
 	node.Supervise(blockStorageService)
 	node.Supervise(benchmarkConsensusAlgo)
 	node.Supervise(leanHelixAlgo)
-	node.SuperviseChan("OS metric reporter", metric.NewSystemReporter(ctx, metricRegistry, logger))
-	node.SuperviseChan("Go runtime metric reporter", metric.NewRuntimeReporter(ctx, metricRegistry, logger))
-	node.SuperviseChan("Metric registry", metricRegistry.PeriodicallyRotate(ctx, logger))
+	node.Supervise(metric.NewSystemReporter(ctx, metricRegistry, logger))
+	node.Supervise(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.Supervise(metricRegistry.PeriodicallyRotate(ctx, logger))
 	if nodeConfig.NTPEndpoint() != "" {
-		node.SuperviseChan("NTP metric reporter", metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+		node.Supervise(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
 	}
 
 	return node
