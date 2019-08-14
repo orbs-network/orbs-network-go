@@ -32,7 +32,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 		done := make(chan struct{})
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-			respondToBroadcastAvailabilityRequest(t, ctx, harness, input, NUM_BLOCKS, 7)
+			respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7)
 			return nil, nil
 		})
 

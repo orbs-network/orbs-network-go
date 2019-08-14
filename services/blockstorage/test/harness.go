@@ -22,6 +22,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 	"time"
 )
@@ -72,6 +73,7 @@ func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
 type harness struct {
 	*test.ConcurrencyHarness
 
+	sync.Mutex
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
 	blockStorage   *blockstorage.Service
@@ -263,6 +265,8 @@ func (d *harness) allowingErrorsMatching(pattern string) *harness {
 }
 
 func (d *harness) start(ctx context.Context) *harness {
+	d.Lock()
+	defer d.Unlock()
 	registry := metric.NewRegistry()
 
 	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.Logger, registry, nil)
@@ -271,4 +275,28 @@ func (d *harness) start(ctx context.Context) *harness {
 	d.Supervise(d.blockStorage)
 
 	return d
+}
+
+func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness, requestInput *gossiptopics.BlockAvailabilityRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
+	harness.Lock()
+	defer harness.Unlock()
+
+	if harness.blockStorage == nil {
+		return // protect against edge condition where harness did not finish initializing and sync has started
+	}
+
+	firstBlockHeight := requestInput.Message.SignedBatchRange.FirstBlockHeight()
+	if firstBlockHeight > availableBlocks {
+		return
+	}
+
+	for _, sourceAddressIndex := range sources {
+		response := builders.BlockAvailabilityResponseInput().
+			WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
+			WithFirstBlockHeight(firstBlockHeight).
+			WithLastBlockHeight(primitives.BlockHeight(availableBlocks)).
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).Build()
+		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
+	}
+
 }

@@ -13,7 +13,6 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -61,14 +60,7 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
 
-	var sendTxOut *codec.SendTransactionResponse
-	var txId string
-	var err error
-	if len(code) == 1 {
-		sendTxOut, txId, err = h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code[0])
-	} else {
-		sendTxOut, txId, err = h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code[0], code[1])
-	}
+	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
 
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
@@ -94,6 +86,15 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 
 func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
 	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	if err != nil {
+		return nil, txId, err
+	}
+	response, err = h.client.SendTransaction(payload)
+	return
+}
+
+func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -139,7 +140,7 @@ func (h *harness) getMetrics() metrics {
 
 	readBytes, _ := ioutil.ReadAll(res.Body)
 	m := make(metrics)
-	json.Unmarshal(readBytes, &m)
+	_ = json.Unmarshal(readBytes, &m)
 
 	return m
 }
@@ -197,7 +198,7 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+		baseUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
