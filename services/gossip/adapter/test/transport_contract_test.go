@@ -125,18 +125,16 @@ func aMemoryTransport(ctx context.Context, tb testing.TB) *transportContractCont
 func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractContext {
 	res := &transportContractContext{}
 
-	gossipPeers := make(map[string]config.GossipPeer)
-
 	for i := 0; i < 4; i++ {
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		res.nodeAddresses = append(res.nodeAddresses, nodeAddress)
 	}
 
 	configs := []config.GossipTransportConfig{
-		config.ForGossipAdapterTests(res.nodeAddresses[0], 0, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[1], 0, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[2], 0, gossipPeers),
-		config.ForGossipAdapterTests(res.nodeAddresses[3], 0, gossipPeers),
+		config.ForGossipAdapterTests(res.nodeAddresses[0]),
+		config.ForGossipAdapterTests(res.nodeAddresses[1]),
+		config.ForGossipAdapterTests(res.nodeAddresses[2]),
+		config.ForGossipAdapterTests(res.nodeAddresses[3]),
 	}
 
 	res.testOutput = log.NewTestOutput(tb, log.NewHumanReadableFormatter())
@@ -164,12 +162,13 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 		testkit.ListenTo(transports[3], res.nodeAddresses[3]),
 	}
 
+	peers := make(map[string]config.GossipPeer)
+	for i, transport := range transports {
+		peers[res.nodeAddresses[i].KeyForMap()] = config.NewHardCodedGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
+	}
+
 	for _, t1 := range transports {
-		for i, t2 := range transports {
-			if t1 != t2 {
-				t1.AddPeer(ctx, res.nodeAddresses[i], config.NewHardCodedGossipPeer(t2.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i])))
-			}
-		}
+		t1.UpdateTopology(ctx, peers)
 	}
 
 	for _, t := range transports {
@@ -193,7 +192,7 @@ func aDirectTransport(ctx context.Context, tb testing.TB) *transportContractCont
 // tolerant to receiving the message more than once as it is likely
 // some listeners will receive multiple transmissings of data
 func (c *transportContractContext) eventuallySendAndVerify(ctx context.Context, sender adapter.Transport, data *adapter.TransportData) bool {
-	cfg := config.ForGossipAdapterTests(nil, 0, nil)
+	cfg := config.ForGossipAdapterTests(nil)
 	return test.Eventually(2*cfg.GossipNetworkTimeout(), func() bool {
 
 		err := sender.Send(ctx, data) // try to resend

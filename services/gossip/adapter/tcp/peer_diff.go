@@ -2,11 +2,9 @@ package tcp
 
 import "github.com/orbs-network/orbs-network-go/config"
 
-type gossipPeers map[string]config.GossipPeer
-
-func peerDiff(oldPeers gossipPeers, newPeers gossipPeers) (peersToRemove gossipPeers, peersToAdd gossipPeers) {
-	peersToRemove = make(gossipPeers)
-	peersToAdd = make(gossipPeers)
+func peerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipPeers, peersToAdd GossipPeers) {
+	peersToRemove = make(GossipPeers)
+	peersToAdd = make(GossipPeers)
 
 	for a, n := range newPeers {
 		if o, peerExistsInOldList := oldPeers[a]; !peerExistsInOldList || peerHasChangedPortOrIPAddress(n, o) {

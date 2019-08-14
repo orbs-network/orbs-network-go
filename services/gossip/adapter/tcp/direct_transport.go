@@ -28,6 +28,8 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
+type GossipPeers map[string]config.GossipPeer
+
 type metrics struct {
 	incomingConnectionAcceptSuccesses *metric.Gauge
 	incomingConnectionAcceptErrors    *metric.Gauge
@@ -109,6 +111,8 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 		}
 	})
 
+	t.sanitizePeerList(config.GossipPeers())
+
 	// client goroutines
 	for peerNodeAddress, peer := range config.GossipPeers() {
 		t.connectForever(parent, peerNodeAddress, peer)
@@ -139,46 +143,39 @@ func (t *DirectTransport) config() config.GossipTransportConfig {
 	return nil
 }
 
+func (t *DirectTransport) sanitizePeerList(peers GossipPeers) {
+	myAddress := t.config().NodeAddress().KeyForMap()
+	delete(peers, myAddress)
+}
+
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
 func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 
-	config := t.config()
-	if peerNodeAddress != config.NodeAddress().KeyForMap() {
-		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, config)
-
-		t.clientConnections.peers[peerNodeAddress] = client
-
-		client.connect(bgCtx)
-
-	}
+	client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config())
+	t.clientConnections.peers[peerNodeAddress] = client
+	client.connect(bgCtx)
 }
 
-func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
-	t.config().GossipPeers()[address.KeyForMap()] = peer
-	t.connectForever(bgCtx, address.KeyForMap(), peer)
-}
-
-func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
-
-	oldConfig := t.config()
-
-	peersToRemove, peersToAdd := peerDiff(oldConfig.GossipPeers(), newConfig.GossipPeers())
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
+	peersToRemove, peersToAdd := peerDiff(t.config().GossipPeers(), newPeers)
+	t.sanitizePeerList(peersToAdd)
 
 	t.disconnectAllClients(bgCtx, peersToRemove)
 
-	t.atomicConfig.Store(newConfig)
 	for peerNodeAddress, peer := range peersToAdd {
 		t.connectForever(bgCtx, peerNodeAddress, peer)
+		t.config().GossipPeers()[peerNodeAddress] = peer
 	}
 }
 
-func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect gossipPeers) {
+func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect GossipPeers) {
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 	for key, peer := range peersToDisconnect {
+		delete(t.config().GossipPeers(), key)
 		if client, found := t.clientConnections.peers[key]; found {
 			select {
 			case <-client.disconnect():
