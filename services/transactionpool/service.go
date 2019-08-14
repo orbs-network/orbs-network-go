@@ -29,13 +29,17 @@ type BlockHeightReporter interface {
 type Service struct {
 	supervised.TreeSupervisor
 
-	clock                      adapter.Clock
-	gossip                     gossiptopics.TransactionRelay
-	virtualMachine             services.VirtualMachine
-	blockHeightReporter        BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
-	transactionResultsHandlers []handlers.TransactionResultsHandler
-	logger                     log.Logger
-	config                     config.TransactionPoolConfig
+	clock               adapter.Clock
+	gossip              gossiptopics.TransactionRelay
+	virtualMachine      services.VirtualMachine
+	blockHeightReporter BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
+	logger              log.Logger
+	config              config.TransactionPoolConfig
+
+	transactionResultsHandlers struct {
+		sync.RWMutex
+		handlers []handlers.TransactionResultsHandler
+	}
 
 	lastCommitted struct {
 		sync.RWMutex

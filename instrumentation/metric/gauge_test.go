@@ -7,6 +7,8 @@
 package metric
 
 import (
+	"encoding/hex"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -53,4 +55,31 @@ func TestGauge_UpdateUInt32(t *testing.T) {
 	g.Update(321)
 
 	require.EqualValues(t, 321, g.Value(), "gauge value differed from expected")
+}
+
+/**
+Format reference: https://prometheus.io/docs/instrumenting/exposition_formats/
+*/
+func TestGauge_ExportPrometheus(t *testing.T) {
+	r := NewRegistry()
+	status := r.NewGauge("Ethereum.Node.LastBlock")
+
+	result := r.ExportPrometheus()
+
+	require.Regexp(t, "# TYPE Ethereum_Node_LastBlock gauge", result)
+	require.Regexp(t, "Ethereum_Node_LastBlock 0", result)
+
+	status.Update(5123441)
+	updatedResult := r.ExportPrometheus()
+	require.Regexp(t, "Ethereum_Node_LastBlock 5123441", updatedResult)
+}
+
+func TestGauge_ExportPrometheusWithParams(t *testing.T) {
+	bytes, _ := hex.DecodeString("0123456789abcdef")
+	r := NewRegistry().WithVirtualChainId(100000).WithNodeAddress(primitives.NodeAddress(bytes))
+	status := r.NewGauge("Ethereum.Node.LastBlock")
+	status.Update(5123441)
+
+	resultWithParams := r.ExportPrometheus()
+	require.Regexp(t, "Ethereum_Node_LastBlock{vcid=\"100000\",node=\"0123456789abcdef\"} 5123441", resultWithParams)
 }

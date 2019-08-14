@@ -113,8 +113,8 @@ func (t *DirectTransport) serverHandleIncomingConnection(ctx context.Context, co
 
 func (t *DirectTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): think about timeout policy on receive, we might not want it
-	timeout := t.config.GossipNetworkTimeout()
-	res := [][]byte{}
+	timeout := t.config().GossipNetworkTimeout()
+	var res [][]byte
 
 	// receive num payloads
 	sizeBuffer, err := readTotal(ctx, conn, 4, timeout)
