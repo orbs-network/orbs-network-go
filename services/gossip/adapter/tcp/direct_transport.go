@@ -58,6 +58,7 @@ type lockableTransportServer struct {
 
 type DirectTransport struct {
 	atomicConfig atomic.Value
+	peers        GossipPeers // this is important - use own copy of peers.
 	logger       log.Logger
 
 	clientConnections *lockableClientConnections
@@ -111,9 +112,8 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 		}
 	})
 
-	t.sanitizePeerList(config.GossipPeers())
-
 	// client goroutines
+	t.peers = make(GossipPeers) // this is important - use own copy of peers.
 	for peerNodeAddress, peer := range config.GossipPeers() {
 		t.connectForever(parent, peerNodeAddress, peer)
 	}
@@ -154,20 +154,21 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 
-	client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config())
-	t.clientConnections.peers[peerNodeAddress] = client
-	client.connect(bgCtx)
+	if t.config().NodeAddress().KeyForMap() != peerNodeAddress {
+		t.peers[peerNodeAddress] = peer
+		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config())
+		t.clientConnections.peers[peerNodeAddress] = client
+		client.connect(bgCtx)
+	}
 }
 
 func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
 	peersToRemove, peersToAdd := peerDiff(t.config().GossipPeers(), newPeers)
-	t.sanitizePeerList(peersToAdd)
 
 	t.disconnectAllClients(bgCtx, peersToRemove)
 
 	for peerNodeAddress, peer := range peersToAdd {
 		t.connectForever(bgCtx, peerNodeAddress, peer)
-		t.config().GossipPeers()[peerNodeAddress] = peer
 	}
 }
 
@@ -175,7 +176,7 @@ func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisco
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 	for key, peer := range peersToDisconnect {
-		delete(t.config().GossipPeers(), key)
+		delete(t.peers, key)
 		if client, found := t.clientConnections.peers[key]; found {
 			select {
 			case <-client.disconnect():
