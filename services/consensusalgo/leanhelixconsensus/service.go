@@ -8,7 +8,6 @@ package leanhelixconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/lean-helix-go"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
@@ -113,11 +112,7 @@ func NewLeanHelixConsensusAlgo(
 	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		s.SuperviseChan("Lean Helix main loop", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
-			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
-			s.leanHelix.Run(ctx)
-			s.leanHelix.WaitUntilShutdown(ctx)
-		}))
+		s.leanHelix.Run(ctx)
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
 		parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
