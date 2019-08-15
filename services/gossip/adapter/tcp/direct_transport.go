@@ -140,11 +140,6 @@ func (t *DirectTransport) config() config.GossipTransportConfig {
 	return nil
 }
 
-func (t *DirectTransport) sanitizePeerList(peers GossipPeers) {
-	myAddress := t.config().NodeAddress().KeyForMap()
-	delete(peers, myAddress)
-}
-
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
 func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
