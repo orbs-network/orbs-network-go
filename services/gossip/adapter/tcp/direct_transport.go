@@ -28,6 +28,8 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
 
+type GossipPeers map[string]config.GossipPeer
+
 type metrics struct {
 	incomingConnectionAcceptSuccesses *metric.Gauge
 	incomingConnectionAcceptErrors    *metric.Gauge
@@ -44,7 +46,8 @@ type metrics struct {
 
 type lockableClientConnections struct {
 	sync.RWMutex
-	peers map[string]*clientConnection
+	peers  map[string]*clientConnection
+	config GossipPeers // this is important - use own copy of peers, otherwise nodes in e2e tests that run in process can mutate each other's config
 }
 
 type lockableTransportServer struct {
@@ -124,7 +127,8 @@ func newDirectTransportServer() *lockableTransportServer {
 
 func newLockableClientConnections() *lockableClientConnections {
 	return &lockableClientConnections{
-		peers: make(map[string]*clientConnection),
+		peers:  make(map[string]*clientConnection),
+		config: make(GossipPeers),
 	}
 }
 
@@ -142,40 +146,30 @@ func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress 
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 
-	config := t.config()
-	if peerNodeAddress != config.NodeAddress().KeyForMap() {
-		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, config)
-
+	if t.config().NodeAddress().KeyForMap() != peerNodeAddress {
+		t.clientConnections.config[peerNodeAddress] = peer
+		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config())
 		t.clientConnections.peers[peerNodeAddress] = client
-
 		client.connect(bgCtx)
-
 	}
 }
 
-func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
-	t.config().GossipPeers()[address.KeyForMap()] = peer
-	t.connectForever(bgCtx, address.KeyForMap(), peer)
-}
-
-func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newConfig config.GossipTransportConfig) {
-
-	oldConfig := t.config()
-
-	peersToRemove, peersToAdd := peerDiff(oldConfig.GossipPeers(), newConfig.GossipPeers())
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
+	oldPeers := t.readOldPeerConfig()
+	peersToRemove, peersToAdd := peerDiff(oldPeers, newPeers)
 
 	t.disconnectAllClients(bgCtx, peersToRemove)
 
-	t.atomicConfig.Store(newConfig)
 	for peerNodeAddress, peer := range peersToAdd {
 		t.connectForever(bgCtx, peerNodeAddress, peer)
 	}
 }
 
-func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect gossipPeers) {
+func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect GossipPeers) {
 	t.clientConnections.Lock()
 	defer t.clientConnections.Unlock()
 	for key, peer := range peersToDisconnect {
+		delete(t.clientConnections.config, key)
 		if client, found := t.clientConnections.peers[key]; found {
 			select {
 			case <-client.disconnect():
@@ -276,6 +270,12 @@ func (t *DirectTransport) waitFor(shutdownContext context.Context, closed chan s
 	case <-shutdownContext.Done():
 		t.logger.Error("failed shutting down within shutdown context")
 	}
+}
+
+func (t *DirectTransport) readOldPeerConfig() GossipPeers {
+	t.clientConnections.RLock()
+	defer t.clientConnections.RUnlock()
+	return t.clientConnections.config
 }
 
 func calcPaddingSize(size uint32) uint32 {
