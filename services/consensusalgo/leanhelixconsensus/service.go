@@ -220,7 +220,7 @@ func (s *Service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
-		logger.Info("onCommit - saving block to storage error", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Error(err))
+		logger.Info("onCommit - error saving block to storage", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Error(err))
 	}
 	now := time.Now()
 	s.metrics.lastCommittedTime.Update(now.UnixNano())
