@@ -25,9 +25,8 @@ import (
 )
 
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
-	// High value to disable keep alive
-
-	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), 20*time.Hour, 1*time.Second)
+	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
+	cfg := config.ForDirectTransportTests(address, make(GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
@@ -36,34 +35,6 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 			return transport.IsServerListening()
 		}), "server did not start")
-	})
-}
-
-func TestDirectTransport_SupportsAddingPeersInRuntime(t *testing.T) {
-
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-		node1 := aNode(ctx, harness.Logger)
-		node2 := aNode(ctx, harness.Logger)
-		superviseAll(harness, node1, node2)
-		defer shutdownAll(ctx, node1, node2)
-
-		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
-
-		node1.addPeer(ctx, node2)
-		node2.addPeer(ctx, node1)
-
-		waitForAllNodesToSatisfy(t,
-			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
-			node1, node2)
-
-		waitForAllNodesToSatisfy(t,
-			"expected all outgoing queues to become enabled after successfully connecting to added peers",
-			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
-			node1, node2)
-
-		node1.requireSendsSuccessfullyTo(t, ctx, node2)
-		node2.requireSendsSuccessfullyTo(t, ctx, node1)
 	})
 }
 
@@ -150,7 +121,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 
 		payloads := aMessage()
 
-		node1.listener.ExpectReceive(payloads) //TODO (https://github.com/orbs-network/orbs-network-go/issues/1250) remove when bug fixed
+		node1.listener.ExpectNotReceive()
 		node2.listener.ExpectReceive(payloads)
 		node3.listener.ExpectReceive(payloads)
 		require.NoError(t, node1.transport.Send(ctx, &adapter.TransportData{
@@ -159,6 +130,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 			Payloads:          payloads,
 		}))
 
+		require.NoError(t, test.ConsistentlyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, node1.listener), "message was sent to self node")
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, node2.listener, node3.listener), "message was not sent to target node")
 	})
 }
@@ -167,10 +139,6 @@ type nodeHarness struct {
 	transport *DirectTransport
 	address   primitives.NodeAddress
 	listener  *testkit.MockTransportListener
-}
-
-func (n *nodeHarness) addPeer(ctx context.Context, other *nodeHarness) {
-	n.transport.AddPeer(ctx, other.address, other.toGossipPeer())
 }
 
 func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Context, other *nodeHarness) {
@@ -216,23 +184,22 @@ func aMessage() [][]byte {
 var currentNodeIndex = 1
 
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
-	cfg := aTopologyContaining()
-	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
+	peers := aTopologyContaining()
+	cfg := config.ForDirectTransportTests(address, peers, 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
 	currentNodeIndex++
 	return &nodeHarness{transport, address, listener}
 }
 
-func aTopologyContaining(nodes ...*nodeHarness) config.GossipTransportConfig {
-	keepAliveInterval := 20 * time.Hour
-	// High value to disable keep alive
+func aTopologyContaining(nodes ...*nodeHarness) GossipPeers {
 	peers := make(map[string]config.GossipPeer)
 	for _, node := range nodes {
 		peers[node.address.KeyForMap()] = node.toGossipPeer()
 	}
-	return config.ForDirectTransportTests(peers, keepAliveInterval, 1*time.Second)
+	return peers
 }
 
 func shutdownAll(ctx context.Context, nodes ...*nodeHarness) {
