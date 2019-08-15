@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
@@ -101,6 +102,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	newHarness().
+		WithEmptyBlockTime(100*time.Millisecond).
 		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {

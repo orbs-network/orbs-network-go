@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestDeployNativeContract(t *testing.T) {
@@ -45,7 +46,7 @@ func TestDeployNativeContract(t *testing.T) {
 }
 
 func TestLockNativeDeployment(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	newHarness().WithEmptyBlockTime(100*time.Millisecond).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
