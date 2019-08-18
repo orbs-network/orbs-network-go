@@ -127,11 +127,6 @@ func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ct
 }
 
 func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
-	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
-	// as we run subtests, golang will by default run two subtests in parallel
-	// we don't want to rely on the -parallel flag, as when running all tests this flag should turn on
-	b.sequentialTests.Lock()
-	defer b.sequentialTests.Unlock()
 
 	switch runner := tb.(type) {
 	case *testing.T:
@@ -148,6 +143,12 @@ func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo cons
 }
 
 func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
+	// as we run subtests, golang will by default run two subtests in parallel
+	// we don't want to rely on the -parallel flag, as when running all tests this flag should turn on
+	b.sequentialTests.Lock()
+	defer b.sequentialTests.Unlock()
+
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 	test.WithContext(func(parentCtx context.Context) {
 		testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
