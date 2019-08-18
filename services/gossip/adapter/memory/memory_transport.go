@@ -134,9 +134,12 @@ func (p *peer) attach(listener adapter.TransportListener) {
 }
 
 func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
+	p.logger.Info("depositing message into peer queue", trace.LogFieldFrom(ctx))
+	before := time.Now()
 	tracingContext, _ := trace.FromContext(ctx)
 	select {
 	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
+		p.logger.Info("deposited message into peer queue", trace.LogFieldFrom(ctx), log.Stringable("duration", time.Since(before)))
 		return
 	case <-ctx.Done():
 		p.logger.Info("memory transport sending message after shutdown", log.Error(ctx.Err()))

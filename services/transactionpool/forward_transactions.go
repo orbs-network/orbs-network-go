@@ -89,15 +89,19 @@ func NewTransactionForwarder(ctx context.Context, logger log.Logger, signer sign
 }
 
 func (f *transactionForwarder) submit(transactions ...*protocol.SignedTransaction) {
+	f.transactionAdded <- f.appendToQueue(transactions)
+}
+
+func (f *transactionForwarder) appendToQueue(transactions []*protocol.SignedTransaction) uint16 {
 	f.forwardQueueMutex.Lock()
+	defer f.forwardQueueMutex.Unlock()
 	f.forwardQueue = append(f.forwardQueue, transactions...)
-	count := uint16(len(f.forwardQueue))
-	f.forwardQueueMutex.Unlock()
-	f.transactionAdded <- count
+	return uint16(len(f.forwardQueue))
 }
 
 func (f *transactionForwarder) start(parent context.Context) {
 	f.Supervise(govnr.Forever(parent, "transaction forwarder", logfields.GovnrErrorer(f.logger), func() {
+		f.logger.Info("transaction forwarder started")
 		for {
 			ctx := trace.NewContext(parent, "TransactionForwarder")
 			timer := synchronization.NewTimer(f.config.TransactionPoolPropagationBatchingTimeout())
