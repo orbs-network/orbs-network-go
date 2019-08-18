@@ -137,12 +137,16 @@ func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ct
 
 func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-	test.WithConcurrencyHarness(tb, func(parentCtx context.Context, parentHarness *test.ConcurrencyHarness) {
-		logger := b.makeLogger(parentHarness, testId)
+	test.WithContext(func(parentCtx context.Context) {
+		testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+
+		logger := b.makeLogger(testOutput, testId)
 
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
 			ctx, cancel := context.WithTimeout(context.Background(), TEST_TIMEOUT_HARD_LIMIT)
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+			defer cancel()
+			defer testOutput.TestTerminated()
 
 			logger.Info("acceptance network created")
 			defer dumpStateOnFailure(tb, network)
@@ -152,12 +156,14 @@ func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensu
 			}
 
 			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
-			parentHarness.Supervise(network)
 			logger.Info("acceptance network started")
 
 			logger.Info("acceptance network running test")
 			f(tb, ctx, network)
+			test.RequireNoUnexpectedErrors(tb, testOutput)
 			cancel()
+			network.WaitUntilShutdown(ctx)
+
 		})
 
 	})
@@ -171,13 +177,13 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *acceptanceNetworkHarness) makeLogger(harness *test.ConcurrencyHarness, testId string) log.Logger {
+func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId string) log.Logger {
 
 	for _, pattern := range b.allowedErrors {
-		harness.AllowErrorsMatching(pattern)
+		testOutput.AllowErrorsMatching(pattern)
 	}
 
-	logger := harness.Logger.WithTags(
+	logger := log.GetLogger().WithTags(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
 		WithFilters(

@@ -54,44 +54,44 @@ func TestLockNativeDeployment(t *testing.T) {
 		t.Log("lock native deployment to account 5 should succeed")
 
 		response, _ := contract.LockNativeDeployment(ctx, 0, 5)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), response.TransactionReceipt().ExecutionResult().String(), "expected LockNativeDeployment to succeed with toAddressIndex=5")
 
 		t.Log("lock native deployment to account 6 should fail (already locked)")
 
 		response, _ = contract.LockNativeDeployment(ctx, 0, 6)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT)
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT.String(), response.TransactionReceipt().ExecutionResult().String(), "expected LockNativeDeployment to fail with toAddressIndex=6 because contract is already locked to addr 5")
 
 		t.Log("deploy native contract from account 6 should fail")
 
 		response, txHash := contract.DeployNativeCounterContract(ctx, 0, 6)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT)
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT.String(), response.TransactionReceipt().ExecutionResult().String(), "expected DeployNativeCounterContract to fail because addr 6 is not the locked deployer")
 		network.WaitForTransactionInNodeState(ctx, txHash, 0)
 
 		t.Log("transacting with contract should fail")
 
 		response, _ = contract.CounterAdd(ctx, 0, 17)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED)
+		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED.String(), response.TransactionReceipt().ExecutionResult().String(), "expected contract not to be deployed")
 
 		t.Log("unlock native deployment from account 5 should succeed")
 
 		response, _ = contract.UnlockNativeDeployment(ctx, 0, 5)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), response.TransactionReceipt().ExecutionResult().String(), "expected unlock to succeed")
 
 		t.Log("lock native deployment to account 6 should succeed")
 
 		response, _ = contract.LockNativeDeployment(ctx, 0, 6)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), response.TransactionReceipt().ExecutionResult().String(), "expected lock to addr 6 to succeed")
 
 		t.Log("deploy native contract from account 6 should succeed")
 
 		response, txHash = contract.DeployNativeCounterContract(ctx, 0, 6)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+		require.Equal(t, response.TransactionReceipt().ExecutionResult().String(), protocol.EXECUTION_RESULT_SUCCESS.String(), "expected deployment by addr 6 to succeed")
 		network.WaitForTransactionInNodeState(ctx, txHash, 0)
 
 		t.Log("transacting with contract should succeed")
 
 		response, _ = contract.CounterAdd(ctx, 0, 17)
-		require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), response.TransactionReceipt().ExecutionResult().String(), "expected CounterAdd to succeed")
 
 	})
 }

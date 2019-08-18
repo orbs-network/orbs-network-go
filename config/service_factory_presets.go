@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
+func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
-	cfg.SetNodeAddress(testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress())
+	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, keepAliveInterval)
@@ -26,12 +26,12 @@ func ForDirectTransportTests(gossipPeers map[string]GossipPeer, keepAliveInterva
 	return cfg
 }
 
-func ForGossipAdapterTests(nodeAddress primitives.NodeAddress, gossipListenPort int, gossipPeers map[string]GossipPeer) GossipTransportConfig {
+func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(gossipPeers)
+	cfg.SetGossipPeers(make(map[string]GossipPeer))
 
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(gossipListenPort))
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(0))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
