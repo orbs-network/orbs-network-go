@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -35,6 +36,7 @@ const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
 var DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME = 10 * time.Millisecond
 
 type acceptanceNetworkHarness struct {
+	sequentialTests          sync.Mutex
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
@@ -120,22 +122,33 @@ func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ct
 	}
 
 	for _, consensusAlgo := range b.consensusAlgos {
-		switch runner := tb.(type) {
-		case *testing.T:
-			runner.Run(consensusAlgo.String(), func(t *testing.T) {
-				b.runTest(t, consensusAlgo, f)
-			})
-		case *testing.B:
-			runner.Run(consensusAlgo.String(), func(t *testing.B) {
-				b.runTest(t, consensusAlgo, f)
-			})
-		default:
-			panic("unexpected TB implementation")
-		}
+		b.runWithAlgo(tb, consensusAlgo, f)
+	}
+}
+
+func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+
+	switch runner := tb.(type) {
+	case *testing.T:
+		runner.Run(consensusAlgo.String(), func(t *testing.T) {
+			b.runTest(t, consensusAlgo, f)
+		})
+	case *testing.B:
+		runner.Run(consensusAlgo.String(), func(t *testing.B) {
+			b.runTest(t, consensusAlgo, f)
+		})
+	default:
+		panic("unexpected TB implementation")
 	}
 }
 
 func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
+	// as we run subtests, golang will by default run two subtests in parallel
+	// we don't want to rely on the -parallel flag, as when running all tests this flag should turn on
+	b.sequentialTests.Lock()
+	defer b.sequentialTests.Unlock()
+
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
 	test.WithContext(func(parentCtx context.Context) {
 		testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
