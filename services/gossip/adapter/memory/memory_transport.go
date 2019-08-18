@@ -21,6 +21,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"sync"
+	"time"
 )
 
 const SEND_QUEUE_MAX_MESSAGES = 1000
@@ -129,9 +130,12 @@ func (p *peer) attach(listener adapter.TransportListener) {
 }
 
 func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
+	p.logger.Info("depositing message into peer queue", trace.LogFieldFrom(ctx))
+	before := time.Now()
 	tracingContext, _ := trace.FromContext(ctx)
 	select {
 	case p.socket <- message{payloads: data.Payloads, traceContext: tracingContext}:
+		p.logger.Info("deposited message into peer queue", trace.LogFieldFrom(ctx), log.Stringable("duration", time.Since(before)))
 		return
 	case <-ctx.Done():
 		return

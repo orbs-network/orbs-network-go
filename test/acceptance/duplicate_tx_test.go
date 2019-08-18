@@ -112,8 +112,6 @@ func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *Network,
 	})
 	require.NoError(t, err, "ScanBlocks should return blocks, instead got error %v", err)
 
-	// TODO (v1) https://github.com/orbs-network/orbs-network-go/issues/837 do we want to keep this require? it may hide a bug in sync between ScanBlocks and WaitForBlock
-	//require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks, instead got %d", height, len(blocks))
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {
