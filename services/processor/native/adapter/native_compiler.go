@@ -114,7 +114,7 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 
 	logger.Info("building shared object", log.StringableSlice("source-path", sourceCodeFilePaths))
 	buildTime := time.Now()
-	soFilePath, err := buildSharedObject(hashOfCode, sourceCodeFilePaths, artifactsPath)
+	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePaths, artifactsPath)
 	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build a shared object")
@@ -161,7 +161,7 @@ func writeSourceCodeToDisk(filenamePrefix string, code []string, artifactsPath s
 	return sourceFilePaths, nil
 }
 
-func buildSharedObject(filenamePrefix string, sourceFilePaths []string, artifactsPath string) (string, error) {
+func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePaths []string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
@@ -182,7 +182,7 @@ func buildSharedObject(filenamePrefix string, sourceFilePaths []string, artifact
 	cmdArgs := []string{"build", "-buildmode=plugin", "-o", soFilePath}
 	cmdArgs = append(cmdArgs, sourceFilePaths...)
 
-	cmd := exec.Command(goCmd, cmdArgs...)
+	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
