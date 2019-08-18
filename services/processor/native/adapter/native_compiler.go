@@ -12,12 +12,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test/contracts"
-	"github.com/orbs-network/scribe/log"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -27,6 +21,14 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
 var LogTag = log.String("adapter", "processor-native")
@@ -88,14 +90,18 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 }
 
 func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	c.metrics.sourceSize.Record(int64(len(code)))
 	start := time.Now()
 	defer c.metrics.totalCompileTime.RecordSince(start)
 
 	artifactsPath := c.config.ProcessorArtifactPath()
+
 	hashOfCode := getHashOfCode(code)
 
+	logger.Info("writing source code to disk", log.String("artifact-path", artifactsPath), log.String("hash-of-code", hashOfCode))
 	writeTime := time.Now()
+
 	sourceCodeFilePaths, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
 	c.metrics.writeToDiskTime.RecordSince(writeTime)
 	for _, sourceCodeFilePath := range sourceCodeFilePaths {
@@ -106,16 +112,21 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 		return nil, errors.Wrap(err, "could not write source code to disk")
 	}
 
+	logger.Info("building shared object", log.StringableSlice("source-path", sourceCodeFilePaths))
 	buildTime := time.Now()
-	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePaths, artifactsPath)
+	soFilePath, err := buildSharedObject(hashOfCode, sourceCodeFilePaths, artifactsPath)
 	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build a shared object")
 	}
 
+	logger.Info("loading shared object", log.String("so-path", soFilePath))
 	loadSoTime := time.Now()
+
 	so, err := loadSharedObject(soFilePath)
 	c.metrics.loadTime.RecordSince(loadSoTime)
+
+	logger.Info("loaded shared object", log.String("so-path", soFilePath))
 
 	return so, err
 }
@@ -150,7 +161,7 @@ func writeSourceCodeToDisk(filenamePrefix string, code []string, artifactsPath s
 	return sourceFilePaths, nil
 }
 
-func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePaths []string, artifactsPath string) (string, error) {
+func buildSharedObject(filenamePrefix string, sourceFilePaths []string, artifactsPath string) (string, error) {
 	dir := filepath.Join(artifactsPath, SHARED_OBJECT_PATH)
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
@@ -170,7 +181,8 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
 	cmdArgs := []string{"build", "-buildmode=plugin", "-o", soFilePath}
 	cmdArgs = append(cmdArgs, sourceFilePaths...)
-	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
+
+	cmd := exec.Command(goCmd, cmdArgs...)
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
@@ -178,6 +190,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	out, err := cmd.CombinedOutput()
+
 	if err != nil {
 		buildOutput := string(out)
 		buildOutput = strings.Replace(buildOutput, "# command-line-arguments\n", "", 1) // "go build", invoked with a file name, puts this odd message before any compile errors; strip it.
@@ -190,12 +203,14 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 
 func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
 	loadedPlugin, err := plugin.Open(soFilePath)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open plugin")
 	}
 
 	publicMethods := []interface{}{}
 	var publicMethodsPtr *[]interface{}
+
 	publicMethodsSymbol, err := loadedPlugin.Lookup("PUBLIC")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not look up a symbol inside a plugin")
