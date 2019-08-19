@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
-	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -102,48 +101,45 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	}
 }
 
-func mockServer(tb testing.TB) *HttpServer {
-	logger := log.DefaultTestingLogger(tb)
-	return &HttpServer{
-		logger: logger.WithTags(LogTag),
-	}
-}
-
 func TestHttpServerWriteMembuffResponse(t *testing.T) {
-	expectedResponse := (&client.SendTransactionResponseBuilder{
-		RequestResult: &client.RequestResultBuilder{
-			RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
-			BlockHeight:    1234,
-			BlockTimestamp: 1546858355859000000,
-		},
-		TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
-		TransactionReceipt: nil,
-	}).Build()
+	test.WithLogger(t, func(harness *test.LoggingHarness) {
+		expectedResponse := (&client.SendTransactionResponseBuilder{
+			RequestResult: &client.RequestResultBuilder{
+				RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
+				BlockHeight:    1234,
+				BlockTimestamp: 1546858355859000000,
+			},
+			TransactionStatus:  protocol.TRANSACTION_STATUS_COMMITTED,
+			TransactionReceipt: nil,
+		}).Build()
 
-	s := mockServer(t)
-	rec := httptest.NewRecorder()
-	s.writeMembuffResponse(rec, expectedResponse, expectedResponse.RequestResult(), errors.New("example error"))
+		s := &HttpServer{logger: harness.Logger}
+		rec := httptest.NewRecorder()
+		s.writeMembuffResponse(rec, expectedResponse, expectedResponse.RequestResult(), errors.New("example error"))
 
-	require.Equal(t, http.StatusOK, rec.Code, "code value is not equal")
-	require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
-	require.Equal(t, "REQUEST_STATUS_COMPLETED", rec.Header().Get("X-ORBS-REQUEST-RESULT"), "should have correct X-ORBS-REQUEST-RESULT")
-	require.Equal(t, "1234", rec.Header().Get("X-ORBS-BLOCK-HEIGHT"), "should have correct X-ORBS-BLOCK-HEIGHT")
-	require.Equal(t, "2019-01-07T10:52:35.859Z", rec.Header().Get("X-ORBS-BLOCK-TIMESTAMP"), "should have correct X-ORBS-BLOCK-TIMESTAMP")
-	require.Equal(t, "example error", rec.Header().Get("X-ORBS-ERROR-DETAILS"), "should have correct X-ORBS-ERROR-DETAILS")
-	responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())
-	test.RequireCmpEqual(t, expectedResponse, responseFromBody, "body response and pre-done response are not equal")
+		require.Equal(t, http.StatusOK, rec.Code, "code value is not equal")
+		require.Equal(t, "application/membuffers", rec.Header().Get("Content-Type"), "should have our content type")
+		require.Equal(t, "REQUEST_STATUS_COMPLETED", rec.Header().Get("X-ORBS-REQUEST-RESULT"), "should have correct X-ORBS-REQUEST-RESULT")
+		require.Equal(t, "1234", rec.Header().Get("X-ORBS-BLOCK-HEIGHT"), "should have correct X-ORBS-BLOCK-HEIGHT")
+		require.Equal(t, "2019-01-07T10:52:35.859Z", rec.Header().Get("X-ORBS-BLOCK-TIMESTAMP"), "should have correct X-ORBS-BLOCK-TIMESTAMP")
+		require.Equal(t, "example error", rec.Header().Get("X-ORBS-ERROR-DETAILS"), "should have correct X-ORBS-ERROR-DETAILS")
+		responseFromBody := client.SendTransactionResponseReader(rec.Body.Bytes())
+		test.RequireCmpEqual(t, expectedResponse, responseFromBody, "body response and pre-done response are not equal")
+	})
 }
 
 func TestHttpServerWriteTextResponse(t *testing.T) {
-	e := &httpErr{
-		code:     http.StatusAccepted,
-		logField: nil,
-		message:  "hello test",
-	}
-	s := mockServer(t)
-	rec := httptest.NewRecorder()
-	s.writeErrorResponseAndLog(rec, e)
-	require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")
-	require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
-	require.Equal(t, "hello test", rec.Body.String(), "should have text value")
+	test.WithLogger(t, func(harness *test.LoggingHarness) {
+		e := &httpErr{
+			code:     http.StatusAccepted,
+			logField: nil,
+			message:  "hello test",
+		}
+		s := &HttpServer{logger: harness.Logger}
+		rec := httptest.NewRecorder()
+		s.writeErrorResponseAndLog(rec, e)
+		require.Equal(t, http.StatusAccepted, rec.Code, "code value is not equal")
+		require.Equal(t, "text/plain", rec.Header().Get("Content-Type"), "should have our content type")
+		require.Equal(t, "hello test", rec.Body.String(), "should have text value")
+	})
 }
