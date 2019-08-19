@@ -195,6 +195,10 @@ func ForAcceptanceTestNetwork(
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
+	if emptyBlockTime == 0 {
+		emptyBlockTime = 50 * time.Millisecond
+	}
+
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
