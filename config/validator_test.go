@@ -8,8 +8,8 @@ package config
 
 import (
 	"encoding/hex"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -23,52 +23,60 @@ func genesisValidators() map[string]ValidatorNode {
 }
 
 func TestValidateConfig(t *testing.T) {
-	v := validator{log.DefaultTestingLogger(t)}
-	cfg := defaultProductionConfig()
-	cfg.SetNodeAddress(defaultNodeAddress())
-	cfg.SetNodePrivateKey(defaultPrivateKey())
-	cfg.SetGenesisValidatorNodes(genesisValidators())
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := validator{harness.Logger}
+		cfg := defaultProductionConfig()
+		cfg.SetNodeAddress(defaultNodeAddress())
+		cfg.SetNodePrivateKey(defaultPrivateKey())
+		cfg.SetGenesisValidatorNodes(genesisValidators())
 
-	require.NotPanics(t, func() {
-		v.ValidateNodeLogic(cfg)
+		require.NotPanics(t, func() {
+			v.ValidateNodeLogic(cfg)
+		})
 	})
 }
 
 func TestValidateConfig_PanicsOnInvalidValue(t *testing.T) {
-	v := validator{log.DefaultTestingLogger(t)}
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := validator{harness.Logger}
 
-	cfg := defaultProductionConfig()
-	cfg.SetGenesisValidatorNodes(genesisValidators())
-	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Millisecond)
+		cfg := defaultProductionConfig()
+		cfg.SetGenesisValidatorNodes(genesisValidators())
+		cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Millisecond)
 
-	require.Panics(t, func() {
-		v.ValidateNodeLogic(cfg)
+		require.Panics(t, func() {
+			v.ValidateNodeLogic(cfg)
+		})
 	})
 }
 
 func TestValidateConfig_DoesNotPanicOnProperKeys(t *testing.T) {
-	v := validator{log.DefaultTestingLogger(t)}
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := validator{harness.Logger}
 
-	cfg := defaultProductionConfig()
-	cfg.SetGenesisValidatorNodes(genesisValidators())
-	cfg.SetNodeAddress(defaultNodeAddress())
-	cfg.SetNodePrivateKey(defaultPrivateKey())
+		cfg := defaultProductionConfig()
+		cfg.SetGenesisValidatorNodes(genesisValidators())
+		cfg.SetNodeAddress(defaultNodeAddress())
+		cfg.SetNodePrivateKey(defaultPrivateKey())
 
-	require.NotPanics(t, func() {
-		v.ValidateNodeLogic(cfg)
+		require.NotPanics(t, func() {
+			v.ValidateNodeLogic(cfg)
+		})
 	})
 }
 
 func TestValidateConfig_PanicsOnInvalidKeys(t *testing.T) {
-	v := validator{log.DefaultTestingLogger(t)}
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := validator{harness.Logger}
 
-	cfg := defaultProductionConfig()
-	cfg.SetGenesisValidatorNodes(genesisValidators())
-	cfg.SetNodeAddress(defaultNodeAddress())
-	cfg.SetNodePrivateKey(wrongPrivateKey())
+		cfg := defaultProductionConfig()
+		cfg.SetGenesisValidatorNodes(genesisValidators())
+		cfg.SetNodeAddress(defaultNodeAddress())
+		cfg.SetNodePrivateKey(wrongPrivateKey())
 
-	require.Panics(t, func() {
-		v.ValidateNodeLogic(cfg)
+		require.Panics(t, func() {
+			v.ValidateNodeLogic(cfg)
+		})
 	})
 }
 

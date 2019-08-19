@@ -10,8 +10,8 @@ import (
 	"bytes"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -25,7 +25,7 @@ import (
 )
 
 func TestHttpServer_SendTransaction_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 
 		response := &client.SendTransactionResponseBuilder{
@@ -41,7 +41,7 @@ func TestHttpServer_SendTransaction_Basic(t *testing.T) {
 }
 
 func TestHttpServer_SendTransaction_Error(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 
 		h.onSendTransaction().Return(nil, errors.Errorf("kaboom"))
@@ -53,7 +53,7 @@ func TestHttpServer_SendTransaction_Error(t *testing.T) {
 }
 
 func TestHttpServer_SendTransactionAsync_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 
 		response := &client.SendTransactionResponseBuilder{
@@ -73,7 +73,7 @@ func TestHttpServer_SendTransactionAsync_Basic(t *testing.T) {
 }
 
 func TestHttpServer_RunQuery_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		response := &client.RunQueryResponseBuilder{
 			RequestResult: aCompletedResult(),
@@ -92,7 +92,7 @@ func TestHttpServer_RunQuery_Basic(t *testing.T) {
 }
 
 func TestHttpServer_RunQuery_Error(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		h.onRunQuery().Return(nil, errors.Errorf("kaboom"))
 
@@ -104,7 +104,7 @@ func TestHttpServer_RunQuery_Error(t *testing.T) {
 }
 
 func TestHttpServer_GetTransactionStatus_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		response := &client.GetTransactionStatusResponseBuilder{
 			RequestResult:     aCompletedResult(),
@@ -121,7 +121,7 @@ func TestHttpServer_GetTransactionStatus_Basic(t *testing.T) {
 }
 
 func TestHttpServer_GetTransactionStatus_Error(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		h.onGetTransactionStatus().Return(nil, errors.Errorf("stam"))
 
@@ -133,7 +133,7 @@ func TestHttpServer_GetTransactionStatus_Error(t *testing.T) {
 }
 
 func TestHttpServer_GetTransactionReceiptProof_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 
 		response := &client.GetTransactionReceiptProofResponseBuilder{
@@ -150,7 +150,7 @@ func TestHttpServer_GetTransactionReceiptProof_Basic(t *testing.T) {
 }
 
 func TestHttpServer_GetTransactionReceiptProof_Error(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		h.onGetTransactionReceiptProof().Return(nil, errors.Errorf("kaboom"))
 
@@ -162,7 +162,7 @@ func TestHttpServer_GetTransactionReceiptProof_Error(t *testing.T) {
 }
 
 func TestHttpServer_GetBlock_Basic(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		response := &client.GetBlockResponseBuilder{
 			RequestResult: aCompletedResult(),
@@ -178,7 +178,7 @@ func TestHttpServer_GetBlock_Basic(t *testing.T) {
 }
 
 func TestHttpServer_GetBlock_Error(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		h.onGetBlock().Return(nil, errors.Errorf("kaboom"))
 
@@ -190,7 +190,7 @@ func TestHttpServer_GetBlock_Error(t *testing.T) {
 }
 
 func TestHttpServer_Index(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 		req, _ := http.NewRequest("GET", "/", nil)
 		rec := httptest.NewRecorder()
@@ -207,7 +207,7 @@ func TestHttpServer_Index(t *testing.T) {
 }
 
 func TestHttpServer_Robots(t *testing.T) {
-	test.WithLogger(t, func(parent *test.LoggingHarness) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
 		h := newHarness(parent)
 
 		req, _ := http.NewRequest("Get", "/robots.txt", nil)
@@ -231,7 +231,7 @@ func aCompletedResult() *client.RequestResultBuilder {
 }
 
 type harness struct {
-	*test.LoggingHarness
+	*with.LoggingHarness
 	publicApi *services.MockPublicApi
 	server    *HttpServer
 }
@@ -320,7 +320,7 @@ func (h *harness) getBlock() *httptest.ResponseRecorder {
 	return rec
 }
 
-func newHarness(parent *test.LoggingHarness) *harness {
+func newHarness(parent *with.LoggingHarness) *harness {
 	papiMock := &services.MockPublicApi{}
 	return &harness{
 		LoggingHarness: parent,

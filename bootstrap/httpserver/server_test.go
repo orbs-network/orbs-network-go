@@ -9,6 +9,7 @@ package httpserver
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/pkg/errors"
@@ -102,7 +103,7 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 }
 
 func TestHttpServerWriteMembuffResponse(t *testing.T) {
-	test.WithLogger(t, func(harness *test.LoggingHarness) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
 		expectedResponse := (&client.SendTransactionResponseBuilder{
 			RequestResult: &client.RequestResultBuilder{
 				RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
@@ -129,7 +130,7 @@ func TestHttpServerWriteMembuffResponse(t *testing.T) {
 }
 
 func TestHttpServerWriteTextResponse(t *testing.T) {
-	test.WithLogger(t, func(harness *test.LoggingHarness) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
 		e := &httpErr{
 			code:     http.StatusAccepted,
 			logField: nil,
