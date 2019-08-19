@@ -32,6 +32,7 @@ func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
 
 		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (first time called)
 		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (second time called)
+		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
 		h.consensusContextRespondWithVerySlowBlockCreation(&isLeanHelixStuckOnCreatingABlock)
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()

@@ -58,7 +58,7 @@ func TestCommitBlockDoesNotUpdateCommittedBlockHeightAndTimestampIfStorageFails(
 		harness.failNextBlocks()
 
 		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(blockHeight+1).Build())
-		require.EqualError(t, err, "could not write a block", "error should be returned if storage fails")
+		require.EqualError(t, err, "intentionally failing (tampering with) WriteNextBlock() height 2", "error should be returned if storage fails")
 
 		harness.verifyMocks(t, 1)
 

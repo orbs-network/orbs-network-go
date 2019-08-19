@@ -100,5 +100,5 @@ func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPa
 }
 
 func (h *harness) expectGossipSendLeanHelixMessage() {
-	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil).Times(1)
+	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil) // TODO Maybe add .Times(1) like there was before
 }

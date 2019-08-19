@@ -13,7 +13,6 @@ _tmp
 *.so
 *.dylib
 
-### Go dep ###
 vendor
 
 # Test binary, build with `go test -c`

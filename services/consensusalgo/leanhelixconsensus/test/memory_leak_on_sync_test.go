@@ -34,6 +34,7 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 		t.Log("Block sync service to block 5")
 
 		h.expectConsensusContextRequestOrderingCommittee(1) // we're index 0 (first time called)
+		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{

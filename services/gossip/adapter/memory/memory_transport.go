@@ -25,6 +25,7 @@ import (
 )
 
 const SEND_QUEUE_MAX_MESSAGES = 1000
+const LISTENER_HANDLE_TIMEOUT = 7 * time.Second
 
 var LogTag = log.String("adapter", "gossip")
 
@@ -116,6 +117,9 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		// wait till we have a listener attached
 		select {
 		case l := <-p.listener:
+			logger.Info("connecting to listener", log.Stringable("listener", l))
+			defer logger.Info("disconnecting from listener", log.Stringable("listener", l))
+
 			p.acceptUsing(ctx, l)
 		case <-ctx.Done():
 			// fall through
@@ -138,6 +142,7 @@ func (p *peer) send(ctx context.Context, data *adapter.TransportData) {
 		p.logger.Info("deposited message into peer queue", trace.LogFieldFrom(ctx), log.Stringable("duration", time.Since(before)))
 		return
 	case <-ctx.Done():
+		p.logger.Info("memory transport sending message after shutdown", log.Error(ctx.Err()))
 		return
 	default:
 		p.logger.Error("memory transport send buffer is full")
@@ -152,13 +157,14 @@ func (p *peer) acceptUsing(bgCtx context.Context, listener adapter.TransportList
 		case message := <-p.socket:
 			receive(bgCtx, listener, message)
 		case <-bgCtx.Done():
+			p.logger.Info("shutting down", log.Error(bgCtx.Err()), log.Int("socket-size", len(p.socket)))
 			return
 		}
 	}
 }
 
 func receive(bgCtx context.Context, listener adapter.TransportListener, message message) {
-	ctx, cancel := context.WithCancel(bgCtx)
+	ctx, cancel := context.WithTimeout(bgCtx, LISTENER_HANDLE_TIMEOUT)
 	defer cancel()
 	traceContext := contextFrom(ctx, message)
 	listener.OnTransportMessageReceived(traceContext, message.payloads)
