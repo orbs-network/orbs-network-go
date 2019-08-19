@@ -8,7 +8,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/rand"
-	"github.com/orbs-network/scribe/log"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -17,55 +17,63 @@ func TestFileSystemBlockPersistence_RecoverFromPartiallyWrittenBlockRecord(t *te
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := rand.NewControlledRand(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		harness.AllowErrorsMatching("built index, found and ignoring invalid block records")
 
-	conf := newTempFileConfig()
-	defer conf.cleanDir()
+		ctrlRand := rand.NewControlledRand(t)
 
-	blocks := writeRandomBlocksToFile(t, conf, 2, ctrlRand)
-	originalFileSize := getFileSize(t, conf)
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
 
-	truncateFile(t, conf, originalFileSize-(ctrlRand.Int63n(30)+1)) // cut some bytes from end of file
+		blocks := writeRandomBlocksToFile(t, harness.Logger, conf, 2, ctrlRand)
+		originalFileSize := getFileSize(t, conf)
 
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLoggerAllowingErrors(t, "built index, found and ignoring invalid block records"), conf)
-	require.NoError(t, err)
-	defer closeAdapter()
+		truncateFile(t, conf, originalFileSize-(ctrlRand.Int63n(30)+1)) // cut some bytes from end of file
 
-	topBlockHeight, err := fsa.GetLastBlockHeight()
-	require.NoError(t, err)
+		fsa, closeAdapter, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.NoError(t, err)
+		defer closeAdapter()
 
-	require.EqualValues(t, 1, topBlockHeight, "expected partially written block record to be ignored")
+		topBlockHeight, err := fsa.GetLastBlockHeight()
+		require.NoError(t, err)
 
-	fsa.WriteNextBlock(blocks[1]) // re-append lost block
-	recoveredFileSize := getFileSize(t, conf)
+		require.EqualValues(t, 1, topBlockHeight, "expected partially written block record to be ignored")
 
-	require.Equal(t, originalFileSize, recoveredFileSize, "appending to a file with partial block record should occur at the end of last full record")
+		fsa.WriteNextBlock(blocks[1]) // re-append lost block
+		recoveredFileSize := getFileSize(t, conf)
+
+		require.Equal(t, originalFileSize, recoveredFileSize, "appending to a file with partial block record should occur at the end of last full record")
+	})
 }
 
 func TestFileSystemBlockPersistence_DataCorruption(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := rand.NewControlledRand(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		harness.AllowErrorsMatching("built index, found and ignoring invalid block records")
 
-	conf := newTempFileConfig()
-	defer conf.cleanDir()
+		ctrlRand := rand.NewControlledRand(t)
 
-	blocks := writeRandomBlocksToFile(t, conf, 2, ctrlRand)
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
 
-	blocksFileSize1 := getFileSize(t, conf)
-	flipBitInFile(t, conf, blocksFileSize1-(ctrlRand.Int63n(100)+1), byte(1)<<uint(ctrlRand.Intn(8))) // flip 1 bit in last block record
+		blocks := writeRandomBlocksToFile(t, harness.Logger, conf, 2, ctrlRand)
 
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLoggerAllowingErrors(t, "built index, found and ignoring invalid block records"), conf)
-	require.NoError(t, err)
-	defer closeAdapter()
+		blocksFileSize1 := getFileSize(t, conf)
+		flipBitInFile(t, conf, blocksFileSize1-(ctrlRand.Int63n(100)+1), byte(1)<<uint(ctrlRand.Intn(8))) // flip 1 bit in last block record
 
-	topBlockHeight, err := fsa.GetLastBlockHeight()
-	require.NoError(t, err)
-	require.EqualValues(t, 1, topBlockHeight, "expected corrupt block record to be ignored")
+		fsa, closeAdapter, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.NoError(t, err)
+		defer closeAdapter()
 
-	fsa.WriteNextBlock(blocks[1]) // re-append lost block
+		topBlockHeight, err := fsa.GetLastBlockHeight()
+		require.NoError(t, err)
+		require.EqualValues(t, 1, topBlockHeight, "expected corrupt block record to be ignored")
 
-	blocksFileSize2 := getFileSize(t, conf)
-	require.Equal(t, blocksFileSize1, blocksFileSize2, "appending to a file with partial block record should occur at the end of last valid record")
+		fsa.WriteNextBlock(blocks[1]) // re-append lost block
+
+		blocksFileSize2 := getFileSize(t, conf)
+		require.Equal(t, blocksFileSize1, blocksFileSize2, "appending to a file with partial block record should occur at the end of last valid record")
+	})
 }
