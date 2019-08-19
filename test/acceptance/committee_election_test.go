@@ -10,6 +10,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
@@ -153,6 +154,13 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	newHarness().
 		WithNumNodes(7).
+		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig { // TODO test assumes all sent transactions return successful.
+			c, err := cfg.MergeWithFileConfig(`{
+				"public-api-send-transaction-timeout": "1h"
+			}`)
+			require.NoError(t, err)
+			return c
+		}).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -180,6 +188,8 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
+
+			network.WaitForTransactionReceiptInTransactionPool(ctx, txHash, 0)
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5, 6})
 
 			t.Log("test done, shutting down")
