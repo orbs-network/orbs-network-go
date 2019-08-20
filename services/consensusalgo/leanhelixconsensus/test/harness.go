@@ -100,10 +100,10 @@ func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int, times int) {
+func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
-	}, nil).Times(times)
+	}, nil).Times(1)
 }
 
 func (h *harness) expectConsensusContextRequestNewBlockNotCalled() {
