@@ -37,20 +37,36 @@ type harness struct {
 }
 
 func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
-	gossip := &gossiptopics.MockLeanHelix{}
-	gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
-
-	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-
-	consensusContext := &services.MockConsensusContext{}
-
-	return &harness{
-		gossip:                 gossip,
-		blockStorage:           blockStorage,
-		consensusContext:       consensusContext,
+	h := &harness{
+		gossip:                 &gossiptopics.MockLeanHelix{},
+		blockStorage:           &services.MockBlockStorage{},
+		consensusContext:       &services.MockConsensusContext{},
 		auditBlocksYoungerThan: auditBlocksYoungerThan,
 	}
+
+	h.resetMocks()
+
+	return h
+}
+
+func (h *harness) resetMocks() {
+	h.ResetConsensusContextMock()
+	h.ResetBlockStorageMock()
+	h.ResetGossipMock()
+}
+
+func (h *harness) ResetConsensusContextMock() {
+	h.consensusContext.Reset()
+}
+
+func (h *harness) ResetBlockStorageMock() {
+	h.blockStorage.Reset()
+	h.blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+}
+
+func (h *harness) ResetGossipMock() {
+	h.gossip.Reset()
+	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 }
 
 func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
@@ -64,7 +80,9 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	signer, err := signer.New(cfg)
 	require.NoError(tb, err)
 
-	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
+	lhca := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
+	lhca.
+		h.consensus = lhca
 	return h
 }
 
@@ -84,10 +102,15 @@ func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
+func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int, times int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
-	}, nil).Times(1)
+	}, nil).Times(times)
+}
+
+func (h *harness) expectConsensusContextRequestNewBlockNotCalled() {
+	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
+	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }
 
 func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPairContainer) {

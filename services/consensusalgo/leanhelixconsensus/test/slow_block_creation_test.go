@@ -8,13 +8,10 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -24,44 +21,39 @@ import (
 // This causes it to get stuck on GetTransactionsForOrdering (9 seconds when no traffic)
 // and broadcast large pre prepares that nobody cares about to everybody (network pollution).
 
-func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
+func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstView(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
-		isLeanHelixStuckOnCreatingABlock := false
+		h.expectConsensusContextRequestNewBlockNotCalled()
 
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (first time called)
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (second time called)
-		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
-		h.consensusContextRespondWithVerySlowBlockCreation(&isLeanHelixStuckOnCreatingABlock)
+		h.expectConsensusContextRequestOrderingCommittee(0, 1) // we're index 0 (first time called)
+		mockFuncRequestOrderingCommittee := h.consensusContext.Functions[len(h.consensusContext.Functions)-1]
+		require.Equal(t, "RequestOrderingCommittee", mockFuncRequestOrderingCommittee.Name, "expected last registered mock function to be mockFuncRequestOrderingCommittee.Name")
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              b5,
 			PrevCommittedBlockPair: nil,
 		})
 
+		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected ordering committee to be requested once")
+		require.NoError(t, test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected new block not to be requested by lean helix")
+
+		h.ResetConsensusContextMock()
+		h.expectConsensusContextRequestOrderingCommittee(0, 1)
+
 		b6 := builders.BlockPair().WithHeight(6).WithEmptyLeanHelixBlockProof().Build()
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              b6,
 			PrevCommittedBlockPair: nil,
 		})
 
-		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
-		require.True(t, test.Consistently(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, func() bool {
-			return !isLeanHelixStuckOnCreatingABlock
-		}), "Lean Helix should not be creating a block and getting stuck doing so")
-	})
-}
-
-func (h *harness) consensusContextRespondWithVerySlowBlockCreation(isCreatingABlock *bool) {
-	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.RequestNewTransactionsBlockInput) (*services.RequestNewTransactionsBlockOutput, error) {
-		*isCreatingABlock = true
-		<-ctx.Done()
-		return nil, errors.New("canceled")
+		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected ordering committee to be requested twice")
+		require.NoError(t, test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected new block not to be requested by lean helix")
 	})
 }
