@@ -40,7 +40,7 @@ func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstVi
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected ordering committee to be requested once")
 		require.NoError(t, test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected new block not to be requested by lean helix")
 
-		h.ResetConsensusContextMock()
+		h.resetAndApplyMockDefaults()
 		h.expectConsensusContextRequestOrderingCommittee(0)
 
 		b6 := builders.BlockPair().WithHeight(6).WithEmptyLeanHelixBlockProof().Build()

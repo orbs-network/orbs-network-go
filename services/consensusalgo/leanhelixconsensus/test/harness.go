@@ -44,28 +44,17 @@ func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
 		auditBlocksYoungerThan: auditBlocksYoungerThan,
 	}
 
-	h.resetMocks()
+	h.resetAndApplyMockDefaults()
 
 	return h
 }
 
-func (h *harness) resetMocks() {
-	h.ResetConsensusContextMock()
-	h.ResetBlockStorageMock()
-	h.ResetGossipMock()
-}
-
-func (h *harness) ResetConsensusContextMock() {
+func (h *harness) resetAndApplyMockDefaults() {
 	h.consensusContext.Reset()
-}
-
-func (h *harness) ResetBlockStorageMock() {
 	h.blockStorage.Reset()
-	h.blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-}
-
-func (h *harness) ResetGossipMock() {
 	h.gossip.Reset()
+
+	h.blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
 	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 }
 
