@@ -80,9 +80,7 @@ func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
 	signer, err := signer.New(cfg)
 	require.NoError(tb, err)
 
-	lhca := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
-	lhca.
-		h.consensus = lhca
+	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
 	return h
 }
 
