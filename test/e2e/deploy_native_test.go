@@ -9,12 +9,13 @@ package e2e
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestDeploymentOfNativeContract(t *testing.T) {
@@ -40,6 +41,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		h.eventuallyDeploy(t, OwnerOfAllSupply, contractName,
 			[]byte(contracts.NativeSourceCodeForCounterPart1(counterStart)),
 			[]byte(contracts.NativeSourceCodeForCounterPart2(counterStart)))
+
 		printTestTime(t, "send deploy - end", &lt)
 
 		// check counter
