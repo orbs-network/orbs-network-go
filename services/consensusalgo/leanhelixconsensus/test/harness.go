@@ -37,20 +37,25 @@ type harness struct {
 }
 
 func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
-	gossip := &gossiptopics.MockLeanHelix{}
-	gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
-
-	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-
-	consensusContext := &services.MockConsensusContext{}
-
-	return &harness{
-		gossip:                 gossip,
-		blockStorage:           blockStorage,
-		consensusContext:       consensusContext,
+	h := &harness{
+		gossip:                 &gossiptopics.MockLeanHelix{},
+		blockStorage:           &services.MockBlockStorage{},
+		consensusContext:       &services.MockConsensusContext{},
 		auditBlocksYoungerThan: auditBlocksYoungerThan,
 	}
+
+	h.resetAndApplyMockDefaults()
+
+	return h
+}
+
+func (h *harness) resetAndApplyMockDefaults() {
+	h.consensusContext.Reset()
+	h.blockStorage.Reset()
+	h.gossip.Reset()
+
+	h.blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 }
 
 func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
@@ -80,8 +85,12 @@ func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.
 	return res
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
-	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
+func (h *harness) beLastInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(1)
+}
+
+func (h *harness) beFirstInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(0)
 }
 
 func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
@@ -101,4 +110,9 @@ func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPa
 
 func (h *harness) expectGossipSendLeanHelixMessage() {
 	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil) // TODO Maybe add .Times(1) like there was before
+}
+
+func (h *harness) expectNeverToProposeABlock() {
+	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
+	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }
