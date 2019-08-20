@@ -28,8 +28,6 @@ func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstVi
 		h.expectConsensusContextRequestNewBlockNotCalled()
 
 		h.expectConsensusContextRequestOrderingCommittee(0, 1) // we're index 0 (first time called)
-		mockFuncRequestOrderingCommittee := h.consensusContext.Functions[len(h.consensusContext.Functions)-1]
-		require.Equal(t, "RequestOrderingCommittee", mockFuncRequestOrderingCommittee.Name, "expected last registered mock function to be mockFuncRequestOrderingCommittee.Name")
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
