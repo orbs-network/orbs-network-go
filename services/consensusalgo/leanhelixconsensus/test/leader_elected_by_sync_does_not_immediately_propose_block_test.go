@@ -25,9 +25,8 @@ func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstVi
 	test.WithContext(func(ctx context.Context) {
 		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
-		h.expectConsensusContextRequestNewBlockNotCalled()
-
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (first time called)
+		h.expectNeverToProposeABlock()
+		h.beFirstInCommittee() // we will be leader after sync:
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
@@ -41,7 +40,9 @@ func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstVi
 		require.NoError(t, test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext), "expected new block not to be requested by lean helix")
 
 		h.resetAndApplyMockDefaults()
-		h.expectConsensusContextRequestOrderingCommittee(0)
+
+		h.expectNeverToProposeABlock()
+		h.beFirstInCommittee() // we will be leader after sync:
 
 		b6 := builders.BlockPair().WithHeight(6).WithEmptyLeanHelixBlockProof().Build()
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{

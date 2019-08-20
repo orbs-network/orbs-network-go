@@ -85,19 +85,18 @@ func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.
 	return res
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
-	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
+func (h *harness) beLastInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(1)
+}
+
+func (h *harness) beFirstInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(0)
 }
 
 func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
 	}, nil).Times(1)
-}
-
-func (h *harness) expectConsensusContextRequestNewBlockNotCalled() {
-	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
-	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }
 
 func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPairContainer) {
@@ -111,4 +110,9 @@ func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPa
 
 func (h *harness) expectGossipSendLeanHelixMessage() {
 	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil) // TODO Maybe add .Times(1) like there was before
+}
+
+func (h *harness) expectNeverToProposeABlock() {
+	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
+	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }
