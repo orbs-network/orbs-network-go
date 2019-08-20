@@ -17,9 +17,10 @@ import (
 )
 
 // This test shows the shy leader problem, that when we sync in lean helix, the petitioner
-// thinks he is the leader on v=0 of old blocks and tries to propose a block.
-// This causes it to get stuck on GetTransactionsForOrdering (9 seconds when no traffic)
-// and broadcast large pre prepares that nobody cares about to everybody (network pollution).
+// might think it is the leader on v=0 of old blocks during block sync, and try to propose a block.
+// This causes it to get block it's own sync flow if tx pool is empty (waiting 9 seconds for an empty block)
+// and to perform meaningless work and broadcast large pre-prepares nobody cares about (network pollution).
+// This test see that it does not attempt to propose a block after sync
 
 func TestService_ShyLeader_LeaderElectedByBlockSyncDoesNotProposeABlockOnFirstView(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
