@@ -57,7 +57,7 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout
-      - run: sudo npm install junit-xml-stats -g
+      - run: npm install junit-xml-stats -g
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
