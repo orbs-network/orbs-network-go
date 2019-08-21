@@ -51,6 +51,8 @@ export API_ENDPOINT=http://localhost:8080/api/v1/ \
       ETHEREUM_PUBLIC_KEY=037a809cc481303d337c1c83d1ba3a2222c7b1b820ac75e3c6f8dc63fa0ed79b18 \
       EXTERNAL_TEST='true'
 
+exit 0
+
 # the ethereum keypair is generated from the mnemonic passed to ganache on startup
 
 echo "The network has started with pre-existing (ancient) 500-some blocks"

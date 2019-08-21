@@ -1,10 +1,10 @@
 FROM golang:1.12.9
 
-RUN apt-get install -y git bash
+WORKDIR /src
 
-WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
+RUN apt-get install -y git bash libc6-dev
 
-ADD . /go/src/github.com/orbs-network/orbs-network-go/
+ADD . /src
 
 RUN env
 
@@ -19,6 +19,3 @@ ARG BUILD_FLAG
 ARG SEMVER
 
 RUN ./build-binaries.sh
-
-# Testing if we can remove this line from here.
-#RUN go get -u github.com/orbs-network/go-junit-report

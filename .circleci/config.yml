@@ -4,10 +4,9 @@ jobs:
     docker:
       - image: circleci/golang:1.12.9
     resource_class: large
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
+      - run: pwd
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.sh
@@ -16,22 +15,19 @@ jobs:
           path: _out
           destination: test-output
       - store_artifacts:
-          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          path: _reports
           destination: test-results
       - store_test_results:
           path: _reports
 
   races:
     docker:
-      - image: circleci/golang:1.11.4
+      - image: circleci/golang:1.12.9
     resource_class: large
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
+      - pwd
       - run: go get -u github.com/orbs-network/go-junit-report
-      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
-      - run: sudo apt-get install -y nodejs
       - run:
           command: ./test.races.sh
           no_output_timeout: 25m
@@ -44,17 +40,23 @@ jobs:
       - store_test_results:
           path: _reports
 
-  flakiness:
+  memory_leaks:
     docker:
-      - image: circleci/golang:1.11.4
-    parallelism: 6
+      - image: circleci/golang:1.12.9
     resource_class: xlarge
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
-      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
-      - run: sudo apt-get install -y nodejs
+      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./test.goroutine-leaks.sh
+      - run: ./test.memory-leaks.sh
+
+  flakiness:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    parallelism: 6
+    resource_class: xlarge
+    steps:
+      - checkout
       - run: sudo npm install junit-xml-stats -g
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
@@ -71,13 +73,11 @@ jobs:
 
   nightly:
     docker:
-      - image: circleci/golang:1.11.4
+      - image: circleci/golang:1.12.9
     parallelism: 6
     resource_class: xlarge
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run:
           command: ./.circleci/nightly.sh
           no_output_timeout: 300m
@@ -91,12 +91,11 @@ jobs:
           path: _reports
 
   e2e:
-    machine: true
-    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
-      - run: ./git-submodule-checkout.sh
       - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       # Update docker-compose
@@ -122,7 +121,8 @@ jobs:
           path: _out
 
   success:
-    machine: true
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - run: echo 'Success'
 
@@ -135,12 +135,12 @@ jobs:
       - run: ./.circleci/deploy-testnet.sh
 
   ganache_related_tests:
-    machine: true
+    machine:
+      image: ubuntu-1604:201903-01
     working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
-      - run: ./git-submodule-checkout.sh
       - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/test/ganache-related-test.sh
       - store_test_results:
@@ -148,21 +148,17 @@ jobs:
     
   e2e_testnet_benchmark:
     docker:
-      - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+      - image: circleci/golang:1.12.9
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42
 
   e2e_testnet_leanhelix:
     docker:
-    - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    - image: circleci/golang:1.12.9
     steps:
     - checkout
-    - run: ./git-submodule-checkout.sh
     - run: sleep 300
     - run: ./.circleci/e2e-testnet.sh 2013
 
@@ -177,7 +173,6 @@ jobs:
       TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
-      - run: ./git-submodule-checkout.sh
       - run: go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/chain_on_pr.sh
       - store_test_results:

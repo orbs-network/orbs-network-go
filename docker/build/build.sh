@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash -e
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SEMVER=$(cat ./.version)
 
@@ -19,7 +19,7 @@ docker build -f ./docker/build/Dockerfile.build \
 
 docker run --name orbs_build orbs:build sleep 1
 
-export SRC=/go/src/github.com/orbs-network/orbs-network-go
+export SRC=/src
 
 rm -rf _bin
 docker cp orbs_build:$SRC/_bin .
