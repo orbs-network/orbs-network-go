@@ -25,12 +25,11 @@ import (
 // and broadcast large pre prepares that nobody cares about to everybody (network pollution).
 
 func TestService_SlowBlockCreationDoesNotHurtBlockSync(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(0).start(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		isLeanHelixStuckOnCreatingABlock := false
 
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (first time called)
 		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0 (second time called)
 		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
 		h.consensusContextRespondWithVerySlowBlockCreation(&isLeanHelixStuckOnCreatingABlock)

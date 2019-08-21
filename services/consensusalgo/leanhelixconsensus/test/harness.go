@@ -14,21 +14,20 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
+	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
-	"testing"
 	"time"
 )
 
 const NETWORK_SIZE = 4
 
 type harness struct {
-	consensus              services.ConsensusAlgoLeanHelix
+	consensus              *leanhelixconsensus.Service
 	gossip                 *gossiptopics.MockLeanHelix
 	blockStorage           *services.MockBlockStorage
 	consensusContext       *services.MockConsensusContext
@@ -53,18 +52,17 @@ func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
 	}
 }
 
-func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
-	logOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(logOutput)
+func (h *harness) start(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
 	registry := metric.NewRegistry()
 
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	signer, err := signer.New(cfg)
-	require.NoError(tb, err)
+	require.NoError(parent.T, err)
 
-	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
+	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, parent.Logger, cfg, registry)
+	parent.Supervise(h.consensus)
 	return h
 }
 
