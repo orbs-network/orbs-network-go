@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
     return (chainIndex !== -1) ? configuration.chains[chainIndex] : false;
@@ -75,6 +77,14 @@ function removeChainConfigurationById(configuration, chainId) {
     return configuration;
 }
 
+function markChainForRemoval(configuration, chainId) {
+    const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
+    if (chainIndex !== -1) {
+        configuration.chains[chainIndex].Disabled = true;
+    }
+    return configuration;
+}
+
 function updateChainConfiguration(configuration, chain) {
     // Incase the chain configuration already exists, let's just remove it.
     removeChainConfigurationById(configuration, chain.Id)
@@ -82,10 +92,24 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
+function getPrChainNumber(prNumber) {
+    return 100000 + prNumber;
+}
+
+async function getClosedPullRequests(page = 1) {
+    const response = await fetch(`https://api.github.com/repos/orbs-network/orbs-network-go/pulls?state=closed&per_page=100&page=${page}`);
+    const closedPRs = await response.json();
+    return closedPRs.map(({ number, title, user: { login } }) => ({ number, title, login }));
+}
+
 module.exports = {
+    getClosedPullRequests,
     newChainConfiguration,
+    getPrChainNumber,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,
+    removeChainConfigurationById,
     isPortUnique,
+    markChainForRemoval,
 };

@@ -23,19 +23,19 @@ import (
 // BlockSync calls ConsensusAlgo.HandleBlockConsensus() when sync wakes up.
 // ConsensusAlgo calls BlockStorage.CommitBlock() when a new block is closed.
 func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).withSyncNoCommitTimeout(time.Nanosecond)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
 
 		updateConsensusAlgoHeight := make(chan struct{})
 
 		targetBlockHeight := primitives.BlockHeight(100)
 
-		var topReportedHeight primitives.BlockHeight
+		committedBlockHeights := make(chan primitives.BlockHeight, 100)
 		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 			if input.BlockPair != nil {
 				updateConsensusAlgoHeight <- struct{}{}
-				topReportedHeight = input.BlockPair.ResultsBlock.Header.BlockHeight()
+				committedBlockHeights <- input.BlockPair.ResultsBlock.Header.BlockHeight()
 			}
 
 			return nil, nil
@@ -44,10 +44,22 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 		harness.start(ctx)
 		startFakeSingleThreadedConsensusAlgo(t, ctx, harness, targetBlockHeight, updateConsensusAlgoHeight)
 
-		require.Truef(t, test.Eventually(15*time.Second, func() bool {
-			return topReportedHeight >= targetBlockHeight
-		}), "expected blocks to be produced without deadlock, but only %d were closed", topReportedHeight)
+		waitUntilReachedBlockHeight(ctx, t, committedBlockHeights, targetBlockHeight)
 	})
+}
+
+func waitUntilReachedBlockHeight(ctx context.Context, t *testing.T, committedBlockHeights chan primitives.BlockHeight, targetBlockHeight primitives.BlockHeight) {
+	var topReportedHeight primitives.BlockHeight
+	for {
+		select {
+		case topReportedHeight = <-committedBlockHeights:
+			if topReportedHeight >= targetBlockHeight {
+				return
+			}
+		case <-ctx.Done():
+			t.Errorf("expected blocks to be produced without deadlock, but only %d were closed", topReportedHeight)
+		}
+	}
 }
 
 // emulates an inconsiderate ConsensusAlgo that blocks HandleBlockConsensus() calls while committing blocks, and closes Blocks eagerly.

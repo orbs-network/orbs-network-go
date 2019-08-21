@@ -8,6 +8,7 @@ package transactionpool
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -17,41 +18,24 @@ import (
 var tickInterval = func() time.Duration { return 1 * time.Millisecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
-func TestStopsWhenContextIsCancelled(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-
-	m := aCleaner()
-	stopped := startCleaningProcess(ctx, tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, 0 }, nil)
-
-	cancel()
-
-	<-stopped
-}
-
 func TestTicksOnSchedule(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		ts := primitives.TimestampNano(time.Now().UnixNano())
 
-	ts := primitives.TimestampNano(time.Now().UnixNano())
+		m := aCleaner()
+		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, harness.Logger))
 
-	m := aCleaner()
-	stopped := startCleaningProcess(ctx, tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, nil)
+		// waiting multiple times to assert that ticker is looping :)
+		for i := 0; i < 3; i++ {
+			select {
+			case cleaned := <-m.cleaned:
+				require.InDelta(t, int64(ts-primitives.TimestampNano(expiration())), int64(cleaned), float64(1*time.Second), "did not call cleaner with expected time")
+			case <-time.After(tickInterval() * 100):
+				t.Fatalf("did not call cleaner within expected timeframe")
+			}
 
-	// waiting multiple times to assert that ticker is looping :)
-	for i := 0; i < 3; i++ {
-		select {
-		case cleaned := <-m.cleaned:
-			require.InDelta(t, int64(ts-primitives.TimestampNano(expiration())), int64(cleaned), float64(1*time.Second), "did not call cleaner with expected time")
-		case <-time.After(tickInterval() * 100):
-			t.Fatalf("did not call cleaner within expected timeframe")
 		}
-
-	}
-
-	cancel()
-
-	<-stopped
+	})
 }
 
 type mockCleaner struct {

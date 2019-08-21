@@ -102,9 +102,9 @@ func TestHttpServerTranslateStatusToHttpCode(t *testing.T) {
 	}
 }
 
-func mockServer(tb testing.TB) *server {
+func mockServer(tb testing.TB) *HttpServer {
 	logger := log.DefaultTestingLogger(tb)
-	return &server{
+	return &HttpServer{
 		logger: logger.WithTags(LogTag),
 	}
 }

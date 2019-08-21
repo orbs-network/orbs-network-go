@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) GenerateReceiptProof(ctx context.Context, input *services.GenerateReceiptProofInput) (*services.GenerateReceiptProofOutput, error) {
+func (s *Service) GenerateReceiptProof(ctx context.Context, input *services.GenerateReceiptProofInput) (*services.GenerateReceiptProofOutput, error) {
 	block, err := s.persistence.GetResultsBlock(input.BlockHeight)
 	if err != nil {
 		return nil, err

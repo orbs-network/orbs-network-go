@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 NIGHTLY=0
 mkdir -p _out
@@ -33,6 +33,7 @@ go_test_junit_report () {
 
     mkdir -p $OUT_DIR
     mkdir -p $REPORTS_DIR
+
     GODEBUG=gctrace=1 go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
     go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
     EXIT_CODE=$?
@@ -45,15 +46,26 @@ go_test_junit_report () {
         if [ $NIGHTLY == 1 ]; then
             junit-xml-stats ${OUT_DIR}/results.xml
         else
-            # find the last RUN line number in the log file
-            LOG_START_LINE=$(grep -n "^--- FAIL" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
-            # find the last line number in the log file
-            LOG_END_LINE=$(cat ${OUT_DIR}/test.out | wc -l | awk '{$1=$1};1')
-            # print the lines in between these line numbers to get the required failed log
-            # and nothing else
-            sed -n "${LOG_START_LINE},${LOG_END_LINE}p" ${OUT_DIR}/test.out
+            # Let's look for the Go package that failed:
+            GOLANG_PKG_ERR_LINE=$(grep -n "^FAIL" ${OUT_DIR}/test.out | grep -Eo '^[^:]+' | tail -n 1)
+
+            # Reduce the test.out file only to section that we focus on and reverse it using tac
+            sed -n "1,${GOLANG_PKG_ERR_LINE}p" ${OUT_DIR}/test.out | tac > ${OUT_DIR}/truncated.tac.test.out
+
+            # Look for the last test that ran before this package failed 
+            # (It's called FIRST in the variable here since we look at the log upside down)
+            FIRST_RUN_LINE=$(grep -n "^=== RUN" -m 1 ${OUT_DIR}/truncated.tac.test.out | grep -Eo '^[^:]+' | tail -n 1)
+
+            echo "The following test failed: "
+            sed -n "1,${FIRST_RUN_LINE}p" ${OUT_DIR}/truncated.tac.test.out | tac
         fi
 
         exit $EXIT_CODE
+    else
+        echo "**************************"
+        echo "Tests passed!"
+        echo "JUnit-style XML for this run generated at: ${OUT_DIR}/results.xml"
+        echo "Go test output saved for reference at: ${OUT_DIR}/test.out"
+        echo "**************************"
     fi
 }

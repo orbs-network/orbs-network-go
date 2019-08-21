@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -33,14 +34,15 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type NodeLogic interface {
+	govnr.ShutdownWaiter
 	PublicApi() services.PublicApi
 }
 
 type nodeLogic struct {
+	govnr.TreeSupervisor
 	publicApi      services.PublicApi
 	consensusAlgos []services.ConsensusAlgo
 }
@@ -89,21 +91,27 @@ func NewNodeLogic(
 	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
 	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
 
-	metric.NewSystemReporter(ctx, metricRegistry, logger)
-	metric.NewRuntimeReporter(ctx, metricRegistry, logger)
-	metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint())
-
-	metricRegistry.PeriodicallyRotate(ctx, logger)
 	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
-
-	ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second)
 
 	logger.Info("Node started")
 
-	return &nodeLogic{
+	node := &nodeLogic{
 		publicApi:      publicApiService,
 		consensusAlgos: consensusAlgos,
 	}
+
+	node.Supervise(gossipService)
+	node.Supervise(blockStorageService)
+	node.Supervise(benchmarkConsensusAlgo)
+	node.Supervise(leanHelixAlgo)
+	node.Supervise(metric.NewSystemReporter(ctx, metricRegistry, logger))
+	node.Supervise(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.Supervise(metricRegistry.PeriodicallyRotate(ctx, logger))
+	if nodeConfig.NTPEndpoint() != "" {
+		node.Supervise(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+	}
+
+	return node
 }
 
 func (n *nodeLogic) PublicApi() services.PublicApi {

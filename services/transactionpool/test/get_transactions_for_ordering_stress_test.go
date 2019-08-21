@@ -20,9 +20,9 @@ import (
 func TestStress_GetTransactionsForOrderingWhenFirstTxAdded(t *testing.T) {
 	const ITERATIONS = 1000
 	for i := 0; i < ITERATIONS; i++ {
+		test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+			h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
 
-		test.WithContext(func(ctx context.Context) {
-			h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(t).start(ctx)
 			h.ignoringForwardMessages()
 
 			ch := make(chan int)

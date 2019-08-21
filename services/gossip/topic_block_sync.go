@@ -8,18 +8,18 @@ package gossip
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
+func (s *Service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
@@ -29,16 +29,16 @@ func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 // handles both client and server sides of block sync
 // server side (responding to requests) fires a new goroutine to handle each requests so as to not block the topic
 // client side will be handled in the block sync client main loop
-func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
-		supervised.GoOnce(s.logger, func() {
+		govnr.Once(logfields.GovnrErrorer(s.logger), func() {
 			s.receivedBlockSyncAvailabilityRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE:
 		s.receivedBlockSyncAvailabilityResponse(ctx, header, payloads)
 	case gossipmessages.BLOCK_SYNC_REQUEST:
-		supervised.GoOnce(s.logger, func() {
+		govnr.Once(logfields.GovnrErrorer(s.logger), func() {
 			s.receivedBlockSyncRequest(createBlockSyncServerChildContextFrom(ctx), header, payloads)
 		})
 	case gossipmessages.BLOCK_SYNC_RESPONSE:
@@ -50,7 +50,7 @@ func createBlockSyncServerChildContextFrom(ctx context.Context) context.Context 
 	return trace.NewContext(ctx, "BlockSyncServer")
 }
 
-func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:          gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:      gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
@@ -68,7 +68,7 @@ func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 	})
 }
 
-func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockAvailabilityRequest(payloads)
 	if err != nil {
 		return
@@ -85,7 +85,7 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 	}
 }
 
-func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
@@ -106,7 +106,7 @@ func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 	})
 }
 
-func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockAvailabilityResponse(payloads)
 	if err != nil {
 		return
@@ -123,7 +123,7 @@ func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, hea
 	}
 }
 
-func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_REQUEST,
@@ -144,7 +144,7 @@ func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 	})
 }
 
-func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockSyncRequest(payloads)
 	if err != nil {
 		return
@@ -161,7 +161,7 @@ func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 	}
 }
 
-func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_RESPONSE,
@@ -182,7 +182,7 @@ func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	})
 }
 
-func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *Service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockSyncResponse(payloads)
 	if err != nil {
 		return

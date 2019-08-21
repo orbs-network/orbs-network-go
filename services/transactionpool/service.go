@@ -7,6 +7,7 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
@@ -25,14 +26,20 @@ type BlockHeightReporter interface {
 	IncrementTo(height primitives.BlockHeight)
 }
 
-type service struct {
-	clock                      adapter.Clock
-	gossip                     gossiptopics.TransactionRelay
-	virtualMachine             services.VirtualMachine
-	blockHeightReporter        BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
-	transactionResultsHandlers []handlers.TransactionResultsHandler
-	logger                     log.Logger
-	config                     config.TransactionPoolConfig
+type Service struct {
+	govnr.TreeSupervisor
+
+	clock               adapter.Clock
+	gossip              gossiptopics.TransactionRelay
+	virtualMachine      services.VirtualMachine
+	blockHeightReporter BlockHeightReporter // used to allow test to wait for a block height to reach the transaction pool
+	logger              log.Logger
+	config              config.TransactionPoolConfig
+
+	transactionResultsHandlers struct {
+		sync.RWMutex
+		handlers []handlers.TransactionResultsHandler
+	}
 
 	lastCommitted struct {
 		sync.RWMutex
@@ -57,13 +64,13 @@ type service struct {
 	addCommitLock sync.RWMutex
 }
 
-func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *Service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
 	s.lastCommitted.RLock()
 	defer s.lastCommitted.RUnlock()
 	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
-func (s *service) createValidationContext() *validationContext {
+func (s *Service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:           s.config.TransactionExpirationWindow(),
 		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),

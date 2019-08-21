@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	triggers_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,8 +22,9 @@ import (
 
 // do not create this struct directly although it's exported
 type TransactionBuilder struct {
-	signer  primitives.Ed25519PrivateKey
-	builder *protocol.SignedTransactionBuilder
+	signer   primitives.Ed25519PrivateKey
+	dontSign bool // special case for nil signer (trigger) will be set to true
+	builder  *protocol.SignedTransactionBuilder
 }
 
 func TransferTransaction() *TransactionBuilder {
@@ -55,14 +57,18 @@ func Transaction() *TransactionBuilder {
 }
 
 func (t *TransactionBuilder) Build() *protocol.SignedTransaction {
-	t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE_BYTES)
-	signedTransaction := t.builder.Build()
-	txHash := digest.CalcTxHash(signedTransaction.Transaction())
-	sig, err := signature.SignEd25519(t.signer, txHash)
-	if err != nil {
-		panic(err)
+	if !t.dontSign {
+		t.builder.Signature = make([]byte, signature.ED25519_SIGNATURE_SIZE_BYTES)
 	}
-	signedTransaction.MutateSignature(sig)
+	signedTransaction := t.builder.Build()
+	if !t.dontSign {
+		txHash := digest.CalcTxHash(signedTransaction.Transaction())
+		sig, err := signature.SignEd25519(t.signer, txHash)
+		if err != nil {
+			panic(err)
+		}
+		signedTransaction.MutateSignature(sig)
+	}
 	return signedTransaction
 }
 
@@ -152,41 +158,17 @@ func TransactionInputArgumentsParse(t *protocol.Transaction) *protocol.ArgumentA
 	return argsArray.ArgumentsIterator()
 }
 
-type NonSignedTransactionBuilder struct {
-	builder *protocol.TransactionBuilder
-}
-
-func NonSignedTransaction() *NonSignedTransactionBuilder {
-	keyPair := testKeys.Ed25519KeyPairForTests(1)
-	return &NonSignedTransactionBuilder{
-		&protocol.TransactionBuilder{
-			ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
-			VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-			ContractName:    "BenchmarkToken",
-			MethodName:      "transfer",
-			Signer: &protocol.SignerBuilder{
-				Scheme: protocol.SIGNER_SCHEME_EDDSA,
-				Eddsa: &protocol.EdDSA01SignerBuilder{
-					NetworkType:     protocol.NETWORK_TYPE_TEST_NET,
-					SignerPublicKey: keyPair.PublicKey(),
-				},
+func TriggerTransaction() *TransactionBuilder {
+	return &TransactionBuilder{
+		dontSign: true,
+		builder: &protocol.SignedTransactionBuilder{
+			Transaction: &protocol.TransactionBuilder{
+				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
+				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
+				ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
+				MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),
+				Timestamp:       primitives.TimestampNano(time.Now().UnixNano()),
 			},
-			Timestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		},
 	}
-}
-
-func (t *NonSignedTransactionBuilder) WithMethod(contractName primitives.ContractName, methodName primitives.MethodName) *NonSignedTransactionBuilder {
-	t.builder.ContractName = contractName
-	t.builder.MethodName = methodName
-	return t
-}
-
-func (t *NonSignedTransactionBuilder) Build() *protocol.Transaction {
-	transaction := t.builder.Build()
-	return transaction
-}
-
-func (t *NonSignedTransactionBuilder) Builder() *protocol.TransactionBuilder {
-	return t.builder
 }

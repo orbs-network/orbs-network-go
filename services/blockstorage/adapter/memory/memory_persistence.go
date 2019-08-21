@@ -29,10 +29,7 @@ type aChainOfBlocks struct {
 }
 
 type InMemoryBlockPersistence struct {
-	blockChain struct {
-		sync.RWMutex
-		blocks []*protocol.BlockPairContainer
-	}
+	blockChain aChainOfBlocks
 
 	tracker *synchronization.BlockTracker
 	Logger  log.Logger

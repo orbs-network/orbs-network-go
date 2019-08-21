@@ -9,8 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"time"
-
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -20,17 +19,17 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 )
 
-type Node interface {
-	GracefulShutdown(timeout time.Duration)
-	WaitUntilShutdown()
-}
-
-type node struct {
-	OrbsProcess
-	logic NodeLogic
+type Node struct {
+	govnr.TreeSupervisor
+	logic      NodeLogic
+	cancelFunc context.CancelFunc
+	httpServer *httpserver.HttpServer
+	transport  *tcp.DirectTransport
+	logger     log.Logger
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -39,7 +38,7 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	return metricRegistry
 }
 
-func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
+func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
@@ -53,13 +52,30 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) Node {
 
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
-	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
+	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
-	return &node{
-		logic:       nodeLogic,
-		OrbsProcess: NewOrbsProcess(nodeLogger, ctxCancel, httpServer),
+	n := &Node{
+		logger:     nodeLogger,
+		cancelFunc: ctxCancel,
+		logic:      nodeLogic,
+		transport:  transport,
+		httpServer: httpServer,
 	}
+
+	ethereumConnection.ReportConnectionStatus(ctx)
+
+	n.Supervise(ethereumConnection)
+	n.Supervise(nodeLogic)
+	n.Supervise(transport)
+	n.Supervise(httpServer)
+	return n
+}
+
+func (n *Node) GracefulShutdown(shutdownContext context.Context) {
+	n.logger.Info("Shutting down")
+	n.cancelFunc()
+	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
 }

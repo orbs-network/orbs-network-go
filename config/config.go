@@ -58,6 +58,7 @@ type NodeConfig interface {
 	// consensus context
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
+	ConsensusContextTriggersEnabled() bool
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -82,6 +83,7 @@ type NodeConfig interface {
 	// processor
 	ProcessorArtifactPath() string
 	ProcessorSanitizeDeployedContracts() bool
+	ProcessorPerformWarmUpCompilation() bool
 
 	// ethereum connector (crosschain)
 	EthereumEndpoint() string
@@ -164,6 +166,7 @@ type ConsensusContextConfig interface {
 	GenesisValidatorNodes() map[string]ValidatorNode
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
+	ConsensusContextTriggersEnabled() bool
 }
 
 type PublicApiConfig interface {
@@ -233,6 +236,7 @@ type ValidatorNode interface {
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
+	HexOrbsAddress() string
 }
 
 type HttpServerConfig interface {

@@ -1,17 +1,18 @@
 package gamma
 
 import (
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func (s *GammaServer) addGammaHandlers(router *http.ServeMux) {
+func (s *Server) addGammaHandlers(router *http.ServeMux) {
 	router.HandleFunc("/debug/gamma/shutdown", s.shutdownHandler)
 	router.HandleFunc("/debug/gamma/inc-time", s.incrementTime)
 }
 
-func (s *GammaServer) shutdownHandler(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) shutdownHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
@@ -19,10 +20,10 @@ func (s *GammaServer) shutdownHandler(writer http.ResponseWriter, request *http.
 
 	writer.Write([]byte(`{"status":"shutting down"}`))
 
-	s.GracefulShutdown(1 * time.Second)
+	supervised.ShutdownGracefully(s, 1*time.Second)
 }
 
-func (s *GammaServer) incrementTime(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) incrementTime(writer http.ResponseWriter, request *http.Request) {
 	if request.Method != http.MethodPost {
 		writer.WriteHeader(http.StatusBadRequest)
 		return

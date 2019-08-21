@@ -13,6 +13,15 @@ import (
 	"testing"
 )
 
+func TestOrbsVotingContract_annualFactorize(t *testing.T) {
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		require.EqualValues(t, 75, _annualFactorize(888000))
+		switchToTimeBasedElections()
+		require.EqualValues(t, 72, _annualFactorize(888000))
+	})
+}
+
 func TestOrbsVotingContract_processRewards_getValidatorStakes(t *testing.T) {
 	validators := [][20]byte{{0x01}, {0x02}, {0x03}}
 	stakes := []uint64{100, 200}
@@ -22,7 +31,6 @@ func TestOrbsVotingContract_processRewards_getValidatorStakes(t *testing.T) {
 		_init()
 
 		// prepare
-		_setCurrentElectionBlockNumber(5000)
 		_setNumberOfValidators(len(validators))
 		for i := 0; i < len(validators); i++ {
 			_setValidatorEthereumAddressAtIndex(i, validators[i][:])
@@ -51,7 +59,6 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants(t *testing
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsParticipants(totalVotes, participants, participantStakes)
@@ -73,13 +80,12 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants_TotalAbove
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsParticipants(totalVotes, participants, h.getAllStakes())
 
 		// assert
-		max := ELECTION_PARTICIPATION_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
+		max := ELECTION_PARTICIPATION_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR_BLOCKBASED
 		require.EqualValues(t, max/4, getCumulativeParticipationReward(p2.address[:]))
 		require.EqualValues(t, max/800, getCumulativeParticipationReward(p1.address[:]))
 		require.EqualValues(t, 0, getCumulativeParticipationReward(p3.address[:]))
@@ -93,7 +99,6 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_SmallNumberOf
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsGuardians(totalVotes, guardiansAccumulatedStakes)
@@ -114,13 +119,12 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_SmallNumberOf
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsGuardians(totalVotes, guardiansAccumulatedStakes)
 
 		// assert
-		max := ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
+		max := ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR_BLOCKBASED
 		require.EqualValues(t, max*4/5, getCumulativeGuardianExcellenceReward(p1[:]))
 		require.EqualValues(t, max/5, getCumulativeGuardianExcellenceReward(p2[:]))
 		require.EqualValues(t, 0, getCumulativeParticipationReward(p3[:]))
@@ -138,7 +142,6 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOf
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsGuardians(0, h.getAllStakes())
@@ -172,7 +175,6 @@ func TestOrbsVotingContract_processRewards_processRewardsGuardians_LargeNumberOf
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsGuardians(0, h.getAllStakes())
@@ -208,7 +210,6 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants_LargeNumbe
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 
 		// call
 		_processRewardsGuardians(0, h.getAllStakes())
@@ -220,7 +221,7 @@ func TestOrbsVotingContract_processRewards_processRewardsParticipants_LargeNumbe
 		for i := 0; i < h.getNumActors(); i++ {
 			calcualtedTotalRewardsFromStake += getCumulativeGuardianExcellenceReward(h.getActor(i).address[:])
 		}
-		max := ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
+		max := ELECTION_GUARDIAN_EXCELLENCE_MAX_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR_BLOCKBASED
 		require.True(t, max-calcualtedTotalRewardsFromStake < 10) // rounding error
 		require.EqualValues(t, 79857, getCumulativeGuardianExcellenceReward(p1.address[:]))
 		require.EqualValues(t, 43558, getCumulativeGuardianExcellenceReward(p2.address[:]))
@@ -253,7 +254,7 @@ func TestOrbsVotingContract_processRewards_processRewardsValidators(t *testing.T
 		_processRewardsValidators([][20]byte{p1, p2, p3, p4})
 
 		// assert
-		electionValidatorIntroduction := ELECTION_VALIDATOR_INTRODUCTION_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR
+		electionValidatorIntroduction := ELECTION_VALIDATOR_INTRODUCTION_REWARD * 100 / ANNUAL_TO_ELECTION_FACTOR_BLOCKBASED
 		require.EqualValues(t, electionValidatorIntroduction+341, getCumulativeValidatorReward(p1[:]))
 		require.EqualValues(t, electionValidatorIntroduction+170, getCumulativeValidatorReward(p2[:]))
 		require.EqualValues(t, electionValidatorIntroduction+0, getCumulativeValidatorReward(p3[:]))
@@ -275,7 +276,6 @@ func TestOrbsVotingContract_processRewards_maxRewardForGroup(t *testing.T) {
 	}
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
-		_setCurrentElectionBlockNumber(5000)
 		for i := range tests {
 			cTest := tests[i]
 			reward := _maxRewardForGroup(cTest.max, cTest.total, cTest.percent)

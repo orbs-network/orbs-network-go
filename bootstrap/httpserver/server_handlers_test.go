@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func makeServer(tb testing.TB, papiMock *services.MockPublicApi) HttpServer {
+func makeServer(tb testing.TB, papiMock *services.MockPublicApi) *HttpServer {
 	logger := log.DefaultTestingLogger(tb)
 
 	return NewHttpServer(NewServerConfig(":0", false), logger, papiMock, metric.NewRegistry())
@@ -35,7 +35,7 @@ func TestHttpServer_Robots(t *testing.T) {
 
 	req, _ := http.NewRequest("Get", "/robots.txt", nil)
 	rec := httptest.NewRecorder()
-	s.(*server).robots(rec, req)
+	s.robots(rec, req)
 
 	expectedResponse := "User-agent: *\nDisallow: /\n"
 
@@ -66,7 +66,7 @@ func TestHttpServer_SendTransaction_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).sendTransactionHandler(rec, req)
+	s.sendTransactionHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 }
@@ -84,7 +84,7 @@ func TestHttpServer_SendTransaction_Error(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).sendTransactionHandler(rec, req)
+	s.sendTransactionHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 }
@@ -111,7 +111,7 @@ func TestHttpServer_SendTransactionAsync_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).sendTransactionAsyncHandler(rec, req)
+	s.sendTransactionAsyncHandler(rec, req)
 
 	require.Equal(t, http.StatusAccepted, rec.Code, "should be accepted (202)")
 }
@@ -141,7 +141,7 @@ func TestHttpServer_RunQuery_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).runQueryHandler(rec, req)
+	s.runQueryHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
@@ -160,7 +160,7 @@ func TestHttpServer_RunQuery_Error(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).runQueryHandler(rec, req)
+	s.runQueryHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
@@ -186,7 +186,7 @@ func TestHttpServer_GetTransactionStatus_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getTransactionStatusHandler(rec, req)
+	s.getTransactionStatusHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
@@ -203,7 +203,7 @@ func TestHttpServer_GetTransactionStatus_Error(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getTransactionStatusHandler(rec, req)
+	s.getTransactionStatusHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
@@ -230,7 +230,7 @@ func TestHttpServer_GetTransactionReceiptProof_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getTransactionReceiptProofHandler(rec, req)
+	s.getTransactionReceiptProofHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
@@ -247,7 +247,7 @@ func TestHttpServer_GetTransactionReceiptProof_Error(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getTransactionReceiptProofHandler(rec, req)
+	s.getTransactionReceiptProofHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
@@ -279,7 +279,7 @@ func TestHttpServer_GetBlock_Basic(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getBlockHandler(rec, req)
+	s.getBlockHandler(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 	// actual values are checked in the server_test.go as unit test of internal WriteMembuffResponse
@@ -296,7 +296,7 @@ func TestHttpServer_GetBlock_Error(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "", bytes.NewReader(request.Raw()))
 	rec := httptest.NewRecorder()
-	s.(*server).getBlockHandler(rec, req)
+	s.getBlockHandler(rec, req)
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "should fail with 500")
 	// actual values are checked in the server_test.go as unit test of internal writeErrorResponseAndLog
@@ -308,13 +308,13 @@ func TestHttpServer_Index(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	rec := httptest.NewRecorder()
-	s.(*server).Index(rec, req)
+	s.Index(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code, "should return 200")
 
 	reqNotFound, _ := http.NewRequest("GET", "/does-not-exist", nil)
 	recNotFound := httptest.NewRecorder()
-	s.(*server).Index(recNotFound, reqNotFound)
+	s.Index(recNotFound, reqNotFound)
 
 	require.Equal(t, http.StatusNotFound, recNotFound.Code, "should return 404")
 

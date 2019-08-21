@@ -18,7 +18,7 @@ import (
 )
 
 func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock adapter.Clock, overrideConfigJson string) *inmemory.Network {
-	numNodes := 5 // Comfortable number for LeanHelix if we choose to use it
+	numNodes := 4 // Comfortable number for LeanHelix if we choose to use it
 	logger.Info("creating development network")
 
 	validatorNodes := map[string]config.ValidatorNode{}

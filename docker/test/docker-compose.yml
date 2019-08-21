@@ -1,10 +1,11 @@
 version: '2.1'
 
 services:
-
   ganache:
     image: trufflesuite/ganache-cli
     command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
+    ports:
+      - 8545:8545
     networks:
       orbs-network:
         ipv4_address: 192.168.199.6
@@ -117,25 +118,6 @@ services:
     networks:
       orbs-network:
         ipv4_address: 192.168.199.5
-
-  orbs-e2e:
-    image: orbs:build
-    environment:
-      API_ENDPOINT: http://orbs-network-node-3:8080/api/v1/
-      STRESS_TEST_NUMBER_OF_TRANSACTIONS: 5000
-      STRESS_TEST_FAILURE_RATE: 20
-      STRESS_TEST_TARGET_TPS: 100
-      STRESS_TEST: 'true'
-      ETHEREUM_ENDPOINT: http://ganache:8545/
-      ETHEREUM_PRIVATE_KEY: f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19 # this keypair is generated from the mnemonic passed to ganache on startup
-      ETHEREUM_PUBLIC_KEY: 037a809cc481303d337c1c83d1ba3a2222c7b1b820ac75e3c6f8dc63fa0ed79b18
-      EXTERNAL_TEST: 'true'
-    command: sh -c "sleep 15 && ./test.adapters.sh"
-    sysctls:
-      net.core.somaxconn: 25000
-    networks:
-      orbs-network:
-        ipv4_address: 192.168.199.7
 
 networks:
   orbs-network:

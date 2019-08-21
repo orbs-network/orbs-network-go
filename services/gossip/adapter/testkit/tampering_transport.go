@@ -79,6 +79,14 @@ func NewTamperingTransport(logger log.Logger, nested adapter.Transport) *Tamperi
 	return t
 }
 
+func (t *TamperingTransport) GracefulShutdown(shutdownContext context.Context) {
+	t.nested.GracefulShutdown(shutdownContext)
+}
+
+func (t *TamperingTransport) WaitUntilShutdown(shutdownContext context.Context) {
+	t.nested.WaitUntilShutdown(shutdownContext)
+}
+
 func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
 	t.nested.RegisterListener(listener, listenerNodeAddress)
 }

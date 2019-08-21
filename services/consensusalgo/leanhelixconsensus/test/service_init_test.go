@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -22,7 +23,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 		t.Log("Service should do nothing on start")
 
-		h.expectConsensusContextRequestOrderingCommitteeNotCalled()
+		h.consensusContext.Never("RequestOrderingCommittee", mock.Any, mock.Any)
 
 		h.start(t, ctx)
 
@@ -31,9 +32,9 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 		t.Log("Service should request committee after HandleBlockConsensus is called")
 
-		h.expectConsensusContextRequestOrderingCommittee(1) // we're index 0
+		h.beLastInCommittee()
 
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              nil,
@@ -49,11 +50,11 @@ func TestService_LeaderProposesBlock(t *testing.T) {
 		h := newLeanHelixServiceHarness(0).start(t, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0
+		h.beFirstInCommittee()
 		h.expectConsensusContextRequestBlock(b)
 		h.expectGossipSendLeanHelixMessage()
 
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              nil,

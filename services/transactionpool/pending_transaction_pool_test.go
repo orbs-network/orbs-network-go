@@ -179,6 +179,41 @@ func TestPendingPoolNotifiesOnNewTransactions(t *testing.T) {
 	require.True(t, called, "pending transaction pool did not notify onNewTransaction")
 }
 
+// this test reproduces an issue when a cleanup goroutine wakes up while a commit is taking place. both will attempt to remove elements from the pool
+func TestPendingTransactionPool_CleanupWhileRemove_NoRaces(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		p := makePendingPool()
+
+		old := time.Now().Add(-1 * time.Hour)
+		tx1 := builders.TransferTransaction().WithTimestamp(old).Build()
+		tx2 := builders.TransferTransaction().WithTimestamp(old).Build()
+
+		add(p, tx1, tx2) // will be removed by p.clearTransactionsOlderThan() below
+
+		var hashes = []primitives.Sha256{digest.CalcTxHash(tx2.Transaction())} // tx2 will be removed by both
+		for i := 0; i < 10; i++ {
+			tx := builders.TransferTransaction().Build()
+			hashes = append(hashes, digest.CalcTxHash(tx.Transaction()))
+			add(p, tx) // will be removed by p.remove() below
+		}
+
+		checkpoint := make(chan struct{})
+		go func() {
+			checkpoint <- struct{}{}
+			p.clearTransactionsOlderThan(ctx, primitives.TimestampNano(time.Now().Add(-30*time.Minute).UnixNano()))
+			checkpoint <- struct{}{}
+		}()
+
+		<-checkpoint
+		for _, hash := range hashes {
+			p.remove(ctx, hash, protocol.TRANSACTION_STATUS_COMMITTED)
+		}
+		<-checkpoint
+
+		require.Empty(t, p.getBatch(3, 10000000), "pool wasn't empty after removing al txs")
+	})
+}
+
 func add(p *pendingTxPool, txs ...*protocol.SignedTransaction) {
 	for _, tx := range txs {
 		p.add(tx, nodeAddress)

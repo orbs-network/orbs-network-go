@@ -9,21 +9,28 @@
 package elections_systemcontract
 
 import (
+	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
+	"time"
 )
 
 var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumContractAddress, getVotingEthereumContractAddress, getValidatorsEthereumContractAddress, getValidatorsRegistryEthereumContractAddress,
 	unsafetests_setTokenEthereumContractAddress, unsafetests_setGuardiansEthereumContractAddress,
 	unsafetests_setVotingEthereumContractAddress, unsafetests_setValidatorsEthereumContractAddress, unsafetests_setValidatorsRegistryEthereumContractAddress,
-	unsafetests_setVariables, unsafetests_setElectedValidators, unsafetests_setElectedBlockNumber,
+	unsafetests_setVariables, unsafetests_setElectedValidators, unsafetests_setCurrentElectedBlockNumber,
+	unsafetests_setCurrentElectionTimeNanos, unsafetests_setElectionMirrorPeriodInSeconds, unsafetests_setElectionVotePeriodInSeconds, unsafetests_setElectionPeriodInSeconds,
 	mirrorDelegationByTransfer, mirrorDelegation,
-	processVoting,
+	processVoting, isProcessingPeriod, hasProcessingStarted, processTrigger,
 	getElectionPeriod, getCurrentElectionBlockNumber, getNextElectionBlockNumber, getEffectiveElectionBlockNumber, getNumberOfElections,
-	getCurrentEthereumBlockNumber, getProcessingStartBlockNumber, getMirroringEndBlockNumber,
+	getElectionPeriodInNanos, getEffectiveElectionTimeInNanos, getCurrentElectionTimeInNanos, getNextElectionTimeInNanos,
+	getCurrentEthereumBlockNumber, getProcessingStartBlockNumber, isElectionOverdue, getMirroringEndBlockNumber,
 	getElectedValidatorsOrbsAddress, getElectedValidatorsEthereumAddress, getElectedValidatorsEthereumAddressByBlockNumber, getElectedValidatorsOrbsAddressByBlockHeight,
 	getElectedValidatorsOrbsAddressByIndex, getElectedValidatorsEthereumAddressByIndex, getElectedValidatorsBlockNumberByIndex, getElectedValidatorsBlockHeightByIndex,
 	getCumulativeParticipationReward, getCumulativeGuardianExcellenceReward, getCumulativeValidatorReward,
 	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidatorStake, getValidatorVote, getExcellenceProgramGuardians,
+	switchToTimeBasedElections,
 )
 var SYSTEM = sdk.Export(_init)
 
@@ -43,8 +50,8 @@ func unsafetests_setElectedValidators(joinedAddresses []byte) {
 	_setElectedValidatorsOrbsAddressAtIndex(index, joinedAddresses)
 }
 
-func unsafetests_setElectedBlockNumber(blockNumber uint64) {
-	_setCurrentElectionBlockNumber(blockNumber)
+func unsafetests_setCurrentElectedBlockNumber(blockNumber uint64) {
+	_setElectedValidatorsBlockNumberAtIndex(getNumberOfElections(), safeuint64.Sub(blockNumber, getElectionPeriod()))
 }
 
 func unsafetests_setTokenEthereumContractAddress(addr string) {
@@ -65,4 +72,22 @@ func unsafetests_setValidatorsRegistryEthereumContractAddress(addr string) {
 
 func unsafetests_setGuardiansEthereumContractAddress(addr string) {
 	ETHEREUM_GUARDIANS_ADDR = addr
+}
+
+func unsafetests_setCurrentElectionTimeNanos(time uint64) {
+	fmt.Printf("elections : set electiontime to %d period %d\n", time, getElectionPeriodInNanos())
+	_setElectedValidatorsTimeInNanosAtIndex(getNumberOfElections(), safeuint64.Sub(time, getElectionPeriodInNanos()))
+	fmt.Printf("elections : compare to current block %d, current block time :%d\n", ethereum.GetBlockNumber(), ethereum.GetBlockTime())
+}
+
+func unsafetests_setElectionMirrorPeriodInSeconds(period uint64) {
+	MIRROR_PERIOD_LENGTH_IN_NANOS = period * uint64(time.Second.Nanoseconds())
+}
+
+func unsafetests_setElectionVotePeriodInSeconds(period uint64) {
+	VOTE_PERIOD_LENGTH_IN_NANOS = period * uint64(time.Second.Nanoseconds())
+}
+
+func unsafetests_setElectionPeriodInSeconds(period uint64) {
+	ELECTION_PERIOD_LENGTH_IN_NANOS = period * uint64(time.Second.Nanoseconds())
 }

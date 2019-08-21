@@ -8,6 +8,7 @@ package leanhelixconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/lean-helix-go"
 	lhmetrics "github.com/orbs-network/lean-helix-go/instrumentation/metrics"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
@@ -17,7 +18,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -31,7 +31,8 @@ import (
 
 var LogTag = log.Service("consensus-algo-lean-helix")
 
-type service struct {
+type Service struct {
+	govnr.TreeSupervisor
 	blockStorage     services.BlockStorage
 	membership       *membership
 	com              *communication
@@ -39,7 +40,7 @@ type service struct {
 	logger           log.Logger
 	config           config.LeanHelixConsensusConfig
 	metrics          *metrics
-	leanHelix        *leanhelix.LeanHelix
+	leanHelix        *leanhelix.MainLoop
 	lastCommitTime   time.Time
 	lastElectionTime time.Time
 }
@@ -72,7 +73,7 @@ func NewLeanHelixConsensusAlgo(
 	config config.LeanHelixConsensusConfig,
 	metricFactory metric.Factory,
 
-) services.ConsensusAlgoLeanHelix {
+) *Service {
 	ctx := trace.NewContext(parentContext, "LeanHelix.Run")
 
 	logger := parentLogger.WithTags(LogTag, trace.LogFieldFrom(ctx))
@@ -86,7 +87,7 @@ func NewLeanHelixConsensusAlgo(
 
 	instanceId := CalcInstanceId(config.NetworkType(), config.VirtualChainId())
 
-	s := &service{
+	s := &Service{
 		com:           com,
 		blockStorage:  blockStorage,
 		logger:        logger,
@@ -96,28 +97,22 @@ func NewLeanHelixConsensusAlgo(
 		leanHelix:     nil,
 	}
 
-	// TODO https://github.com/orbs-network/orbs-network-go/issues/786 Implement election trigger here, run its goroutine under "supervised"
-	electionTrigger := NewExponentialBackoffElectionTrigger(logger, config.LeanHelixConsensusRoundTimeoutInterval(), s.onElection) // Configure to be ~5 times the minimum wait for transactions (consensus context)
-	logger.Info("Election trigger set the first time", log.String("election-trigger-timeout", config.LeanHelixConsensusRoundTimeoutInterval().String()))
-
 	leanHelixConfig := &lh.Config{
-		InstanceId:      instanceId,
-		Communication:   com,
-		Membership:      membership,
-		BlockUtils:      provider,
-		KeyManager:      mgr,
-		ElectionTrigger: electionTrigger,
-		Logger:          NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
+		InstanceId:          instanceId,
+		Communication:       com,
+		Membership:          membership,
+		BlockUtils:          provider,
+		KeyManager:          mgr,
+		ElectionTimeoutOnV0: config.LeanHelixConsensusRoundTimeoutInterval(),
+		Logger:              NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
 	}
 
-	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix() (not starting its goroutine yet)")
-	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit)
+	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix()", log.String("election-timeout", leanHelixConfig.ElectionTimeoutOnV0.String()))
+	s.leanHelix = leanhelix.NewLeanHelix(leanHelixConfig, s.onCommit, nil)
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
-		supervised.GoForever(ctx, logger, func() {
-			logger.Info("NewLeanHelixConsensusAlgo() LeanHelix is active consensus algo: starting its goroutine")
-			s.leanHelix.Run(ctx)
-		})
+		waiter := s.leanHelix.Run(ctx)
+		s.Supervise(waiter)
 		gossip.RegisterLeanHelixHandler(s)
 	} else {
 		parentLogger.Info("NewLeanHelixConsensusAlgo() LeanHelix is not the active consensus algo so not starting its goroutine, only registering for block validation")
@@ -128,7 +123,7 @@ func NewLeanHelixConsensusAlgo(
 	return s
 }
 
-func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
 
 	blockType := input.BlockType
 	blockPair := input.BlockPair
@@ -179,7 +174,7 @@ func (s *service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 	return nil, nil
 }
 
-func (s *service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
+func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
 	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
 	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
 
@@ -202,7 +197,7 @@ func ExtractBlockProof(blockPair *protocol.BlockPairContainer) (primitives.LeanH
 	return blockPair.TransactionsBlock.BlockProof.LeanHelix(), nil
 }
 
-func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	consensusRawMessage := &lh.ConsensusRawMessage{
 		Content: input.Message.Content,
 		Block:   ToLeanHelixBlock(input.Message.BlockPair),
@@ -211,7 +206,7 @@ func (s *service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 	return nil, nil
 }
 
-func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
+func (s *Service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", logfields.BlockHeight(primitives.BlockHeight(block.Height())))
 	blockPairWrapper := block.(*BlockPairWrapper)
@@ -223,7 +218,7 @@ func (s *service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
-		logger.Info("onCommit - saving block to storage error: ", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+		logger.Info("onCommit - error saving block to storage", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Error(err))
 	}
 	now := time.Now()
 	s.metrics.lastCommittedTime.Update(now.UnixNano())
@@ -247,7 +242,7 @@ func CreateTransactionBlockProof(blockPair *protocol.BlockPairContainer, blockPr
 	}).Build()
 }
 
-func (s *service) onElection(m lhmetrics.ElectionMetrics) {
+func (s *Service) onElection(m lhmetrics.ElectionMetrics) {
 	memberIdStr := m.CurrentLeaderMemberId().String()[:6]
 	s.metrics.currentLeaderMemberId.Update(string(memberIdStr))
 	s.metrics.currentElectionCount.Update(int64(m.CurrentView()))
@@ -257,7 +252,7 @@ func (s *service) onElection(m lhmetrics.ElectionMetrics) {
 	s.logger.Info("onElection()", log.String("lh-leader-member-id", memberIdStr), log.Int64("lh-view", int64(m.CurrentView())))
 }
 
-func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+func (s *Service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
 		return errors.Errorf("saveToBlockStorage with block height 0 - genesis is not supported")

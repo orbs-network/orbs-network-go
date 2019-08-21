@@ -16,8 +16,8 @@ import (
 )
 
 func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withValidateConsensusAlgos(1).
 			start(ctx)
@@ -29,8 +29,8 @@ func TestValidateBlockWithValidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			allowingErrorsMatching("protocol version mismatch in.*").
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -58,8 +58,8 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestValidateBlockWithValidHeight(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).
@@ -75,8 +75,8 @@ func TestValidateBlockWithValidHeight(t *testing.T) {
 }
 
 func TestValidateBlockWithInvalidHeight(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
 			withValidateConsensusAlgos(1).

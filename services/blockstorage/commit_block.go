@@ -9,9 +9,9 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
@@ -19,15 +19,15 @@ import (
 	"time"
 )
 
-func (s *service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *Service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	return s.commitBlock(ctx, input, false)
 }
 
-func (s *service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
+func (s *Service) CommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 	return s.commitBlock(ctx, input, true)
 }
 
-func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
+func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	proposedBlockHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
@@ -62,7 +62,7 @@ func (s *service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 
 	if notifyNodeSync {
-		supervised.GoOnce(logger, func() {
+		govnr.Once(logfields.GovnrErrorer(logger), func() {
 			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
 			defer cancel()
 			s.nodeSync.HandleBlockCommitted(shortCtx)

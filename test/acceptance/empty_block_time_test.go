@@ -19,7 +19,7 @@ import (
 func TestIncomingTransactionTriggersExactlyOneBlock(t *testing.T) {
 	newHarness().
 		WithEmptyBlockTime(1*time.Second).
-		Start(t, func(tb testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(tb testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			time.Sleep(100 * time.Millisecond)
 			heightBeforeTx, _ := network.BlockPersistence(0).GetLastBlockHeight()
@@ -38,7 +38,7 @@ func TestIncomingTransactionTriggersImmediateBlockClosure(t *testing.T) {
 		WithEmptyBlockTime(1*time.Hour).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		WithLogFilters(log.ExcludeEntryPoint("BlockSync")).
-		Start(t, func(tb testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(tb testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 
 			network.WaitForBlock(ctx, 1) // wait for network to start closing blocks

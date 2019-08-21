@@ -7,11 +7,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"os"
 )
 
@@ -39,8 +41,12 @@ func main() {
 
 	logger := instrumentation.GetLogger(*pathToLog, *silentLog, cfg)
 
-	bootstrap.NewNode(
+	node := bootstrap.NewNode(
 		cfg,
 		logger,
-	).WaitUntilShutdown()
+	)
+
+	supervised.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
+
+	node.WaitUntilShutdown(context.Background())
 }

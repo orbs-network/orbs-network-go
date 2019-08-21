@@ -8,8 +8,10 @@ package tcp
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -19,16 +21,17 @@ type transportQueue struct {
 	networkAddress string
 	maxBytes       int
 	maxMessages    int
-	disabled       bool // not under mutex on purpose
 
 	protected struct {
 		sync.Mutex
 		bytesLeft int
+		disabled  bool // not under mutex on purpose
 	}
 	usagePercentageMetric *metric.Gauge
+	logger                log.Logger
 }
 
-func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory) *transportQueue {
+func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Factory, peerNodeAddress string) *transportQueue {
 	q := &transportQueue{
 		channel:     make(chan *adapter.TransportData, maxSizeMessages),
 		maxBytes:    maxSizeBytes,
@@ -36,16 +39,12 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	}
 	q.protected.bytesLeft = maxSizeBytes
 
-	q.usagePercentageMetric = metricFactory.NewGauge("Gossip.OutgoingConnection.Queue.Usage.Percent")
+	q.usagePercentageMetric = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
 
 	return q
 }
 
 func (q *transportQueue) Push(data *adapter.TransportData) error {
-	if q.disabled {
-		return nil
-	}
-
 	err := q.consumeBytes(data)
 	if err != nil {
 		return err
@@ -83,16 +82,35 @@ func (q *transportQueue) Clear(ctx context.Context) {
 }
 
 func (q *transportQueue) Disable() {
-	q.disabled = true
+	q.protected.Lock()
+	defer q.protected.Unlock()
+	q.protected.disabled = true
 }
 
 func (q *transportQueue) Enable() {
-	q.disabled = false
+	q.protected.Lock()
+	defer q.protected.Unlock()
+	q.protected.disabled = false
+}
+
+func (q *transportQueue) disabled() bool {
+	q.protected.Lock()
+	defer q.protected.Unlock()
+	return q.protected.disabled
+}
+
+func (q *transportQueue) OnNewConnection(ctx context.Context) {
+	q.Clear(ctx)
+	q.Enable()
 }
 
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	q.protected.Lock()
 	defer q.protected.Unlock()
+
+	if q.protected.disabled {
+		return errors.Errorf("attempted to push to a disabled queue")
+	}
 
 	dataSize := data.TotalSize()
 	if dataSize > q.protected.bytesLeft {

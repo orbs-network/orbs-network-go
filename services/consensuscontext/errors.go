@@ -12,7 +12,6 @@ var ErrMismatchedProtocolVersion = errors.New("ErrMismatchedProtocolVersion")
 var ErrMismatchedVirtualChainID = errors.New("ErrMismatchedVirtualChainID")
 var ErrMismatchedBlockHeight = errors.New("ErrMismatchedBlockHeight")
 var ErrMismatchedPrevBlockHash = errors.New("ErrMismatchedPrevBlockHash")
-var ErrInvalidBlockTimestamp = errors.New("ErrInvalidBlockTimestamp")
 
 var ErrFailedTransactionOrdering = errors.New("ErrFailedTransactionOrdering")
 
@@ -23,3 +22,9 @@ var ErrMismatchedTxHashPtrToActualTxBlock = errors.New("ErrMismatchedTxHashPtrTo
 var ErrGetStateHash = errors.New("ErrGetStateHash failed in GetStateHash() so cannot retrieve pre-execution state diff merkleRoot from previous block")
 var ErrMismatchedPreExecutionStateMerkleRoot = errors.New("ErrMismatchedPreExecutionStateMerkleRoot pre-execution state diff merkleRoot is different between results block header and extracted from state storage for previous block")
 var ErrProcessTransactionSet = errors.New("ErrProcessTransactionSet failed in ProcessTransactionSet()")
+
+var ErrTriggerDisabledAndTriggerExists = errors.New("ErrTriggerDisabledAndTriggerExists Trigger Transaction exists when it is not suppose to be")
+var ErrTriggerEnabledAndTriggerMissing = errors.New("ErrTriggerEnabledAndTriggerMissing Trigger Transaction missing from end of block transactions")
+var ErrTriggerEnabledAndTriggerNotLast = errors.New("ErrTriggerEnabledAndTriggerNotLast A Trigger Transaction exists that is not the correct place (last)")
+var ErrTriggerEnabledAndTriggerInvalid = errors.New("ErrTriggerEnabledAndTriggerInvalid Trigger Transaction has some invalid values")
+var ErrTriggerEnabledAndTriggerInvalidTime = errors.New("ErrTriggerEnabledAndTriggerInvalidTime Trigger Transaction should have same time as block")

@@ -8,31 +8,65 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func newLeaderHarnessWaitingForCommittedMessages(t *testing.T, ctx context.Context) *harness {
-	h := newHarness(t, true)
+func newLeaderHarnessWaitingForCommittedMessages(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
+	h := newHarness(parent, true)
 	h.expectNewBlockProposalNotRequested()
 	h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
 	h.createService(ctx)
-	h.verifyCommitBroadcastViaGossip(t)
+	h.verifyCommitBroadcastViaGossip(parent.T)
 	return h
 }
 
 func TestLeaderInit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		h.verifyHandlerRegistrations(t)
 		h.verifyNewBlockProposalNotRequested(t)
 	})
 }
 
+// this test protects against a rare race where we loaded blocks from storage and node sync didn't update followers before leader started
+// see https://circleci.com/gh/orbs-network/orbs-network-go/17275#tests/containers/2
+func TestLeaderInitWithExistingBlocks_DoesNotCreateGenesisBlock(t *testing.T) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		block17 := builders.BlockPair().WithHeight(17).Build()
+
+		h := newHarness(parent, true)
+		h.expectNewBlockProposalNotRequested()
+		h.expectCommitBroadcastViaGossip(17, h.config.NodeAddress())
+
+		// resetting because go-mock doesn't register later When() calls as taking precedence over older calls, and newHarness() stubs this same method with a no-op
+		h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Call(func(handler handlers.ConsensusBlocksHandler) {
+			// this recreates how block storage updates us on last committed block on init (via the call to RegisterConsensusBlocksHandler)
+			_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+				Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+				BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
+				BlockPair:              block17,
+				PrevCommittedBlockPair: nil,
+			})
+			require.NoError(t, err, "failed calling HandleBlockConsensus")
+
+		}).Times(1)
+
+		h.createService(ctx)
+
+		h.verifyCommitBroadcastViaGossip(t)
+	})
+}
+
 func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -57,8 +91,8 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), fail to generate height 1")
 
@@ -81,8 +115,8 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -107,8 +141,8 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Bad signatures nodes confirmed height 0 (genesis), commit height 0 again")
 
@@ -123,8 +157,8 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 }
 
 func TestLeaderIgnoresNonValidatorSigners(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Non validator nodes confirmed height 0 (genesis), commit height 0 again")
 
@@ -139,8 +173,8 @@ func TestLeaderIgnoresNonValidatorSigners(t *testing.T) {
 }
 
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
 
@@ -164,8 +198,8 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 1000, commit height 0 (genesis) again")
 

@@ -11,7 +11,32 @@ jobs:
       - run: go get -u github.com/orbs-network/go-junit-report
       - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
       - run: sudo apt-get install -y nodejs
-      - run: ./test.sh
+      - run:
+          command: ./test.sh
+          no_output_timeout: 15m
+      - store_artifacts:
+          path: _out
+          destination: test-output
+      - store_artifacts:
+          path: /go/src/github.com/orbs-network/orbs-network-go/_reports
+          destination: test-results
+      - store_test_results:
+          path: _reports
+
+  races:
+    docker:
+      - image: circleci/golang:1.11.4
+    resource_class: large
+    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
+      - run: sudo apt-get install -y nodejs
+      - run:
+          command: ./test.races.sh
+          no_output_timeout: 25m
       - store_artifacts:
           path: _out
           destination: test-output
@@ -69,32 +94,34 @@ jobs:
 
   e2e:
     machine: true
+    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
+      - run: ./.circleci/install-go.sh
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       # Update docker-compose
       - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Benchmark Consensus"
           environment:
             CONSENSUSALGO: benchmark
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
           command: ./docker/test/test.sh
+          name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
       - run: ./.circleci/release-internal.sh
+      - store_test_results:
+          path: _reports
       - store_artifacts:
           path: _logs
-
-
-#  notify_github_about_dashboard:
-#    machine: true
-#    steps:
-#      - checkout
-#      - run: python ./.circleci/post-dashboard-link.py
+      - store_artifacts:
+          path: _out
 
   success:
     machine: true
@@ -109,6 +136,18 @@ jobs:
       - run: ./.circleci/set-aws-credentials.sh
       - run: ./.circleci/deploy-testnet.sh
 
+  ganache_related_tests:
+    machine: true
+    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
+    steps:
+      - checkout
+      - run: ./.circleci/install-go.sh
+      - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
+      - run: ./docker/test/ganache-related-test.sh
+      - store_test_results:
+          path: _reports
+    
   e2e_testnet_benchmark:
     docker:
       - image: circleci/golang:1.11.4
@@ -131,7 +170,7 @@ jobs:
 
   deploy_new_chain_pr_only:
     docker:
-    - image: circleci/golang:1.11.4
+    - image: itamararjuan/golang_with_node_aws
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
@@ -141,7 +180,12 @@ jobs:
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
+      - run: go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/chain_on_pr.sh
+      - store_test_results:
+          path: _reports
+      - store_artifacts:
+          path: _out
 
   release:
     machine: true
@@ -158,15 +202,21 @@ workflows:
             tags:
               only: /^v.*/
 
+      - races
+
       - deploy_new_chain_pr_only:
           requires:
             - e2e
             - tests
+          filters:
+            branches:
+              ignore: master
       - e2e:
           filters:
             tags:
               only: /^v.*/
       - flakiness
+      - ganache_related_tests
       - success:
           requires:
             - tests

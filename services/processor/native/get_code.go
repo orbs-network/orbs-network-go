@@ -52,21 +52,26 @@ func (s *service) retrieveContractInfo(ctx context.Context, executionContextId p
 func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
 	start := time.Now()
 
-	codeBytes, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
+	rawCodeFiles, err := s.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
-	code, err := s.sanitizeDeployedSourceCode(string(codeBytes))
-	if err != nil {
-		return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
+	var code []string
+
+	for _, rawCodeFile := range rawCodeFiles {
+		sanitizedCode, err := s.sanitizeDeployedSourceCode(rawCodeFile)
+		if err != nil {
+			return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
+		}
+		code = append(code, sanitizedCode)
 	}
 
 	// TODO(v1): replace with given wrapped given context
 	ctx, cancel := context.WithTimeout(context.Background(), adapter.MAX_COMPILATION_TIME)
 	defer cancel()
 
-	newContractInfo, err := s.compiler.Compile(ctx, code)
+	newContractInfo, err := s.compiler.Compile(ctx, code...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
 	}
@@ -90,9 +95,72 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 	return newContractInfo, nil
 }
 
-func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]byte, error) {
+func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
+	codeParts, err := s.getCodeParts(ctx, executionContextId, contractName)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []string
+	for i := uint32(0); i < codeParts; i++ {
+		part, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, part)
+	}
+
+	return results, nil
+}
+
+func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PART)
+
+	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+		ContextId:     primitives.ExecutionContextId(executionContextId),
+		OperationName: SDK_OPERATION_NAME_SERVICE,
+		MethodName:    "callMethod",
+		InputArguments: []*protocol.Argument{
+			(&protocol.ArgumentBuilder{
+				// serviceName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: string(systemContractName),
+			}).Build(),
+			(&protocol.ArgumentBuilder{
+				// methodName
+				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
+				StringValue: string(systemMethodName),
+			}).Build(),
+			(&protocol.ArgumentBuilder{
+				// inputArgs
+				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
+				BytesValue: argsToArgumentArray(string(contractName), index).Raw(),
+			}).Build(),
+		},
+		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	ArgumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
+	argIterator := ArgumentArray.ArgumentsIterator()
+	if !argIterator.HasNext() {
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	arg0 := argIterator.NextArguments()
+	if !arg0.IsTypeBytesValue() {
+		return "", errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	}
+	return string(arg0.BytesValue()), nil
+}
+
+func (s *service) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
+	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PARTS)
 
 	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
@@ -118,19 +186,21 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
+
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+		return 0, errors.Errorf("callMethod Sdk.Service of _Deployments.getCodeParts returned corrupt output value")
 	}
 	ArgumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
 	argIterator := ArgumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+		return 0, errors.Errorf("callMethod Sdk.Service of _Deployments.getCodeParts returned corrupt output value")
 	}
 	arg0 := argIterator.NextArguments()
-	if !arg0.IsTypeBytesValue() {
-		return nil, errors.Errorf("callMethod Sdk.Service of _Deployments.getCode returned corrupt output value")
+	if !arg0.IsTypeUint32Value() {
+		return 0, errors.Errorf("callMethod Sdk.Service of _Deployments.getCodeParts returned corrupt output value")
 	}
-	return arg0.BytesValue(), nil
+
+	return arg0.Uint32Value(), nil
 }

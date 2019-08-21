@@ -8,24 +8,27 @@ package signer
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/services/signer"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 )
 
-type SignerServer struct {
-	bootstrap.OrbsProcess
-	service services.Vault
+type Server struct {
+	govnr.TreeSupervisor
+	service    services.Vault
+	cancelFunc context.CancelFunc
+	httpServer *httpServer
 }
 
-type SignerServerConfig interface {
+type ServerConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	HttpAddress() string
 }
 
-func StartSignerServer(cfg SignerServerConfig, logger log.Logger) *SignerServer {
+func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
 	_, cancel := context.WithCancel(context.Background())
 
 	service := signer.NewService(cfg, logger)
@@ -41,10 +44,17 @@ func StartSignerServer(cfg SignerServerConfig, logger log.Logger) *SignerServer 
 
 	httpServer.Router().HandleFunc("/sign", api.SignHandler)
 
-	s := &SignerServer{
-		OrbsProcess: bootstrap.NewOrbsProcess(logger, cancel, httpServer),
-		service:     service,
+	s := &Server{
+		service:    service,
+		cancelFunc: cancel,
+		httpServer: httpServer,
 	}
 
+	s.Supervise(httpServer)
+
 	return s
+}
+
+func (s *Server) GracefulShutdown(shutdownContext context.Context) {
+	supervised.ShutdownAllGracefully(shutdownContext, s.httpServer)
 }

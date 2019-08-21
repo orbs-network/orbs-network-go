@@ -8,16 +8,17 @@ package tcp
 
 import (
 	"context"
-	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
+	"sync/atomic"
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
@@ -26,6 +27,8 @@ const SEND_QUEUE_MAX_MESSAGES = 1000
 const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 
 var LogTag = log.String("adapter", "gossip")
+
+type GossipPeers map[string]config.GossipPeer
 
 type metrics struct {
 	incomingConnectionAcceptSuccesses *metric.Gauge
@@ -41,9 +44,10 @@ type metrics struct {
 	outgoingMessageSize *metric.Histogram
 }
 
-type lockableOutgoingQueues struct {
+type lockableClientConnections struct {
 	sync.RWMutex
-	peers map[string]*transportQueue
+	peers  map[string]*clientConnection
+	config GossipPeers // this is important - use own copy of peers, otherwise nodes in e2e tests that run in process can mutate each other's config
 }
 
 type lockableTransportServer struct {
@@ -54,15 +58,17 @@ type lockableTransportServer struct {
 }
 
 type DirectTransport struct {
-	config config.GossipTransportConfig
-	logger log.Logger
+	atomicConfig atomic.Value
+	logger       log.Logger
 
-	outgoingQueues *lockableOutgoingQueues
+	clientConnections *lockableClientConnections
 
 	server *lockableTransportServer
 
 	metrics        *metrics
 	metricRegistry metric.Registry
+	serverClosed   chan struct{}
+	cancelServer   context.CancelFunc
 }
 
 func getMetrics(registry metric.Registry) *metrics {
@@ -79,26 +85,33 @@ func getMetrics(registry metric.Registry) *metrics {
 	}
 }
 
-func NewDirectTransport(ctx context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *DirectTransport {
+func NewDirectTransport(parent context.Context, config config.GossipTransportConfig, logger log.Logger, registry metric.Registry) *DirectTransport {
+	serverCtx, cancelServer := context.WithCancel(parent)
+
 	t := &DirectTransport{
-		config:         config,
 		logger:         logger.WithTags(LogTag),
 		metricRegistry: registry,
 
-		outgoingQueues: newLockableOutgoingQueues(),
-		server:         newDirectTransportServer(),
+		clientConnections: newLockableClientConnections(),
+		server:            newDirectTransportServer(),
 
 		metrics: getMetrics(registry),
+
+		cancelServer: cancelServer,
 	}
 
+	t.atomicConfig.Store(config)
+
 	// server goroutine
-	supervised.GoForever(ctx, t.logger, func() {
-		t.serverMainLoop(ctx, t.config.GossipListenPort())
+	handle := govnr.Forever(serverCtx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
+		t.serverMainLoop(serverCtx, config.GossipListenPort())
 	})
+	t.serverClosed = handle.Done()
+	handle.MarkSupervised() // TODO use real supervision
 
 	// client goroutines
-	for peerNodeAddress, peer := range t.config.GossipPeers() {
-		t.connectForever(ctx, peerNodeAddress, peer)
+	for peerNodeAddress, peer := range config.GossipPeers() {
+		t.connectForever(parent, peerNodeAddress, peer)
 	}
 
 	return t
@@ -112,37 +125,63 @@ func newDirectTransportServer() *lockableTransportServer {
 	}
 }
 
-func newLockableOutgoingQueues() *lockableOutgoingQueues {
-	return &lockableOutgoingQueues{
-		peers: make(map[string]*transportQueue),
+func newLockableClientConnections() *lockableClientConnections {
+	return &lockableClientConnections{
+		peers:  make(map[string]*clientConnection),
+		config: make(GossipPeers),
 	}
+}
+
+func (t *DirectTransport) config() config.GossipTransportConfig {
+	if c, ok := t.atomicConfig.Load().(config.GossipTransportConfig); ok {
+		return c
+	}
+
+	return nil
 }
 
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
 func (t *DirectTransport) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
-	t.outgoingQueues.Lock()
-	defer t.outgoingQueues.Unlock()
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
 
-	if peerNodeAddress != t.config.NodeAddress().KeyForMap() {
-
-		newQueue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, t.metricRegistry)
-
-		peerAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
-		newQueue.networkAddress = peerAddress
-		newQueue.Disable() // until connection is established
-
-		t.outgoingQueues.peers[peerNodeAddress] = newQueue
-
-		supervised.GoForever(bgCtx, t.logger, func() {
-			t.clientMainLoop(bgCtx, newQueue) // avoid referencing queue map not under lock
-		})
+	if t.config().NodeAddress().KeyForMap() != peerNodeAddress {
+		t.clientConnections.config[peerNodeAddress] = peer
+		client := newClientConnection(peer, t.logger, t.metricRegistry, t.metrics, t.config())
+		t.clientConnections.peers[peerNodeAddress] = client
+		client.connect(bgCtx)
 	}
 }
 
-func (t *DirectTransport) AddPeer(bgCtx context.Context, address primitives.NodeAddress, peer config.GossipPeer) {
-	t.config.GossipPeers()[address.KeyForMap()] = peer
-	t.connectForever(bgCtx, address.KeyForMap(), peer)
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
+	oldPeers := t.readOldPeerConfig()
+	peersToRemove, peersToAdd := peerDiff(oldPeers, newPeers)
+
+	t.disconnectAllClients(bgCtx, peersToRemove)
+
+	for peerNodeAddress, peer := range peersToAdd {
+		t.connectForever(bgCtx, peerNodeAddress, peer)
+	}
+}
+
+func (t *DirectTransport) disconnectAllClients(ctx context.Context, peersToDisconnect GossipPeers) {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for key, peer := range peersToDisconnect {
+		delete(t.clientConnections.config, key)
+		if client, found := t.clientConnections.peers[key]; found {
+			select {
+			case <-client.disconnect():
+				delete(t.clientConnections.peers, key)
+			case <-ctx.Done():
+				t.logger.Info("system shutdown while waiting for clients to disconnect")
+			}
+		} else {
+			t.logger.Error("attempted to disconnect a client that was not connected", log.String("missing-peer", peer.HexOrbsAddress()))
+		}
+
+	}
 }
 
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
@@ -154,19 +193,21 @@ func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, l
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
 func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData) error {
-	t.outgoingQueues.RLock()
-	defer t.outgoingQueues.RUnlock()
+	t.clientConnections.RLock()
+	defer t.clientConnections.RUnlock()
 
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
-		for _, peerQueue := range t.outgoingQueues.peers {
-			t.addDataToOutgoingPeerQueue(data, peerQueue)
+		for _, client := range t.clientConnections.peers {
+			client.addDataToOutgoingPeerQueue(ctx, data)
+			t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 		}
 		return nil
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, recipientPublicKey := range data.RecipientNodeAddresses {
-			if peerQueue, found := t.outgoingQueues.peers[recipientPublicKey.KeyForMap()]; found {
-				t.addDataToOutgoingPeerQueue(data, peerQueue)
+			if client, found := t.clientConnections.peers[recipientPublicKey.KeyForMap()]; found {
+				client.addDataToOutgoingPeerQueue(ctx, data)
+				t.metrics.outgoingMessageSize.Record(int64(data.TotalSize()))
 			} else {
 				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
 			}
@@ -193,15 +234,48 @@ func (t *DirectTransport) setServerPort(v int) {
 }
 
 func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
-	t.outgoingQueues.RLock()
-	defer t.outgoingQueues.RUnlock()
+	t.clientConnections.RLock()
+	defer t.clientConnections.RUnlock()
 
-	for _, queue := range t.outgoingQueues.peers {
-		if queue.disabled {
+	for _, client := range t.clientConnections.peers {
+		if client.queue.disabled() {
 			return false
 		}
 	}
 	return true
+}
+
+func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
+	t.logger.Info("Shutting down")
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for _, client := range t.clientConnections.peers {
+		client.disconnect()
+	}
+	t.cancelServer()
+}
+
+func (t *DirectTransport) WaitUntilShutdown(shutdownContext context.Context) {
+	t.clientConnections.Lock()
+	defer t.clientConnections.Unlock()
+	for _, client := range t.clientConnections.peers {
+		t.waitFor(shutdownContext, client.closed)
+	}
+	t.waitFor(shutdownContext, t.serverClosed)
+}
+
+func (t *DirectTransport) waitFor(shutdownContext context.Context, closed chan struct{}) {
+	select {
+	case <-closed:
+	case <-shutdownContext.Done():
+		t.logger.Error("failed shutting down within shutdown context")
+	}
+}
+
+func (t *DirectTransport) readOldPeerConfig() GossipPeers {
+	t.clientConnections.RLock()
+	defer t.clientConnections.RUnlock()
+	return t.clientConnections.config
 }
 
 func calcPaddingSize(size uint32) uint32 {

@@ -9,7 +9,7 @@ package validators
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/test/crypto/validators"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 
 func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 	wrongHash := hash.CalcSha256([]byte{1})
-	block := validators.AStructurallyValidBlock()
+	block := builders.BlockPairBuilder().Build()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -34,7 +34,7 @@ func TestValidateTransactionsBlockMerkleRoot(t *testing.T) {
 
 func TestValidateTransactionsBlockMetadataHash(t *testing.T) {
 	wrongHash := hash.CalcSha256([]byte{1})
-	block := validators.AStructurallyValidBlock()
+	block := builders.BlockPairBuilder().Build()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -50,9 +50,9 @@ func TestValidateTransactionsBlockMetadataHash(t *testing.T) {
 func TestValidateReceiptsMerkleRoot(t *testing.T) {
 	manualReceiptsMerkleRoot1 := hash.CalcSha256([]byte{1})
 	manualReceiptsMerkleRoot2 := hash.CalcSha256([]byte{2})
-	successfulCalculateReceiptsMerkleRoot := validators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
+	successfulCalculateReceiptsMerkleRoot := builders.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
 
-	block := validators.AStructurallyValidBlock()
+	block := builders.BlockPairBuilder().Build()
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -73,8 +73,8 @@ func TestValidateReceiptsMerkleRoot(t *testing.T) {
 func TestValidateResultsBlockStateDiffHash(t *testing.T) {
 	manualStateDiffHash1 := hash.CalcSha256([]byte{10})
 	manualStateDiffHash2 := hash.CalcSha256([]byte{20})
-	block := validators.AStructurallyValidBlock()
-	successfulCalcStateDiffHash := validators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
+	block := builders.BlockPairBuilder().Build()
+	successfulCalcStateDiffHash := builders.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
 	bvcx := &BlockValidatorContext{
 		TransactionsBlock: block.TransactionsBlock,
 		ResultsBlock:      block.ResultsBlock,
@@ -94,7 +94,6 @@ func TestValidateResultsBlockStateDiffHash(t *testing.T) {
 }
 
 func TestValidateBlockHash(t *testing.T) {
-
 	tamperedTimestamp := primitives.TimestampNano(time.Now().UnixNano() + 1000)
 	tamperedPrevBlockHash := hash.CalcSha256([]byte{9, 9, 9})
 	tamperedMetadataHash := hash.CalcSha256([]byte{9, 9, 7})
@@ -148,7 +147,7 @@ func TestValidateBlockHash(t *testing.T) {
 }
 
 func validBlockValidatorContext() *BlockValidatorContext {
-	validBlock := validators.AStructurallyValidBlock()
+	validBlock := builders.BlockPairBuilder().Build()
 	calculatedHashOfValidBlock := []byte(digest.CalcBlockHash(validBlock.TransactionsBlock, validBlock.ResultsBlock))
 	return &BlockValidatorContext{
 		TransactionsBlock: validBlock.TransactionsBlock,

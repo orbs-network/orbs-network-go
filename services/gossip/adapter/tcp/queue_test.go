@@ -16,9 +16,11 @@ import (
 	"time"
 )
 
+const someAddress = ""
+
 func TestQueue_PushAndPopMultiple(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+		q := aQueue(t, 1000, 1000)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
 		require.NoError(t, err)
@@ -42,7 +44,7 @@ func TestQueue_PushAndPopMultiple(t *testing.T) {
 
 func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 2, metric.NewRegistry())
+		q := aQueue(t, 1000, 2)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
 		require.NoError(t, err)
@@ -66,7 +68,7 @@ func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
 
 func TestQueue_PopWhenEmptyWaitsUntilPush(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+		q := aQueue(t, 1000, 1000)
 
 		go func() {
 			time.Sleep(10 * time.Millisecond)
@@ -81,7 +83,7 @@ func TestQueue_PopWhenEmptyWaitsUntilPush(t *testing.T) {
 
 func TestQueue_PopWhenEmptyCancelsWithContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	q := NewTransportQueue(1000, 1000, metric.NewRegistry())
+	q := aQueue(t, 1000, 1000)
 
 	go func() {
 		time.Sleep(10 * time.Millisecond)
@@ -94,7 +96,7 @@ func TestQueue_PopWhenEmptyCancelsWithContext(t *testing.T) {
 
 func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(10, 1000, metric.NewRegistry())
+		q := aQueue(t, 10, 1000)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}, Payloads: [][]byte{buf(3), buf(4)}})
 		require.NoError(t, err)
@@ -118,7 +120,7 @@ func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 
 func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 3, metric.NewRegistry())
+		q := aQueue(t, 1000, 3)
 
 		q.Clear(ctx)
 
@@ -146,12 +148,12 @@ func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
 
 func TestQueue_DisableThenEnable(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		q := NewTransportQueue(1000, 2, metric.NewRegistry())
+		q := aQueue(t, 1000, 2)
 
 		q.Disable()
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
-		require.NoError(t, err)
+		require.Error(t, err)
 
 		q.Enable()
 
@@ -164,10 +166,14 @@ func TestQueue_DisableThenEnable(t *testing.T) {
 		q.Disable()
 
 		err = q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x04}})
-		require.NoError(t, err)
+		require.Error(t, err)
 	})
 }
 
 func buf(len int) []byte {
 	return make([]byte, len)
+}
+
+func aQueue(t testing.TB, maxSizeInBytes int, maxNumOfMessages int) *transportQueue {
+	return NewTransportQueue(maxSizeInBytes, maxNumOfMessages, metric.NewRegistry(), someAddress)
 }

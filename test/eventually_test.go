@@ -8,22 +8,22 @@ package test
 
 import (
 	"github.com/orbs-network/go-mock"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestEventually(t *testing.T) {
-	t.Parallel()
 
 	sem := newSemaphore(4)
-	num := 1
+	num := int32(1)
 	go func() {
 		sem.waitUntilZero()
-		num = 2
+		atomic.StoreInt32(&num, 2)
 	}()
 	ok := Eventually(EVENTUALLY_ACCEPTANCE_TIMEOUT, func() bool {
 		sem.dec()
-		return num == 2
+		return atomic.LoadInt32(&num) == 2
 	})
 	if !ok {
 		t.Fatal("Eventually did not discover change to 2")
@@ -31,17 +31,16 @@ func TestEventually(t *testing.T) {
 }
 
 func TestConsistently(t *testing.T) {
-	t.Parallel()
 
 	sem := newSemaphore(4)
-	num := 1
+	num := int32(1)
 	go func() {
 		sem.waitUntilZero()
-		num = 2
+		atomic.StoreInt32(&num, 2)
 	}()
 	ok := Consistently(CONSISTENTLY_ACCEPTANCE_TIMEOUT, func() bool {
 		sem.dec()
-		return num == 1
+		return atomic.LoadInt32(&num) == 1
 	})
 	if ok {
 		t.Fatal("Consistently did not discover change to 2")
@@ -57,7 +56,6 @@ func (p *personMock) GetName() string {
 }
 
 func TestEventuallyVerifySuccess(t *testing.T) {
-	t.Parallel()
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(1)
@@ -72,7 +70,6 @@ func TestEventuallyVerifySuccess(t *testing.T) {
 }
 
 func TestEventuallyVerifyFailure(t *testing.T) {
-	t.Parallel()
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(1)
@@ -83,7 +80,6 @@ func TestEventuallyVerifyFailure(t *testing.T) {
 }
 
 func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
-	t.Parallel()
 
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(1)
@@ -102,7 +98,6 @@ func TestEventuallyVerifySuccessWithTwoMocks(t *testing.T) {
 }
 
 func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
-	t.Parallel()
 
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(1)
@@ -119,7 +114,6 @@ func TestEventuallyVerifyFailureWithTwoMocks(t *testing.T) {
 }
 
 func TestConsistentlyVerifySuccess(t *testing.T) {
-	t.Parallel()
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(0)
@@ -130,7 +124,6 @@ func TestConsistentlyVerifySuccess(t *testing.T) {
 }
 
 func TestConsistentlyVerifyFailure(t *testing.T) {
-	t.Parallel()
 
 	p := &personMock{}
 	p.When("GetName").Return("john").Times(0)
@@ -145,7 +138,6 @@ func TestConsistentlyVerifyFailure(t *testing.T) {
 }
 
 func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
-	t.Parallel()
 
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(0)
@@ -158,7 +150,6 @@ func TestConsistentlyVerifySuccessWithTwoMocks(t *testing.T) {
 }
 
 func TestConsistentlyVerifyFailureWithTwoMocks(t *testing.T) {
-	t.Parallel()
 
 	p1 := &personMock{}
 	p1.When("GetName").Return("john").Times(0)

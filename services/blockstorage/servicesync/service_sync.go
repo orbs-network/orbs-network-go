@@ -9,11 +9,11 @@ package servicesync
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -21,7 +21,7 @@ import (
 
 type BlockPairCommitter interface {
 	commitBlockPair(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (next primitives.BlockHeight, err error)
-	getServiceName() string
+	GetServiceName() string
 }
 
 type blockSource interface {
@@ -74,11 +74,11 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	return requestedHeight
 }
 
-func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) {
-	ctx = trace.NewContext(ctx, committer.getServiceName())
+func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) *govnr.ForeverHandle {
+	ctx = trace.NewContext(ctx, committer.GetServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
-	supervised.GoForever(ctx, logger, func() {
+	return govnr.Forever(ctx, committer.GetServiceName(), logfields.GovnrErrorer(logger), func() {
 		var height primitives.BlockHeight
 		var err error
 		for err == nil {

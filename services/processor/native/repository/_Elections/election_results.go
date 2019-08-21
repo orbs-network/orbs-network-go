@@ -17,8 +17,8 @@ import (
 /*****
  * Election results
  */
-func getElectionPeriod() uint64 {
-	return ELECTION_PERIOD_LENGTH_IN_BLOCKS
+func getElectionPeriodInNanos() uint64 {
+	return ELECTION_PERIOD_LENGTH_IN_NANOS
 }
 
 func getElectedValidatorsOrbsAddress() []byte {
@@ -29,6 +29,18 @@ func getElectedValidatorsOrbsAddress() []byte {
 func getElectedValidatorsEthereumAddress() []byte {
 	index := getNumberOfElections()
 	return getElectedValidatorsEthereumAddressByIndex(index)
+}
+
+func isElectionOverdue() uint32 {
+	if _isTimeBasedElections() {
+		timeMuchLongerThanMirrorTimeThatMeansElectionIsOverdue := 3 * MIRROR_PERIOD_LENGTH_IN_NANOS
+		if ethereum.GetBlockTime() > safeuint64.Add(getCurrentElectionTimeInNanos(), timeMuchLongerThanMirrorTimeThatMeansElectionIsOverdue) {
+			return 1
+		}
+		return 0
+	} else {
+		return _isElectionOverdueBlockBased()
+	}
 }
 
 func getElectedValidatorsEthereumAddressByBlockNumber(blockNumber uint64) []byte {
@@ -51,14 +63,14 @@ func getElectedValidatorsOrbsAddressByBlockHeight(blockHeight uint64) []byte {
 	return _getDefaultElectionResults()
 }
 
-func _setElectedValidators(elected [][20]byte) {
-	electionBlockNumber := _getCurrentElectionBlockNumber()
+func _setElectedValidators(elected [][20]byte, electionTime uint64, electionBlockNumber uint64) {
 	index := getNumberOfElections()
 	if getElectedValidatorsBlockNumberByIndex(index) > electionBlockNumber {
 		panic(fmt.Sprintf("Election results rejected as new election happend at block %d which is older than last election %d",
 			electionBlockNumber, getElectedValidatorsBlockNumberByIndex(index)))
 	}
 	index++
+	_setElectedValidatorsTimeInNanosAtIndex(index, electionTime)
 	_setElectedValidatorsBlockNumberAtIndex(index, electionBlockNumber)
 	_setElectedValidatorsBlockHeightAtIndex(index, env.GetBlockHeight()+TRANSITION_PERIOD_LENGTH_IN_BLOCKS)
 	electedOrbsAddresses := _translateElectedAddressesToOrbsAddressesAndConcat(elected)
@@ -80,25 +92,9 @@ func _translateElectedAddressesToOrbsAddressesAndConcat(elected [][20]byte) []by
 	electedForSave := make([]byte, 0, len(elected)*20)
 	for i := range elected {
 		electedOrbsAddress := _getValidatorOrbsAddress(elected[i][:])
-		fmt.Printf("elections %10d: translate %x to %x\n", _getCurrentElectionBlockNumber(), elected[i][:], electedOrbsAddress)
 		electedForSave = append(electedForSave, electedOrbsAddress[:]...)
 	}
 	return electedForSave
-}
-
-func initCurrentElectionBlockNumber() {
-	if getCurrentElectionBlockNumber() == 0 {
-		currBlock := getCurrentEthereumBlockNumber()
-		if currBlock < FIRST_ELECTION_BLOCK {
-			_setCurrentElectionBlockNumber(FIRST_ELECTION_BLOCK)
-		} else {
-			blocksSinceFirstEver := safeuint64.Sub(currBlock, FIRST_ELECTION_BLOCK)
-			blocksSinceStartOfAnElection := safeuint64.Mod(blocksSinceFirstEver, getElectionPeriod())
-			blocksUntilNextElection := safeuint64.Sub(getElectionPeriod(), blocksSinceStartOfAnElection)
-			nextElectionBlock := safeuint64.Add(currBlock, blocksUntilNextElection)
-			_setCurrentElectionBlockNumber(nextElectionBlock)
-		}
-	}
 }
 
 func _getDefaultElectionResults() []byte {
@@ -115,6 +111,18 @@ func getNumberOfElections() uint32 {
 
 func _setNumberOfElections(index uint32) {
 	state.WriteUint32(_formatElectionsNumber(), index)
+}
+
+func _formatElectionTimeInNanos(index uint32) []byte {
+	return []byte(fmt.Sprintf("Election_%d_Time", index))
+}
+
+func getElectedValidatorsTimeInNanosByIndex(index uint32) uint64 {
+	return state.ReadUint64(_formatElectionTimeInNanos(index))
+}
+
+func _setElectedValidatorsTimeInNanosAtIndex(index uint32, timestamp uint64) {
+	state.WriteUint64(_formatElectionTimeInNanos(index), timestamp)
 }
 
 func _formatElectionBlockNumber(index uint32) []byte {
@@ -169,35 +177,14 @@ func getEffectiveElectionBlockNumber() uint64 {
 	return getElectedValidatorsBlockNumberByIndex(getNumberOfElections())
 }
 
-func _formatElectionBlockNumberKey() []byte {
-	return []byte("Election_Block_Number")
+func getEffectiveElectionTimeInNanos() uint64 {
+	return getElectedValidatorsTimeInNanosByIndex(getNumberOfElections())
 }
 
-func _getCurrentElectionBlockNumber() uint64 {
-	initCurrentElectionBlockNumber()
-	return getCurrentElectionBlockNumber()
+func getCurrentElectionTimeInNanos() uint64 {
+	return safeuint64.Add(getEffectiveElectionTimeInNanos(), getElectionPeriodInNanos())
 }
 
-func _setCurrentElectionBlockNumber(BlockNumber uint64) {
-	state.WriteUint64(_formatElectionBlockNumberKey(), BlockNumber)
-}
-
-func getCurrentElectionBlockNumber() uint64 {
-	return state.ReadUint64(_formatElectionBlockNumberKey())
-}
-
-func getNextElectionBlockNumber() uint64 {
-	return safeuint64.Add(getCurrentElectionBlockNumber(), getElectionPeriod())
-}
-
-func getCurrentEthereumBlockNumber() uint64 {
-	return ethereum.GetBlockNumber()
-}
-
-func getProcessingStartBlockNumber() uint64 {
-	return safeuint64.Add(getCurrentElectionBlockNumber(), VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS)
-}
-
-func getMirroringEndBlockNumber() uint64 {
-	return safeuint64.Add(getCurrentElectionBlockNumber(), VOTE_MIRROR_PERIOD_LENGTH_IN_BLOCKS)
+func getNextElectionTimeInNanos() uint64 {
+	return safeuint64.Add(getCurrentElectionTimeInNanos(), getElectionPeriodInNanos())
 }

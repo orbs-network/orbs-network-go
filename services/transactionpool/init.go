@@ -29,7 +29,7 @@ func NewTransactionPool(ctx context.Context,
 	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.Logger,
-	metricFactory metric.Factory) services.TransactionPool {
+	metricFactory metric.Factory) *Service {
 
 	if blockHeightReporter == nil {
 		blockHeightReporter = synchronization.NopHeightReporter{}
@@ -43,7 +43,7 @@ func NewTransactionPool(ctx context.Context,
 
 	txForwarder := NewTransactionForwarder(ctx, logger, signer, config, gossip)
 
-	s := &service{
+	s := &Service{
 		clock:          createClockIfNeeded(maybeClock),
 		gossip:         gossip,
 		virtualMachine: virtualMachine,
@@ -68,8 +68,9 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	startCleaningProcess(ctx, config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger)
-	startCleaningProcess(ctx, config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger)
+	s.Supervise(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.Supervise(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.Supervise(txForwarder)
 
 	return s
 }
@@ -82,10 +83,12 @@ func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
 	return maybeClock
 }
 
-func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+func (s *Service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
 	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
-		for _, trh := range s.transactionResultsHandlers {
+		s.transactionResultsHandlers.RLock()
+		defer s.transactionResultsHandlers.RUnlock()
+		for _, trh := range s.transactionResultsHandlers.handlers {
 			_, err := trh.HandleTransactionError(ctx, &handlers.HandleTransactionErrorInput{
 				Txhash:            txHash,
 				TransactionStatus: removalReason,

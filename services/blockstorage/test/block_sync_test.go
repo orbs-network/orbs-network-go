@@ -23,8 +23,8 @@ import (
 
 // TODO(v1) move to unit tests
 func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			start(ctx)
@@ -76,8 +76,8 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 }
 
 func TestSyncPetitioner_BroadcastsBlockAvailabilityRequest(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(3 * time.Millisecond).
 			expectValidateConsensusAlgos()
 
@@ -94,8 +94,8 @@ func TestSyncPetitioner_NeverStartsWhenBlocksAreCommitted(t *testing.T) {
 	// this test may still be flaky, it runs commits in a busy wait loop that should take longer than the timeout,
 	// to make sure we stay at the same state logically.
 	// system timing may cause it to flake, but at a very low probability now
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(5 * time.Millisecond).
 			withSyncBroadcast(1).
 			withCommitStateDiff(10).

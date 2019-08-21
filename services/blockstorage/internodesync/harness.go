@@ -110,12 +110,6 @@ func newBlockSyncHarnessWithManualWaitForChunksTimeoutTimer(logger log.Logger, c
 	return newBlockSyncHarnessWithTimers(logger, nil, nil, createTimer)
 }
 
-func (h *blockSyncHarness) waitForShutdown(bs *BlockSync) bool {
-	return test.Eventually(test.EVENTUALLY_LOCAL_E2E_TIMEOUT, func() bool {
-		return bs.IsTerminated()
-	})
-}
-
 func (h *blockSyncHarness) withWaitForChunksTimeout(d time.Duration) *blockSyncHarness {
 	h.config.collectChunks = d
 	return h

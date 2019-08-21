@@ -22,23 +22,23 @@ import (
 )
 
 func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
 
 		const NUM_BLOCKS = 50
-		done := false
+		done := make(chan struct{})
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-			respondToBroadcastAvailabilityRequest(t, ctx, harness, input, NUM_BLOCKS, 7)
+			respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7)
 			return nil, nil
 		})
 
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 			if input.Message.SignedChunkRange.LastBlockHeight() >= NUM_BLOCKS {
-				done = true
+				done <- struct{}{}
 			}
 			respondToBlockSyncRequestWithConcurrentCommit(t, ctx, harness, input, NUM_BLOCKS)
 			return nil, nil
@@ -49,7 +49,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 				currHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
 				prevHeight := input.PrevCommittedBlockPair.TransactionsBlock.Header.BlockHeight()
 				if currHeight != prevHeight+1 {
-					done = true
+					done <- struct{}{}
 					require.Failf(t, "HandleBlockConsensus given invalid args", "called with height %d and prev height %d", currHeight, prevHeight)
 				}
 			}
@@ -58,10 +58,12 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 
 		harness.start(ctx)
 
-		passed := test.Eventually(25*time.Second, func() bool { // wait for sync flow to complete successfully:
-			return done
-		})
-		require.True(t, passed, "timed out waiting for passing conditions")
+		select {
+		case <-done:
+			// test passed
+		case <-ctx.Done():
+			t.Fatalf("timed out waiting for sync flow to complete")
+		}
 	})
 }
 

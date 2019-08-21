@@ -5,6 +5,7 @@
 // The above notice should be included in all copies or substantial portions of the software.
 
 //+build !nonativecompiler
+//+build !race
 
 package adapter
 
@@ -37,9 +38,12 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 
 	t.Log("Build fresh artifacts")
 
-	sourceFilePath, err := writeSourceCodeToDisk("testPrefix", code, tmpDir)
+	sourceFilePath, err := writeSourceCodeToDisk("testPrefix", []string{code}, tmpDir)
 	require.NoError(t, err, "write to disk should succeed")
-	require.FileExists(t, sourceFilePath, "file should exist")
+	require.NotZero(t, len(sourceFilePath))
+	for _, path := range sourceFilePath {
+		require.FileExists(t, path, "file should exist")
+	}
 
 	compilationStartTime := time.Now().UnixNano()
 	soFilePath, err := buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)
@@ -51,19 +55,22 @@ func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	t.Log("Simulate corrupted artifacts and rebuild")
 
 	// simulate corrupt file that exists
-	err = ioutil.WriteFile(sourceFilePath, []byte{0x01}, 0600)
+	err = ioutil.WriteFile(sourceFilePath[0], []byte{0x01}, 0600)
 	require.NoError(t, err)
-	require.Equal(t, int64(1), getFileSize(sourceFilePath), "file size should match")
+	require.Equal(t, int64(1), getFileSize(sourceFilePath[0]), "file size should match")
 
 	// simulate corrupt file that exists
 	err = ioutil.WriteFile(soFilePath, []byte{0x01}, 0600)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), getFileSize(soFilePath), "file size should match")
 
-	sourceFilePath, err = writeSourceCodeToDisk("testPrefix", code, tmpDir)
+	sourceFilePath, err = writeSourceCodeToDisk("testPrefix", []string{code}, tmpDir)
 	require.NoError(t, err, "write to disk should succeed")
-	require.FileExists(t, sourceFilePath, "file should exist")
-	require.NotEqual(t, int64(1), getFileSize(sourceFilePath), "file size should not match")
+	require.NotZero(t, len(sourceFilePath))
+	for _, path := range sourceFilePath {
+		require.FileExists(t, path, "file should exist")
+	}
+	require.NotEqual(t, int64(1), getFileSize(sourceFilePath[0]), "file size should not match")
 
 	compilationStartTime = time.Now().UnixNano()
 	soFilePath, err = buildSharedObject(ctx, "testPrefix", sourceFilePath, tmpDir)

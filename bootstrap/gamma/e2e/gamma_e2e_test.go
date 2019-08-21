@@ -12,53 +12,60 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-func testGammaWithJSONConfig(configJSON string) func(t *testing.T) {
-	return func(t *testing.T) {
-		endpoint := runGammaOnRandomPort(t, configJSON)
-
-		sender, _ := orbsClient.CreateAccount()
-		transferTo, _ := orbsClient.CreateAccount()
-		client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
-
-		sendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
-
-		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 2)))
-	}
-}
-
-func testGammaWithEmptyBlocks(configJSON string) func(t *testing.T) {
-	return func(t *testing.T) {
-		endpoint := runGammaOnRandomPort(t, configJSON)
-
-		require.True(t, test.Eventually(WAIT_FOR_BLOCK_TIMEOUT, waitForBlock(endpoint, 5)))
-	}
-}
-
-func TestGamma(t *testing.T) {
+func testGammaWithJSONConfig(t *testing.T, configJSON string) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
+		return
 	}
 
-	t.Run("Benchmark", testGammaWithJSONConfig(""))
-	t.Run("LeanHelix", testGammaWithJSONConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	endpoint := runGammaOnRandomPort(t, configJSON)
+	defer shutdown(t, endpoint)
+
+	sender, _ := orbsClient.CreateAccount()
+	transferTo, _ := orbsClient.CreateAccount()
+	client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
+
+	sendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
+	require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 2)), "Gamma did not close a block")
 }
 
-func TestGammaWithEmptyBlocks(t *testing.T) {
+func testGammaWithEmptyBlocks(t *testing.T, configJSON string) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
+		return
 	}
 
-	t.Run("Benchmark", testGammaWithEmptyBlocks(`{"transaction-pool-time-between-empty-blocks":"200ms"}`))
-	t.Run("LeanHelix", testGammaWithEmptyBlocks(fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	endpoint := runGammaOnRandomPort(t, configJSON)
+	defer shutdown(t, endpoint)
+
+	require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 5)), "Gamma did not reach desired block")
+}
+
+func TestGamma_Benchmark(t *testing.T) {
+	testGammaWithJSONConfig(t, "")
+}
+
+func TestGamma_LeanHelix(t *testing.T) {
+	testGammaWithJSONConfig(t, fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX))
+}
+
+func TestGammaWithEmptyBlocks_Benchmark(t *testing.T) {
+	testGammaWithEmptyBlocks(t, `{"transaction-pool-time-between-empty-blocks":"200ms"}`)
+}
+
+func TestGammaWithEmptyBlocks_LeanHelix(t *testing.T) {
+	testGammaWithEmptyBlocks(t, fmt.Sprintf(`{"active-consensus-algo":%d,"transaction-pool-time-between-empty-blocks":"200ms"}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX))
 }
 
 func TestGammaSetBlockTime(t *testing.T) {
 	endpoint := runGammaOnRandomPort(t, "")
+	defer shutdown(t, endpoint)
 
 	timeTravel(t, endpoint, 10*time.Second)
 

@@ -19,23 +19,20 @@ import (
 )
 
 type harness struct {
-	btg     BlockTimeGetter
-	logger  log.Logger
-	metrics metric.Factory
-	finder  *finder
+	btg    BlockTimeGetter
+	logger log.Logger
+	finder *finder
 }
 
 func NewTestHarness(t testing.TB) *harness {
 	logger := log.DefaultTestingLogger(t)
 	btg := NewFakeBlockTimeGetter(logger)
-	metricFactory := metric.NewRegistry()
-	finder := NewTimestampFinder(btg, logger, metricFactory)
+	finder := NewTimestampFinder(btg, logger, metric.NewRegistry())
 
 	h := &harness{
-		btg:     btg,
-		finder:  finder,
-		logger:  logger,
-		metrics: metricFactory,
+		btg:    btg,
+		finder: finder,
+		logger: logger,
 	}
 
 	return h
@@ -48,7 +45,7 @@ func (h *harness) GetBtgAsFake() *FakeBlockTimeGetter {
 
 func (h *harness) WithBtg(btg BlockTimeGetter) *harness {
 	h.btg = btg
-	finder := NewTimestampFinder(btg, h.logger, h.metrics)
+	finder := NewTimestampFinder(btg, h.logger, metric.NewRegistry())
 	h.finder = finder
 	return h
 }

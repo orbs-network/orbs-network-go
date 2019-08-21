@@ -1,3 +1,4 @@
+//+build !race
 // Copyright 2019 the orbs-network-go authors
 // This file is part of the orbs-network-go library in the Orbs project.
 //
@@ -35,7 +36,10 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		printTestTime(t, "send deploy - start", &lt)
 
-		h.eventuallyDeploy(t, OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		//h.eventuallyDeploy(t, OwnerOfAllSupply, contractName, []byte(contracts.NativeSourceCodeForCounter(counterStart)))
+		h.eventuallyDeploy(t, OwnerOfAllSupply, contractName,
+			[]byte(contracts.NativeSourceCodeForCounterPart1(counterStart)),
+			[]byte(contracts.NativeSourceCodeForCounterPart2(counterStart)))
 		printTestTime(t, "send deploy - end", &lt)
 
 		// check counter

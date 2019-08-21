@@ -9,14 +9,15 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"sync"
+	"testing"
+	"time"
+
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestE2EStress(t *testing.T) {
@@ -52,10 +53,14 @@ func TestE2EStress(t *testing.T) {
 				response, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 
 				if err2 != nil {
+					fmt.Println("Encountered an error sending a transaction while stress testing", err2)
 					mutex.Lock()
 					defer mutex.Unlock()
+					fmt.Println("")
 					errors = append(errors, err2)
-					errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
+					if response != nil {
+						errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
+					}
 				}
 			}()
 		} else {

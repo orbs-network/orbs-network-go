@@ -9,9 +9,11 @@ package metric
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,10 +35,11 @@ type Registry interface {
 	Factory
 	String() string
 	ExportAll() map[string]exportedMetric
-	PeriodicallyRotate(ctx context.Context, logger log.Logger)
+	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
+	Remove(metric metric)
 }
 
 type exportedMetric interface {
@@ -60,7 +63,7 @@ func (m *namedMetric) Name() string {
 	return m.name
 }
 
-func NewRegistry() Registry {
+func NewRegistry() *inMemoryRegistry {
 	return &inMemoryRegistry{}
 }
 
@@ -73,9 +76,35 @@ type inMemoryRegistry struct {
 	}
 }
 
+func (r *inMemoryRegistry) Remove(m metric) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s := r.mu.metrics
+	for i, existing := range s {
+		if existing.Name() == m.Name() {
+			lastMetric := len(s) - 1
+			s[i] = s[lastMetric]
+			s[lastMetric] = nil // so that it gets garbage-collected, see here https://stackoverflow.com/questions/28832016/re-slicing-and-garbage-collection
+			// We do not need to put s[i] at the end, as it will be discarded anyway
+			r.mu.metrics = s[:lastMetric]
+			return
+		}
+	}
+
+	err := errors.Errorf("a metric with name %s cannot be removed as it is not registered", m.Name())
+	panic(err)
+}
+
 func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	for _, existing := range r.mu.metrics {
+		if existing.Name() == m.Name() {
+			err := errors.Errorf("a metric with name %s is already registered", m.Name())
+			panic(err)
+		}
+	}
+
 	r.mu.metrics = append(r.mu.metrics, m)
 }
 
@@ -133,8 +162,8 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	return all
 }
 
-func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) {
-	synchronization.NewPeriodicalTrigger(ctx, ROTATE_INTERVAL, logger, func() {
+func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
+	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", ROTATE_INTERVAL, logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {

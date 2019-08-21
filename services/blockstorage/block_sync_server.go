@@ -17,17 +17,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	err := s.sourceHandleBlockAvailabilityRequest(ctx, input.Message)
 	return nil, err
 }
 
-func (s *service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *Service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	err := s.sourceHandleBlockSyncRequest(ctx, input.Message)
 	return nil, err
 }
 
-func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
+func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("received block availability request",
@@ -76,7 +76,7 @@ func (s *service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	return err
 }
 
-func (s *service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
+func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	senderNodeAddress := message.Sender.SenderNodeAddress()

@@ -7,7 +7,10 @@
 package e2e
 
 import (
+	"context"
+	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -25,26 +28,28 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 const LOCAL_NETWORK_SIZE = 4
 
 type inProcessE2ENetwork struct {
-	nodes []bootstrap.Node
+	govnr.TreeSupervisor
+	nodes []*bootstrap.Node
 }
 
 func NewInProcessE2ENetwork() *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
-	return &inProcessE2ENetwork{bootstrapE2ENetwork()}
+	return bootstrapE2ENetwork()
 }
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	for _, node := range h.nodes {
-		node.GracefulShutdown(0) // meaning don't have a deadline timeout so allowing enough time for shutdown to free port
+		node.GracefulShutdown(context.TODO())
 	}
 
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 }
 
-func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
+func bootstrapE2ENetwork() *inProcessE2ENetwork {
+	net := &inProcessE2ENetwork{}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
@@ -53,7 +58,7 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1")
+		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
 	}
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
@@ -98,8 +103,9 @@ func bootstrapE2ENetwork() (nodes []bootstrap.Node) {
 		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
 
 		node := bootstrap.NewNode(cfg, nodeLogger)
-
-		nodes = append(nodes, node)
+		net.Supervise(node)
+		net.nodes = append(net.nodes, node)
 	}
-	return nodes
+
+	return net
 }

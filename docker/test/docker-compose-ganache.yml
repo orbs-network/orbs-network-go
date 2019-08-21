@@ -1,0 +1,8 @@
+version: '2.1'
+
+services:
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
+    ports:
+      - 8545:8545

@@ -20,8 +20,9 @@ import (
 
 func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 	return func(t *testing.T) {
-		test.WithContext(func(ctx context.Context) {
+		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 			network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), nil, jsonConfig)
+			harness.Supervise(network)
 			contract := callcontract.NewContractClient(network)
 
 			t.Log("doing a simple transfer")
@@ -35,7 +36,6 @@ func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 			}), "expected balance to reflect the transfer")
 
 		})
-		time.Sleep(5 * time.Millisecond) // give context dependent goroutines 5 ms to terminate gracefully
 	}
 }
 

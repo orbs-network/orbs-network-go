@@ -8,6 +8,7 @@ package blockstorage
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -28,7 +29,8 @@ const (
 
 var LogTag = log.Service("block-storage")
 
-type service struct {
+type Service struct {
+	govnr.TreeSupervisor
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
@@ -60,10 +62,10 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
-	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) services.BlockStorage {
+	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) *Service {
 	logger := parentLogger.WithTags(LogTag)
 
-	s := &service{
+	s := &Service{
 		persistence: persistence,
 		gossip:      gossip,
 		logger:      logger,
@@ -75,8 +77,9 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	for _, bpr := range blockPairReceivers {
-		servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr)
+		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))
 	}
+	s.Supervise(s.nodeSync)
 
 	height, err := persistence.GetLastBlockHeight()
 	if err != nil {
@@ -101,13 +104,13 @@ func getBlockTimestamp(block *protocol.BlockPairContainer) primitives.TimestampN
 	return block.TransactionsBlock.Header.Timestamp()
 }
 
-func (s *service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
+func (s *Service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {
 	s.appendHandlerUnderLock(handler)
 	// update the consensus algo about the latest block we have (for its initialization)
 	s.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(context.TODO())
 }
 
-func (s *service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler) {
+func (s *Service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler) {
 	s.consensusBlocksHandlers.Lock()
 	defer s.consensusBlocksHandlers.Unlock()
 	s.consensusBlocksHandlers.handlers = append(s.consensusBlocksHandlers.handlers, handler)

@@ -8,9 +8,10 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -61,6 +62,7 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 }
 
 type BlockSync struct {
+	govnr.TreeSupervisor
 	logger  log.Logger
 	factory *stateFactory
 	gossip  gossiptopics.BlockSync
@@ -69,7 +71,6 @@ type BlockSync struct {
 	conduit blockSyncConduit
 
 	metrics *stateMachineMetrics
-	done    supervised.ContextEndedChan
 }
 
 type stateMachineMetrics struct {
@@ -100,9 +101,9 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
-	bs.done = supervised.GoForever(ctx, logger, func() {
+	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)
-	})
+	}))
 
 	return bs
 }
@@ -128,15 +129,6 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 
 		currentState = currentState.processState(ctx)
 		bs.metrics.statesTransitioned.Inc()
-	}
-}
-
-func (bs *BlockSync) IsTerminated() bool {
-	select {
-	case _, open := <-bs.done:
-		return !open
-	default:
-		return false
 	}
 }
 

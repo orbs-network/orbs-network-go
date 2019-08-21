@@ -35,7 +35,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 		AllowingErrors(
 			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
 			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 
@@ -58,7 +58,7 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 }
 
 func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
-	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *Network) {
 		for _, builder := range txBuilders {
 			resp, _ := network.SendTransaction(ctx, builder.Builder(), 0)
 			require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus(), "expected transaction to be committed")
@@ -85,7 +85,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 		WithInitialBlocks(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),
 			log.ExcludeField(internodesync.LogTag)).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 			// wait for all tx to reach state storage:
 			for _, txHash := range txHashes {
@@ -105,7 +105,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 func createTransferBlocks(t testing.TB, transfers int, amount uint64) (blocks []*protocol.BlockPairContainer, txHashes []primitives.Sha256) {
 
-	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *NetworkHarness) {
+	usingABenchmarkConsensusNetwork(t, func(ctx context.Context, network *Network) {
 
 		// generate some blocks with state
 		contract := network.DeployBenchmarkTokenContract(ctx, 0)

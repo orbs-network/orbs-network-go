@@ -79,7 +79,7 @@ func newTransactionBatch(logger log.Logger, transactions Transactions) *transact
 	}
 }
 
-func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	//TODO(v1) fail if requested block height is in the past
 	logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
@@ -140,7 +140,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	return out, err
 }
 
-func (s *service) proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
+func (s *Service) proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
 	return digest.CalcNewBlockTimestamp(prevBlockTimestamp, primitives.TimestampNano(s.clock.CurrentTime().UnixNano()))
 }
 

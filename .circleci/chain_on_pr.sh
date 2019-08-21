@@ -1,23 +1,14 @@
 #!/bin/bash -e
 
-#touch $BASH_ENV
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
-
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-nvm install v10.14.1
+nvm use $NODE_VERSION
+
 cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
 
-# Installing aws cli
-echo "Installing AWS CLI"
-sudo apt-get update
-sudo apt-get install -y python-dev
-sudo apt-get install -y python-pip
-sudo pip install awscli
-
-aws --version
+. ./test.common.sh
 
 COMMIT_HASH=$(./docker/hash.sh)
 
@@ -29,7 +20,25 @@ then
 
     echo "Downloading the current testnet Boyar config.json"
     curl -O $BOOTSTRAP_URL
-    echo "Done downloading!"
+    echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs which already closed"
+
+    node .circleci/testnet-cleanup-mark.js
+
+    echo "Copying the newly updated config.json to S3 (with networks to remove)"
+    aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
+    echo "Done!"
+
+    sleep 60
+    echo "Verifying the networks are being cleaned.."
+    node .circleci/testnet-poll-disabled-chains.js
+
+    echo "Refreshing config.json and removing the dead networks from it.."
+    rm -f config.json && curl -O $BOOTSTRAP_URL
+    node .circleci/testnet-remove-disabled-chains.js
+
+    echo "Copying the newly updated config.json to S3.."
+    aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
+    echo "Done!"
 
     echo "Creating a network for this PR within the config.json file.."
     PR_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH)
@@ -57,7 +66,7 @@ then
 
     echo "Starting E2E tests against network ($PR_CHAIN_ID)"
     export VCHAIN=$PR_CHAIN_ID
-    go test ./test/e2e/... -v
+    time go_test_junit_report e2e_against_$PR_CHAIN_ID -timeout 10m -count=1 ./test/e2e/...
 
     echo "Disabling the $PR_CHAIN_ID network..."
     rm -f config.json && curl -O $BOOTSTRAP_URL

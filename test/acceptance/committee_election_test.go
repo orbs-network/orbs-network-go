@@ -11,6 +11,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -18,20 +19,21 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 	newHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect first 4 out of 6")
 
 			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 0, []int{0, 1, 2, 3})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect first 4 out of 6 failed")
 
 			t.Log("send transaction to one of the elected")
 
@@ -66,7 +68,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 	newHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
@@ -74,16 +76,17 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 
 			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
 			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 0,1,2,3 failed")
 
 			t.Log("elect 1,2,3,4")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{1, 2, 3, 4})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 1,2,3,4 failed")
 
 			t.Log("elect 2,3,4,5")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{2, 3, 4, 5})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 2,3,4,5 failed")
 
 			t.Log("send transaction to one of the elected")
 
@@ -99,16 +102,17 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	newHarness().
+		WithEmptyBlockTime(100*time.Millisecond).
 		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
 
 			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 0,1,2,3 failed")
 
 			t.Log("send transaction to the first group")
 
@@ -120,7 +124,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 			t.Log("elect 4,5,6,7 - entire first group loses")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 4, []int{4, 5, 6, 7})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 4,5,6,7 failed")
 
 			t.Log("send transaction to the first group after loss")
 
@@ -132,7 +136,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 			t.Log("elect 0,1,2,3 - first group returns")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "re-elect 0,1,2,3 failed")
 
 			t.Log("send transaction to the first node after return")
 
@@ -150,14 +154,14 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	newHarness().
 		WithNumNodes(7).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
 
 			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 0,1,2,3 failed")
 
 			t.Log("send transaction")
 
@@ -169,7 +173,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			t.Log("elect 0,1,2,3,4,5,6")
 
 			response, _ = contract.UnsafeTests_SetElectedValidators(ctx, 3, []int{0, 1, 2, 3, 4, 5, 6})
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
+			test.RequireSuccess(t, response, "elect 0,1,2,3,4,5,6 failed")
 
 			t.Log("send transaction")
 
@@ -186,7 +190,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
 	response := api.GetTransactionReceiptProof(ctx, txHash, nodeIndex)
 	signers, err := digest.GetBlockSignersFromReceiptProof(response.PackedProof())
-	require.NoError(t, err)
+	require.NoError(t, err, "failed getting signers from block proof")
 	signerIndexes := testKeys.NodeAddressesForTestsToIndexes(signers)
 	t.Logf("signers of txHash %s are %v", txHash, signerIndexes)
 	require.Subset(t, allowedIndexes, signerIndexes, "tx signers should be subset of allowed group")

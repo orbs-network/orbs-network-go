@@ -20,6 +20,7 @@ type hardCodedValidatorNode struct {
 type hardCodedGossipPeer struct {
 	gossipPort     int
 	gossipEndpoint string
+	hexOrbsAddress string
 }
 
 type NodeConfigValue struct {
@@ -62,6 +63,7 @@ const (
 
 	CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK   = "CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK"
 	CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER = "CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER"
+	CONSENSUS_CONTEXT_TRIGGERS_ENABLED                = "CONSENSUS_CONTEXT_TRIGGERS_ENABLED"
 
 	STATE_STORAGE_HISTORY_SNAPSHOT_NUM = "STATE_STORAGE_HISTORY_SNAPSHOT_NUM"
 
@@ -88,6 +90,7 @@ const (
 
 	PROCESSOR_ARTIFACT_PATH               = "PROCESSOR_ARTIFACT_PATH"
 	PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS = "PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS"
+	PROCESSOR_PERFORM_WARM_UP_COMPILATION = "PROCESSOR_PERFORM_WARM_UP_COMPILATION"
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
@@ -118,10 +121,11 @@ func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode
 	}
 }
 
-func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string) GossipPeer {
+func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) GossipPeer {
 	return &hardCodedGossipPeer{
 		gossipPort:     gossipPort,
 		gossipEndpoint: gossipEndpoint,
+		hexOrbsAddress: hexAddress,
 	}
 }
 
@@ -190,6 +194,10 @@ func (c *hardCodedGossipPeer) GossipPort() int {
 
 func (c *hardCodedGossipPeer) GossipEndpoint() string {
 	return c.gossipEndpoint
+}
+
+func (c *hardCodedGossipPeer) HexOrbsAddress() string {
+	return c.hexOrbsAddress
 }
 
 func (c *config) NodeAddress() primitives.NodeAddress {
@@ -264,6 +272,10 @@ func (c *config) ConsensusContextSystemTimestampAllowedJitter() time.Duration {
 	return c.kv[CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER].DurationValue
 }
 
+func (c *config) ConsensusContextTriggersEnabled() bool {
+	return c.kv[CONSENSUS_CONTEXT_TRIGGERS_ENABLED].BoolValue
+}
+
 func (c *config) StateStorageHistorySnapshotNum() uint32 {
 	return c.kv[STATE_STORAGE_HISTORY_SNAPSHOT_NUM].Uint32Value
 }
@@ -330,6 +342,10 @@ func (c *config) ProcessorArtifactPath() string {
 
 func (c *config) ProcessorSanitizeDeployedContracts() bool {
 	return c.kv[PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS].BoolValue
+}
+
+func (c *config) ProcessorPerformWarmUpCompilation() bool {
+	return c.kv[PROCESSOR_PERFORM_WARM_UP_COMPILATION].BoolValue
 }
 
 func (c *config) GossipListenPort() uint16 {

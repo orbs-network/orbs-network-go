@@ -9,70 +9,31 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext {
-
-	empty32ByteHash := make([]byte, 32)
-	currentBlockHeight := primitives.BlockHeight(1000)
-	transaction := builders.TransferTransaction().WithAmountAndTargetAddress(10, builders.ClientAddressForEd25519SignerForTests(6)).Build()
-	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
-	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot([]*protocol.SignedTransaction{transaction})
-	validMetadataHash := digest.CalcTransactionMetaDataHash(txMetadata.Build())
-	validPrevBlock := builders.BlockPair().WithHeight(currentBlockHeight - 1).Build()
-	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
-	validPrevBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano() - 1000)
-
-	block := builders.
-		BlockPair().
-		WithHeight(currentBlockHeight).
-		WithProtocolVersion(cfg.ProtocolVersion()).
-		WithVirtualChainId(cfg.VirtualChainId()).
-		WithTransactions(0).
-		WithTransaction(transaction).
-		WithPrevBlock(validPrevBlock).
-		WithPrevBlockHash(validPrevBlockHash).
-		WithMetadata(txMetadata).
-		WithMetadataHash(validMetadataHash).
-		WithTransactionsRootHash(txRootHashForValidBlock).
-		Build()
-
-	txBlockHashPtr := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
-	receiptMerkleRoot, _ := digest.CalcReceiptsMerkleRoot(block.ResultsBlock.TransactionReceipts)
-	stateDiffHash, _ := digest.CalcStateDiffHash(block.ResultsBlock.ContractStateDiffs)
-	preExecutionRootHash := &services.GetStateHashOutput{
-		StateMerkleRootHash: empty32ByteHash,
-	}
-
-	block.ResultsBlock.Header.MutateTransactionsBlockHashPtr(txBlockHashPtr)
-	block.ResultsBlock.Header.MutateReceiptsMerkleRootHash(receiptMerkleRoot)
-	block.ResultsBlock.Header.MutateStateDiffHash(stateDiffHash)
-	block.ResultsBlock.Header.MutatePreExecutionStateMerkleRootHash(preExecutionRootHash.StateMerkleRootHash)
+	block := builders.BlockPairBuilder().Build()
 
 	return &rxValidatorContext{
 		protocolVersion: cfg.ProtocolVersion(),
 		virtualChainId:  cfg.VirtualChainId(),
 		input: &services.ValidateResultsBlockInput{
-			CurrentBlockHeight: currentBlockHeight,
+			CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
 			ResultsBlock:       block.ResultsBlock,
-			PrevBlockHash:      validPrevBlockHash,
+			PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
 			TransactionsBlock:  block.TransactionsBlock,
-			PrevBlockTimestamp: validPrevBlockTimestamp,
+			PrevBlockTimestamp: block.TransactionsBlock.Header.Timestamp() - 1000,
 		},
 	}
-
 }
 
 func mockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error) {
@@ -84,7 +45,7 @@ func mockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) fun
 }
 
 func TestResultsBlockValidators(t *testing.T) {
-	cfg := config.ForConsensusContextTests(nil)
+	cfg := config.ForConsensusContextTests(nil, false)
 	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
@@ -213,11 +174,11 @@ func TestResultsBlockValidators(t *testing.T) {
 		}
 
 		successfulProcessTransactionSet := MockProcessTransactionSetThatReturns(nil)
-		successfulCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
-		successfulCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
+		successfulCalcReceiptsMerkleRoot := builders.MockCalcReceiptsMerkleRootThatReturns(manualReceiptsMerkleRoot1, nil)
+		successfulCalcStateDiffHash := builders.MockCalcStateDiffHashThatReturns(manualStateDiffHash1, nil)
 		errorProcessTransactionSet := MockProcessTransactionSetThatReturns(errors.New("Some error"))
-		errorCalcReceiptsMerkleRoot := testValidators.MockCalcReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
-		errorCalcStateDiffHash := testValidators.MockCalcStateDiffHashThatReturns(nil, errors.New("Some error"))
+		errorCalcReceiptsMerkleRoot := builders.MockCalcReceiptsMerkleRootThatReturns(nil, errors.New("Some error"))
+		errorCalcStateDiffHash := builders.MockCalcStateDiffHashThatReturns(nil, errors.New("Some error"))
 
 		// ProcessTransactionSet returns an error - returns ErrProcessTransactionSet
 		vcrx.processTransactionSet = errorProcessTransactionSet
@@ -261,7 +222,6 @@ func TestResultsBlockValidators(t *testing.T) {
 		require.Equal(t, validators.ErrMismatchedStateDiffHash, errors.Cause(err), "validation should fail on incorrect post-execution state diff hash", err)
 		require.Contains(t, err.Error(), `"BenchmarkToken/616d6f756e74":"e: 0a <==> c: NA"`, "expected error message to include a digest of the state diff comparison")
 	})
-
 }
 
 func TestCompare(t *testing.T) {

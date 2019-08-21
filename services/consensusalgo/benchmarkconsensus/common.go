@@ -20,7 +20,7 @@ import (
 	"math"
 )
 
-func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
+func (s *Service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.BlockPairContainer) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -30,7 +30,7 @@ func (s *service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.Blo
 	return s.lastCommittedBlockUnderMutex.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlockUnderMutex
 }
 
-func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) error {
+func (s *Service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -44,12 +44,12 @@ func (s *service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, 
 	return nil
 }
 
-func (s *service) requiredQuorumSize() int {
+func (s *Service) requiredQuorumSize() int {
 	networkSize := len(s.config.GenesisValidatorNodes())
 	return int(math.Ceil(float64(networkSize) * float64(s.config.BenchmarkConsensusRequiredQuorumPercentage()) / 100))
 }
 
-func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
+func (s *Service) saveToBlockStorage(ctx context.Context, blockPair *protocol.BlockPairContainer) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	if blockPair.TransactionsBlock.Header.BlockHeight() == 0 {
@@ -62,7 +62,7 @@ func (s *service) saveToBlockStorage(ctx context.Context, blockPair *protocol.Bl
 	return err
 }
 
-func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+func (s *Service) validateBlockConsensus(blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 
 	// TODO Handle nil as Genesis block https://github.com/orbs-network/orbs-network-go/issues/632
 	if blockPair == nil {
@@ -106,7 +106,7 @@ func (s *service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 	return nil
 }
 
-func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
+func (s *Service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer) []byte {
 	return (&consensus.BenchmarkConsensusBlockRefBuilder{
 		PlaceholderType: consensus.BENCHMARK_CONSENSUS_VALID,
 		BlockHeight:     blockPair.TransactionsBlock.Header.BlockHeight(),
@@ -115,7 +115,7 @@ func (s *service) signedDataForBlockProof(blockPair *protocol.BlockPairContainer
 	}).Build().Raw()
 }
 
-func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
+func (s *Service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConsensusMode, blockType protocol.BlockType, blockPair *protocol.BlockPairContainer, prevCommittedBlockPair *protocol.BlockPairContainer) error {
 	if blockType != protocol.BLOCK_TYPE_BLOCK_PAIR {
 		return errors.Errorf("handler received unsupported block type %s", blockType)
 	}
@@ -136,7 +136,9 @@ func (s *service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 		if blockPair == nil {
 			return nil
 		}
-		if blockPair.TransactionsBlock.Header.BlockHeight() > lastCommittedBlockHeight {
+		incomingBlockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+		if incomingBlockHeight > lastCommittedBlockHeight {
+			s.logger.Info("updating last committed block height from HandleBlockConsensus", logfields.BlockHeight(incomingBlockHeight))
 			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
 			if err != nil {
 				return err

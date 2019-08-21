@@ -1,6 +1,6 @@
 [submodule "vendor/github.com/orbs-network/membuffers"]
 	path = vendor/github.com/orbs-network/membuffers
-	url = https://github.com/orbs-network/membuffers
+	url = https://github.com/orbs-network/membuffers.git
 [submodule "vendor/github.com/orbs-network/orbs-spec"]
 	path = vendor/github.com/orbs-network/orbs-spec
 	url = https://github.com/orbs-network/orbs-spec
@@ -58,3 +58,6 @@
 [submodule "vendor/github.com/orbs-network/contract-external-libraries-go"]
 	path = vendor/github.com/orbs-network/contract-external-libraries-go
 	url = https://github.com/orbs-network/contract-external-libraries-go
+[submodule "vendor/github.com/orbs-network/govnr"]
+	path = vendor/github.com/orbs-network/govnr
+	url = https://github.com/orbs-network/govnr

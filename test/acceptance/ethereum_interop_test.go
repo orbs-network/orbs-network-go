@@ -27,7 +27,7 @@ import (
 func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 	newHarness().
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("tx-pool-sync"), log.ExcludeEntryPoint("TransactionForwarder")).
-		Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 			addressOfContractInEthereum := deployEthereumContract(t, network.EthereumSimulator(), "foobar")
 			deployOrbsContractCallingEthereum(ctx, network)
@@ -54,7 +54,7 @@ func extractStringValueFrom(readResponse *client.RunQueryResponse) string {
 	return argsArray.ArgumentsIterator().NextArguments().StringValue()
 }
 
-func readStringFromEthereumReaderAt(ctx context.Context, network *NetworkHarness, address string) *client.RunQueryResponse {
+func readStringFromEthereumReaderAt(ctx context.Context, network *Network, address string) *client.RunQueryResponse {
 	readQuery := builders.Query().
 		WithMethod("EthereumReader", "readString").
 		WithArgs(address).
@@ -63,7 +63,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network *NetworkHarness
 	return readResponse
 }
 
-func deployOrbsContractCallingEthereum(parent context.Context, network *NetworkHarness) {
+func deployOrbsContractCallingEthereum(parent context.Context, network *Network) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
 	ethereumReaderCode := "[placeholder for contract code which doesn't matter because native compiler is mocked]"

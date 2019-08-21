@@ -7,7 +7,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -40,6 +39,9 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
+
+	// don't auto start triggers // TODO NOAM should this be false or true ?
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -85,6 +87,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 60)
 
 	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
@@ -130,6 +133,7 @@ func ForE2E(
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 
@@ -191,15 +195,20 @@ func ForAcceptanceTestNetwork(
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
+	if emptyBlockTime == 0 {
+		emptyBlockTime = 50 * time.Millisecond
+	}
+
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
-	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, emptyBlockTime)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 600*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
@@ -228,6 +237,8 @@ func TemplateForGamma(
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 100*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Minute)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 100)
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 24*time.Hour)
@@ -236,7 +247,7 @@ func TemplateForGamma(
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 10*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 24*time.Hour)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
-	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 20*time.Minute)
+	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ganache
@@ -249,7 +260,8 @@ func TemplateForGamma(
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
-	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts", fmt.Sprintf("%d", time.Now().Unix())))
+	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
 
 	return cfg
 }

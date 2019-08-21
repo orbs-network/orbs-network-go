@@ -58,6 +58,11 @@ func RequireSuccess(t testing.TB, tx transactionStatuser, msg string, args ...in
 	require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS.String(), tx.TransactionReceipt().ExecutionResult().String(), message)
 }
 
+func RequireResult(t testing.TB, result protocol.ExecutionResult, tx transactionStatuser, msg string, args ...interface{}) {
+	message := fmt.Sprintf(msg, args...)
+	require.Equal(t, result.String(), tx.TransactionReceipt().ExecutionResult().String(), message)
+}
+
 func RequireDoesNotContainNil(t *testing.T, obj interface{}) bool {
 	if obj == nil {
 		return true

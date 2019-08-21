@@ -8,7 +8,8 @@ package leanhelixconsensus
 
 import (
 	"context"
-	testValidators "github.com/orbs-network/orbs-network-go/test/crypto/validators"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -47,45 +48,53 @@ func aMockValidateBlockHashThatReturnsError(blockHash primitives.Sha256, tx *pro
 // We only test the glue that holds them together. These are tests for these 2 functions in the same package where they are defined.
 
 func TestValidateBlockProposal_HappyPath(t *testing.T) {
-	block := testValidators.AStructurallyValidBlock()
-	prevBlock := testValidators.AStructurallyValidBlock()
-	require.NoError(t, validateBlockProposalInternal(context.Background(), ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.DefaultTestingLogger(t),
-	}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+	test.WithContext(func(ctx context.Context) {
+		block := builders.BlockPairBuilder().Build()
+		prevBlock := builders.BlockPairBuilder().Build()
+		require.NoError(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+			logger:                    log.DefaultTestingLogger(t),
+		}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
-	block := testValidators.AStructurallyValidBlock()
-	prevBlock := testValidators.AStructurallyValidBlock()
-	require.Error(t, validateBlockProposalInternal(context.Background(), ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
-		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.DefaultTestingLogger(t),
-	}), "should return false when ValidateTransactionsBlock() returns an error")
+	test.WithContext(func(ctx context.Context) {
+		block := builders.BlockPairBuilder().Build()
+		prevBlock := builders.BlockPairBuilder().Build()
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
+			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+			logger:                    log.DefaultTestingLogger(t),
+		}), "should return false when ValidateTransactionsBlock() returns an error")
+	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
-	block := testValidators.AStructurallyValidBlock()
-	prevBlock := testValidators.AStructurallyValidBlock()
-	require.Error(t, validateBlockProposalInternal(context.Background(), ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-		validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
-		validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-		logger:                    log.DefaultTestingLogger(t),
-	}), "should return false when ValidateResultsBlock() returns an error")
+	test.WithContext(func(ctx context.Context) {
+		block := builders.BlockPairBuilder().Build()
+		prevBlock := builders.BlockPairBuilder().Build()
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+			validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
+			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+			logger:                    log.DefaultTestingLogger(t),
+		}), "should return false when ValidateResultsBlock() returns an error")
+	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInValidateBlockHash(t *testing.T) {
-	block := testValidators.AStructurallyValidBlock()
-	prevBlock := testValidators.AStructurallyValidBlock()
-	require.Error(t, validateBlockProposalInternal(context.Background(), ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-		validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-		validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-		validateBlockHash:         aMockValidateBlockHashThatReturnsError,
-		logger:                    log.DefaultTestingLogger(t),
-	}), "should return false when ValidateBlockHash() returns an error")
+	test.WithContext(func(ctx context.Context) {
+		block := builders.BlockPairBuilder().Build()
+		prevBlock := builders.BlockPairBuilder().Build()
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+			validateBlockHash:         aMockValidateBlockHashThatReturnsError,
+			logger:                    log.DefaultTestingLogger(t),
+		}), "should return false when ValidateBlockHash() returns an error")
+	})
 }

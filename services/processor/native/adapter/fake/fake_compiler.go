@@ -16,7 +16,8 @@ import (
 
 type FakeCompiler interface {
 	adapter.Compiler
-	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string)
+	// Does not support multi-file fakes!
+	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string)
 }
 
 type fakeCompiler struct {
@@ -31,18 +32,22 @@ func NewCompiler() *fakeCompiler {
 	}
 }
 
-func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
+func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.provided[code] = fakeContractInfo
+	if len(code) > 1 {
+		panic("fake compiler does not support multiple files in contracts")
+	}
+
+	c.provided[code[0]] = fakeContractInfo
 }
 
-func (c *fakeCompiler) Compile(ctx context.Context, code string) (*sdkContext.ContractInfo, error) {
+func (c *fakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	contractInfo, found := c.provided[code]
+	contractInfo, found := c.provided[code[0]]
 	if !found {
 		return nil, errors.New("fake contract for given code was not previously provided with ProvideFakeContract()")
 	}

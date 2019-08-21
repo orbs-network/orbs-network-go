@@ -13,7 +13,6 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -57,10 +56,12 @@ func newHarness() *harness {
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code []byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 10 * time.Second
 	beginTime := time.Now()
-	sendTxOut, txId, err := h.sendTransaction(from.PublicKey(), from.PrivateKey(), "_Deployments", "deployService", contractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), code)
+
+	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
+
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
 	}
@@ -85,6 +86,15 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 
 func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
 	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	if err != nil {
+		return nil, txId, err
+	}
+	response, err = h.client.SendTransaction(payload)
+	return
+}
+
+func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -130,18 +140,18 @@ func (h *harness) getMetrics() metrics {
 
 	readBytes, _ := ioutil.ReadAll(res.Body)
 	m := make(metrics)
-	json.Unmarshal(readBytes, &m)
+	_ = json.Unmarshal(readBytes, &m)
 
 	return m
 }
 
 // TODO remove Eventually loop once node can handle requests at block height 0
-func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes []byte) {
+func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
 	var dcExResult codec.ExecutionResult
 	var dcTxStatus codec.TransactionStatus
 	var dcErr error
 	require.True(t, test.Eventually(20*time.Second, func() bool {
-		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes)
+		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes...)
 		return dcErr == nil &&
 			dcTxStatus == codec.TRANSACTION_STATUS_COMMITTED &&
 			dcExResult == codec.EXECUTION_RESULT_SUCCESS
@@ -188,7 +198,7 @@ func getConfig() E2EConfig {
 
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
-		baseUrl = strings.TrimRight(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
+		baseUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 

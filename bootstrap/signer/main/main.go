@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap/signer"
@@ -39,5 +40,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	signer.StartSignerServer(cfg, getLogger()).WaitUntilShutdown()
+	signer.StartSignerServer(cfg, getLogger()).WaitUntilShutdown(context.Background())
 }
