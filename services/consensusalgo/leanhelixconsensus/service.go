@@ -137,16 +137,14 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
+		//Validate no matter what Should be changed with the full implementation of audit nodes.
+		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
 
 		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
 		}
-
-		//Assume valid execution. Should be changed with the full implementation of audit nodes.
-		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
-
 	}
 
 	if shouldUpdateStateInLeanHelix(input.Mode) {
@@ -179,10 +177,10 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) {
 	threshold := time.Now().Add(-1 * s.config.InterNodeSyncAuditBlocksYoungerThan())
 	if int64(blockPair.TransactionsBlock.Header.Timestamp()) > threshold.UnixNano() {
+
 		// ignore results - we only execute the transactions so that logs are printed in an audit node
-		_, _ = s.blockProvider.consensusContext.ValidateResultsBlock(ctx, &services.ValidateResultsBlockInput{
+		_, _ = s.blockProvider.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
 			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
-			ResultsBlock:       blockPair.ResultsBlock,
 			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
 			TransactionsBlock:  blockPair.TransactionsBlock,
 			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp()})
