@@ -5,6 +5,7 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 nvm use v10.14.1
+npm install junit-xml-stats -g
 
 . ./test.common.sh
 
