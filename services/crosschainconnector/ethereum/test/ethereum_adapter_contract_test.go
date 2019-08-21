@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -122,7 +123,7 @@ func testCallContract(ctx context.Context, adapter adapter.DeployingEthereumConn
 func createRpcClient(tb testing.TB) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
 	cfg := ConfigForExternalRPCConnection()
 
-	a := adapter.NewEthereumRpcConnection(cfg, log.DefaultTestingLogger(tb))
+	a := adapter.NewEthereumRpcConnection(cfg, log.DefaultTestingLogger(tb), metric.NewRegistry())
 	auth, err := cfg.GetAuthFromConfig()
 	if err != nil {
 		panic(err)

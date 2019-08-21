@@ -47,7 +47,8 @@ func (c *ethereumConnectorConfigForTests) GetAuthFromConfig() (*bind.TransactOpt
 
 func TestReportingFailure(t *testing.T) {
 	emptyConfig := &ethereumConnectorConfigForTests{}
-	x := NewEthereumRpcConnection(emptyConfig, log.DefaultTestingLogger(t))
-	err := x.updateConnectionStatus(context.Background(), createConnectionStatusMetrics(metric.NewRegistry()))
+	registry := metric.NewRegistry()
+	x := NewEthereumRpcConnection(emptyConfig, log.DefaultTestingLogger(t), registry)
+	err := x.updateConnectionStatus(context.Background(), createConnectionStatusMetrics(registry))
 	require.Error(t, err, "require some error from the update flow, config is a lie")
 }
