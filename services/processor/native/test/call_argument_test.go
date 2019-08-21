@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
@@ -65,16 +66,18 @@ func TestProcessCall_Arguments(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			test.WithContext(func(ctx context.Context) {
-				h := newHarness(t)
+				with.Logging(t, func(parent *with.LoggingHarness) {
+					h := newHarness(parent.Logger)
 
-				output, err := h.service.ProcessCall(ctx, tt.input)
-				if tt.expectedError {
-					require.Error(t, err, "call should fail")
-					require.NotEmpty(t, output.OutputArgumentArray.ArgumentsIterator().NextArguments().StringValue(), "call return args should contain an error string")
-				} else {
-					require.NoError(t, err, "call should succeed")
-					require.Equal(t, tt.expectedOutput, output.OutputArgumentArray, "call return args should be equal")
-				}
+					output, err := h.service.ProcessCall(ctx, tt.input)
+					if tt.expectedError {
+						require.Error(t, err, "call should fail")
+						require.NotEmpty(t, output.OutputArgumentArray.ArgumentsIterator().NextArguments().StringValue(), "call return args should contain an error string")
+					} else {
+						require.NoError(t, err, "call should succeed")
+						require.Equal(t, tt.expectedOutput, output.OutputArgumentArray, "call return args should be equal")
+					}
+				})
 			})
 		})
 	}

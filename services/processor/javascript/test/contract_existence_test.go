@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -21,36 +22,40 @@ import (
 
 func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
-		input := processCallInput().WithUnknownContract().Build()
-		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
+			input := processCallInput().WithUnknownContract().Build()
+			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), nil, errors.New("code not found error"))
 
-		_, err := h.service.ProcessCall(ctx, input)
-		require.Error(t, err, "call should fail")
+			_, err := h.service.ProcessCall(ctx, input)
+			require.Error(t, err, "call should fail")
 
-		h.verifySdkCallMade(t)
+			h.verifySdkCallMade(t)
+		})
 	})
 }
 
 func TestProcessCall_WithDeployableContractSucceeds(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
-		input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
-		codeOutput := builders.ArgumentsArray([]byte(contracts.JavaScriptSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
-		h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), codeOutput, nil)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
+			input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
+			codeOutput := builders.ArgumentsArray([]byte(contracts.JavaScriptSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), codeOutput, nil)
 
-		output, err := h.service.ProcessCall(ctx, input)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+			output, err := h.service.ProcessCall(ctx, input)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
 
-		t.Log("First call should getCode for compilation")
-		h.verifySdkCallMade(t)
+			t.Log("First call should getCode for compilation")
+			h.verifySdkCallMade(t)
 
-		output, err = h.service.ProcessCall(ctx, input)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+			output, err = h.service.ProcessCall(ctx, input)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
 
-		t.Log("Make sure second call does not getCode again")
-		h.verifySdkCallMade(t)
+			t.Log("Make sure second call does not getCode again")
+			h.verifySdkCallMade(t)
+		})
 	})
 }
