@@ -73,13 +73,14 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 
 func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigForTests) *harness {
 	logger := log.DefaultTestingLogger(tb)
-	a := adapter.NewEthereumRpcConnection(cfg, logger)
+	registry := metric.NewRegistry()
+	a := adapter.NewEthereumRpcConnection(cfg, logger, registry)
 
 	return &harness{
 		config:     cfg,
 		rpcAdapter: a,
 		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger, metric.NewRegistry()),
+		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger, registry),
 	}
 }
 
