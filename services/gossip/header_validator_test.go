@@ -7,6 +7,7 @@
 package gossip
 
 import (
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -15,55 +16,63 @@ import (
 )
 
 func TestValidateMessageHeader_Valid(t *testing.T) {
-	v := newValidator(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := newValidator(harness.Logger)
 
-	header := (&gossipmessages.HeaderBuilder{
-		VirtualChainId:         42,
-		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientNodeAddresses: []primitives.NodeAddress{{0x1}},
-	}).Build()
+		header := (&gossipmessages.HeaderBuilder{
+			VirtualChainId:         42,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{{0x1}},
+		}).Build()
 
-	require.NoError(t, v.validateMessageHeader(header))
+		require.NoError(t, v.validateMessageHeader(header))
+	})
 }
 
 func TestValidateMessageHeader_IncorrectVirtualChain(t *testing.T) {
-	v := newValidator(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := newValidator(harness.Logger)
 
-	header := (&gossipmessages.HeaderBuilder{
-		VirtualChainId: 43,
-		RecipientMode:  gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-	}).Build()
+		header := (&gossipmessages.HeaderBuilder{
+			VirtualChainId: 43,
+			RecipientMode:  gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+		}).Build()
 
-	require.Error(t, v.validateMessageHeader(header))
+		require.Error(t, v.validateMessageHeader(header))
+	})
 }
 
 func TestValidateMessageHeader_NodeIsNotARecipient_ListMode(t *testing.T) {
-	v := newValidator(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := newValidator(harness.Logger)
 
-	header := (&gossipmessages.HeaderBuilder{
-		VirtualChainId:         42,
-		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
-		RecipientNodeAddresses: []primitives.NodeAddress{{0x2}, {0x3}},
-	}).Build()
+		header := (&gossipmessages.HeaderBuilder{
+			VirtualChainId:         42,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{{0x2}, {0x3}},
+		}).Build()
 
-	require.Error(t, v.validateMessageHeader(header))
+		require.Error(t, v.validateMessageHeader(header))
+	})
 }
 
 func TestValidateMessageHeader_NodeIsARecipient_AllButListMode(t *testing.T) {
-	v := newValidator(t)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		v := newValidator(harness.Logger)
 
-	header := (&gossipmessages.HeaderBuilder{
-		VirtualChainId:         42,
-		RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST,
-		RecipientNodeAddresses: []primitives.NodeAddress{{0x1}},
-	}).Build()
+		header := (&gossipmessages.HeaderBuilder{
+			VirtualChainId:         42,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{{0x1}},
+		}).Build()
 
-	require.Error(t, v.validateMessageHeader(header))
+		require.Error(t, v.validateMessageHeader(header))
+	})
 }
 
-func newValidator(t *testing.T) *headerValidator {
+func newValidator(logger log.Logger) *headerValidator {
 	cfg := &hardcodedValidatorConfig{virtualChainId: 42, nodeAddress: []byte{0x1}}
-	v := newHeaderValidator(cfg, log.DefaultTestingLogger(t))
+	v := newHeaderValidator(cfg, logger)
 	return v
 }
 
