@@ -29,8 +29,7 @@ type harness struct {
 	vmMock  *services.MockVirtualMachine
 }
 
-func newPublicApiHarness(ctx context.Context, tb testing.TB, txTimeout time.Duration, outOfSyncWarningTime time.Duration) *harness {
-	logger := log.DefaultTestingLogger(tb)
+func newPublicApiHarness(logger log.Logger, txTimeout time.Duration, outOfSyncWarningTime time.Duration) *harness {
 	cfg := config.ForPublicApiTests(uint32(builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID), txTimeout, outOfSyncWarningTime)
 	txpMock := makeTxMock()
 	vmMock := &services.MockVirtualMachine{}
