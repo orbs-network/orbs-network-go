@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -31,25 +32,26 @@ type directHarness struct {
 	config    config.GossipTransportConfig
 	transport *DirectTransport
 
-	peerTalkerConnection      net.Conn
-	listenerMock              *testkit.MockTransportListener
+	peerTalkerConnection net.Conn
+	listenerMock         *testkit.MockTransportListener
 }
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
-	cfg := config.ForDirectTransportTests(make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
+	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
+	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
 	transport := makeTransport(ctx, t, cfg)
 
-	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort())      // establish connection from test to server port ( test harness ==> SUT )
+	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort()) // establish connection from test to server port ( test harness ==> SUT )
 
 	h := &directHarness{
-		config:                    cfg,
-		transport:                 transport,
-		listenerMock:              &testkit.MockTransportListener{},
-		peerTalkerConnection:      peerTalkerConnection,
+		config:               cfg,
+		transport:            transport,
+		listenerMock:         &testkit.MockTransportListener{},
+		peerTalkerConnection: peerTalkerConnection,
 	}
 
-	return h}
-
+	return h
+}
 
 func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *DirectTransport {
 	log := log.DefaultTestingLogger(tb)

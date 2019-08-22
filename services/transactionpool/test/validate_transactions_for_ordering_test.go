@@ -18,9 +18,8 @@ import (
 )
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		require.NoError(t,
 			h.validateTransactionsForOrdering(ctx, 2, builders.Transaction().Build(), builders.Transaction().Build()),
@@ -29,9 +28,8 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 }
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
@@ -50,9 +48,8 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
 
@@ -66,9 +63,8 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		invalidTx := builders.TransferTransaction().Build()
 		h.failPreOrderCheckFor(func(tx *protocol.SignedTransaction) bool {
@@ -83,9 +79,8 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 }
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
-	h := newHarness(t)
-	test.WithContextAndShutdown(h, func(ctx context.Context) {
-		h.start(ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
 		require.EqualErrorf(t,
 			h.validateTransactionsForOrdering(ctx, 666, builders.Transaction().Build()),

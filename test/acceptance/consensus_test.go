@@ -25,7 +25,7 @@ func TestBenchmarkConsensus_LeaderGetsVotesBeforeNextBlock(t *testing.T) {
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // override default consensus algo
 		WithMaxTxPerBlock(1).
-		Start(t, func(t testing.TB, parent context.Context, network *NetworkHarness) {
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()
 

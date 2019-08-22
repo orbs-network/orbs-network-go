@@ -20,9 +20,9 @@ import (
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -66,8 +66,8 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			start(ctx)
@@ -88,8 +88,8 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 }
 
 func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			start(ctx)
@@ -107,11 +107,12 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 }
 
 func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			start(ctx)
+
 		harness.commitSomeBlocks(ctx, 3)
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
@@ -129,9 +130,9 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 }
 
 func TestSourceRespondsWithChunks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		batchSize := uint32(10)
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withBatchSize(batchSize).
 			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
 			withSyncBroadcast(1).
@@ -172,7 +173,7 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 }
 
 func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		lastBlock := 10
 		firstHeight := primitives.BlockHeight(lastBlock + 1)
 		lastHeight := primitives.BlockHeight(lastBlock)
@@ -182,7 +183,7 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 			WithLastCommittedBlockHeight(lastHeight).
 			Build()
 
-		harness := newBlockStorageHarness(t).
+		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
 			start(ctx)

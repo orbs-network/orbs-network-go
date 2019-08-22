@@ -74,11 +74,11 @@ func syncOneBlock(ctx context.Context, block *protocol.BlockPairContainer, commi
 	return requestedHeight
 }
 
-func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) govnr.ContextEndedChan {
+func NewServiceBlockSync(ctx context.Context, logger log.Logger, source blockSource, committer BlockPairCommitter) *govnr.ForeverHandle {
 	ctx = trace.NewContext(ctx, committer.GetServiceName())
 	logger = logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("service block sync starting") // TODO what context? if not context then remove the message
-	return govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+	return govnr.Forever(ctx, committer.GetServiceName(), logfields.GovnrErrorer(logger), func() {
 		var height primitives.BlockHeight
 		var err error
 		for err == nil {

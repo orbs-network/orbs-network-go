@@ -53,11 +53,9 @@ func TestSyncLoop(t *testing.T) {
 
 func TestSyncInitialState(t *testing.T) {
 
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		// Set up block source mock
-		logger := log.DefaultTestingLogger(t)
-
-		sourceTracker := synchronization.NewBlockTracker(logger, 3, 10)
+		sourceTracker := synchronization.NewBlockTracker(harness.Logger, 3, 10)
 		sourceMock := newBlockSourceMock(3)
 		sourceMock.When("GetLastBlock").Times(2)
 		sourceMock.When("GetBlockTracker").Return(sourceTracker, nil).AtLeast(0)
@@ -66,7 +64,7 @@ func TestSyncInitialState(t *testing.T) {
 		// Set up target mock
 		committerMock := &blockPairCommitterMock{}
 		targetCurrentHeight := primitives.BlockHeight(0)
-		targetTracker := synchronization.NewBlockTracker(logger, 0, 10)
+		targetTracker := synchronization.NewBlockTracker(harness.Logger, 0, 10)
 		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
 			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == targetCurrentHeight+1 {
 				targetCurrentHeight++
@@ -75,7 +73,7 @@ func TestSyncInitialState(t *testing.T) {
 			return targetCurrentHeight + 1, nil
 		}).Times(5)
 
-		NewServiceBlockSync(ctx, logger, sourceMock, committerMock)
+		harness.Supervise(NewServiceBlockSync(ctx, harness.Logger, sourceMock, committerMock))
 
 		// Wait for first sync
 		err := targetTracker.WaitForBlock(ctx, 3)

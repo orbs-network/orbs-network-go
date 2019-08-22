@@ -10,22 +10,29 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"math/big"
 )
 
 type EthereumRpcConnection struct {
+	govnr.TreeSupervisor
 	connectorCommon
 
-	config ethereumAdapterConfig
+	config   ethereumAdapterConfig
+	registry metric.Registry
 }
 
-func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.Logger) *EthereumRpcConnection {
+func NewEthereumRpcConnection(config ethereumAdapterConfig, logger log.Logger, registry metric.Registry) *EthereumRpcConnection {
 	rpc := &EthereumRpcConnection{
-		config: config,
+		connectorCommon: connectorCommon{
+			logger: logger.WithTags(log.String("adapter", "ethereum")),
+		},
+		config:   config,
+		registry: registry,
 	}
-	rpc.logger = logger.WithTags(log.String("adapter", "ethereum"))
 	rpc.getContractCaller = func() (caller EthereumCaller, e error) {
 		return rpc.dial()
 	}

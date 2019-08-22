@@ -17,7 +17,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
+	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -25,14 +25,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
-	"testing"
 	"time"
 )
 
 type harness struct {
-	supervised.TreeSupervisor
+	*test.ConcurrencyHarness
 	txpool                  *transactionpool.Service
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
@@ -42,8 +40,6 @@ type harness struct {
 	lastBlockTimestamp      primitives.TimestampNano
 	config                  config.TransactionPoolConfig
 	ignoreBlockHeightChecks bool
-	logger                  log.Logger
-	testOutput              *log.TestOutput
 }
 
 var (
@@ -235,7 +231,7 @@ func (h *harness) getTxReceipt(ctx context.Context, tx *protocol.SignedTransacti
 }
 
 func (h *harness) start(ctx context.Context) *harness {
-	service := transactionpool.NewTransactionPool(ctx, adapter.NewSystemClock(), h.gossip, h.vm, h.signer, nil, h.config, h.logger, metric.NewRegistry())
+	service := transactionpool.NewTransactionPool(ctx, adapter.NewSystemClock(), h.gossip, h.vm, h.signer, nil, h.config, h.Logger, metric.NewRegistry())
 	service.RegisterTransactionResultsHandler(h.trh)
 	h.txpool = service
 	h.fastForwardTo(ctx, 1)
@@ -243,50 +239,42 @@ func (h *harness) start(ctx context.Context) *harness {
 	return h
 }
 
-func (h *harness) allowingErrorsMatching(pattern string) *harness {
-	h.testOutput.AllowErrorsMatching(pattern)
-	return h
-}
-
 const DEFAULT_CONFIG_SIZE_LIMIT = 20 * 1024 * 1024
 const DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS = 100
 
-func newHarness(tb testing.TB) *harness {
-	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+func newHarness(parent *test.ConcurrencyHarness) *harness {
+	return newHarnessWithConfig(parent, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithSizeLimit(tb testing.TB, sizeLimit uint32) *harness {
-	return newHarnessWithConfig(tb, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
+func newHarnessWithSizeLimit(parent *test.ConcurrencyHarness, sizeLimit uint32) *harness {
+	return newHarnessWithConfig(parent, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithInfiniteTimeBetweenEmptyBlocks(tb testing.TB) *harness {
-	return newHarnessWithConfig(tb, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
+func newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent *test.ConcurrencyHarness) *harness {
+	return newHarnessWithConfig(parent, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
 }
 
-func newHarnessWithConfig(tb testing.TB, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
+func newHarnessWithConfig(parent *test.ConcurrencyHarness, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 
 	virtualMachine := &services.MockVirtualMachine{}
 
 	cfg := config.ForTransactionPoolTests(sizeLimit, thisNodeKeyPair, timeBetweenEmptyBlocks)
-	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(testOutput)
 
 	transactionResultHandler := &handlers.MockTransactionResultsHandler{}
 
 	signer, err := signer.New(cfg)
-	require.NoError(tb, err)
+	require.NoError(parent.T, err)
 
 	h := &harness{
+		ConcurrencyHarness: parent,
 		gossip:             gossip,
 		vm:                 virtualMachine,
 		signer:             signer,
 		trh:                transactionResultHandler,
 		lastBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 		config:             cfg,
-		logger:             logger,
-		testOutput:         testOutput,
 	}
 
 	h.passAllPreOrderChecks()

@@ -8,208 +8,246 @@ package acceptance
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/govnr"
-	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
-	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	memoryGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	testGossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
-	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
-	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
-	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
-	"math"
+	"math/rand"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
-type NetworkHarness struct {
-	inmemory.Network
+const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
+const TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
+const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
+const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
+const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
+const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
 
-	tamperingTransport                 testGossipAdapter.Tamperer
-	ethereumConnection                 *ethereumAdapter.EthereumSimulator
-	fakeCompiler                       fake.FakeCompiler
-	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
-	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
-	stateBlockHeightTrackers           []*synchronization.BlockTracker
-	transactionPoolBlockHeightTrackers []*synchronization.BlockTracker
+var DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME = 10 * time.Millisecond
+
+type acceptanceNetworkHarness struct {
+	sequentialTests          sync.Mutex
+	numNodes                 int
+	consensusAlgos           []consensus.ConsensusAlgoType
+	testId                   string
+	setupFunc                func(ctx context.Context, network *Network)
+	configOverride           func(config config.OverridableConfig) config.OverridableConfig
+	logFilters               []log.Filter
+	maxTxPerBlock            uint32
+	allowedErrors            []string
+	numOfNodesToStart        int
+	requiredQuorumPercentage uint32
+	blockChain               []*protocol.BlockPairContainer
+	virtualChainId           primitives.VirtualChainId
+	emptyBlockTime           time.Duration
 }
 
-func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, network *NetworkHarness)) {
-	logger := log.DefaultTestingLogger(tb)
-	ctx, cancel := context.WithCancel(context.Background())
-	govnr.Recover(logfields.GovnrErrorer(logger), func() {
-		defer cancel()
-		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, nil)
-		network.CreateAndStartNodes(ctx, 2)
-		f(ctx, network)
+func newHarness() *acceptanceNetworkHarness {
+	n := &acceptanceNetworkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
+
+	var algos []consensus.ConsensusAlgoType
+	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
+		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
+	} else {
+		algos = []consensus.ConsensusAlgoType{consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS}
+	}
+
+	callerFuncName := getCallerFuncName(2)
+	if callerFuncName == "getStressTestHarness" {
+		callerFuncName = getCallerFuncName(3)
+	}
+
+	harness := n.
+		WithTestId(callerFuncName).
+		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
+		WithConsensusAlgos(algos...).
+		WithVirtualChainId(DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID).
+		AllowingErrors(
+			"ValidateBlockProposal failed.*", // it is acceptable for validation to fail in one or more nodes, as long as f+1 nodes are in agreement on a block and even if they do not, a new leader should eventually be able to reach consensus on the block
+		)
+
+	return harness
+}
+
+func (b *acceptanceNetworkHarness) WithLogFilters(filters ...log.Filter) *acceptanceNetworkHarness {
+	b.logFilters = filters
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithTestId(testId string) *acceptanceNetworkHarness {
+	randNum := rand.Intn(1000)
+	b.testId = "acc-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithNumNodes(numNodes int) *acceptanceNetworkHarness {
+	b.numNodes = numNodes
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithConsensusAlgos(algos ...consensus.ConsensusAlgoType) *acceptanceNetworkHarness {
+	b.consensusAlgos = algos
+	return b
+}
+
+// setup runs when all adapters have been created but before the nodes are started
+func (b *acceptanceNetworkHarness) WithSetup(f func(ctx context.Context, network *Network)) *acceptanceNetworkHarness {
+	b.setupFunc = f
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithMaxTxPerBlock(maxTxPerBlock uint32) *acceptanceNetworkHarness {
+	b.maxTxPerBlock = maxTxPerBlock
+	return b
+}
+
+func (b *acceptanceNetworkHarness) AllowingErrors(allowedErrors ...string) *acceptanceNetworkHarness {
+	b.allowedErrors = append(b.allowedErrors, allowedErrors...)
+	return b
+}
+
+func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ctx context.Context, network *Network)) {
+	if b.numOfNodesToStart == 0 {
+		b.numOfNodesToStart = b.numNodes
+	}
+
+	for _, consensusAlgo := range b.consensusAlgos {
+		b.runWithAlgo(tb, consensusAlgo, f)
+	}
+}
+
+func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+
+	switch runner := tb.(type) {
+	case *testing.T:
+		runner.Run(consensusAlgo.String(), func(t *testing.T) {
+			b.runTest(t, consensusAlgo, f)
+		})
+	case *testing.B:
+		runner.Run(consensusAlgo.String(), func(t *testing.B) {
+			b.runTest(t, consensusAlgo, f)
+		})
+	default:
+		panic("unexpected TB implementation")
+	}
+}
+
+func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
+	// as we run subtests, golang will by default run two subtests in parallel
+	// we don't want to rely on the -parallel flag, as when running all tests this flag should turn on
+	b.sequentialTests.Lock()
+	defer b.sequentialTests.Unlock()
+
+	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
+	test.WithContext(func(parentCtx context.Context) {
+		testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
+
+		logger := b.makeLogger(testOutput, testId)
+
+		govnr.Recover(logfields.GovnrErrorer(logger), func() {
+			ctx, cancel := context.WithTimeout(context.Background(), TEST_TIMEOUT_HARD_LIMIT)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+			defer cancel()
+			defer testOutput.TestTerminated()
+
+			logger.Info("acceptance network created")
+			defer dumpStateOnFailure(tb, network)
+
+			if b.setupFunc != nil {
+				b.setupFunc(ctx, network)
+			}
+
+			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
+			logger.Info("acceptance network started")
+
+			logger.Info("acceptance network running test")
+			f(tb, ctx, network)
+			test.RequireNoUnexpectedErrors(tb, testOutput)
+			cancel()
+			network.WaitUntilShutdown(ctx)
+
+		})
+
 	})
 }
 
-func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration,
-	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *NetworkHarness {
-
-	testLogger.Info("===========================================================================")
-	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
-
-	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
-
-	genesisValidatorNodes := map[string]config.ValidatorNode{}
-	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
-	var nodeOrder []primitives.NodeAddress
-	for i := 0; i < int(numNodes); i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
-		nodeOrder = append(nodeOrder, nodeAddress)
+func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
+	str := algoType.String()
+	if len(str) < 20 {
+		return str
 	}
-
-	var cfgTemplate config.OverridableConfig
-	cfgTemplate = config.ForAcceptanceTestNetwork(
-		genesisValidatorNodes,
-		leaderKeyPair.NodeAddress(),
-		consensusAlgo,
-		maxTxPerBlock,
-		requiredQuorumPercentage,
-		vcid,
-		emptyBlockTime,
-	)
-
-	if configOverride != nil {
-		cfgTemplate = configOverride(cfgTemplate)
-	}
-
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
-	sharedCompiler := nativeProcessorAdapter.NewCompiler()
-	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
-
-	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
-	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
-	var transactionPoolTrackers []*synchronization.BlockTracker
-	var stateTrackers []*synchronization.BlockTracker
-
-	provider := func(idx int, nodeConfig config.NodeConfig, logger log.Logger, metricRegistry metric.Registry) *inmemory.NodeDependencies {
-		tamperingBlockPersistence := blockStorageAdapter.NewBlockPersistence(logger, preloadedBlocks, metricRegistry)
-		dumpingStateStorage := harnessStateStorageAdapter.NewDumpingStatePersistence(metricRegistry)
-
-		txPoolHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-		stateHeightTracker := synchronization.NewBlockTracker(logger, 0, math.MaxUint16)
-
-		tamperingBlockPersistences = append(tamperingBlockPersistences, tamperingBlockPersistence)
-		dumpingStatePersistences = append(dumpingStatePersistences, dumpingStateStorage)
-		transactionPoolTrackers = append(transactionPoolTrackers, txPoolHeightTracker)
-		stateTrackers = append(stateTrackers, stateHeightTracker)
-
-		return &inmemory.NodeDependencies{
-			BlockPersistence:                   tamperingBlockPersistence,
-			StatePersistence:                   dumpingStateStorage,
-			EtherConnection:                    sharedEthereumSimulator,
-			Compiler:                           sharedCompiler,
-			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
-			StateBlockHeightReporter:           stateHeightTracker,
-		}
-	}
-
-	harness := &NetworkHarness{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, nil, provider),
-		tamperingTransport:                 sharedTamperingTransport,
-		ethereumConnection:                 sharedEthereumSimulator,
-		fakeCompiler:                       sharedCompiler,
-		tamperingBlockPersistences:         tamperingBlockPersistences,
-		dumpingStatePersistences:           dumpingStatePersistences,
-		stateBlockHeightTrackers:           stateTrackers,
-		transactionPoolBlockHeightTrackers: transactionPoolTrackers,
-	}
-
-	return harness // call harness.CreateAndStartNodes() to launch nodes in the network
+	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (n *NetworkHarness) WaitForTransactionInNodeState(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
-	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
-	err := n.stateBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
-	if err != nil {
-		instrumentation.DebugPrintGoroutineStacks(n.Logger) // since test timed out, help find deadlocked goroutines
-		panic(fmt.Sprintf("statePersistence.WaitUntilCommittedBlockOfHeight failed: %s", err.Error()))
+func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId string) log.Logger {
+
+	for _, pattern := range b.allowedErrors {
+		testOutput.AllowErrorsMatching(pattern)
+	}
+
+	logger := log.GetLogger().WithTags(
+		log.String("_test", "acceptance"),
+		log.String("_test-id", testId)).
+		WithFilters(
+			log.IgnoreMessagesMatching("transport message received"),
+			log.ExcludeField(memory.LogTag),
+		).
+		WithFilters(b.logFilters...)
+	//WithFilters(log.Or(log.OnlyErrors(), log.OnlyCheckpoints()))
+
+	return logger
+}
+
+func (b *acceptanceNetworkHarness) WithNumRunningNodes(numNodes int) *acceptanceNetworkHarness {
+	b.numOfNodesToStart = numNodes
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithRequiredQuorumPercentage(percentage int) *acceptanceNetworkHarness {
+	b.requiredQuorumPercentage = uint32(percentage)
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithInitialBlocks(blocks []*protocol.BlockPairContainer) *acceptanceNetworkHarness {
+	b.blockChain = blocks
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithVirtualChainId(id primitives.VirtualChainId) *acceptanceNetworkHarness {
+	b.virtualChainId = id
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithEmptyBlockTime(emptyBlockTime time.Duration) *acceptanceNetworkHarness {
+	b.emptyBlockTime = emptyBlockTime
+	return b
+}
+
+func (b *acceptanceNetworkHarness) WithConfigOverride(f func(cfg config.OverridableConfig) config.OverridableConfig) *acceptanceNetworkHarness {
+	b.configOverride = f
+	return b
+}
+
+func dumpStateOnFailure(tb testing.TB, network *Network) {
+	if tb.Failed() {
+		network.DumpState()
 	}
 }
 
-func (n *NetworkHarness) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
-	for i, node := range n.Nodes {
-		if node.Started() {
-			n.WaitForTransactionInNodeState(ctx, txHash, i)
-		}
-	}
-}
-
-func (n *NetworkHarness) TransportTamperer() testGossipAdapter.Tamperer {
-	return n.tamperingTransport
-}
-
-func (n *NetworkHarness) EthereumSimulator() *ethereumAdapter.EthereumSimulator {
-	return n.ethereumConnection
-}
-
-func (n *NetworkHarness) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {
-	bt := callcontract.NewContractClient(n)
-
-	benchmarkDeploymentTimeout := 5 * time.Second
-	timeoutCtx, cancel := context.WithTimeout(ctx, benchmarkDeploymentTimeout)
-	defer cancel()
-
-	res, txHash := bt.Transfer(timeoutCtx, 0, 0, ownerAddressIndex, ownerAddressIndex) // deploy BenchmarkToken by running an empty transaction
-
-	switch res.TransactionStatus() {
-	case protocol.TRANSACTION_STATUS_COMMITTED, protocol.TRANSACTION_STATUS_PENDING, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING:
-		n.WaitForTransactionInState(ctx, txHash)
-	default:
-		panic(fmt.Sprintf("error sending transaction response: %s", res.String()))
-	}
-	return bt
-}
-
-func (n *NetworkHarness) MockContract(fakeContractInfo *sdkContext.ContractInfo, code string) {
-	n.fakeCompiler.ProvideFakeContract(fakeContractInfo, code)
-}
-
-func (n *NetworkHarness) GetTransactionPoolBlockHeightTracker(nodeIndex int) *synchronization.BlockTracker {
-	return n.transactionPoolBlockHeightTrackers[nodeIndex]
-}
-
-func (n *NetworkHarness) BlockPersistence(nodeIndex int) blockStorageAdapter.TamperingInMemoryBlockPersistence {
-	return n.tamperingBlockPersistences[nodeIndex]
-}
-
-func (n *NetworkHarness) GetStatePersistence(i int) testStateStorageAdapter.DumpingStatePersistence {
-	return n.dumpingStatePersistences[i]
-}
-
-func (n *NetworkHarness) Size() int {
-	return len(n.Nodes)
-}
-
-func (n *NetworkHarness) DumpState() {
-	for i := range n.Nodes {
-		n.Logger.Info("state dump", log.Int("node", i), log.String("data", n.GetStatePersistence(i).Dump()))
-	}
-}
-
-func (n *NetworkHarness) WaitForBlock(ctx context.Context, height primitives.BlockHeight) {
-	for _, tracker := range n.transactionPoolBlockHeightTrackers {
-		tracker.WaitForBlock(ctx, height)
-	}
+func getCallerFuncName(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip)
+	packageAndFuncName := runtime.FuncForPC(pc).Name()
+	parts := strings.Split(packageAndFuncName, ".")
+	return parts[len(parts)-1]
 }

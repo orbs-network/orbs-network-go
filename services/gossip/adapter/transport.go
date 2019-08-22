@@ -28,6 +28,7 @@ type Transport interface {
 }
 
 type TransportListener interface {
+	fmt.Stringer // TODO smelly
 	OnTransportMessageReceived(ctx context.Context, payloads [][]byte)
 }
 

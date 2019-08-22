@@ -8,6 +8,7 @@ package gossip
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -27,6 +28,7 @@ type meteredTopicChannel struct {
 	ch      chan gossipMessage
 	size    *metric.Gauge
 	inQueue *metric.Gauge
+	name    string
 }
 
 func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) {
@@ -38,8 +40,8 @@ func (c *meteredTopicChannel) updateMetrics() {
 	c.inQueue.Update(int64(len(c.ch)))
 }
 
-func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) govnr.ContextEndedChan {
-	return govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handler handlerFunc) *govnr.ForeverHandle {
+	return govnr.Forever(ctx, c.name, logfields.GovnrErrorer(logger), func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -72,6 +74,7 @@ func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopic
 		ch:      make(chan gossipMessage, capacity),
 		size:    sizeGauge,
 		inQueue: registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
+		name:    fmt.Sprintf("%s topic handler", name),
 	}
 }
 
@@ -106,7 +109,7 @@ func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmess
 
 }
 
-func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) govnr.ContextEndedChan {
+func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) *govnr.ForeverHandle {
 	topicChannel, err := d.get(topic)
 	if err != nil {
 		logger.Error("no message channel found", log.Error(err))

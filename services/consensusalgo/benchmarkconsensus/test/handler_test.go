@@ -15,8 +15,8 @@ import (
 )
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
@@ -36,8 +36,8 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
@@ -56,8 +56,8 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *test
 }
 
 func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeaderHarnessWaitingForCommittedMessages(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
@@ -77,8 +77,8 @@ func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) 
 }
 
 func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 1002")
@@ -102,8 +102,8 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 without hash pointer")
@@ -119,8 +119,8 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 with bad signature")
@@ -140,8 +140,8 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newNonLeaderHarness(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderKeyPair())
 
 		t.Log("Handle block consensus (ie due to block sync) of height 2 from non leader")

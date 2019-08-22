@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -20,11 +21,10 @@ import (
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
-	"time"
 )
 
 type Node struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	logic      NodeLogic
 	cancelFunc context.CancelFunc
 	httpServer *httpserver.HttpServer
@@ -52,7 +52,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
-	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger)
+	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
@@ -65,7 +65,9 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		httpServer: httpServer,
 	}
 
-	n.SuperviseChan("Ethereum connector status reporter", ethereumConnection.ReportConnectionStatus(ctx, metricRegistry, logger, 30*time.Second))
+	ethereumConnection.ReportConnectionStatus(ctx)
+
+	n.Supervise(ethereumConnection)
 	n.Supervise(nodeLogic)
 	n.Supervise(transport)
 	n.Supervise(httpServer)

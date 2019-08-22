@@ -133,6 +133,7 @@ func ForE2E(
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 
@@ -194,16 +195,20 @@ func ForAcceptanceTestNetwork(
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
+	if emptyBlockTime == 0 {
+		emptyBlockTime = 50 * time.Millisecond
+	}
+
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
-	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, emptyBlockTime)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 600*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
@@ -233,7 +238,7 @@ func TemplateForGamma(
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Minute)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 100)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
-	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
+	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 24*time.Hour)

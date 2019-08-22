@@ -8,6 +8,8 @@ package transactionpool
 
 import (
 	"context"
+	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -18,9 +20,9 @@ type cleaner interface {
 	clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano)
 }
 
-func startCleaningProcess(ctx context.Context, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, lastBlockHeightAndTime func() (primitives.BlockHeight, primitives.TimestampNano), logger log.Logger) chan struct{} {
-	return synchronization.NewPeriodicalTrigger(ctx, tickInterval(), logger, func() {
+func startCleaningProcess(ctx context.Context, poolName string, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, lastBlockHeightAndTime func() (primitives.BlockHeight, primitives.TimestampNano), logger log.Logger) govnr.ShutdownWaiter {
+	return synchronization.NewPeriodicalTrigger(ctx, fmt.Sprintf("%s cleaner trigger", poolName), tickInterval(), logger, func() {
 		_, lastCommittedBlockTime := lastBlockHeightAndTime()
 		c.clearTransactionsOlderThan(ctx, lastCommittedBlockTime-primitives.TimestampNano(expiration().Nanoseconds()))
-	}, nil).Closed
+	}, nil)
 }

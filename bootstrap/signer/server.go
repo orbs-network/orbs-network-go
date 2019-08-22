@@ -8,6 +8,7 @@ package signer
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/services/signer"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -16,7 +17,7 @@ import (
 )
 
 type Server struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	service    services.Vault
 	cancelFunc context.CancelFunc
 	httpServer *httpServer

@@ -8,10 +8,11 @@ package gossip
 
 import (
 	"context"
+	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -35,7 +36,7 @@ type gossipListeners struct {
 }
 
 type Service struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 
 	config          Config
 	logger          log.Logger
@@ -59,10 +60,10 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 		messageDispatcher: dispatcher,
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
-	s.SuperviseChan("Transaction Relay gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
-	s.SuperviseChan("Block Sync gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
-	s.SuperviseChan("Lean Helix gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
-	s.SuperviseChan("Benchmark Consensus gossip topic", dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
+	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
+	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
+	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
+	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
 
 	return s
 }
@@ -91,4 +92,8 @@ func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
 		s.messageDispatcher.dispatch(logger, header, payloads[1:])
 	}
+}
+
+func (s *Service) String() string {
+	return fmt.Sprintf("Gossip service for node %s: %p", s.config.NodeAddress(), s)
 }

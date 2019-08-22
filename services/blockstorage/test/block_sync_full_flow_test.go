@@ -22,8 +22,8 @@ import (
 )
 
 func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		harness := newBlockStorageHarness(t).
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(200 * time.Millisecond).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond)
@@ -33,7 +33,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		resultsForVerification := newSyncFlowSummary()
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-			respondToBroadcastAvailabilityRequest(t, ctx, harness, input, NUM_BLOCKS, 7, 8)
+			respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7, 8)
 			return nil, nil
 		})
 
@@ -139,25 +139,4 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 	require.Conditionf(t, func() (success bool) {
 		return lastRequestedBlock >= firstRequestedBlock && lastRequestedBlock <= availableBlocks
 	}, "request is not consistent with my BlockAvailabilityResponse, last requested block must be between first (%d) and total (%d) but was %d", firstRequestedBlock, availableBlocks, lastRequestedBlock)
-}
-
-func respondToBroadcastAvailabilityRequest(t *testing.T, ctx context.Context, harness *harness, requestInput *gossiptopics.BlockAvailabilityRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
-	if harness.blockStorage == nil {
-		return // protect against edge condition where harness did not finish initializing and sync has started
-	}
-
-	firstBlockHeight := requestInput.Message.SignedBatchRange.FirstBlockHeight()
-	if firstBlockHeight > availableBlocks {
-		return
-	}
-
-	for _, sourceAddressIndex := range sources {
-		response := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithFirstBlockHeight(firstBlockHeight).
-			WithLastBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).Build()
-		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
-	}
-
 }

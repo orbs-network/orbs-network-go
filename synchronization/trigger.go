@@ -20,6 +20,7 @@ type Telemetry struct {
 
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
+	govnr.TreeSupervisor
 	d       time.Duration
 	f       func()
 	s       func()
@@ -28,10 +29,10 @@ type PeriodicalTrigger struct {
 	ticker  *time.Ticker
 	metrics *Telemetry
 	Closed  govnr.ContextEndedChan
-	stopped chan struct{}
+	name    string
 }
 
-func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
+func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &PeriodicalTrigger{
 		ticker:  nil,
@@ -40,8 +41,8 @@ func NewPeriodicalTrigger(ctx context.Context, interval time.Duration, logger lo
 		s:       onStop,
 		cancel:  cancel,
 		logger:  logger,
+		name:    name,
 		metrics: &Telemetry{},
-		stopped: make(chan struct{}),
 	}
 
 	t.run(subCtx)
@@ -54,7 +55,7 @@ func (t *PeriodicalTrigger) TimesTriggered() uint64 {
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
 	t.ticker = time.NewTicker(t.d)
-	t.Closed = govnr.GoForever(ctx, logfields.GovnrErrorer(t.logger), func() {
+	h := govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
 		for {
 			select {
 			case <-t.ticker.C:
@@ -62,7 +63,6 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 				atomic.AddUint64(&t.metrics.timesTriggered, 1)
 			case <-ctx.Done():
 				t.ticker.Stop()
-				close(t.stopped)
 				if t.s != nil {
 					go t.s()
 				}
@@ -70,10 +70,12 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 			}
 		}
 	})
+	t.Closed = h.Done()
+	t.Supervise(h)
 }
 
 func (t *PeriodicalTrigger) Stop() {
 	t.cancel()
 	// we want ticker stop to process before we return
-	<-t.stopped
+	<-t.Closed
 }

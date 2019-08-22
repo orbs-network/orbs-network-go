@@ -40,7 +40,7 @@ type duplicatingTamperer struct {
 
 func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
-		govnr.GoOnce(logfields.GovnrErrorer(o.transport.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(o.transport.logger), func() {
 			time.Sleep(10 * time.Millisecond)
 			o.transport.sendToPeers(ctx, data)
 		})
@@ -60,7 +60,7 @@ type delayingTamperer struct {
 
 func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
 	if o.predicate(data) {
-		govnr.GoOnce(logfields.GovnrErrorer(o.transport.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(o.transport.logger), func() {
 			time.Sleep(o.duration())
 			o.transport.sendToPeers(ctx, data)
 		})

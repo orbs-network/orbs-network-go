@@ -77,7 +77,10 @@ func TestStateCollectingAvailabilityResponses_MovesToFinishedCollecting(t *testi
 func TestStateCollectingAvailabilityResponses_ContextTermination(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	h := newBlockSyncHarness(log.DefaultTestingLogger(t))
+
+	h := newBlockSyncHarnessWithCollectResponsesTimer(log.DefaultTestingLogger(t), func() *synchronization.Timer {
+		return synchronization.NewTimerWithManualTick() // so that it deterministically doesn't tick
+	})
 
 	h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()

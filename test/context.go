@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"time"
 )
 
@@ -16,20 +15,6 @@ func WithContext(f func(ctx context.Context)) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f(ctx)
-}
-
-func WithContextAndShutdown(waiter supervised.ShutdownWaiter, f func(ctx context.Context)) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer shutdown(waiter)
-	defer cancel()
-	f(ctx)
-}
-
-func shutdown(waiter supervised.ShutdownWaiter) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	waiter.WaitUntilShutdown(ctx)
 }
 
 func WithContextWithTimeout(d time.Duration, f func(ctx context.Context)) {

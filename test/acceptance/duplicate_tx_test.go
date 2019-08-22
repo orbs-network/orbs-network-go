@@ -27,7 +27,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
-	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 		ts := time.Now()
 
 		network.DeployBenchmarkTokenContract(ctx, 1)
@@ -66,7 +66,7 @@ func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
 		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		ts := time.Now()
 		network.DeployBenchmarkTokenContract(ctx, 1)
@@ -90,7 +90,7 @@ func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
 	})
 }
 
-func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *NetworkHarness, nodeIndex int, txHash primitives.Sha256) {
+func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *Network, nodeIndex int, txHash primitives.Sha256) {
 	// wait for the tx to be seen as committed in state
 	network.WaitForTransactionInState(ctx, txHash)
 	persistence := network.BlockPersistence(nodeIndex)
@@ -112,8 +112,6 @@ func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *NetworkH
 	})
 	require.NoError(t, err, "ScanBlocks should return blocks, instead got error %v", err)
 
-	// TODO (v1) https://github.com/orbs-network/orbs-network-go/issues/837 do we want to keep this require? it may hide a bug in sync between ScanBlocks and WaitForBlock
-	//require.Len(t, blocks, int(height), "ScanBlocks should return %d blocks, instead got %d", height, len(blocks))
 	for _, block := range blocks {
 		for _, r := range block.ResultsBlock.TransactionReceipts {
 			if bytes.Equal(r.Txhash(), txHash) {
@@ -130,7 +128,7 @@ func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
 		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-	).Start(t, func(t testing.TB, ctx context.Context, network *NetworkHarness) {
+	).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		persistence := network.BlockPersistence(0)
 		targetBlockHeight := 2

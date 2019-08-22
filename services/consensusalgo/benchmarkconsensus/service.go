@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -40,7 +39,7 @@ type Config interface {
 }
 
 type Service struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	gossip           gossiptopics.BenchmarkConsensus
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
@@ -114,7 +113,7 @@ func NewBenchmarkConsensusAlgo(
 
 	if config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS && s.isLeader {
 		logger.Info("NewBenchmarkConsensusAlgo() Benchmark Consensus is active algo, and this node is leader, starting goroutine now")
-		s.SuperviseChan("Benchmark consensus main loop", govnr.GoForever(ctx, logfields.GovnrErrorer(logger), func() {
+		s.Supervise(govnr.Forever(ctx, "Benchmark consensus main loop", logfields.GovnrErrorer(logger), func() {
 			s.leaderConsensusRoundRunLoop(ctx)
 		}))
 	}

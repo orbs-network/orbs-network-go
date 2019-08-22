@@ -9,7 +9,6 @@ package leanhelixconsensus
 import (
 	"bytes"
 	"context"
-	"github.com/orbs-network/lean-helix-go"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -51,7 +50,6 @@ func FromLeanHelixBlock(lhBlock lh.Block) *protocol.BlockPairContainer {
 
 type blockProvider struct {
 	logger           log.Logger
-	leanhelix        leanhelix.LeanHelix
 	blockStorage     services.BlockStorage
 	consensusContext services.ConsensusContext
 	nodeAddress      primitives.NodeAddress
@@ -127,6 +125,9 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
 
+	if ctx.Err() != nil {
+		return errors.New("context canceled")
+	}
 	if err := validLeanHelixBlockPair(blockPair); err != nil {
 		return errors.Wrapf(err, "validateBlockConsensus(): error when sending blockPair to validLeanHelixBlockPair()")
 	}

@@ -10,9 +10,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -28,7 +28,7 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 const LOCAL_NETWORK_SIZE = 4
 
 type inProcessE2ENetwork struct {
-	supervised.TreeSupervisor
+	govnr.TreeSupervisor
 	nodes []*bootstrap.Node
 }
 
