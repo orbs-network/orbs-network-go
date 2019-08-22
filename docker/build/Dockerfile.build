@@ -19,6 +19,3 @@ ARG BUILD_FLAG
 ARG SEMVER
 
 RUN ./build-binaries.sh
-
-# Testing if we can remove this line from here.
-#RUN go get -u github.com/orbs-network/go-junit-report
