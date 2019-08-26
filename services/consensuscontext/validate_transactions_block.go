@@ -64,6 +64,16 @@ func validateTxPrevBlockHashPtr(ctx context.Context, vctx *txValidatorContext) e
 	return nil
 }
 
+func validateTxBlockProposer(ctx context.Context, vctx *txValidatorContext) error {
+	expectedBlockProposer := vctx.input.BlockProposerAddress
+	blockProposer := vctx.input.TransactionsBlock.Header.BlockProposerAddress()
+	// TODO NOAM BC new field BPA
+	if len(blockProposer) > 0 && !bytes.Equal(blockProposer, expectedBlockProposer) {
+		return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+	}
+	return nil
+}
+
 func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidatorContext) error {
 	prevBlockTimestamp := vctx.input.PrevBlockTimestamp
 	currentBlockTimestamp := vctx.input.TransactionsBlock.Header.Timestamp()
@@ -206,6 +216,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		validateTxBlockHeight,
 		validateTxPrevBlockHashPtr,
 		validateTxTransactionsBlockTimestamp,
+		validateTxBlockProposer,
 		validateTransactionsBlockMerkleRoot,
 		validateTransactionsBlockMetadataHash,
 	}

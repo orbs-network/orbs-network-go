@@ -98,13 +98,19 @@ func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 // used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
 func (s *Service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header:             (&protocol.TransactionsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		Header:             (&protocol.TransactionsBlockHeaderBuilder{
+			BlockHeight: 0,
+			BlockProposerAddress:s.config.BenchmarkConsensusConstantLeader(),
+		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: []*protocol.SignedTransaction{},
 		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:              (&protocol.ResultsBlockHeaderBuilder{BlockHeight: 0}).Build(),
+		Header:              (&protocol.ResultsBlockHeaderBuilder{
+			BlockHeight: 0,
+			BlockProposerAddress:s.config.BenchmarkConsensusConstantLeader(),
+		}).Build(),
 		TransactionReceipts: []*protocol.TransactionReceipt{},
 		ContractStateDiffs:  []*protocol.ContractStateDiff{},
 		BlockProof:          nil, // will be generated in a minute when signed
@@ -130,6 +136,7 @@ func (s *Service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
 		PrevBlockTimestamp:      lastCommittedBlock.TransactionsBlock.Header.Timestamp(),
+		BlockProposerAddress:    s.config.BenchmarkConsensusConstantLeader(),
 	})
 	if err != nil {
 		return nil, err
@@ -137,10 +144,11 @@ func (s *Service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		CurrentBlockHeight: lastCommittedBlockHeight + 1,
-		PrevBlockHash:      digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
-		TransactionsBlock:  txOutput.TransactionsBlock,
-		PrevBlockTimestamp: lastCommittedBlock.ResultsBlock.Header.Timestamp(),
+		CurrentBlockHeight:   lastCommittedBlockHeight + 1,
+		PrevBlockHash:        digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
+		TransactionsBlock:    txOutput.TransactionsBlock,
+		PrevBlockTimestamp:   lastCommittedBlock.ResultsBlock.Header.Timestamp(),
+		BlockProposerAddress: s.config.BenchmarkConsensusConstantLeader(),
 	})
 	if err != nil {
 		return nil, err

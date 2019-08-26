@@ -61,6 +61,22 @@ func validateRxBlockHeight(ctx context.Context, vcrx *rxValidatorContext) error 
 	return nil
 }
 
+func validateRxBlockProposer(ctx context.Context, vcrx *rxValidatorContext) error {
+	blockProposer := vcrx.input.ResultsBlock.Header.BlockProposerAddress()
+	// TODO NOAM BC new field BPA
+	if len(blockProposer) > 0 {
+		expectedBlockProposer := vcrx.input.BlockProposerAddress
+		if !bytes.Equal(blockProposer, expectedBlockProposer) {
+			return errors.Wrapf(ErrMismatchedBlockProposer, "Results Block expected %v actual %v", expectedBlockProposer, blockProposer)
+		}
+		txBlockProposer := vcrx.input.TransactionsBlock.Header.BlockProposerAddress()
+		if !bytes.Equal(blockProposer, txBlockProposer) {
+			return errors.Wrapf(ErrMismatchedTxRxBlockProposer, "txBlock %v rxBlock %v", txBlockProposer, blockProposer)
+		}
+	}
+	return nil
+}
+
 func validateRxTxBlockPtrMatchesActualTxBlock(ctx context.Context, vcrx *rxValidatorContext) error {
 	txBlockHashPtr := vcrx.input.ResultsBlock.Header.TransactionsBlockHashPtr()
 	expectedTxBlockHashPtr := digest.CalcTransactionsBlockHash(vcrx.input.TransactionsBlock)
@@ -187,7 +203,6 @@ func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*pro
 	}
 
 	return diff
-
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
@@ -209,6 +224,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 		validateRxTxBlockPtrMatchesActualTxBlock,
 		validateIdenticalTxRxTimestamp,
 		validateRxPrevBlockHashPtr,
+		validateRxBlockProposer,
 		validateReceiptsMerkleRoot,
 		validateRxStateDiffHash,
 		validatePreExecutionStateMerkleRoot,

@@ -51,7 +51,7 @@ func TestValidateBlockProposal_HappyPath(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
 		prevBlock := builders.BlockPairBuilder().Build()
-		require.NoError(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+		require.NoError(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
 			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
@@ -64,7 +64,7 @@ func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
 		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
 			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
 			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
@@ -77,7 +77,7 @@ func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
 		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
 			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 			validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
 			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
@@ -90,7 +90,7 @@ func TestValidateBlockProposal_FailsOnErrorInValidateBlockHash(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
 		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
 			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
 			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
 			validateBlockHash:         aMockValidateBlockHashThatReturnsError,

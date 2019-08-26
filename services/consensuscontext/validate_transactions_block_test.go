@@ -23,15 +23,27 @@ import (
 )
 
 func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext {
-	block := builders.BlockPairBuilder().Build()
-	prevBlockHashCopy := make([]byte, 32)
+	return toTxValidatorContextWithBc(cfg, false)
+}
+
+func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBc bool) *txValidatorContext {
+	blockProposer := builders.HashObj().WithFirstByte(1).Build()
+	blockBuilder := builders.BlockPairBuilder()
+	if isBc {
+		blockBuilder.WithBlockProposerAddress(builders.EmptyHash()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
+	} else {
+		blockBuilder.WithBlockProposerAddress(blockProposer)
+	}
+	block := blockBuilder.Build()
+	prevBlockHashCopy := builders.HashObj().Build()
 	copy(prevBlockHashCopy, block.TransactionsBlock.Header.PrevBlockHashPtr())
 
 	input := &services.ValidateTransactionsBlockInput{
-		CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
-		TransactionsBlock:  block.TransactionsBlock,                                        // fill in each test
-		PrevBlockTimestamp: primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano()), // this is intentionally set in the future to fail timestamp tests
-		PrevBlockHash:      prevBlockHashCopy,
+		CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
+		TransactionsBlock:    block.TransactionsBlock,                                        // fill in each test
+		PrevBlockTimestamp:   primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano()), // this is intentionally set in the future to fail timestamp tests
+		PrevBlockHash:        prevBlockHashCopy,
+		BlockProposerAddress: blockProposer,
 	}
 
 	return &txValidatorContext{
@@ -87,6 +99,27 @@ func TestTransactionsBlockValidators(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
 		err := validateTxTransactionsBlockTimestamp(context.Background(), vctx)
 		require.Error(t, err, "validation should fail on invalid timestamp of block")
+	})
+}
+
+func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		vctx := toTxValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+			require.NoError(t, err, "Could not mutate input")
+		}
+		err := validateTxBlockProposer(ctx, vctx)
+		require.Error(t, err, "Must fail with both block proposers are not the same")
+	})
+}
+
+func TestConsensusContextValidateTransactionsBlock_TestBlockProposerIgnoredIfBlockProposerIsEmpty(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		vctx := toTxValidatorContextWithBc(cfg, true)
+		err := validateTxBlockProposer(ctx, vctx)
+		require.NoError(t, err, "Must not fail with tx block proposer is empty (bc)")
 	})
 }
 

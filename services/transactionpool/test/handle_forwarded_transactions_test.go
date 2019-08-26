@@ -23,7 +23,7 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 		ctrlRand := rand.NewControlledRand(t)
 		h := newHarness(parent).start(ctx)
 
-		invalidSig := make([]byte, 32)
+		invalidSig := builders.HashObj().Build()
 		ctrlRand.Read(invalidSig)
 
 		tx1 := builders.TransferTransaction().Build()

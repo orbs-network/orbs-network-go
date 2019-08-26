@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
+	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,19 +20,30 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 )
-
 func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext {
-	block := builders.BlockPairBuilder().Build()
+	return toRxValidatorContextWithBc(cfg, false)
+}
+
+func toRxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBc bool) *rxValidatorContext {
+	blockProposer := builders.HashObj().WithFirstByte(1).Build()
+	blockBuilder := builders.BlockPairBuilder()
+	if isBc {
+		blockBuilder.WithBlockProposerAddress(builders.EmptyHash()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
+	} else {
+		blockBuilder.WithBlockProposerAddress(blockProposer)
+	}
+	block := blockBuilder.Build()
 
 	return &rxValidatorContext{
 		protocolVersion: cfg.ProtocolVersion(),
 		virtualChainId:  cfg.VirtualChainId(),
 		input: &services.ValidateResultsBlockInput{
-			CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
-			ResultsBlock:       block.ResultsBlock,
-			PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock:  block.TransactionsBlock,
-			PrevBlockTimestamp: block.TransactionsBlock.Header.Timestamp() - 1000,
+			CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
+			ResultsBlock:         block.ResultsBlock,
+			PrevBlockHash:        block.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:    block.TransactionsBlock,
+			PrevBlockTimestamp:   block.TransactionsBlock.Header.Timestamp() - 1000,
+			BlockProposerAddress: blockProposer,
 		},
 	}
 }
@@ -252,4 +264,39 @@ func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, i
 	return func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error) {
 		return someEmptyTxSetThatWeReturnOnlyToPreventErrors, err
 	}
+}
+
+func TestConsensusContextValidateResultsBlock_TestBlockProposerNotSame(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		vcrx := toRxValidatorContext(cfg)
+		if err := vcrx.input.ResultsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+			require.NoError(t, err, "Could not mutate input")
+		}
+		err := validateRxBlockProposer(ctx, vcrx)
+		require.Error(t, err, "Must fail with both block proposers are not the same")
+	})
+}
+
+func TestConsensusContextValidateResultsBlock_TestTxRxBlockProposerNotSame(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		vcrx := toRxValidatorContext(cfg)
+		if err := vcrx.input.TransactionsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+			require.NoError(t, err, "Could not mutate input of tx block")
+		}
+		err := validateRxBlockProposer(ctx, vcrx)
+		require.Error(t, err, "Must fail with both block proposers are not the same")
+	})
+}
+
+// TODO NOAM ask shai if need a empty (32 byte)
+
+func TestConsensusContextValidateResultssBlock_TestBlockProposerIgnoredIfBlockProposerIsZeroLength(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(nil, false)
+		vcrx := toRxValidatorContextWithBc(cfg, true)
+		err := validateRxBlockProposer(ctx, vcrx)
+		require.NoError(t, err, "Must not fail with rx block proposer is empty (bc)")
+	})
 }
