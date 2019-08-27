@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -e
 
 # Important note: trying to run the stress test locally? you will need to increase your max allowed sockets open / open files
 # as shown in this stack overflow URL:
