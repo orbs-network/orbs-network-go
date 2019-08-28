@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestSendTransactionToTwoSeparateChains(t *testing.T) {
@@ -14,62 +13,48 @@ func TestSendTransactionToTwoSeparateChains(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	h := newHarness()
-	lt := time.Now()
-	printTestTime(t, "started", &lt)
+	appChain := newAppHarness()
+	mgmtChain := newMgmtHarness()
 
-	h.waitUntilTransactionPoolIsReady(t)
-	printTestTime(t, "first block committed", &lt)
+	amount1 := uint64(13)
+	amount2 := uint64(17)
 
-	transferTo, _ := orbsClient.CreateAccount()
+	appChain.waitUntilTransactionPoolIsReady(t)
+	mgmtChain.waitUntilTransactionPoolIsReady(t)
 
-	// send 3 transactions with total of 70
-	amounts := []uint64{15, 22, 33}
-	txIds := []string{}
-	for _, amount := range amounts {
-		printTestTime(t, "send transaction - start", &lt)
-		response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.AddressAsBytes())
-		printTestTime(t, "send transaction - end", &lt)
+	recipient, _ := orbsClient.CreateAccount()
 
-		txIds = append(txIds, txId)
-		require.NoError(t, err, "transaction for amount %d should not return error\nresponse: %+v", amount, response)
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-	}
+	response1, _, err1 := appChain.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount1, recipient.AddressAsBytes())
+	response2, _, err2 := mgmtChain.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount2, recipient.AddressAsBytes())
 
-	// get statuses and receipt proofs
-	for _, txId := range txIds {
-		printTestTime(t, "get status - start", &lt)
-		response, err := h.getTransactionStatus(txId)
-		printTestTime(t, "get status - end", &lt)
+	require.NoError(t, err1, "expected tx1 to succeed")
+	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response1.TransactionStatus)
+	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response1.ExecutionResult)
 
-		require.NoError(t, err, "get status for txid %s should not return error", txId)
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-
-		printTestTime(t, "get receipt proof - start", &lt)
-		proofResponse, err := h.getTransactionReceiptProof(txId)
-		printTestTime(t, "get receipt proof - end", &lt)
-
-		require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, proofResponse.ExecutionResult)
-		require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
-	}
+	require.NoError(t, err2, "expected tx2 to succeed")
+	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response2.TransactionStatus)
+	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response2.ExecutionResult)
 
 	// check balance
+	eventuallyBalance(t, appChain, recipient, amount1)
+	eventuallyBalance(t, mgmtChain, recipient, amount2)
+}
+
+func eventuallyBalance(t *testing.T, chainHarness *harness, address *orbsClient.OrbsAccount, expectedBalance uint64, msgAndArgs ...interface{}) {
+	var lastObservedBalance uint64
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		printTestTime(t, "run query - start", &lt)
-		response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.AddressAsBytes())
-		printTestTime(t, "run query - end", &lt)
+		response, err := chainHarness.runQuery(address.PublicKey, "BenchmarkToken", "getBalance", address.AddressAsBytes())
 
-		if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-			return response.OutputArguments[0] == uint64(70)
+		if err != nil {
+			return false
 		}
-		return false
+
+		if response.ExecutionResult != codec.EXECUTION_RESULT_SUCCESS {
+			return false
+		}
+		lastObservedBalance = response.OutputArguments[0].(uint64)
+		return lastObservedBalance == expectedBalance
 	})
-
-	require.True(t, ok, "getBalance should return total amount")
-	printTestTime(t, "done", &lt)
-
+	t.Log("found balance of", lastObservedBalance, "for address", address.Address)
+	require.True(t, ok, msgAndArgs...)
 }

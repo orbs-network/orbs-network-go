@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
 	"os"
@@ -32,11 +33,18 @@ type inProcessE2ENetwork struct {
 	nodes []*bootstrap.Node
 }
 
-func NewInProcessE2ENetwork() *inProcessE2ENetwork {
+func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
 	cleanNativeProcessorCache()
 	cleanBlockStorage()
 
-	return bootstrapE2ENetwork()
+	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false)
+}
+
+func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
+	cleanNativeProcessorCache()
+	cleanBlockStorage()
+
+	return bootstrapE2ENetwork(0, "app", virtualChainId, true)
 }
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
@@ -48,7 +56,7 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	cleanBlockStorage()
 }
 
-func bootstrapE2ENetwork() *inProcessE2ENetwork {
+func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool) *inProcessE2ENetwork {
 	net := &inProcessE2ENetwork{}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
@@ -76,7 +84,7 @@ func bootstrapE2ENetwork() *inProcessE2ENetwork {
 		nodeKeyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
 
 		logFile, err := os.OpenFile(
-			fmt.Sprintf("%s/_logs/node%d-%v.log", config.GetProjectSourceRootPath(), i+1, time.Now().Format(time.RFC3339Nano)),
+			fmt.Sprintf("%s/_logs/%s-node%d-%v.log", config.GetProjectSourceRootPath(), logFilePrefix, i+1, time.Now().Format(time.RFC3339Nano)),
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 			0644)
 		if err != nil {
@@ -87,20 +95,11 @@ func bootstrapE2ENetwork() *inProcessE2ENetwork {
 		processorArtifactPath, _ := getProcessorArtifactPath()
 
 		cfg := config.
-			ForE2E(
-				fmt.Sprintf(":%d", START_HTTP_PORT+i),
-				gossipPortByNodeIndex[i],
-				nodeKeyPair.NodeAddress(),
-				nodeKeyPair.PrivateKey(),
-				gossipPeers,
-				genesisValidatorNodes,
-				blockStorageDataDirPrefix,
-				processorArtifactPath,
-				ethereumEndpoint,
-				leaderKeyPair.NodeAddress(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-			)
-		deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
+			ForE2E(fmt.Sprintf(":%d", START_HTTP_PORT+i+portOffset), virtualChainId, gossipPortByNodeIndex[i], nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), gossipPeers, genesisValidatorNodes, blockStorageDataDirPrefix, processorArtifactPath, ethereumEndpoint, leaderKeyPair.NodeAddress(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+
+		if deployBlocksFile {
+			deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
+		}
 
 		node := bootstrap.NewNode(cfg, nodeLogger)
 		net.Supervise(node)

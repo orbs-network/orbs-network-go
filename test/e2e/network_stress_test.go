@@ -21,7 +21,7 @@ import (
 )
 
 func TestE2EStress(t *testing.T) {
-	h := newHarness()
+	h := newAppHarness()
 	ctrlRand := rand.NewControlledRand(t)
 
 	config := getConfig().stressTest
