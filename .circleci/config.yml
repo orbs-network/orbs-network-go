@@ -154,7 +154,7 @@ jobs:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: sleep 300
-      - run: ./.circleci/e2e-testnet.sh 42
+      - run: ./.circleci/e2e-testnet.sh 42 40
 
   e2e_testnet_leanhelix:
     docker:
@@ -164,7 +164,7 @@ jobs:
     - checkout
     - run: ./git-submodule-checkout.sh
     - run: sleep 300
-    - run: ./.circleci/e2e-testnet.sh 2013
+    - run: ./.circleci/e2e-testnet.sh 2013 2011
 
   deploy_new_chain_pr_only:
     docker:
