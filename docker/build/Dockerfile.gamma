@@ -1,6 +1,6 @@
-FROM golang:1.11.4-alpine
+FROM golang:1.12.9
 
-RUN apk add --no-cache gcc musl-dev
+RUN apt-get install -y bash
 
 ADD ./vendor/github.com/orbs-network/orbs-contract-sdk/go/ /go/src/github.com/orbs-network/orbs-network-go/vendor/github.com/orbs-network/orbs-contract-sdk/go/
 

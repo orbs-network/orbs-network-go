@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 NIGHTLY=0
 mkdir -p _out
@@ -41,6 +41,10 @@ go_test_junit_report () {
     cp ${OUT_DIR}/results.xml ${REPORTS_DIR}/results.xml # so that we have it in _out for uploading as artifact, and separately in _reports since CircleCI doesn't like test summary dir to contain huge files
 
     if [ $EXIT_CODE != 0 ]; then
+        echo "xxxxxxxxxxxxxxxxxxxxx"
+        echo "Tests failed!"
+        echo ""
+
         # junit-xml-stats is a globally installed npm package specifically for the purpose
         # of grouping together logs of failing tests ONLY.
         if [ $NIGHTLY == 1 ]; then
