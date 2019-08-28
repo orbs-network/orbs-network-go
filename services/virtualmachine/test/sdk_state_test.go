@@ -33,7 +33,7 @@ func TestSdkState_ReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("First read should reach state storage")
 			res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
@@ -63,7 +63,7 @@ func TestSdkState_WriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("Attempt to write without proper access")
 			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "write", []byte{0x01}, []byte{0x02})

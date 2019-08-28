@@ -64,7 +64,7 @@ func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			t.Log("Emit of Event1")
 			_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())

@@ -25,7 +25,7 @@ func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodNotCalled("Contract1", "method1")
 
 		result, outputArgs, refHeight, _, err := h.processQuery(ctx, "Contract1", "method1")

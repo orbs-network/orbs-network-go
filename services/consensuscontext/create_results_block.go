@@ -23,6 +23,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		SignedTransactions:    input.TransactionsBlock.SignedTransactions,
 		CurrentBlockHeight:    input.CurrentBlockHeight,
 		CurrentBlockTimestamp: input.TransactionsBlock.Header.Timestamp(),
+		BlockProposerAddress:  input.BlockProposerAddress,
 	})
 	s.metrics.processTransactionsSeInCreateResultsBlock.RecordSince(start)
 	if err != nil {

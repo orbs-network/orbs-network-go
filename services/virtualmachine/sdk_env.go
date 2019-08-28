@@ -38,6 +38,17 @@ func (s *service) handleSdkEnvCall(ctx context.Context, executionContext *execut
 			Uint64Value: value,
 		}).Build()}, nil
 
+	case "getBlockProposerAddress":
+		value, err := s.handleSdkEnvGetBlockProposerAddress(executionContext, args)
+		if err != nil {
+			return nil, err
+		}
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:        protocol.ARGUMENT_TYPE_BYTES_VALUE,
+			BytesValue: value,
+		}).Build()}, nil
+
 	default:
 		return nil, errors.Errorf("unknown SDK env call method: %s", methodName)
 	}
@@ -59,4 +70,13 @@ func (s *service) handleSdkEnvGetBlockTimestamp(executionContext *executionConte
 	}
 
 	return uint64(executionContext.currentBlockTimestamp), nil
+}
+
+// outputArg0: value (bytes)
+func (s *service) handleSdkEnvGetBlockProposerAddress(executionContext *executionContext, args []*protocol.Argument) ([]byte, error) {
+	if len(args) != 0 {
+		return []byte{}, errors.Errorf("invalid SDK env getBlockProposerAddress args: %v", args)
+	}
+
+	return executionContext.currentBlockProposerAddress, nil
 }

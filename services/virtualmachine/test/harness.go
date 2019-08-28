@@ -134,10 +134,10 @@ type contractAndMethod struct {
 }
 
 func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
-	return h.processTransactionSetAtHeightAndTimestamp(ctx, 12, 0x777, contractAndMethods, additionalExpectedStateDiffContracts...)
+	return h.processTransactionSetWithBlockInfo(ctx, 12, 0x777, builders.HashObj().WithFirstByte(5).Build(), contractAndMethods, additionalExpectedStateDiffContracts...)
 }
 
-func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
+func (h *harness) processTransactionSetWithBlockInfo(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockProposer primitives.NodeAddress, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
 	resultKeyValuePairsPerContract := make(map[primitives.ContractName][]*keyValuePair)
 
 	transactions := []*protocol.SignedTransaction{}
@@ -154,6 +154,7 @@ func (h *harness) processTransactionSetAtHeightAndTimestamp(ctx context.Context,
 		SignedTransactions:    transactions,
 		CurrentBlockHeight:    currentBlockHeight,
 		CurrentBlockTimestamp: currentBlockTimestamp,
+		BlockProposerAddress:  currentBlockProposer,
 	})
 
 	results := []protocol.ExecutionResult{}

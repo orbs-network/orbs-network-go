@@ -49,12 +49,12 @@ func TestWriteAtHeight(t *testing.T) {
 func TestNoLayers(t *testing.T) {
 	persistenceMock := &StatePersistenceMock{}
 	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
+		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
 		Return(nil).
 		Times(2)
 	d := newDriver(t, persistenceMock, 0, nil)
-	d.writeFull(1, 1, "c", "k", "v1")
-	d.writeFull(2, 2, "c", "k", "v2")
+	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
 
 	_, _, err := d.read(1, "c", "k")
 	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
@@ -84,23 +84,24 @@ func TestMergeToPersistence(t *testing.T) {
 	var writeCallCount byte = 1
 	persistenceMock := &StatePersistenceMock{}
 	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
-		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
+		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
+		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 			expectedValue := fmt.Sprintf("v%v", writeCallCount)
 			v := string(diff["c"]["k"].Value())
 			require.EqualValues(t, expectedValue, v)
 			require.EqualValues(t, writeCallCount, height)
 			require.EqualValues(t, writeCallCount, ts)
+			require.EqualValues(t, []byte{0x01}, proposer)
 			require.EqualValues(t, primitives.Sha256{writeCallCount}, root)
 			writeCallCount++
 			return nil
 		}).
 		Times(2)
 	d := newDriver(t, persistenceMock, 2, nil)
-	d.writeFull(1, 1, "c", "k", "v1")
-	d.writeFull(2, 2, "c", "k", "v2")
-	d.writeFull(3, 3, "c", "k", "v3")
-	d.writeFull(4, 4, "c", "k", "v4")
+	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+	d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
+	d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
 
 	_, errCalled := persistenceMock.Verify()
 	require.NoError(t, errCalled, "error happened when it should not")
@@ -109,10 +110,10 @@ func TestMergeToPersistence(t *testing.T) {
 func TestReadOutOfRange(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
 	d := newDriver(t, persistenceMock, 2, nil)
-	d.writeFull(1, 1, "c", "k", "v1")
-	d.writeFull(2, 2, "c", "k", "v2")
-	d.writeFull(3, 3, "c", "k", "v3")
-	d.writeFull(4, 4, "c", "k", "v4")
+	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+	d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
+	d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
 
 	_, _, err := d.read(1, "c", "k")
 	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
@@ -127,8 +128,8 @@ func TestReadOutOfRange(t *testing.T) {
 func TestReadHash(t *testing.T) {
 	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
 	d := newDriver(t, persistenceMock, 1, nil)
-	d.writeFull(1, 1, "c", "k", "v1")
-	d.writeFull(2, 2, "c", "k", "v2")
+	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
 
 	root, err := d.readHash(1)
 	require.NoError(t, err)
@@ -153,10 +154,10 @@ func TestRevisionEviction(t *testing.T) {
 	})
 
 	firstHash, _ := d.readHash(0)
-	d.writeFull(1, 1, "c", "k", "v1")
+	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
 	require.Len(t, evictedMerkleRoots, 0)
 
-	d.writeFull(2, 2, "c", "k", "v2")
+	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
 	require.Equal(t, []primitives.Sha256{firstHash}, evictedMerkleRoots)
 }
 
@@ -182,15 +183,15 @@ func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractNam
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.addRevision(h, 0, diff)
+	return d.inner.addRevision(h, 0, []byte{}, diff)
 }
 
-func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, contract primitives.ContractName, kv ...string) error {
+func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, contract primitives.ContractName, kv ...string) error {
 	diff := adapter.ChainState{contract: make(adapter.ContractState)}
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
 	}
-	return d.inner.addRevision(h, ts, diff)
+	return d.inner.addRevision(h, ts, proposer, diff)
 }
 
 func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName, key string) (string, bool, error) {
@@ -213,21 +214,21 @@ type StatePersistenceMock struct {
 func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceMock {
 	persistenceMock := &StatePersistenceMock{}
 	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any).
+		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
 		Return(nil).
 		Times(writeTimes)
 	return persistenceMock
 }
 
-func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
-	return spm.Mock.Called(height, ts, root, diff).Error(0)
+func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
+	return spm.Mock.Called(height, ts, proposer, root, diff).Error(0)
 }
 func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
 	ret := spm.Mock.Called(contract, key)
 	return ret.Get(0).(*protocol.StateRecord), ret.Bool(1), ret.Error(2)
 }
-func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.Sha256, error) {
-	return 0, 0, primitives.Sha256{}, nil
+func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, primitives.Sha256, error) {
+	return 0, 0, []byte{}, primitives.Sha256{}, nil
 }
 
 type MerkleMock struct {

@@ -23,7 +23,7 @@ func TestProcessQuery_Success(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), nil
 		})
@@ -46,7 +46,7 @@ func TestProcessQuery_ContractError(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			return protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, builders.ArgumentsArray(), errors.New("contract error")
 		})
@@ -68,7 +68,7 @@ func TestProcessQuery_UnexpectedError(t *testing.T) {
 		h := newHarness(t)
 		h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-		h.expectStateStorageBlockHeightRequested(12)
+		h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 			return protocol.EXECUTION_RESULT_ERROR_UNEXPECTED, builders.ArgumentsArray(), errors.New("unexpected error")
 		})
