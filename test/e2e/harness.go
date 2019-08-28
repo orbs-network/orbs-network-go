@@ -13,6 +13,7 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -161,14 +162,17 @@ func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, c
 
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 	require.True(t, test.Eventually(3*time.Second, func() bool { // 3 seconds to avoid jitter but it really shouldn't take that long
+
 		m := h.getMetrics()
 		if m == nil {
 			return false
 		}
 
-		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
-
-		return blockHeight > 0
+		lastCommittedTimestamp := m["BlockStorage.LastCommitted.TimeNano"]["Value"].(primitives.TimestampNano)
+		currentTime := time.Now()
+		// TODO Add func to E2EConfig - config.TransactionPoolNodeSyncRejectTime
+		threshold := primitives.TimestampNano(currentTime.Add(time.Minute * -1).UnixNano())
+		return lastCommittedTimestamp >= threshold
 	}), "Timed out waiting for metric TransactionPool.BlockHeight > 0")
 }
 
