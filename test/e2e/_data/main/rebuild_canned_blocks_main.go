@@ -46,7 +46,7 @@ func clearBlocksFile() {
 }
 
 func extractBlocksFile() {
-	nodeFolders, err := e2e.GetNodesDataDirs()
+	nodeFolders, err := e2e.GetNodesDataDirs(42)
 	if err != nil {
 		fmt.Printf("error searching for e2e blocks file floders: %s", err)
 		os.Exit(1)

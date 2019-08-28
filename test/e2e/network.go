@@ -30,19 +30,20 @@ const LOCAL_NETWORK_SIZE = 4
 
 type inProcessE2ENetwork struct {
 	govnr.TreeSupervisor
-	nodes []*bootstrap.Node
+	nodes          []*bootstrap.Node
+	virtualChainId primitives.VirtualChainId
 }
 
 func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
-	cleanNativeProcessorCache()
-	cleanBlockStorage()
+	cleanNativeProcessorCache(virtualChainId)
+	cleanBlockStorage(virtualChainId)
 
 	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false)
 }
 
 func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
-	cleanNativeProcessorCache()
-	cleanBlockStorage()
+	cleanNativeProcessorCache(virtualChainId)
+	cleanBlockStorage(virtualChainId)
 
 	return bootstrapE2ENetwork(0, "app", virtualChainId, true)
 }
@@ -52,12 +53,14 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 		node.GracefulShutdown(context.TODO())
 	}
 
-	cleanNativeProcessorCache()
-	cleanBlockStorage()
+	cleanNativeProcessorCache(h.virtualChainId)
+	cleanBlockStorage(h.virtualChainId)
 }
 
 func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool) *inProcessE2ENetwork {
-	net := &inProcessE2ENetwork{}
+	net := &inProcessE2ENetwork{
+		virtualChainId: virtualChainId,
+	}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
@@ -92,10 +95,23 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 		}
 
 		nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
-		processorArtifactPath, _ := getProcessorArtifactPath()
+		processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
 
 		cfg := config.
-			ForE2E(fmt.Sprintf(":%d", START_HTTP_PORT+i+portOffset), virtualChainId, gossipPortByNodeIndex[i], nodeKeyPair.NodeAddress(), nodeKeyPair.PrivateKey(), gossipPeers, genesisValidatorNodes, blockStorageDataDirPrefix, processorArtifactPath, ethereumEndpoint, leaderKeyPair.NodeAddress(), consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
+			ForE2E(
+				fmt.Sprintf(":%d", START_HTTP_PORT+i+portOffset),
+				virtualChainId,
+				gossipPortByNodeIndex[i],
+				nodeKeyPair.NodeAddress(),
+				nodeKeyPair.PrivateKey(),
+				gossipPeers,
+				genesisValidatorNodes,
+				getVirtualChainDataDir(virtualChainId),
+				processorArtifactPath,
+				ethereumEndpoint,
+				leaderKeyPair.NodeAddress(),
+				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+			)
 
 		if deployBlocksFile {
 			deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
