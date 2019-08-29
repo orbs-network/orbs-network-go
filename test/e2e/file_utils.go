@@ -45,11 +45,11 @@ func GetNodesDataDirs(virtualChainId primitives.VirtualChainId) ([]string, error
 }
 
 func getVirtualChainDataDir(virtualChainId primitives.VirtualChainId) string {
-	return filepath.Join(blockStorageDataDirPrefix, virtualChainId.String())
+	return filepath.Join(blockStorageDataDirPrefix, vChainPathComponent(virtualChainId))
 }
 
 func getProcessorArtifactPath(virtualChainId primitives.VirtualChainId) (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp", virtualChainId.String())
+	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp", vChainPathComponent(virtualChainId))
 	return filepath.Join(dir, "processor-artifacts"), dir
 }
 
@@ -76,4 +76,8 @@ func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 	if err != nil {
 		panic(fmt.Sprintf("could not copy files %s -> %s", sourceBlocksFilePath, targetBlocksFilePath))
 	}
+}
+
+func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
+	return fmt.Sprintf("vcid_%d", virtualChainId)
 }
