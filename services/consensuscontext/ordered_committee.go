@@ -33,7 +33,7 @@ func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight pr
 		return generateGenesisCommittee(s.config.GenesisValidatorNodes()), nil
 	}
 
-	logger.Info("querying GetOrderedCommittee", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
+	logger.Info("querying GetOrderedCommittee", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_COMMITTEE_CONTRACT_INTERVAL))
 	orderedCommittee, err := s.callGetOrderedCommitteeSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
 	if err != nil {
 		return nil, err
