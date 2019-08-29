@@ -56,9 +56,10 @@ type Service struct {
 	addNewTransactionConcurrencyLimiter *requestConcurrencyLimiter
 
 	metrics struct {
-		blockHeight *metric.Gauge
-		commitRate  *metric.Rate
-		commitCount *metric.Gauge
+		blockHeight            *metric.Gauge
+		lastCommittedTimestamp *metric.Gauge
+		commitRate             *metric.Rate
+		commitCount            *metric.Gauge
 	}
 
 	addCommitLock sync.RWMutex
