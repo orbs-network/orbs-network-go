@@ -27,6 +27,7 @@ const {
 
 const githubPRLink = process.argv[2];
 const targetTag = process.argv[3];
+const vchainType=process.argv[4]; //"MGMT", "APP"
 const configFilePath = path.join(process.cwd(), 'config.json');
 
 if (!githubPRLink) {
@@ -41,7 +42,7 @@ if (!targetTag) {
 
 const prLinkParts = githubPRLink.split('/');
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-const chainNumber = getPrChainNumber(prNumber);
+const chainNumber = getPrChainNumber(prNumber, vchainType);
 let chain;
 
 // Read the Boyar config from file

@@ -1,5 +1,11 @@
 const fetch = require('node-fetch');
 
+const vchainTypesCount=2;
+const vchainIdOffsetByType = {
+    "MGMT": 0,
+    "APP": 1,
+};
+
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
     return (chainIndex !== -1) ? configuration.chains[chainIndex] : false;
@@ -92,8 +98,8 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
-function getPrChainNumber(prNumber) {
-    return 100000 + prNumber;
+function getPrChainNumber(prNumber, vchainType) {
+    return 100000 + (prNumber * vchainTypesCount + vchainIdOffsetByType[vchainType]);
 }
 
 async function getClosedPullRequests(page = 1) {
