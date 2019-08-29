@@ -1,10 +1,10 @@
 const fetch = require('node-fetch');
 
-const vchainTypesCount=2;
-const vchainIdOffsetByType = {
+const vChainIdOffsetByType = { // values must be ordinal integers
     "MGMT": 0,
     "APP": 1,
 };
+const vChainTypesCount=Object.keys(vChainIdOffsetByType).length;
 
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
@@ -98,8 +98,17 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
-function getPrChainNumber(prNumber, vchainType) {
-    return 100000 + (prNumber * vchainTypesCount + vchainIdOffsetByType[vchainType]);
+// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
+function getPrChainNumber(prNumber, vChainType) {
+    let offset = 0;
+    if (vChainType !== undefined) {
+        offset = vChainIdOffsetByType[vChainType];
+    }
+    if (offset === undefined) {
+        throw `Unknown virtual chain type ${vChainType}`
+    }
+
+    return 100000 + (prNumber * vChainTypesCount + offset) % 1000000;
 }
 
 async function getClosedPullRequests(page = 1) {
@@ -118,4 +127,5 @@ module.exports = {
     removeChainConfigurationById,
     isPortUnique,
     markChainForRemoval,
+    vChainIdOffsetByType,
 };
