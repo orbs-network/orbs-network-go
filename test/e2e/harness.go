@@ -70,7 +70,7 @@ func newAppHarness() *harness {
 }
 
 func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
-	timeoutDuration := 10 * time.Second
+	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
 	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
@@ -172,7 +172,7 @@ func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
-	require.True(t, test.Eventually(5*time.Second, func() bool {
+	require.True(t, test.Eventually(15*time.Second, func() bool {
 
 		m := h.getMetrics()
 		if m == nil {
@@ -224,7 +224,7 @@ func getConfig() E2EConfig {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		appChainUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
 		mgmtEndpoint := os.Getenv("MGMT_API_ENDPOINT")
-		appChainUrl = strings.TrimSuffix(strings.TrimRight(mgmtEndpoint, "/"), "/api/v1")
+		mgmtChainUrl = strings.TrimSuffix(strings.TrimRight(mgmtEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
