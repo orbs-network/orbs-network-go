@@ -62,6 +62,7 @@ func NewTransactionPool(ctx context.Context,
 	s.validationContext = s.createValidationContext()
 	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
+	s.metrics.lastCommittedTimestamp = metricFactory.NewGauge("TransactionPool.LastCommitted.TimeNano")
 	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate.PerSecond")
 	s.metrics.commitCount = metricFactory.NewGauge("TransactionPool.TotalCommits.Count")
 

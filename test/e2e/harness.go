@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -145,31 +147,47 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
-// TODO remove Eventually loop once node can handle requests at block height 0
-func (h *harness) eventuallyDeploy(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
-	var dcExResult codec.ExecutionResult
-	var dcTxStatus codec.TransactionStatus
-	var dcErr error
-	require.True(t, test.Eventually(20*time.Second, func() bool {
-		dcExResult, dcTxStatus, dcErr = h.deployNativeContract(keyPair, contractName, contractBytes...)
-		return dcErr == nil &&
-			dcTxStatus == codec.TRANSACTION_STATUS_COMMITTED &&
-			dcExResult == codec.EXECUTION_RESULT_SUCCESS
-	}), "expected contract to deploy successfully within 20 seconds, got error=%s, status=%s, execution result=%s", dcErr, dcTxStatus, dcExResult)
+func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
 
+	h.waitUntilTransactionPoolIsReady(t)
+
+	dcExResult, dcTxStatus, dcErr := h.deployNativeContract(keyPair, contractName, contractBytes...)
+
+	require.Nil(t, dcErr, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult, "expected deploy contract to succeed")
 }
 
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
-	require.True(t, test.Eventually(3*time.Second, func() bool { // 3 seconds to avoid jitter but it really shouldn't take that long
+
+	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
+	require.True(t, test.Eventually(5*time.Second, func() bool {
+
 		m := h.getMetrics()
 		if m == nil {
 			return false
 		}
 
-		blockHeight := m["TransactionPool.BlockHeight"]["Value"].(float64)
+		lastCommittedTimestamp := int64(m["TransactionPool.LastCommitted.TimeNano"]["Value"].(float64))
+		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
+		return diff >= 0
+	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
+}
 
-		return blockHeight > 0
-	}), "Timed out waiting for metric TransactionPool.BlockHeight > 0")
+func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
+	return config.ForE2E(
+		"",
+		0,
+		primitives.NodeAddress{},
+		primitives.EcdsaSecp256K1PrivateKey{},
+		nil,
+		nil,
+		"",
+		"",
+		"",
+		primitives.NodeAddress{},
+		0).
+		TransactionPoolNodeSyncRejectTime()
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {
