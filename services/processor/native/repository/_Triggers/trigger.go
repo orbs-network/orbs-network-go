@@ -2,6 +2,8 @@ package triggers_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 )
 
 // helpers for avoiding reliance on strings throughout the system
@@ -16,6 +18,7 @@ func _init() {
 }
 
 func trigger() {
+	service.CallMethod(committee_systemcontract.CONTRACT_NAME, committee_systemcontract.METHOD_UPDATE_REPUTATION) // must be before elections
 	// TODO v2 TODO management chain and election proxy - there should be call to electionValidators contraact to "get elections" where the if will be
 	//	if env.GetVirtualChainId() == MANAGEMENT_CHAIN {
 	//		service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_PROCESS_TRIGGER)

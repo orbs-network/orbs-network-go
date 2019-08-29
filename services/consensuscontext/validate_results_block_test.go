@@ -290,8 +290,6 @@ func TestConsensusContextValidateResultsBlock_TestTxRxBlockProposerNotSame(t *te
 	})
 }
 
-// TODO NOAM ask shai if need a empty (32 byte)
-
 func TestConsensusContextValidateResultssBlock_TestBlockProposerIgnoredIfBlockProposerIsZeroLength(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)

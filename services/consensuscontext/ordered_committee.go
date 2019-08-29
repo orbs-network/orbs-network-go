@@ -7,62 +7,58 @@
 package consensuscontext
 
 import (
+	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"sort"
 	"time"
 )
+const CALL_COMMITTEE_CONTRACT_INTERVAL = 200 * time.Millisecond
 
-const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
-
-func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	lastCommittedBlockHeight := currentBlockHeight - 1
 
-	genesisValidatorNodes := s.config.GenesisValidatorNodes()
-	genesisValidatorNodesAddresses := toNodeAddresses(genesisValidatorNodes)
-
-	// genesis
 	if lastCommittedBlockHeight == 0 {
-		return genesisValidatorNodesAddresses, nil
+		return generateGenesisCommittee(s.config.GenesisValidatorNodes()), nil
 	}
 
-	logger.Info("querying elected validators", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
-	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
+	logger.Info("querying GetOrderedCommittee", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
+	orderedCommittee, err := s.callGetOrderedCommitteeSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), logfields.BlockHeight(lastCommittedBlockHeight))
+	logger.Info("queried elected validators", log.Int("num-results", len(orderedCommittee)), logfields.BlockHeight(lastCommittedBlockHeight))
 
 	// elections not active yet
-	if len(electedValidatorsAddresses) == 0 {
-		return genesisValidatorNodesAddresses, nil
+	if len(orderedCommittee) == 0 {
+		return generateGenesisCommittee(s.config.GenesisValidatorNodes()), nil
 	}
 
-	return electedValidatorsAddresses, nil
+	return orderedCommittee, nil
 }
 
-func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+func (s *service) callGetOrderedCommitteeSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	attempts := 1
 	for {
-
 		// exit on system shutdown
 		if ctx.Err() != nil {
 			return nil, errors.New("context terminated during callElectionsSystemContractUntilSuccess")
 		}
 
-		electedValidatorsAddresses, err := s.callElectionsSystemContract(ctx, blockHeight)
+		orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, blockHeight)
 		if err == nil {
-			return electedValidatorsAddresses, nil
+			return orderedCommittee, nil
 		}
 
 		// log every 500 failures
@@ -73,7 +69,7 @@ func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, b
 		}
 
 		// sleep or wait for ctx done, whichever comes first
-		sleepOrShutdown, cancel := context.WithTimeout(ctx, CALL_ELECTIONS_CONTRACT_INTERVAL)
+		sleepOrShutdown, cancel := context.WithTimeout(ctx, CALL_COMMITTEE_CONTRACT_INTERVAL)
 		<-sleepOrShutdown.Done()
 		cancel()
 
@@ -81,13 +77,13 @@ func (s *service) callElectionsSystemContractUntilSuccess(ctx context.Context, b
 	}
 }
 
-func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
-	systemContractName := primitives.ContractName(elections_systemcontract.CONTRACT_NAME)
-	systemMethodName := primitives.MethodName(elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)
+func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+	systemContractName := primitives.ContractName(committee_systemcontract.CONTRACT_NAME)
+	systemMethodName := primitives.MethodName(committee_systemcontract.METHOD_GET_ORDERED_COMMITTEE)
 
 	output, err := s.virtualMachine.CallSystemContract(ctx, &services.CallSystemContractInput{
 		BlockHeight:        blockHeight,
-		BlockTimestamp:     0, // unfortunately we don't know the timestamp here, this limits which contract SDK API can be used
+		BlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()), // use now as the call is a kind of RunQuery and doesn't happen under consensus
 		ContractName:       systemContractName,
 		MethodName:         systemMethodName,
 		InputArgumentArray: (&protocol.ArgumentArrayBuilder{}).Build(),
@@ -108,21 +104,25 @@ func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight p
 		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
 	}
 	joinedAddresses := arg0.BytesValue()
+	return splitAddresses(joinedAddresses), nil
+}
 
+func splitAddresses(joinedAddresses []byte) []primitives.NodeAddress {
 	numAddresses := len(joinedAddresses) / digest.NODE_ADDRESS_SIZE_BYTES
 	res := make([]primitives.NodeAddress, numAddresses)
 	for i := 0; i < numAddresses; i++ {
-		res[i] = joinedAddresses[20*i : 20*(i+1)]
+		res[i] = joinedAddresses[digest.NODE_ADDRESS_SIZE_BYTES*i : digest.NODE_ADDRESS_SIZE_BYTES*(i+1)]
 	}
-	return res, nil
+	return res
 }
 
-func toNodeAddresses(nodes map[string]config.ValidatorNode) []primitives.NodeAddress {
-	nodeAddresses := make([]primitives.NodeAddress, len(nodes))
-	i := 0
+func generateGenesisCommittee(nodes map[string]config.ValidatorNode) []primitives.NodeAddress {
+	res := make([]primitives.NodeAddress, 0, len(nodes))
 	for _, value := range nodes {
-		nodeAddresses[i] = value.NodeAddress()
-		i++
+		res = append(res, value.NodeAddress())
 	}
-	return nodeAddresses
+	sort.Slice(res, func(i, j int) bool {
+		return bytes.Compare(res[i], res[j]) > 0
+	})
+	return res
 }
