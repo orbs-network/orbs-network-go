@@ -128,7 +128,7 @@ jobs:
 
   deploy_testnet:
     docker:
-      - image: circleci/node:11.2.0
+      - image: itamararjuan/golang_with_node_aws
     steps:
       - checkout
       - run: ./.circleci/set-aws-credentials.sh
@@ -145,11 +145,10 @@ jobs:
       - run: ./docker/test/ganache-related-test.sh
       - store_test_results:
           path: _reports
-    
+
   e2e_testnet_benchmark:
     docker:
-      - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+      - image: circleci/golang:1.12.9
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
@@ -158,17 +157,16 @@ jobs:
 
   e2e_testnet_leanhelix:
     docker:
-    - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
+      - image: circleci/golang:1.12.9
     steps:
-    - checkout
-    - run: ./git-submodule-checkout.sh
-    - run: sleep 300
-    - run: ./.circleci/e2e-testnet.sh 2013 2011
+      - checkout
+      - run: ./git-submodule-checkout.sh
+      - run: sleep 300
+      - run: ./.circleci/e2e-testnet.sh 2013 2011
 
   deploy_new_chain_pr_only:
     docker:
-    - image: itamararjuan/golang_with_node_aws
+      - image: itamararjuan/golang_with_node_aws
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
@@ -188,8 +186,8 @@ jobs:
   release:
     machine: true
     steps:
-    - checkout
-    - run: ./.circleci/release.sh
+      - checkout
+      - run: ./.circleci/release.sh
 
 workflows:
   version: 2
@@ -226,12 +224,12 @@ workflows:
             branches:
               only:
                 - master
-      # - e2e_testnet_benchmark:
-      #     requires:
-      #       - deploy_testnet
-      # - e2e_testnet_leanhelix:
-      #     requires:
-      #       - deploy_testnet
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release:
           requires:
             - tests
@@ -252,5 +250,3 @@ workflows:
                 - master
     jobs:
       - nightly
-
-
