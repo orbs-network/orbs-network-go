@@ -26,18 +26,26 @@ type gossipMessage struct {
 }
 
 type meteredTopicChannel struct {
-	ch      chan gossipMessage
-	size    *metric.Gauge
-	inQueue *metric.Gauge
-	logger  log.Logger
-	name    string
+	ch              chan gossipMessage
+	size            *metric.Gauge
+	inQueue         *metric.Gauge
+	droppedMessages *metric.Gauge
+	logger          log.Logger
+	name            string
 }
 
-func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("transport message received", log.Stringable("header", header), log.Int("topic-size", len(c.ch)))
-	c.ch <- gossipMessage{header: header, payloads: payloads} //TODO should the channel have *gossipMessage as type?
-	c.updateMetrics()
+
+	select {
+	default:
+		c.droppedMessages.Inc()
+		return errors.Errorf("buffer full")
+	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
+		c.updateMetrics()
+		return nil
+	}
 }
 
 func (c *meteredTopicChannel) updateMetrics() {
@@ -70,16 +78,16 @@ func (c *meteredTopicChannel) drain() {
 	}
 }
 
-func newMeteredTopicChannel(name string, registry metric.Registry, logger log.Logger) *meteredTopicChannel {
-	capacity := 10
+func newMeteredTopicChannel(name string, registry metric.Registry, logger log.Logger, topicBufferSize int) *meteredTopicChannel {
 	sizeGauge := registry.NewGauge("Gossip.Topic." + name + ".QueueSize")
-	sizeGauge.Update(int64(capacity))
+	sizeGauge.Update(int64(topicBufferSize))
 	return &meteredTopicChannel{
-		ch:      make(chan gossipMessage, capacity),
-		size:    sizeGauge,
-		inQueue: registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
-		name:    fmt.Sprintf("%s topic handler", name),
-		logger:  logger.WithTags(log.String("gossip-topic", name)),
+		ch:              make(chan gossipMessage, topicBufferSize),
+		size:            sizeGauge,
+		inQueue:         registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
+		droppedMessages: registry.NewGauge("Gossip.Topic." + name + ".DroppedMessages"),
+		name:            fmt.Sprintf("%s topic handler", name),
+		logger:          logger.WithTags(log.String("gossip-topic", name)),
 	}
 }
 
@@ -94,11 +102,13 @@ type gossipMessageDispatcher struct {
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
 func newMessageDispatcher(registry metric.Registry, logger log.Logger) (d *gossipMessageDispatcher) {
+	fastHandlersBufferSize := 10 // use with non blocking/io performing topic handlers
+
 	d = &gossipMessageDispatcher{
-		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger),
-		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger),
-		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger),
-		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger),
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, fastHandlersBufferSize),
+		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger, fastHandlersBufferSize),
+		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger, 100), // handlers performs I/O operations and require buffering of requests
+		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger, fastHandlersBufferSize),
 	}
 	return
 }
@@ -110,8 +120,10 @@ func (d *gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logge
 		return
 	}
 
-	ch.send(ctx, header, payloads)
-
+	err = ch.send(ctx, header, payloads)
+	if err != nil {
+		logger.Error("message dropped", log.Error(err), log.Stringable("header", header))
+	}
 }
 
 func (d *gossipMessageDispatcher) runHandler(ctx context.Context, logger log.Logger, topic gossipmessages.HeaderTopic, handler handlerFunc) *govnr.ForeverHandle {
