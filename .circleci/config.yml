@@ -2,15 +2,13 @@ version: 2
 jobs:
   tests:
     docker:
-      - image: circleci/golang:1.11.4
+      - image: circleci/golang:1.12.9
     resource_class: large
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./git-submodule-checkout.sh
       - run: go get -u github.com/orbs-network/go-junit-report
-      - run: curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
-      - run: sudo apt-get install -y nodejs
       - run:
           command: ./test.sh
           no_output_timeout: 15m
@@ -101,8 +99,7 @@ jobs:
       - run: ./git-submodule-checkout.sh
       - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
-      # Update docker-compose
-      - run: sudo bash -c "rm -rf /usr/local/bin/docker-compose && pip install docker-compose==1.23.2"
+      - run: ./.circleci/install-docker-compose.sh
       - run:
           command: ./docker/test/test.sh
           name: "Docker test with Benchmark Consensus"

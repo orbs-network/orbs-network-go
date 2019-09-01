@@ -14,21 +14,20 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
+	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
-	"testing"
 	"time"
 )
 
 const NETWORK_SIZE = 4
 
 type harness struct {
-	consensus              services.ConsensusAlgoLeanHelix
+	consensus              *leanhelixconsensus.Service
 	gossip                 *gossiptopics.MockLeanHelix
 	blockStorage           *services.MockBlockStorage
 	consensusContext       *services.MockConsensusContext
@@ -37,34 +36,38 @@ type harness struct {
 }
 
 func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
-	gossip := &gossiptopics.MockLeanHelix{}
-	gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
-
-	blockStorage := &services.MockBlockStorage{}
-	blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
-
-	consensusContext := &services.MockConsensusContext{}
-
-	return &harness{
-		gossip:                 gossip,
-		blockStorage:           blockStorage,
-		consensusContext:       consensusContext,
+	h := &harness{
+		gossip:                 &gossiptopics.MockLeanHelix{},
+		blockStorage:           &services.MockBlockStorage{},
+		consensusContext:       &services.MockConsensusContext{},
 		auditBlocksYoungerThan: auditBlocksYoungerThan,
 	}
+
+	h.resetAndApplyMockDefaults()
+
+	return h
 }
 
-func (h *harness) start(tb testing.TB, ctx context.Context) *harness {
-	logOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-	logger := log.GetLogger().WithOutput(logOutput)
+func (h *harness) resetAndApplyMockDefaults() {
+	h.consensusContext.Reset()
+	h.blockStorage.Reset()
+	h.gossip.Reset()
+
+	h.blockStorage.When("RegisterConsensusBlocksHandler", mock.Any).Return().Times(1)
+	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
+}
+
+func (h *harness) start(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
 	registry := metric.NewRegistry()
 
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	signer, err := signer.New(cfg)
-	require.NoError(tb, err)
+	require.NoError(parent.T, err)
 
-	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, logger, cfg, registry)
+	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, parent.Logger, cfg, registry)
+	parent.Supervise(h.consensus)
 	return h
 }
 
@@ -80,8 +83,12 @@ func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.
 	return res
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommitteeNotCalled() {
-	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(nil, nil).Times(0)
+func (h *harness) beLastInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(1)
+}
+
+func (h *harness) beFirstInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(0)
 }
 
 func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
@@ -101,4 +108,9 @@ func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPa
 
 func (h *harness) expectGossipSendLeanHelixMessage() {
 	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil) // TODO Maybe add .Times(1) like there was before
+}
+
+func (h *harness) expectNeverToProposeABlock() {
+	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
+	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }

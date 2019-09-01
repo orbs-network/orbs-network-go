@@ -28,12 +28,12 @@ const MAX_LEAK_BYTES = 5 * 1024 * 1024
 // This can will eventually consume all memory and cause the node to crash.
 
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(0).start(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		t.Log("Block sync service to block 5")
 
-		h.expectConsensusContextRequestOrderingCommittee(1) // we're index 0 (first time called)
+		h.beLastInCommittee()
 		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()

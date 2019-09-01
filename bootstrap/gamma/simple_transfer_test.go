@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -21,7 +20,7 @@ import (
 func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 	return func(t *testing.T) {
 		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
-			network := NewDevelopmentNetwork(ctx, log.DefaultTestingLogger(t), nil, jsonConfig)
+			network := NewDevelopmentNetwork(ctx, harness.Logger, nil, jsonConfig)
 			harness.Supervise(network)
 			contract := callcontract.NewContractClient(network)
 

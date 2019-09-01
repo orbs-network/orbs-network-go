@@ -122,8 +122,8 @@ func flipBitInFile(t *testing.T, conf *localConfig, offset int64, bitMask byte) 
 	require.NoError(t, err)
 }
 
-func writeRandomBlocksToFile(t *testing.T, conf *localConfig, numBlocks int32, ctrlRand *rand.ControlledRand) []*protocol.BlockPairContainer {
-	fsa, closeAdapter, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
+func writeRandomBlocksToFile(t *testing.T, logger log.Logger, conf *localConfig, numBlocks int32, ctrlRand *rand.ControlledRand) []*protocol.BlockPairContainer {
+	fsa, closeAdapter, err := NewFilesystemAdapterDriver(logger, conf)
 	require.NoError(t, err)
 	defer closeAdapter()
 

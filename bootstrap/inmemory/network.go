@@ -84,7 +84,7 @@ func NewNetworkWithNumOfNodes(
 		if provider == nil {
 			dep.BlockPersistence = blockStorageMemoryAdapter.NewBlockPersistence(nodeLogger, metricRegistry)
 			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger, metricRegistry)
-			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger)
+			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger, metricRegistry)
 			dep.StatePersistence = stateStorageMemoryAdapter.NewStatePersistence(metricRegistry)
 			dep.StateBlockHeightReporter = synchronization.NopHeightReporter{}
 			dep.TransactionPoolBlockHeightReporter = synchronization.NewBlockTracker(nodeLogger, 0, math.MaxUint16)
@@ -135,11 +135,10 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *
 }
 
 func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int) {
+	nodes := reverse(n.Nodes[:numOfNodesToStart]) // this is to reduce the chances of getting to view=1 in the first block; since the committee is ordered by num of nodes, this will increase the chances that the leader of block height 1 starts after its validators, thereby reducing the chances that it sends PREPREPARE before its validators have started
+
 	wg := &sync.WaitGroup{}
-	for i, node := range n.Nodes {
-		if i >= numOfNodesToStart {
-			break
-		}
+	for _, node := range nodes {
 		wg.Add(1)
 
 		nodeLogger := n.Logger.WithTags(log.Node(node.name))
@@ -172,6 +171,13 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 	}
 
 	wg.Wait()
+}
+
+func reverse(nodes []*Node) (reversed []*Node) {
+	for i := len(nodes) - 1; i >= 0; i-- {
+		reversed = append(reversed, nodes[i])
+	}
+	return
 }
 
 func (n *Network) PublicApi(nodeIndex int) services.PublicApi {

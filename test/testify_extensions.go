@@ -33,20 +33,6 @@ func RequireCmpEqual(t *testing.T, expected interface{}, actual interface{}, msg
 	t.FailNow()
 }
 
-type Fataler interface {
-	Fatal(args ...interface{})
-}
-
-type ErrorTracker interface {
-	HasErrors() bool
-}
-
-func RequireNoUnexpectedErrors(f Fataler, errorTracker ErrorTracker) {
-	if errorTracker.HasErrors() {
-		f.Fatal("Test failed; encountered unexpected errors")
-	}
-}
-
 type transactionStatuser interface {
 	TransactionStatus() protocol.TransactionStatus
 	TransactionReceipt() *protocol.TransactionReceipt

@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,23 +18,23 @@ import (
 )
 
 func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		h := newLeanHelixServiceHarness(0)
 
 		t.Log("Service should do nothing on start")
 
-		h.expectConsensusContextRequestOrderingCommitteeNotCalled()
+		h.consensusContext.Never("RequestOrderingCommittee", mock.Any, mock.Any)
 
-		h.start(t, ctx)
+		h.start(parent, ctx)
 
 		err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext)
 		require.NoError(t, err)
 
 		t.Log("Service should request committee after HandleBlockConsensus is called")
 
-		h.expectConsensusContextRequestOrderingCommittee(1) // we're index 0
+		h.beLastInCommittee()
 
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              nil,
@@ -45,15 +46,15 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 }
 
 func TestService_LeaderProposesBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(0).start(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
-		h.expectConsensusContextRequestOrderingCommittee(0) // we're index 0
+		h.beFirstInCommittee()
 		h.expectConsensusContextRequestBlock(b)
 		h.expectGossipSendLeanHelixMessage()
 
-		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
+		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
 			BlockPair:              nil,

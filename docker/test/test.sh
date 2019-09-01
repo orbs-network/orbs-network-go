@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # Important note: trying to run the stress test locally? you will need to increase your max allowed sockets open / open files
 # as shown in this stack overflow URL:
@@ -12,7 +12,7 @@ echo "Cleaned the following containers:"
 (docker ps -aq | xargs docker rm -fv) || echo "No containers to clean! Good!"
 sleep 3
 
-rm -rf _logs
+rm -rf _logs _out
 
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
 
@@ -56,7 +56,7 @@ export API_ENDPOINT=http://localhost:8080/api/v1/ \
 echo "The network has started with pre-existing (ancient) 500-some blocks"
 echo "Sleeping to allow the network to start closing new blocks.."
 echo "(So that the txpool won't throw our calls to the bin)"
-sleep 10
+sleep 15
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 time go_test_junit_report e2e -timeout 10m -count=1 ./test/e2e/...

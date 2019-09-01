@@ -8,18 +8,19 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func TestRequestOrderingCommittee(t *testing.T) {
-	h := newHarness(t, false)
-	blockHeight := primitives.BlockHeight(1)
-	genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
+func TestRequestOrderingCommittee_ReturnsMaxCommitteeSizeMembers_WhenCommitteeSizeIsSmallerThanGenesisValidatorsSize(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		h := newHarness(harness.Logger, false)
+		blockHeight := primitives.BlockHeight(1)
+		genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
 
-	t.Run("if MaxCommitteeSize <= genesisValidatorsSize, then return MaxCommitteeSize members", func(t *testing.T) {
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,
 			RandomSeed:         0,
@@ -32,7 +33,15 @@ func TestRequestOrderingCommittee(t *testing.T) {
 		actualNumberOfValidators := len(output.NodeAddresses)
 		require.Equal(t, genesisValidatorsSize, actualNumberOfValidators, "expected committee size is %d but got %d", genesisValidatorsSize, actualNumberOfValidators)
 	})
-	t.Run("if MaxCommitteeSize > genesisValidatorsSize, then return all genesis validators (genesisValidatorsSize)", func(t *testing.T) {
+
+}
+
+func TestRequestOrderingCommittee_ReturnsAllGenesisValidators_WhenCommitteeSizeIsLargerThanGenesisValidatorsSize(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		h := newHarness(harness.Logger, false)
+		blockHeight := primitives.BlockHeight(1)
+		genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
+
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,
 			RandomSeed:         0,

@@ -8,6 +8,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"os/exec"
@@ -57,20 +58,22 @@ func TestAdvisoryLock_AdapterCanReleaseLock(t *testing.T) {
 		t.Skip("Skipping Integration tests in short mode")
 	}
 
-	c := newTempFileConfig()
-	defer c.cleanDir()
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		c := newTempFileConfig()
+		defer c.cleanDir()
 
-	err := lockAndRelease(t, c)
-	require.NoError(t, err, "should succeed in creating an adapter for a non-existing temp file")
+		err := lockAndRelease(harness.Logger, c)
+		require.NoError(t, err, "should succeed in creating an adapter for a non-existing temp file")
 
-	time.Sleep(500 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 
-	err = lockAndRelease(t, c)
-	require.NoError(t, err, "should succeed in creating a second adapter for same file after closing first adapter")
+		err = lockAndRelease(harness.Logger, c)
+		require.NoError(t, err, "should succeed in creating a second adapter for same file after closing first adapter")
+	})
 }
 
-func lockAndRelease(tb testing.TB, c config.FilesystemBlockPersistenceConfig) error {
-	_, cancel, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(tb), c)
+func lockAndRelease(logger log.Logger, c config.FilesystemBlockPersistenceConfig) error {
+	_, cancel, err := NewFilesystemAdapterDriver(logger, c)
 	if err != nil {
 		return err
 	}
