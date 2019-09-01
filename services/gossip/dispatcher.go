@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -28,10 +29,13 @@ type meteredTopicChannel struct {
 	ch      chan gossipMessage
 	size    *metric.Gauge
 	inQueue *metric.Gauge
+	logger  log.Logger
 	name    string
 }
 
-func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) {
+func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger.Info("transport message received", log.Stringable("header", header), log.Int("topic-size", len(c.ch)))
 	c.ch <- gossipMessage{header: header, payloads: payloads} //TODO should the channel have *gossipMessage as type?
 	c.updateMetrics()
 }
@@ -66,7 +70,7 @@ func (c *meteredTopicChannel) drain() {
 	}
 }
 
-func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
+func newMeteredTopicChannel(name string, registry metric.Registry, logger log.Logger) *meteredTopicChannel {
 	capacity := 10
 	sizeGauge := registry.NewGauge("Gossip.Topic." + name + ".QueueSize")
 	sizeGauge.Update(int64(capacity))
@@ -75,6 +79,7 @@ func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopic
 		size:    sizeGauge,
 		inQueue: registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
 		name:    fmt.Sprintf("%s topic handler", name),
+		logger:  logger.WithTags(log.String("gossip-topic", name)),
 	}
 }
 
@@ -88,24 +93,24 @@ type gossipMessageDispatcher struct {
 // These channels are buffered because we don't want to assume that the topic consumers behave nicely
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
-func newMessageDispatcher(registry metric.Registry) (d *gossipMessageDispatcher) {
+func newMessageDispatcher(registry metric.Registry, logger log.Logger) (d *gossipMessageDispatcher) {
 	d = &gossipMessageDispatcher{
-		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry),
-		blockSync:          newMeteredTopicChannel("BlockSync", registry),
-		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry),
-		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry),
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger),
+		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger),
+		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger),
+		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger),
 	}
 	return
 }
 
-func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
+func (d *gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logger, header *gossipmessages.Header, payloads [][]byte) {
 	ch, err := d.get(header.Topic())
 	if err != nil {
 		logger.Error("no message channel found", log.Error(err))
 		return
 	}
 
-	ch.send(header, payloads)
+	ch.send(ctx, header, payloads)
 
 }
 
