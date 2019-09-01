@@ -34,6 +34,7 @@ type meteredTopicChannel struct {
 func (c *meteredTopicChannel) send(header *gossipmessages.Header, payloads [][]byte) error {
 	select {
 	default:
+		c.droppedMessages.Inc()
 		return errors.Errorf("buffer full")
 	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
 		c.updateMetrics()
@@ -71,12 +72,11 @@ func (c *meteredTopicChannel) drain() {
 	}
 }
 
-func newMeteredTopicChannel(name string, registry metric.Registry) *meteredTopicChannel {
-	bufferSize := 1000
+func newMeteredTopicChannel(name string, registry metric.Registry, topicBufferSize int) *meteredTopicChannel {
 	sizeGauge := registry.NewGauge("Gossip.Topic." + name + ".QueueSize")
-	sizeGauge.Update(int64(bufferSize))
+	sizeGauge.Update(int64(topicBufferSize))
 	return &meteredTopicChannel{
-		ch:              make(chan gossipMessage, bufferSize),
+		ch:              make(chan gossipMessage, topicBufferSize),
 		size:            sizeGauge,
 		inQueue:         registry.NewGauge("Gossip.Topic." + name + ".MessagesInQueue"),
 		droppedMessages: registry.NewGauge("Gossip.Topic." + name + ".DroppedMessages"),
@@ -95,11 +95,14 @@ type gossipMessageDispatcher struct {
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
 func newMessageDispatcher(registry metric.Registry) (d *gossipMessageDispatcher) {
+
+	fastHandlersBufferSize := 10 // use with non blocking/io performing topic handlers
+
 	d = &gossipMessageDispatcher{
-		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry),
-		blockSync:          newMeteredTopicChannel("BlockSync", registry),
-		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry),
-		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry),
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, fastHandlersBufferSize),
+		blockSync:          newMeteredTopicChannel("BlockSync", registry, fastHandlersBufferSize),
+		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, 100), // handlers performs I/O operations and require buffering of requests
+		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, fastHandlersBufferSize),
 	}
 	return
 }
@@ -113,7 +116,7 @@ func (d *gossipMessageDispatcher) dispatch(logger log.Logger, header *gossipmess
 
 	err = ch.send(header, payloads)
 	if err != nil {
-		logger.Info("message dropped", log.Error(err), log.Stringable("header", header))
+		logger.Error("message dropped", log.Error(err), log.Stringable("header", header))
 	}
 }
 
