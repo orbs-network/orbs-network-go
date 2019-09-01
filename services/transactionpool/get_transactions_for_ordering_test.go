@@ -11,124 +11,136 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
-		tx3 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
+			tx3 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{
-			logger:               log.DefaultTestingLogger(t),
-			maxNumOfTransactions: 2,
-		}
+			b := &transactionBatch{
+				logger:               parent.Logger,
+				maxNumOfTransactions: 2,
+			}
 
-		f := &fakeFetcher{
-			transactions: Transactions{tx1, tx2, tx3},
-		}
+			f := &fakeFetcher{
+				transactions: Transactions{tx1, tx2, tx3},
+			}
 
-		b.fetchUsing(f)
+			b.fetchUsing(f)
 
-		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+			require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+		})
 	})
 }
 
 func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
-		tx3 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
+			tx3 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{
-			logger:               log.DefaultTestingLogger(t),
-			sizeLimit:            sizeOf(tx1, tx2) + 1,
-			maxNumOfTransactions: 100,
-		}
+			b := &transactionBatch{
+				logger:               parent.Logger,
+				sizeLimit:            sizeOf(tx1, tx2) + 1,
+				maxNumOfTransactions: 100,
+			}
 
-		f := &fakeFetcher{
-			transactions: Transactions{tx1, tx2, tx3},
-		}
+			f := &fakeFetcher{
+				transactions: Transactions{tx1, tx2, tx3},
+			}
 
-		b.fetchUsing(f)
+			b.fetchUsing(f)
 
-		require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+			require.Len(t, b.incomingTransactions, 2, "did not fetch exactly 2 transactions")
+		})
 	})
 }
 
 func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
 
-		b := newTransactionBatch(log.DefaultTestingLogger(t), Transactions{tx1, tx2})
-		b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0)
+			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
+			b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0)
 
-		require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
+			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
-		require.Len(t, b.transactionsForPreOrder, 1)
-		require.Equal(t, tx1, b.transactionsForPreOrder[0], "valid transaction was rejected")
+			require.Len(t, b.transactionsForPreOrder, 1)
+			require.Equal(t, tx1, b.transactionsForPreOrder[0], "valid transaction was rejected")
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_RESERVED, b.transactionsToReject[0].status, "invalid transaction was not rejected")
-		require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_RESERVED, b.transactionsToReject[0].status, "invalid transaction was not rejected")
+			require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+		})
 	})
 }
 
 func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
 
-		b := newTransactionBatch(log.DefaultTestingLogger(t), Transactions{tx1, tx2})
-		b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0)
+			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
+			b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0)
 
-		require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
+			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
-		require.Len(t, b.transactionsForPreOrder, 1)
-		require.Equal(t, tx1, b.transactionsForPreOrder[0], "valid transaction was rejected")
+			require.Len(t, b.transactionsForPreOrder, 1)
+			require.Equal(t, tx1, b.transactionsForPreOrder[0], "valid transaction was rejected")
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, b.transactionsToReject[0].status, "invalid transaction was not rejected")
-		require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED, b.transactionsToReject[0].status, "invalid transaction was not rejected")
+			require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+		})
 	})
 }
 
 func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
-		tx3 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
+			tx3 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2, tx3}, logger: log.DefaultTestingLogger(t)}
-		err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}}, 0, 0)
+			b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2, tx3}, logger: parent.Logger}
+			err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}}, 0, 0)
 
-		require.NoError(t, err, "this should really never happen")
-		require.Empty(t, b.transactionsForPreOrder, "did not empty transaction for preorder list")
+			require.NoError(t, err, "this should really never happen")
+			require.Empty(t, b.transactionsForPreOrder, "did not empty transaction for preorder list")
 
-		require.Len(t, b.validTransactions, 1)
-		require.Equal(t, tx1, b.validTransactions[0], "valid transaction was rejected")
+			require.Len(t, b.validTransactions, 1)
+			require.Equal(t, tx1, b.validTransactions[0], "valid transaction was rejected")
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, b.transactionsToReject[0].status, "invalid transaction was not rejected")
-		require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, b.transactionsToReject[0].status, "invalid transaction was not rejected")
+			require.Equal(t, digest.CalcTxHash(tx2.Transaction()), b.transactionsToReject[0].hash, "invalid transaction was not rejected")
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, b.transactionsToReject[1].status, "invalid transaction was not rejected")
-		require.Equal(t, digest.CalcTxHash(tx3.Transaction()), b.transactionsToReject[1].hash, "invalid transaction was not rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH, b.transactionsToReject[1].status, "invalid transaction was not rejected")
+			require.Equal(t, digest.CalcTxHash(tx3.Transaction()), b.transactionsToReject[1].hash, "invalid transaction was not rejected")
+		})
 	})
 }
 
 func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		tx1 := builders.TransferTransaction().Build()
-		tx2 := builders.TransferTransaction().Build()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			tx1 := builders.TransferTransaction().Build()
+			tx2 := builders.TransferTransaction().Build()
 
-		b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: log.DefaultTestingLogger(t)}
-		require.Panics(t, func() {
-			b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0)
-		}, "pre order validation returning statuses with length that differs from number of txs sent did not panic")
+			b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: parent.Logger}
+			require.Panics(t, func() {
+				b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0)
+			}, "pre order validation returning statuses with length that differs from number of txs sent did not panic")
+		})
 	})
 }
 

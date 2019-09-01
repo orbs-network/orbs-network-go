@@ -30,8 +30,7 @@ type harness struct {
 	service        services.Processor
 }
 
-func newHarness(tb testing.TB) *harness {
-	log := log.DefaultTestingLogger(tb)
+func newHarness(logger log.Logger) *harness {
 
 	compiler := fake.NewCompiler()
 	compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
@@ -42,7 +41,7 @@ func newHarness(tb testing.TB) *harness {
 
 	config := &nativeProcessorConfigForTests{}
 
-	service := native.NewNativeProcessor(compiler, config, log, registry)
+	service := native.NewNativeProcessor(compiler, config, logger, registry)
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
 	return &harness{

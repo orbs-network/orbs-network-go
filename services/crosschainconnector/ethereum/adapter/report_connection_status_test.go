@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/scribe/log"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -46,9 +46,12 @@ func (c *ethereumConnectorConfigForTests) GetAuthFromConfig() (*bind.TransactOpt
 }
 
 func TestReportingFailure(t *testing.T) {
-	emptyConfig := &ethereumConnectorConfigForTests{}
-	registry := metric.NewRegistry()
-	x := NewEthereumRpcConnection(emptyConfig, log.DefaultTestingLogger(t), registry)
-	err := x.updateConnectionStatus(context.Background(), createConnectionStatusMetrics(registry))
-	require.Error(t, err, "require some error from the update flow, config is a lie")
+	with.Logging(t, func(harness *with.LoggingHarness) {
+
+		emptyConfig := &ethereumConnectorConfigForTests{}
+		registry := metric.NewRegistry()
+		x := NewEthereumRpcConnection(emptyConfig, harness.Logger, registry)
+		err := x.updateConnectionStatus(context.Background(), createConnectionStatusMetrics(registry))
+		require.Error(t, err, "require some error from the update flow, config is a lie")
+	})
 }

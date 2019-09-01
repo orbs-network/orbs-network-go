@@ -71,8 +71,7 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 
 }
 
-func newRpcEthereumConnectorHarness(tb testing.TB, cfg *ethereumConnectorConfigForTests) *harness {
-	logger := log.DefaultTestingLogger(tb)
+func newRpcEthereumConnectorHarness(logger log.Logger, cfg *ethereumConnectorConfigForTests) *harness {
 	registry := metric.NewRegistry()
 	a := adapter.NewEthereumRpcConnection(cfg, logger, registry)
 
@@ -89,8 +88,7 @@ func (h *harness) WithFakeTimeGetter() *harness {
 	return h
 }
 
-func newSimulatedEthereumConnectorHarness(tb testing.TB) *harness {
-	logger := log.DefaultTestingLogger(tb)
+func newSimulatedEthereumConnectorHarness(logger log.Logger) *harness {
 	conn := adapter.NewEthereumSimulatorConnection(logger)
 	cfg := ConfigForSimulatorConnection()
 

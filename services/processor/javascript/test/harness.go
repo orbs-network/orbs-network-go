@@ -26,12 +26,11 @@ type harness struct {
 	service        services.Processor
 }
 
-func newHarness(tb testing.TB) *harness {
-	log := log.DefaultTestingLogger(tb)
+func newHarness(logger log.Logger) *harness {
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
-	service := javascript.NewJavaScriptProcessor(log)
+	service := javascript.NewJavaScriptProcessor(logger)
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
 	return &harness{
