@@ -10,7 +10,6 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
@@ -154,13 +153,6 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	newHarness().
 		WithNumNodes(7).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig { // TODO test assumes all sent transactions return successful.
-			c, err := cfg.MergeWithFileConfig(`{
-				"public-api-send-transaction-timeout": "1h"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
