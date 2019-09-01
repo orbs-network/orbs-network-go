@@ -49,7 +49,7 @@ type Service struct {
 
 func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *Service {
 	logger := parent.WithTags(LogTag)
-	dispatcher := newMessageDispatcher(metricRegistry)
+	dispatcher := newMessageDispatcher(metricRegistry, logger)
 	s := &Service{
 		transport:       transport,
 		config:          config,
@@ -89,8 +89,7 @@ func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 			return
 		}
 
-		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
-		s.messageDispatcher.dispatch(logger, header, payloads[1:])
+		s.messageDispatcher.dispatch(ctx, logger, header, payloads[1:])
 	}
 }
 

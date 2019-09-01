@@ -200,7 +200,7 @@ func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
 		WithFilters(
-			log.IgnoreMessagesMatching("transport message received"),
+			//log.IgnoreMessagesMatching("transport message received"),
 			log.ExcludeField(memory.LogTag),
 		).
 		WithFilters(b.logFilters...)
