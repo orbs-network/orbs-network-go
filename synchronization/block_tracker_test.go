@@ -9,6 +9,7 @@ package synchronization
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/wait"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"sync/atomic"
@@ -85,10 +86,9 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tracker := NewBlockTracker(parent.Logger, 1, 1)
 
-			var waitCount int32
-			internalWaitChan := make(chan int32)
+			internalWaitChan := make(chan struct{})
 			tracker.fireOnWait = func() {
-				internalWaitChan <- atomic.AddInt32(&waitCount, 1)
+				internalWaitChan <- struct{}{}
 			}
 
 			doneWait := make(chan error)
@@ -98,10 +98,8 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 			go waiter()
 			go waiter()
 
-			selectIterationsBeforeIncrement := <-internalWaitChan
-			require.EqualValues(t, 1, selectIterationsBeforeIncrement, "did not enter select before returning")
-			selectIterationsBeforeIncrement = <-internalWaitChan
-			require.EqualValues(t, 2, selectIterationsBeforeIncrement, "did not enter select before returning")
+			require.NoError(t, wait.ForSignal(internalWaitChan), "did not enter select before returning")
+			require.NoError(t, wait.ForSignal(internalWaitChan), "did not enter select before returning")
 
 			require.NotPanics(t, func() {
 				tracker.IncrementTo(2)
