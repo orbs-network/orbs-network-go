@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -151,33 +150,26 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 	defer b.sequentialTests.Unlock()
 
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-	test.WithContext(func(parentCtx context.Context) {
-		testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
-
-		logger := b.makeLogger(testOutput, testId)
+	test.WithConcurrencyHarness(tb, func(parentCtx context.Context, parentHarness *test.ConcurrencyHarness) {
+		logger := b.makeLogger(parentHarness, testId)
 
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
 			ctx, cancel := context.WithTimeout(context.Background(), TEST_TIMEOUT_HARD_LIMIT)
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
 			defer cancel()
-			defer testOutput.TestTerminated()
 
-			logger.Info("acceptance network created")
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+			parentHarness.Supervise(network)
 			defer dumpStateOnFailure(tb, network)
+			logger.Info("acceptance network created")
 
 			if b.setupFunc != nil {
 				b.setupFunc(ctx, network)
 			}
 
 			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
-			logger.Info("acceptance network started")
-
-			logger.Info("acceptance network running test")
+			logger.Info("acceptance network started, running tests")
 			f(tb, ctx, network)
-			with.RequireNoUnexpectedErrors(tb, testOutput)
 			cancel()
-			network.WaitUntilShutdown(ctx)
-
 		})
 
 	})
@@ -191,13 +183,13 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *networkHarness) makeLogger(testOutput *log.TestOutput, testId string) log.Logger {
+func (b *networkHarness) makeLogger(parentHarness *test.ConcurrencyHarness, testId string) log.Logger {
 
 	for _, pattern := range b.allowedErrors {
-		testOutput.AllowErrorsMatching(pattern)
+		parentHarness.AllowErrorsMatching(pattern)
 	}
 
-	logger := log.GetLogger().WithTags(
+	logger := parentHarness.Logger.WithTags(
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
 		WithFilters(
@@ -209,7 +201,6 @@ func (b *networkHarness) makeLogger(testOutput *log.TestOutput, testId string) l
 
 	return logger
 }
-
 func (b *networkHarness) WithNumRunningNodes(numNodes int) *networkHarness {
 	b.numOfNodesToStart = numNodes
 	return b
