@@ -205,7 +205,7 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, emptyBlockTime)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, requiredQuorumPercentage)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 300*time.Millisecond)
-	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 600*time.Millisecond)
+	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 24*time.Hour) // ridiculously long timeout to reflect "forever"
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)

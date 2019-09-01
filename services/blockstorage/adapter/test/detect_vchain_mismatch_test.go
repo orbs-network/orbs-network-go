@@ -8,7 +8,7 @@ package test
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/rand"
-	"github.com/orbs-network/scribe/log"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -18,15 +18,17 @@ func TestPersistenceAdapter_DetectsVirtualChainMismatch(t *testing.T) {
 		t.Skip("Skipping Integration tests in short mode")
 	}
 
-	conf := newTempFileConfig()
-	defer conf.cleanDir()
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
 
-	writeRandomBlocksToFile(t, conf, 1, rand.NewControlledRand(t))
+		writeRandomBlocksToFile(t, harness.Logger, conf, 1, rand.NewControlledRand(t))
 
-	conf.setVirtualChainId(conf.VirtualChainId() + 1)
+		conf.setVirtualChainId(conf.VirtualChainId() + 1)
 
-	_, _, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
-	require.Error(t, err, "expected error when trying to open a blocks file from a different virtual chain")
+		_, _, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.Error(t, err, "expected error when trying to open a blocks file from a different virtual chain")
+	})
 }
 
 func TestPersistenceAdapter_DetectsNeworkTypeMismatch(t *testing.T) {
@@ -34,13 +36,16 @@ func TestPersistenceAdapter_DetectsNeworkTypeMismatch(t *testing.T) {
 		t.Skip("Skipping Integration tests in short mode")
 	}
 
-	conf := newTempFileConfig()
-	defer conf.cleanDir()
+	with.Logging(t, func(harness *with.LoggingHarness) {
 
-	writeRandomBlocksToFile(t, conf, 1, rand.NewControlledRand(t))
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
 
-	conf.setNetworkType(conf.networkType + 1)
+		writeRandomBlocksToFile(t, harness.Logger, conf, 1, rand.NewControlledRand(t))
 
-	_, _, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
-	require.Error(t, err, "expected error when trying to open a blocks file from a different network type")
+		conf.setNetworkType(conf.networkType + 1)
+
+		_, _, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.Error(t, err, "expected error when trying to open a blocks file from a different network type")
+	})
 }

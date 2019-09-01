@@ -52,12 +52,14 @@ type Service struct {
 }
 
 type metrics struct {
-	blockHeight *metric.Gauge
+	blockHeight       *metric.Gauge
+	lastCommittedTime *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		blockHeight: m.NewGauge("BlockStorage.BlockHeight"),
+		blockHeight:       m.NewGauge("BlockStorage.BlockHeight"),
+		lastCommittedTime: m.NewGauge("BlockStorage.LastCommitted.TimeNano"),
 	}
 }
 
@@ -81,11 +83,20 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 	s.Supervise(s.nodeSync)
 
-	height, err := persistence.GetLastBlockHeight()
+	lastBlock, err := persistence.GetLastBlock()
 	if err != nil {
-		logger.Error("could not read block height from adapter", log.Error(err))
+		logger.Error("could not read block from adapter", log.Error(err))
 	}
-	s.metrics.blockHeight.Update(int64(height))
+	var height int64
+	var lastCommittedTime int64
+
+	if lastBlock != nil {
+		height = int64(lastBlock.TransactionsBlock.Header.BlockHeight())
+		lastCommittedTime = int64(lastBlock.TransactionsBlock.Header.Timestamp())
+	}
+
+	s.metrics.blockHeight.Update(height)
+	s.metrics.lastCommittedTime.Update(lastCommittedTime)
 
 	return s
 }

@@ -54,31 +54,6 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 	p.Stop()
 }
 
-func TestTriggerInternalMetrics(t *testing.T) {
-	logger := mockLogger()
-	fromTrigger := make(chan struct{})
-	stop := make(chan struct{})
-	trigger := func() {
-		select {
-		case fromTrigger <- struct{}{}:
-		case <-stop:
-			return
-		}
-	}
-	tickTime := time.Microsecond
-	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
-
-	// wait for three triggers
-	for i := 0; i < 3; i++ {
-		<-fromTrigger
-	}
-
-	time.Sleep(time.Millisecond) // yield
-	require.EqualValues(t, 3, p.TimesTriggered(), "expected 3 triggers but got %d (metric)", p.TimesTriggered())
-	close(stop)
-	p.Stop()
-}
-
 func TestPeriodicalTrigger_Stop(t *testing.T) {
 	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
 		x := 0

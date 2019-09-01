@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -173,7 +174,7 @@ func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensu
 
 			logger.Info("acceptance network running test")
 			f(tb, ctx, network)
-			test.RequireNoUnexpectedErrors(tb, testOutput)
+			with.RequireNoUnexpectedErrors(tb, testOutput)
 			cancel()
 			network.WaitUntilShutdown(ctx)
 
@@ -200,7 +201,7 @@ func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId
 		log.String("_test", "acceptance"),
 		log.String("_test-id", testId)).
 		WithFilters(
-			log.IgnoreMessagesMatching("transport message received"),
+			//log.IgnoreMessagesMatching("transport message received"),
 			log.ExcludeField(memory.LogTag),
 		).
 		WithFilters(b.logFilters...)

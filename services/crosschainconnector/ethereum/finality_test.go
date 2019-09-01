@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
@@ -28,8 +29,7 @@ type harness struct {
 	service *service
 }
 
-func newHarness(t testing.TB, fct time.Duration, fbc uint32) *harness {
-	logger := log.DefaultTestingLogger(t)
+func newHarness(logger log.Logger, fct time.Duration, fbc uint32) *harness {
 	cfg := &finalityConfig{fct, fbc}
 
 	btg := timestampfinder.NewFakeBlockTimeGetter(logger)
@@ -52,70 +52,82 @@ func newHarness(t testing.TB, fct time.Duration, fbc uint32) *harness {
 
 func TestFinality_GetSafeBlockWithoutLimits(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 0, 0)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 0, 0)
 
-		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
-		t.Log("safe block number is", safeBlockNumberAndTime)
-		require.NoError(t, err, "should not fail")
-		require.EqualValues(t, RECENT_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return the recent block number of fake getter")
-		require.EqualValues(t, RECENT_TIMESTAMP, safeBlockNumberAndTime.BlockTimeNano, "should return the recent block time of fake getter")
+			safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+			t.Log("safe block number is", safeBlockNumberAndTime)
+			require.NoError(t, err, "should not fail")
+			require.EqualValues(t, RECENT_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return the recent block number of fake getter")
+			require.EqualValues(t, RECENT_TIMESTAMP, safeBlockNumberAndTime.BlockTimeNano, "should return the recent block time of fake getter")
+		})
 	})
 }
 
 func TestFinality_GetSafeBlockWithBlockLimit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 0, FINALITY_BLOCKS)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 0, FINALITY_BLOCKS)
 
-		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
-		t.Log("safe block number is", safeBlockNumberAndTime)
-		require.NoError(t, err, "should not fail")
-		require.EqualValues(t, FINALITY_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return 100 blocks before the recent block number of fake getter")
-		require.EqualValues(t, FINALITY_BLOCK_TIME, safeBlockNumberAndTime.BlockTimeNano, "should return time of block which is 100 blocks before the recent block time of fake getter")
+			safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+			t.Log("safe block number is", safeBlockNumberAndTime)
+			require.NoError(t, err, "should not fail")
+			require.EqualValues(t, FINALITY_BLOCK_NUMBER, safeBlockNumberAndTime.BlockNumber, "should return 100 blocks before the recent block number of fake getter")
+			require.EqualValues(t, FINALITY_BLOCK_TIME, safeBlockNumberAndTime.BlockTimeNano, "should return time of block which is 100 blocks before the recent block time of fake getter")
+		})
 	})
 }
 
 func TestFinality_GetSafeBlockWithTimeLimit(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 200*time.Second, 0)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 200*time.Second, 0)
 
-		safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
-		t.Log("safe block number is", safeBlockNumberAndTime)
-		require.NoError(t, err, "should not fail")
-		require.Truef(t, safeBlockNumberAndTime.BlockNumber < RECENT_BLOCK_NUMBER-10, "should return at least 10 blocks before the recent block number of fake getter, but difference is %d", RECENT_BLOCK_NUMBER-safeBlockNumberAndTime.BlockNumber)
+			safeBlockNumberAndTime, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+			t.Log("safe block number is", safeBlockNumberAndTime)
+			require.NoError(t, err, "should not fail")
+			require.Truef(t, safeBlockNumberAndTime.BlockNumber < RECENT_BLOCK_NUMBER-10, "should return at least 10 blocks before the recent block number of fake getter, but difference is %d", RECENT_BLOCK_NUMBER-safeBlockNumberAndTime.BlockNumber)
+		})
 	})
 }
 
 func TestFinality_GetSafeBlockWithBlockLimit_WhenNotEnoughBlocks(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 0, 2*timestampfinder.FAKE_CLIENT_NUMBER_OF_BLOCKS)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 0, 2*timestampfinder.FAKE_CLIENT_NUMBER_OF_BLOCKS)
 
-		safeBlockNumber, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
-		t.Log("safe block number is", safeBlockNumber)
-		require.Error(t, err, "should fail because not enough blocks")
+			safeBlockNumber, err := h.service.getFinalitySafeBlockNumber(ctx, RECENT_TIMESTAMP)
+			t.Log("safe block number is", safeBlockNumber)
+			require.Error(t, err, "should fail because not enough blocks")
+		})
 	})
 }
 
 func TestFinality_VerifySafeBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 0, 100)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 0, 100)
 
-		err := h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-100, RECENT_TIMESTAMP)
-		require.NoError(t, err, "100 difference should be safe")
+			err := h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-100, RECENT_TIMESTAMP)
+			require.NoError(t, err, "100 difference should be safe")
 
-		err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-101, RECENT_TIMESTAMP)
-		require.NoError(t, err, "101 difference should be safe")
+			err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-101, RECENT_TIMESTAMP)
+			require.NoError(t, err, "101 difference should be safe")
 
-		err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-99, RECENT_TIMESTAMP)
-		require.Error(t, err, "99 difference should not be safe")
+			err = h.service.verifyBlockNumberIsFinalitySafe(ctx, RECENT_BLOCK_NUMBER-99, RECENT_TIMESTAMP)
+			require.Error(t, err, "99 difference should not be safe")
+		})
 	})
 }
 
 func TestFinality_GetSafeBlockNeverReturnsNegative(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, 2*time.Minute, 90)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger, 2*time.Minute, 90)
 
-		_, err := h.service.getFinalitySafeBlockNumber(ctx, primitives.TimestampNano(timestampfinder.FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS*time.Second+3*time.Minute))
-		require.Error(t, err, "should fail due to negative block number")
+			_, err := h.service.getFinalitySafeBlockNumber(ctx, primitives.TimestampNano(timestampfinder.FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS*time.Second+3*time.Minute))
+			require.Error(t, err, "should fail due to negative block number")
+		})
 	})
 }
 
