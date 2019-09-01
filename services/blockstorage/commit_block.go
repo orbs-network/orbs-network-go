@@ -60,6 +60,7 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	}
 
 	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	s.metrics.lastCommittedTime.Update(int64(input.BlockPair.TransactionsBlock.Header.Timestamp()))
 
 	if notifyNodeSync {
 		govnr.Once(logfields.GovnrErrorer(logger), func() {
