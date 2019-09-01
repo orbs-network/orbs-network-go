@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -17,60 +18,67 @@ import (
 
 func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		t.Log("Runs BenchmarkContract.add to add two numbers")
+			h := newHarness(parent.Logger)
 
-		call := processCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
+			t.Log("Runs BenchmarkContract.add to add two numbers")
 
-		output, err := h.service.ProcessCall(ctx, call)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.ArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
+			call := processCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
+
+			output, err := h.service.ProcessCall(ctx, call)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+			require.Equal(t, builders.ArgumentsArray(uint64(12+27)), output.OutputArgumentArray, "call return args should be equal")
+		})
 	})
 }
 
 func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
-		const value = uint64(41)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
+			const value = uint64(41)
 
-		t.Log("Runs BenchmarkContract.set to save a value in state")
+			t.Log("Runs BenchmarkContract.set to save a value in state")
 
-		call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).Build()
-		h.expectSdkCallMadeWithStateWrite(nil, nil)
+			call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).Build()
+			h.expectSdkCallMadeWithStateWrite(nil, nil)
 
-		output, err := h.service.ProcessCall(ctx, call)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.ArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
-		h.verifySdkCallMade(t)
+			output, err := h.service.ProcessCall(ctx, call)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+			require.Equal(t, builders.ArgumentsArray(), output.OutputArgumentArray, "call return args should be equal")
+			h.verifySdkCallMade(t)
 
-		t.Log("Runs BenchmarkContract.get to read that value back from state")
+			t.Log("Runs BenchmarkContract.get to read that value back from state")
 
-		call = processCallInput().WithMethod("BenchmarkContract", "get").Build()
-		h.expectSdkCallMadeWithStateRead(nil, uint64ToBytes(value))
+			call = processCallInput().WithMethod("BenchmarkContract", "get").Build()
+			h.expectSdkCallMadeWithStateRead(nil, uint64ToBytes(value))
 
-		output, err = h.service.ProcessCall(ctx, call)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		require.Equal(t, builders.ArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
-		h.verifySdkCallMade(t)
+			output, err = h.service.ProcessCall(ctx, call)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+			require.Equal(t, builders.ArgumentsArray(value), output.OutputArgumentArray, "call return args should be equal")
+			h.verifySdkCallMade(t)
+		})
 	})
 }
 
 func TestBenchmarkContract_EmitEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
 
-		t.Log("Runs BenchmarkContract.giveBirth to emit an event")
+			t.Log("Runs BenchmarkContract.giveBirth to emit an event")
 
-		call := processCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
-		h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.ArgumentsArray("John Snow", uint32(3)), nil)
+			call := processCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
+			h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.ArgumentsArray("John Snow", uint32(3)), nil)
 
-		output, err := h.service.ProcessCall(ctx, call)
-		require.NoError(t, err, "call should succeed")
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
-		h.verifySdkCallMade(t)
+			output, err := h.service.ProcessCall(ctx, call)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, output.CallResult, "call result should be success")
+			h.verifySdkCallMade(t)
+		})
 	})
 }

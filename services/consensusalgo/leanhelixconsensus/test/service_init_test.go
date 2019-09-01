@@ -18,14 +18,14 @@ import (
 )
 
 func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
 		h := newLeanHelixServiceHarness(0)
 
 		t.Log("Service should do nothing on start")
 
 		h.consensusContext.Never("RequestOrderingCommittee", mock.Any, mock.Any)
 
-		h.start(t, ctx)
+		h.start(parent, ctx)
 
 		err := test.ConsistentlyVerify(test.CONSISTENTLY_ACCEPTANCE_TIMEOUT, h.consensusContext)
 		require.NoError(t, err)
@@ -46,8 +46,8 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 }
 
 func TestService_LeaderProposesBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(0).start(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
 		h.beFirstInCommittee()

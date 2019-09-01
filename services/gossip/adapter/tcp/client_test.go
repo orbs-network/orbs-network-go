@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -21,35 +22,41 @@ import (
 func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		server := newServerStub(t)
-		defer server.Close()
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		client := server.createClientAndConnect(ctx, t, 20*time.Hour) // so that we don't send keep alives
+			defer server.Close()
 
-		waitForQueueEnabled(t, client)
+			client := server.createClientAndConnect(ctx, t, parent.Logger, 20*time.Hour) // so that we don't send keep alives
 
-		client.disconnect()
+			waitForQueueEnabled(t, client)
 
-		waitForQueueDisabled(t, client)
+			client.disconnect()
 
-		require.Zero(t, server.readSomeBytes(), "client shouldn't have sent anything")
+			waitForQueueDisabled(t, client)
+
+			require.Zero(t, server.readSomeBytes(), "client shouldn't have sent anything")
+		})
 	})
+
 }
 
 func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		server := newServerStub(t)
-		defer server.Close()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			server := newServerStub(t)
+			defer server.Close()
 
-		client := server.createClientAndConnect(ctx, t, 10*time.Millisecond)
-		waitForQueueEnabled(t, client)
+			client := server.createClientAndConnect(ctx, t, parent.Logger, 10*time.Millisecond)
+			waitForQueueEnabled(t, client)
 
-		server.forceDisconnect(t)
+			server.forceDisconnect(t)
 
-		server.acceptClientConnection(t)
-		waitForQueueEnabled(t, client)
+			server.acceptClientConnection(t)
+			waitForQueueEnabled(t, client)
 
-		require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
-		require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
+			require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
+			require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
+		})
 	})
 }
 
@@ -101,8 +108,7 @@ func (s *serverStub) readSomeBytes() int {
 	return bytesRead
 }
 
-func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, keepAliveInterval time.Duration) *clientConnection {
-	logger := log.DefaultTestingLogger(t)
+func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, logger log.Logger, keepAliveInterval time.Duration) *clientConnection {
 	registry := metric.NewRegistry()
 	peer := config.NewHardCodedGossipPeer(s.port, "127.0.0.1", "012345")
 	client := newClientConnection(peer, logger, registry, getMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})

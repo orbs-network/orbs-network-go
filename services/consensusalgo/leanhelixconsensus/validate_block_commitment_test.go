@@ -9,9 +9,9 @@ package leanhelixconsensus
 import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -31,20 +31,22 @@ func TestValidateBlockFailsOnNil(t *testing.T) {
 }
 
 func TestValidateBlockCommitment_HappyFlow(t *testing.T) {
-	block := builders.BlockPairBuilder().Build()
-	blockHash := []byte{1, 2, 3, 4}
-	vcx := &validatorContext{
-		blockHash:              primitives.Sha256(blockHash),
-		CalcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
-		CalcStateDiffHash:      digest.CalcStateDiffHash,
-	}
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		block := builders.BlockPairBuilder().Build()
+		blockHash := []byte{1, 2, 3, 4}
+		vcx := &validatorContext{
+			blockHash:              primitives.Sha256(blockHash),
+			CalcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
+			CalcStateDiffHash:      digest.CalcStateDiffHash,
+		}
 
-	require.True(t, validateBlockCommitmentInternal(1, ToLeanHelixBlock(block), blockHash, log.DefaultTestingLogger(t), vcx, &commitmentvalidators{
-		validateBlockNotNil:                 func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error { return nil },
-		validateTransactionsBlockMerkleRoot: func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
-		validateTransactionsMetadataHash:    func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
-		validateReceiptsMerkleRoot:          func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
-		validateResultsBlockStateDiffHash:   func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
-		validateBlockHash_Commitment:        func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
-	}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+		require.True(t, validateBlockCommitmentInternal(1, ToLeanHelixBlock(block), blockHash, harness.Logger, vcx, &commitmentvalidators{
+			validateBlockNotNil:                 func(block *protocol.BlockPairContainer, validatorCtx *validatorContext) error { return nil },
+			validateTransactionsBlockMerkleRoot: func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
+			validateTransactionsMetadataHash:    func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
+			validateReceiptsMerkleRoot:          func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
+			validateResultsBlockStateDiffHash:   func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
+			validateBlockHash_Commitment:        func(block *protocol.BlockPairContainer, vcx *validatorContext) error { return nil },
+		}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+	})
 }
