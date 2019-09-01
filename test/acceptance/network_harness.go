@@ -36,7 +36,7 @@ const DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID = 42
 
 var DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME = 10 * time.Millisecond
 
-type acceptanceNetworkHarness struct {
+type networkHarness struct {
 	sequentialTests          sync.Mutex
 	numNodes                 int
 	consensusAlgos           []consensus.ConsensusAlgoType
@@ -53,8 +53,8 @@ type acceptanceNetworkHarness struct {
 	emptyBlockTime           time.Duration
 }
 
-func newHarness() *acceptanceNetworkHarness {
-	n := &acceptanceNetworkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
+func newHarness() *networkHarness {
+	n := &networkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -80,44 +80,44 @@ func newHarness() *acceptanceNetworkHarness {
 	return harness
 }
 
-func (b *acceptanceNetworkHarness) WithLogFilters(filters ...log.Filter) *acceptanceNetworkHarness {
+func (b *networkHarness) WithLogFilters(filters ...log.Filter) *networkHarness {
 	b.logFilters = filters
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithTestId(testId string) *acceptanceNetworkHarness {
+func (b *networkHarness) WithTestId(testId string) *networkHarness {
 	randNum := rand.Intn(1000)
 	b.testId = "acc-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithNumNodes(numNodes int) *acceptanceNetworkHarness {
+func (b *networkHarness) WithNumNodes(numNodes int) *networkHarness {
 	b.numNodes = numNodes
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithConsensusAlgos(algos ...consensus.ConsensusAlgoType) *acceptanceNetworkHarness {
+func (b *networkHarness) WithConsensusAlgos(algos ...consensus.ConsensusAlgoType) *networkHarness {
 	b.consensusAlgos = algos
 	return b
 }
 
 // setup runs when all adapters have been created but before the nodes are started
-func (b *acceptanceNetworkHarness) WithSetup(f func(ctx context.Context, network *Network)) *acceptanceNetworkHarness {
+func (b *networkHarness) WithSetup(f func(ctx context.Context, network *Network)) *networkHarness {
 	b.setupFunc = f
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithMaxTxPerBlock(maxTxPerBlock uint32) *acceptanceNetworkHarness {
+func (b *networkHarness) WithMaxTxPerBlock(maxTxPerBlock uint32) *networkHarness {
 	b.maxTxPerBlock = maxTxPerBlock
 	return b
 }
 
-func (b *acceptanceNetworkHarness) AllowingErrors(allowedErrors ...string) *acceptanceNetworkHarness {
+func (b *networkHarness) AllowingErrors(allowedErrors ...string) *networkHarness {
 	b.allowedErrors = append(b.allowedErrors, allowedErrors...)
 	return b
 }
 
-func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ctx context.Context, network *Network)) {
+func (b *networkHarness) Start(tb testing.TB, f func(tb testing.TB, ctx context.Context, network *Network)) {
 	if b.numOfNodesToStart == 0 {
 		b.numOfNodesToStart = b.numNodes
 	}
@@ -127,7 +127,7 @@ func (b *acceptanceNetworkHarness) Start(tb testing.TB, f func(tb testing.TB, ct
 	}
 }
 
-func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+func (b *networkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
 
 	switch runner := tb.(type) {
 	case *testing.T:
@@ -143,7 +143,7 @@ func (b *acceptanceNetworkHarness) runWithAlgo(tb testing.TB, consensusAlgo cons
 	}
 }
 
-func (b *acceptanceNetworkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
+func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
 	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
 	// as we run subtests, golang will by default run two subtests in parallel
 	// we don't want to rely on the -parallel flag, as when running all tests this flag should turn on
@@ -191,7 +191,7 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId string) log.Logger {
+func (b *networkHarness) makeLogger(testOutput *log.TestOutput, testId string) log.Logger {
 
 	for _, pattern := range b.allowedErrors {
 		testOutput.AllowErrorsMatching(pattern)
@@ -210,32 +210,32 @@ func (b *acceptanceNetworkHarness) makeLogger(testOutput *log.TestOutput, testId
 	return logger
 }
 
-func (b *acceptanceNetworkHarness) WithNumRunningNodes(numNodes int) *acceptanceNetworkHarness {
+func (b *networkHarness) WithNumRunningNodes(numNodes int) *networkHarness {
 	b.numOfNodesToStart = numNodes
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithRequiredQuorumPercentage(percentage int) *acceptanceNetworkHarness {
+func (b *networkHarness) WithRequiredQuorumPercentage(percentage int) *networkHarness {
 	b.requiredQuorumPercentage = uint32(percentage)
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithInitialBlocks(blocks []*protocol.BlockPairContainer) *acceptanceNetworkHarness {
+func (b *networkHarness) WithInitialBlocks(blocks []*protocol.BlockPairContainer) *networkHarness {
 	b.blockChain = blocks
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithVirtualChainId(id primitives.VirtualChainId) *acceptanceNetworkHarness {
+func (b *networkHarness) WithVirtualChainId(id primitives.VirtualChainId) *networkHarness {
 	b.virtualChainId = id
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithEmptyBlockTime(emptyBlockTime time.Duration) *acceptanceNetworkHarness {
+func (b *networkHarness) WithEmptyBlockTime(emptyBlockTime time.Duration) *networkHarness {
 	b.emptyBlockTime = emptyBlockTime
 	return b
 }
 
-func (b *acceptanceNetworkHarness) WithConfigOverride(f func(cfg config.OverridableConfig) config.OverridableConfig) *acceptanceNetworkHarness {
+func (b *networkHarness) WithConfigOverride(f func(cfg config.OverridableConfig) config.OverridableConfig) *networkHarness {
 	b.configOverride = f
 	return b
 }
