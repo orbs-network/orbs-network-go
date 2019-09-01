@@ -11,9 +11,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -22,30 +22,32 @@ func TestPersistenceAdapter_CanAccessBlocksOutOfOrder(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping Integration tests in short mode")
 	}
-	ctrlRand := rand.NewControlledRand(t)
-	blocks := builders.RandomizedBlockChain(50, ctrlRand)
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		ctrlRand := rand.NewControlledRand(t)
+		blocks := builders.RandomizedBlockChain(50, ctrlRand)
 
-	conf := newTempFileConfig()
-	defer conf.cleanDir()
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
 
-	adapter1, close1, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
-	require.NoError(t, err)
-
-	for _, block := range blocks { // write some blocks
-		added, pHeight, err := adapter1.WriteNextBlock(block)
+		adapter1, close1, err := NewFilesystemAdapterDriver(harness.Logger, conf)
 		require.NoError(t, err)
-		require.True(t, added)
-		require.EqualValues(t, block.TransactionsBlock.Header.BlockHeight(), pHeight)
-	}
 
-	requireCanReadAllBlocksInRandomOrder(t, adapter1, blocks, ctrlRand)
-	close1()
+		for _, block := range blocks { // write some blocks
+			added, pHeight, err := adapter1.WriteNextBlock(block)
+			require.NoError(t, err)
+			require.True(t, added)
+			require.EqualValues(t, block.TransactionsBlock.Header.BlockHeight(), pHeight)
+		}
 
-	adapter2, close2, err := NewFilesystemAdapterDriver(log.DefaultTestingLogger(t), conf)
-	require.NoError(t, err)
+		requireCanReadAllBlocksInRandomOrder(t, adapter1, blocks, ctrlRand)
+		close1()
 
-	requireCanReadAllBlocksInRandomOrder(t, adapter2, blocks, ctrlRand)
-	close2()
+		adapter2, close2, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.NoError(t, err)
+
+		requireCanReadAllBlocksInRandomOrder(t, adapter2, blocks, ctrlRand)
+		close2()
+	})
 }
 
 func requireCanReadAllBlocksInRandomOrder(t *testing.T, adapter adapter.BlockPersistence, blocks []*protocol.BlockPairContainer, ctrlRand *rand.ControlledRand) {

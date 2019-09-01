@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -29,16 +30,20 @@ func withEachAdapter(t *testing.T, testFunc func(t *testing.T, adapter adapter.B
 	if testing.Short() {
 		t.Skip("Skipping contract tests in short mode")
 	}
-	adapters := []*adapterUnderTest{
-		newInMemoryAdapter(t),
-		newFilesystemAdapter(t),
-	}
-	for _, a := range adapters {
-		t.Run(a.name, func(t *testing.T) {
-			defer a.cleanup()
-			testFunc(t, a.adapter)
+
+	t.Run("File System Persistence", func(t *testing.T) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			adapter, cleanup := newFilesystemAdapter(harness.Logger)
+			defer cleanup()
+			testFunc(t, adapter)
 		})
-	}
+	})
+
+	t.Run("In-Memory Persistence", func(t *testing.T) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			testFunc(t, newInMemoryAdapter(harness.Logger))
+		})
+	})
 }
 
 func TestBlockPersistenceContract_GetLastBlockWhenNoneExistReturnsNilNoError(t *testing.T) {
@@ -289,21 +294,11 @@ func TestReturnTransactionReceipt(t *testing.T) {
 	})
 }
 
-type adapterUnderTest struct {
-	name    string
-	adapter adapter.BlockPersistence
-	cleanup func()
+func newInMemoryAdapter(logger log.Logger) adapter.BlockPersistence {
+	return memory.NewBlockPersistence(logger, metric.NewRegistry())
 }
 
-func newInMemoryAdapter(tb testing.TB) *adapterUnderTest {
-	return &adapterUnderTest{
-		name:    "In Memory Adapter",
-		adapter: memory.NewBlockPersistence(log.DefaultTestingLogger(tb), metric.NewRegistry()),
-		cleanup: func() {},
-	}
-}
-
-func newFilesystemAdapter(tb testing.TB) *adapterUnderTest {
+func newFilesystemAdapter(logger log.Logger) (adapter.BlockPersistence, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	conf := newTempFileConfig()
@@ -312,15 +307,10 @@ func newFilesystemAdapter(tb testing.TB) *adapterUnderTest {
 		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
-	logger := log.DefaultTestingLogger(tb)
 	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
 	if err != nil {
 		panic(err.Error())
 	}
 
-	return &adapterUnderTest{
-		name:    "File System Adapter",
-		adapter: persistence,
-		cleanup: cleanup,
-	}
+	return persistence, cleanup
 }

@@ -40,13 +40,21 @@ type InMemoryBlockPersistence struct {
 func NewBlockPersistence(parent log.Logger, metricFactory metric.Factory, preloadedBlocks ...*protocol.BlockPairContainer) *InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &InMemoryBlockPersistence{
-		Logger:     logger,
-		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistenceSize.Bytes")},
-		tracker:    synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
-		blockChain: aChainOfBlocks{blocks: preloadedBlocks},
+		Logger:  logger,
+		metrics: &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistenceSize.Bytes")},
+		tracker: synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
+		blockChain: aChainOfBlocks{
+			blocks: clone(preloadedBlocks), // this is needed so that each instance of BlockPersistence has its own copy of the block chain
+		},
 	}
 
 	return p
+}
+
+func clone(blocks []*protocol.BlockPairContainer) (cloned []*protocol.BlockPairContainer) {
+	cloned = make([]*protocol.BlockPairContainer, len(blocks))
+	copy(cloned, blocks)
+	return
 }
 
 func (bp *InMemoryBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {

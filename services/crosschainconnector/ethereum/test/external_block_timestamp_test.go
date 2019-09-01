@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"strings"
@@ -31,66 +32,69 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 	}
 
 	test.WithContext(func(ctx context.Context) {
-		h := newRpcEthereumConnectorHarness(t, ConfigForExternalRPCConnection())
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		// pad Ganache nicely so that any previous test
-		h.moveBlocksInGanache(t, 100, 1)
-		blockAtStart, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
-		require.NoError(t, err, "failed to get latest block in ganache")
-		t.Logf("block at start: %d | %d", blockAtStart.Number.Int64(), blockAtStart.Time.Int64())
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
 
-		time.Sleep(time.Second)
+			// pad Ganache nicely so that any previous test
+			h.moveBlocksInGanache(t, 100, 1)
+			blockAtStart, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			t.Logf("block at start: %d | %d", blockAtStart.Number.Int64(), blockAtStart.Time.Int64())
 
-		expectedTextFromEthereum := "test3"
-		contractAddress, err := h.deployRpcStorageContract(expectedTextFromEthereum)
-		require.NoError(t, err, "failed deploying contract to Ethereum")
+			time.Sleep(time.Second)
 
-		blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
-		require.NoError(t, err, "failed to get latest block in ganache")
-		t.Logf("block at deploy: %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64())
+			expectedTextFromEthereum := "test3"
+			contractAddress, err := h.deployRpcStorageContract(expectedTextFromEthereum)
+			require.NoError(t, err, "failed deploying contract to Ethereum")
 
-		t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
-		h.moveBlocksInGanache(t, int(h.config.finalityBlocksComponent+1), 1)                                                                                          // finality blocks + block we will request below of because of the finder algo
-		referenceTime := time.Unix(blockAtStart.Time.Int64(), 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent+1)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+			blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			t.Logf("block at deploy: %d | %d", blockAtDeploy.Number.Int64(), blockAtDeploy.Time.Int64())
 
-		methodToCall := "getValues"
-		parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
-		require.NoError(t, err, "abi parse failed for simple storage contract")
+			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
+			h.moveBlocksInGanache(t, int(h.config.finalityBlocksComponent+1), 1)                                                                                          // finality blocks + block we will request below of because of the finder algo
+			referenceTime := time.Unix(blockAtStart.Time.Int64(), 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent+1)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
 
-		ethCallData, err := ethereum.ABIPackFunctionInputArguments(parsedABI, methodToCall, nil)
-		require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
+			methodToCall := "getValues"
+			parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
+			require.NoError(t, err, "abi parse failed for simple storage contract")
 
-		// request at time now, which should be (with finality) after the contract was deployed
-		input := builders.EthereumCallContractInput().
-			WithTimestamp(referenceTime).
-			WithContractAddress(contractAddress).
-			WithAbi(contract.SimpleStorageABI).
-			WithFunctionName(methodToCall).
-			WithPackedArguments(ethCallData).
-			Build()
+			ethCallData, err := ethereum.ABIPackFunctionInputArguments(parsedABI, methodToCall, nil)
+			require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")
 
-		t.Logf("going to request from ethereum at time %d, rounded to secs %d", input.ReferenceTimestamp, time.Unix(0, int64(input.ReferenceTimestamp.KeyForMap())).Unix())
-		output, err := h.connector.EthereumCallContract(ctx, input)
-		require.NoError(t, err, "expecting call to succeed")
-		require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")
-		ret := new(struct { // this is the expected return type of that ethereum call for the SimpleStorage contract getValues
-			IntValue    *big.Int
-			StringValue string
+			// request at time now, which should be (with finality) after the contract was deployed
+			input := builders.EthereumCallContractInput().
+				WithTimestamp(referenceTime).
+				WithContractAddress(contractAddress).
+				WithAbi(contract.SimpleStorageABI).
+				WithFunctionName(methodToCall).
+				WithPackedArguments(ethCallData).
+				Build()
+
+			t.Logf("going to request from ethereum at time %d, rounded to secs %d", input.ReferenceTimestamp, time.Unix(0, int64(input.ReferenceTimestamp.KeyForMap())).Unix())
+			output, err := h.connector.EthereumCallContract(ctx, input)
+			require.NoError(t, err, "expecting call to succeed")
+			require.True(t, len(output.EthereumAbiPackedOutput) > 0, "expecting output to have some data")
+			ret := new(struct { // this is the expected return type of that ethereum call for the SimpleStorage contract getValues
+				IntValue    *big.Int
+				StringValue string
+			})
+
+			ethereum.ABIUnpackFunctionOutputArguments(parsedABI, ret, methodToCall, output.EthereumAbiPackedOutput)
+			require.Equal(t, expectedTextFromEthereum, ret.StringValue, "text part from eth")
+
+			timeAtStart := time.Unix(blockAtStart.Time.Int64(), 0)
+			input = builders.EthereumCallContractInput().
+				WithTimestamp(timeAtStart).
+				WithContractAddress(contractAddress).
+				WithAbi(contract.SimpleStorageABI).
+				WithFunctionName(methodToCall).
+				WithPackedArguments(ethCallData).
+				Build()
+
+			output, err = h.connector.EthereumCallContract(ctx, input)
+			require.Error(t, err, "expecting call to fail as contract is not yet deployed in a past time block")
 		})
-
-		ethereum.ABIUnpackFunctionOutputArguments(parsedABI, ret, methodToCall, output.EthereumAbiPackedOutput)
-		require.Equal(t, expectedTextFromEthereum, ret.StringValue, "text part from eth")
-
-		timeAtStart := time.Unix(blockAtStart.Time.Int64(), 0)
-		input = builders.EthereumCallContractInput().
-			WithTimestamp(timeAtStart).
-			WithContractAddress(contractAddress).
-			WithAbi(contract.SimpleStorageABI).
-			WithFunctionName(methodToCall).
-			WithPackedArguments(ethCallData).
-			Build()
-
-		output, err = h.connector.EthereumCallContract(ctx, input)
-		require.Error(t, err, "expecting call to fail as contract is not yet deployed in a past time block")
 	})
 }

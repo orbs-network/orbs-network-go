@@ -10,6 +10,7 @@ import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
@@ -18,43 +19,47 @@ import (
 
 func TestContextId_Simple(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
 
-		var CONTEXT_ID = []byte{0x17, 0x18}
+			var CONTEXT_ID = []byte{0x17, 0x18}
 
-		call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
-		h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
+			call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
+			h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
 
-		_, err := h.service.ProcessCall(ctx, call)
-		require.NoError(t, err, "call should succeed")
-		h.verifySdkCallMade(t)
+			_, err := h.service.ProcessCall(ctx, call)
+			require.NoError(t, err, "call should succeed")
+			h.verifySdkCallMade(t)
+		})
 	})
 }
 
 func TestContextId_MultipleGoroutines(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		var wg sync.WaitGroup
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			var wg sync.WaitGroup
+			h := newHarness(parent.Logger)
 
-		for i := 0; i < 20; i++ {
-			wg.Add(1)
-			var CONTEXT_ID = sdkContext.ContextId([]byte{0x17, byte(i + 17)})
+			for i := 0; i < 20; i++ {
+				wg.Add(1)
+				var CONTEXT_ID = sdkContext.ContextId([]byte{0x17, byte(i + 17)})
 
-			go func() {
-				call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
-				h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
+				go func() {
+					call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
+					h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
 
-				time.Sleep(5 * time.Millisecond)
+					time.Sleep(5 * time.Millisecond)
 
-				_, err := h.service.ProcessCall(ctx, call)
-				require.NoError(t, err, "call should succeed")
+					_, err := h.service.ProcessCall(ctx, call)
+					require.NoError(t, err, "call should succeed")
 
-				wg.Done()
-			}()
+					wg.Done()
+				}()
 
-		}
+			}
 
-		wg.Wait()
-		h.verifySdkCallMade(t)
+			wg.Wait()
+			h.verifySdkCallMade(t)
+		})
 	})
 }
