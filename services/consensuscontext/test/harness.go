@@ -40,7 +40,7 @@ type harness struct {
 	transactionPool *services.MockTransactionPool
 	virtualMachine  *services.MockVirtualMachine
 	stateStorage    *services.MockStateStorage
-	reporting       log.Logger
+	logger          log.Logger
 	service         services.ConsensusContext
 	config          config.ConsensusContextConfig
 }
@@ -123,8 +123,7 @@ func (h *harness) expectStateHashToReturn(hash []byte) {
 
 }
 
-func newHarness(tb testing.TB, enableTriggers bool) *harness {
-	log := log.DefaultTestingLogger(tb)
+func newHarness(logger log.Logger, enableTriggers bool) *harness {
 
 	txPool := &services.MockTransactionPool{}
 	machine := &services.MockVirtualMachine{}
@@ -142,13 +141,13 @@ func newHarness(tb testing.TB, enableTriggers bool) *harness {
 		txPool,
 		machine,
 		state,
-		cfg, log, metricFactory)
+		cfg, logger, metricFactory)
 
 	return &harness{
 		transactionPool: txPool,
 		virtualMachine:  machine,
 		stateStorage:    state,
-		reporting:       log,
+		logger:          logger,
 		service:         service,
 		config:          cfg,
 	}

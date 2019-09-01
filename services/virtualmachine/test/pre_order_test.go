@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -43,15 +44,17 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			test.WithContext(func(ctx context.Context) {
-				h := newHarness(t)
+				with.Logging(t, func(parent *with.LoggingHarness) {
+					h := newHarness(parent.Logger)
 
-				h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, nil)
+					h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, nil)
 
-				results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
-				require.NoError(t, err, "transaction set pre order should not fail on signature problems")
-				require.Equal(t, []protocol.TransactionStatus{tt.status}, results, "transactionSetPreOrder returned statuses should match")
+					results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
+					require.NoError(t, err, "transaction set pre order should not fail on signature problems")
+					require.Equal(t, []protocol.TransactionStatus{tt.status}, results, "transactionSetPreOrder returned statuses should match")
 
-				h.verifySystemContractCalled(t)
+					h.verifySystemContractCalled(t)
+				})
 			})
 		})
 	}
@@ -59,21 +62,23 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 
 func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
 
-		h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("subscription problem"))
+			h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("subscription problem"))
 
-		txs := []*protocol.SignedTransaction{}
-		txs = append(txs, builders.TransferTransaction().Build())
-		txs = append(txs, builders.Transaction().WithContract(globalpreorder_systemcontract.CONTRACT_NAME).Build())
-		txs = append(txs, builders.TransferTransaction().Build())
+			txs := []*protocol.SignedTransaction{}
+			txs = append(txs, builders.TransferTransaction().Build())
+			txs = append(txs, builders.Transaction().WithContract(globalpreorder_systemcontract.CONTRACT_NAME).Build())
+			txs = append(txs, builders.TransferTransaction().Build())
 
-		results, err := h.transactionSetPreOrder(ctx, txs)
-		require.NoError(t, err, "transaction set pre order should not fail")
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[0], "first tx should be rejected")
-		require.Equal(t, protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, results[1], "second tx should not be rejected since it is made to _GlobalPreOrder")
-		require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[2], "third tx should be rejected")
+			results, err := h.transactionSetPreOrder(ctx, txs)
+			require.NoError(t, err, "transaction set pre order should not fail")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[0], "first tx should be rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, results[1], "second tx should not be rejected since it is made to _GlobalPreOrder")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[2], "third tx should be rejected")
 
-		h.verifySystemContractCalled(t)
+			h.verifySystemContractCalled(t)
+		})
 	})
 }

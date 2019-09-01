@@ -10,10 +10,10 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -49,52 +49,60 @@ func aMockValidateBlockHashThatReturnsError(blockHash primitives.Sha256, tx *pro
 
 func TestValidateBlockProposal_HappyPath(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		block := builders.BlockPairBuilder().Build()
-		prevBlock := builders.BlockPairBuilder().Build()
-		require.NoError(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-			logger:                    log.DefaultTestingLogger(t),
-		}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			block := builders.BlockPairBuilder().Build()
+			prevBlock := builders.BlockPairBuilder().Build()
+			require.NoError(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+				validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+				validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+				validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+				logger:                    harness.Logger,
+			}), "should return true when ValidateTransactionsBlock() and ValidateResultsBlock() are successful")
+		})
 	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		block := builders.BlockPairBuilder().Build()
-		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
-			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-			logger:                    log.DefaultTestingLogger(t),
-		}), "should return false when ValidateTransactionsBlock() returns an error")
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			block := builders.BlockPairBuilder().Build()
+			prevBlock := builders.BlockPairBuilder().Build()
+			require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+				validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsError,
+				validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+				validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+				logger:                    harness.Logger,
+			}), "should return false when ValidateTransactionsBlock() returns an error")
+		})
 	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		block := builders.BlockPairBuilder().Build()
-		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-			validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
-			validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
-			logger:                    log.DefaultTestingLogger(t),
-		}), "should return false when ValidateResultsBlock() returns an error")
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			block := builders.BlockPairBuilder().Build()
+			prevBlock := builders.BlockPairBuilder().Build()
+			require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+				validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+				validateResultsBlock:      aMockValidateResultsBlockThatReturnsError,
+				validateBlockHash:         aMockValidateBlockHashThatReturnsSuccess,
+				logger:                    harness.Logger,
+			}), "should return false when ValidateResultsBlock() returns an error")
+		})
 	})
 }
 
 func TestValidateBlockProposal_FailsOnErrorInValidateBlockHash(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		block := builders.BlockPairBuilder().Build()
-		prevBlock := builders.BlockPairBuilder().Build()
-		require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
-			validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
-			validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
-			validateBlockHash:         aMockValidateBlockHashThatReturnsError,
-			logger:                    log.DefaultTestingLogger(t),
-		}), "should return false when ValidateBlockHash() returns an error")
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			block := builders.BlockPairBuilder().Build()
+			prevBlock := builders.BlockPairBuilder().Build()
+			require.Error(t, validateBlockProposalInternal(ctx, ToLeanHelixBlock(block), []byte{1, 2, 3, 4}, builders.HashObj().Build(), ToLeanHelixBlock(prevBlock), &validateBlockProposalContext{
+				validateTransactionsBlock: aMockValidateTransactionsBlockThatReturnsSuccess,
+				validateResultsBlock:      aMockValidateResultsBlockThatReturnsSuccess,
+				validateBlockHash:         aMockValidateBlockHashThatReturnsError,
+				logger:                    harness.Logger,
+			}), "should return false when ValidateBlockHash() returns an error")
+		})
 	})
 }

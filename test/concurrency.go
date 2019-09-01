@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func WithConcurrencyHarness(tb testing.TB, f func(ctx context.Context, harness *
 	defer cancel()
 	defer testOutput.TestTerminated()
 	f(ctx, h)
-	RequireNoUnexpectedErrors(tb, testOutput)
+	with.RequireNoUnexpectedErrors(tb, testOutput)
 }
 
 func shutdown(waiter govnr.ShutdownWaiter) {

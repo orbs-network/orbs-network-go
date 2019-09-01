@@ -24,8 +24,8 @@ import (
 // This test see that it does not attempt to propose a block after sync
 
 func TestService_DoesNotProposeNewBlocksWhileSyncingBlocksSequentially(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
-		h := newLeanHelixServiceHarness(0).start(t, ctx)
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		syncFromBlock := primitives.BlockHeight(5)
 		syncUpToBlock := primitives.BlockHeight(7) // exercise 3 block syncs in succession
