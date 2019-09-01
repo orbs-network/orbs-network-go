@@ -40,16 +40,17 @@ type InMemoryBlockPersistence struct {
 func NewBlockPersistence(parent log.Logger, metricFactory metric.Factory, preloadedBlocks ...*protocol.BlockPairContainer) *InMemoryBlockPersistence {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	p := &InMemoryBlockPersistence{
-		Logger:     logger,
-		metrics:    &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistenceSize.Bytes")},
-		tracker:    synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
-		blockChain: aChainOfBlocks{blocks: clone(preloadedBlocks)},
+		Logger:  logger,
+		metrics: &memMetrics{size: metricFactory.NewGauge("BlockStorage.InMemoryBlockPersistenceSize.Bytes")},
+		tracker: synchronization.NewBlockTracker(logger, uint64(len(preloadedBlocks)), 5),
+		blockChain: aChainOfBlocks{
+			blocks: clone(preloadedBlocks), // this is needed so that each instance of BlockPersistence has its own copy of the block chain
+		},
 	}
 
 	return p
 }
 
-// this is needed so that each instance of BlockPersistence has its own copy of the block chain
 func clone(blocks []*protocol.BlockPairContainer) (cloned []*protocol.BlockPairContainer) {
 	cloned = make([]*protocol.BlockPairContainer, len(blocks))
 	copy(cloned, blocks)
@@ -100,7 +101,6 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 		return false, currentTop
 	}
 
-	// XXX TODO - all instances of bp.blockChain share the same instance of bp.blockChain.blocks. they are initialized from "preloadedBlocks"
 	bp.blockChain.blocks = append(bp.blockChain.blocks, blockPair)
 	bp.tracker.IncrementTo(blockPair.ResultsBlock.Header.BlockHeight())
 	return true, blockPair.ResultsBlock.Header.BlockHeight()
