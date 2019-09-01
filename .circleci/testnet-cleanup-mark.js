@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const configFilePath = path.join(process.cwd(), 'config.json');
-const { getClosedPullRequests, getPrChainNumber, getBoyarChainConfigurationById, markChainForRemoval, vChainIdOffsetByType } = require('./boyar-lib');
+const { getClosedPullRequests, getBoyarChainConfigurationById, markChainForRemoval, getAllPrChainIds } = require('./boyar-lib');
 
 // Read the Boyar config from file
 // We use this const variable as a solid base to start modifying
@@ -19,10 +19,9 @@ const configuration = require(configFilePath);
 
     for (let key in closedPRs) {
         let aClosedPR = closedPRs[key];
-        let aClosedPRChainId = getPrChainNumber(aClosedPR.number); // get the first vChainId of this PR
+        const vChainIds = getAllPrChainIds(aClosedPR.number);
 
-        for (let vChainIdOffset of Object.values(vChainIdOffsetByType)) {
-            let chainId = aClosedPRChainId + vChainIdOffset;
+        for (let chainId of vChainIds) {
             if (getBoyarChainConfigurationById(configuration, chainId) !== false) {
                 console.log(`Chain for PR ${aClosedPR.number} (PR ${aClosedPR.title}, VCHAIN ${chainId}) already closed`);
                 console.log(`PR User: ${aClosedPR.login}`);

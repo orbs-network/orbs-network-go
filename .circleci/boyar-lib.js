@@ -98,12 +98,18 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
-// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
-function getPrChainNumber(prNumber, vChainType) {
-    let offset = 0;
-    if (vChainType !== undefined) {
-        offset = vChainIdOffsetByType[vChainType];
+function getAllPrChainIds(prNumber) {
+    const chainIds = [];
+    for (let aChainType in vChainIdOffsetByType) {
+        chainIds.push(getPrChainId(prNumber, aChainType))
     }
+    return chainIds;
+}
+
+// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
+function getPrChainId(prNumber, vChainType) {
+    let offset = vChainIdOffsetByType[vChainType];
+
     if (offset === undefined) {
         throw `Unknown virtual chain type ${vChainType}`
     }
@@ -120,12 +126,12 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
-    getPrChainNumber,
+    getPrChainId,
+    getAllPrChainIds,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,
     removeChainConfigurationById,
     isPortUnique,
     markChainForRemoval,
-    vChainIdOffsetByType,
 };

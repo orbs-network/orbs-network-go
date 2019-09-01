@@ -21,7 +21,7 @@ const {
     newChainConfiguration,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
-    getPrChainNumber,
+    getPrChainId,
     newVacantTCPPort,
 } = require('./boyar-lib');
 
@@ -42,7 +42,7 @@ if (!targetTag) {
 
 const prLinkParts = githubPRLink.split('/');
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-const chainNumber = getPrChainNumber(prNumber, vChainType);
+const chainNumber = getPrChainId(prNumber, vChainType);
 let chain;
 
 // Read the Boyar config from file
