@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -23,7 +24,7 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 		ctrlRand := rand.NewControlledRand(t)
 		h := newHarness(parent).start(ctx)
 
-		invalidSig := builders.HashObj().Build()
+		invalidSig := hash.Make32EmptyBytes()
 		ctrlRand.Read(invalidSig)
 
 		tx1 := builders.TransferTransaction().Build()

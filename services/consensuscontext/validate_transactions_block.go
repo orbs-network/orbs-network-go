@@ -67,9 +67,10 @@ func validateTxPrevBlockHashPtr(ctx context.Context, vctx *txValidatorContext) e
 func validateTxBlockProposer(ctx context.Context, vctx *txValidatorContext) error {
 	expectedBlockProposer := vctx.input.BlockProposerAddress
 	blockProposer := vctx.input.TransactionsBlock.Header.BlockProposerAddress()
-	// TODO NOAM BC new field BPA
-	if len(blockProposer) > 0 && !bytes.Equal(blockProposer, expectedBlockProposer) {
-		return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+	if len(blockProposer) > 0 { // If tx block header - block proposer is len 0 this is older version and for backward compatibility validate check is skipped
+		if !bytes.Equal(blockProposer, expectedBlockProposer) {
+			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+		}
 	}
 	return nil
 }

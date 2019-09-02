@@ -63,8 +63,7 @@ func validateRxBlockHeight(ctx context.Context, vcrx *rxValidatorContext) error 
 
 func validateRxBlockProposer(ctx context.Context, vcrx *rxValidatorContext) error {
 	blockProposer := vcrx.input.ResultsBlock.Header.BlockProposerAddress()
-	// TODO NOAM BC new field BPA
-	if len(blockProposer) > 0 {
+	if len(blockProposer) > 0 { // If rx block header - block proposer is len 0 this is older version and for backward compatibility validate check is skipped
 		expectedBlockProposer := vcrx.input.BlockProposerAddress
 		if !bytes.Equal(blockProposer, expectedBlockProposer) {
 			return errors.Wrapf(ErrMismatchedBlockProposer, "Results Block expected %v actual %v", expectedBlockProposer, blockProposer)
