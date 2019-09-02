@@ -32,7 +32,9 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 
 			PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
 			TransactionsBlock:  block.TransactionsBlock,
-			PrevBlockTimestamp: prevBlock.TransactionsBlock.Header.Timestamp()}
+			PrevBlockTimestamp: prevBlock.TransactionsBlock.Header.Timestamp(),
+			BlockProposerAddress: block.TransactionsBlock.Header.BlockProposerAddress(),
+		}
 
 		h.consensusContext.When("RequestNewResultsBlock", mock.Any, vrb).
 			Return(&services.RequestNewResultsBlockOutput{}, nil).Times(1)

@@ -16,8 +16,6 @@ import (
 	"testing"
 )
 
-// TODO NOAM rename file
-
 const RECENT_TIMESTAMP = primitives.TimestampNano(1505735343000000000)
 const CURRENT_TIMESTAMP = primitives.TimestampNano(1505735309000000000)
 const CURRENT_BLOCK_NUMBER = 938870

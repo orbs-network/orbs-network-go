@@ -65,6 +65,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 			PreExecutionStateMerkleRootHash: preExecutionStateRootHash.StateMerkleRootHash,
 			NumTransactionReceipts:          uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:           uint32(len(output.ContractStateDiffs)),
+			BlockProposerAddress: 			 input.BlockProposerAddress,
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,

@@ -66,10 +66,9 @@ func NewBlockProvider(
 		blockStorage:     blockStorage,
 		consensusContext: consensusContext,
 	}
-
 }
 
-func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlock lh.Block) (lh.Block, lhprimitives.BlockHash) {
+func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, blockProposer lhprimitives.MemberId, prevBlock lh.Block) (lh.Block, lhprimitives.BlockHash) {
 
 	currentBlockHeight := primitives.BlockHeight(1)
 	var prevTxBlockHash primitives.Sha256
@@ -88,6 +87,8 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	maxNumOfTransactions := uint32(10000)
 	maxBlockSize := uint32(1000000)
 
+	blockProposerAddress := primitives.NodeAddress(blockProposer) // TODO Noam maybe need an empty convertor in lhprimitives
+
 	// get tx
 	txOutput, err := p.consensusContext.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
 		CurrentBlockHeight:      currentBlockHeight,
@@ -95,6 +96,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		PrevBlockTimestamp:      prevBlockTimestamp,
 		MaxNumberOfTransactions: maxNumOfTransactions,
 		MaxBlockSizeKb:          maxBlockSize,
+		BlockProposerAddress:    blockProposerAddress,
 	})
 	if err != nil {
 		return nil, nil
@@ -106,6 +108,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		PrevBlockHash:      prevRxBlockHash,
 		TransactionsBlock:  txOutput.TransactionsBlock,
 		PrevBlockTimestamp: prevBlockTimestamp,
+		BlockProposerAddress:    blockProposerAddress,
 	})
 	if err != nil {
 		return nil, nil

@@ -33,7 +33,7 @@ type blockPair struct {
 
 func BlockPair() *blockPair {
 	// allocate size for empty fields or you'll get "size mismatch" errors from membuffers
-	empty32ByteHash := make([]byte, 32)
+	empty32ByteHash := hash.Make32EmptyBytes()
 	createdDate := time.Now()
 	transactions := []*protocol.SignedTransaction{
 		(TransferTransaction().WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6))).Build(),
@@ -49,6 +49,7 @@ func BlockPair() *blockPair {
 			TransactionsMerkleRootHash: empty32ByteHash,
 			MetadataHash:               empty32ByteHash,
 			NumSignedTransactions:      1,
+			BlockProposerAddress: 		empty32ByteHash,
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
 		transactions: transactions,
@@ -65,6 +66,7 @@ func BlockPair() *blockPair {
 			PreExecutionStateMerkleRootHash: empty32ByteHash,
 			NumContractStateDiffs:           1,
 			NumTransactionReceipts:          1,
+			BlockProposerAddress: 			 empty32ByteHash,
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),
@@ -151,6 +153,12 @@ func (b *blockPair) WithMetadata(txMetadata *protocol.TransactionsBlockMetadataB
 
 func (b *blockPair) WithMetadataHash(metadataHash primitives.Sha256) *blockPair {
 	b.txHeader.MetadataHash = metadataHash
+	return b
+}
+
+func (b *blockPair) WithBlockProposerAddress(bpa primitives.NodeAddress) *blockPair {
+	b.txHeader.BlockProposerAddress = bpa
+	b.rxHeader.BlockProposerAddress = bpa
 	return b
 }
 
@@ -295,6 +303,7 @@ type blockPairBuilder struct {
 	protocolVersion    primitives.ProtocolVersion
 	virtualChainId     primitives.VirtualChainId
 	currentBlockHeight primitives.BlockHeight
+	blockProposer      primitives.NodeAddress
 	tiggerEnabled      bool
 }
 
@@ -303,6 +312,7 @@ func BlockPairBuilder() *blockPairBuilder {
 		protocolVersion:    DEFAULT_TEST_PROTOCOL_VERSION,
 		virtualChainId:     DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 		currentBlockHeight: 1000,
+		blockProposer:      hash.Make32EmptyBytes(),
 		tiggerEnabled:      true,
 	}
 }
@@ -329,6 +339,7 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 		WithPrevBlockHash(validPrevBlockHash).
 		WithMetadata(txMetadata).
 		WithMetadataHash(validMetadataHash).
+		WithBlockProposerAddress(b.blockProposer).
 		WithTransactionsRootHash(txRootHashForValidBlock).
 		WithTimestamp(blockTime).
 		Build()
@@ -358,6 +369,11 @@ func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder
 	b.protocolVersion = cfg.ProtocolVersion()
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
+	return b
+}
+
+func (b *blockPairBuilder) WithBlockProposerAddress(bpa primitives.NodeAddress) *blockPairBuilder {
+	b.blockProposer = bpa
 	return b
 }
 

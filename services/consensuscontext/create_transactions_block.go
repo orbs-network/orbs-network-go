@@ -51,6 +51,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 			TransactionsMerkleRootHash: merkleTransactionsRoot,
 			MetadataHash:               digest.CalcTransactionMetaDataHash(metaData),
 			NumSignedTransactions:      uint32(txCount),
+			BlockProposerAddress:	    input.BlockProposerAddress,
 		}).Build(),
 		Metadata:           metaData,
 		SignedTransactions: transactionsForBlock,
