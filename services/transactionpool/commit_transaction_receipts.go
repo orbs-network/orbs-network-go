@@ -71,6 +71,7 @@ func (s *Service) updateBlockHeightAndTimestamp(ctx context.Context, header *pro
 	s.lastCommitted.blockHeight = header.BlockHeight()
 	s.lastCommitted.timestamp = header.Timestamp()
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
+	s.metrics.lastCommittedTimestamp.Update(int64(header.Timestamp()))
 
 	logger.Info("transaction pool reached block height", logfields.BlockHeight(header.BlockHeight()))
 

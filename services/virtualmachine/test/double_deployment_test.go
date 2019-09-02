@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
@@ -21,34 +22,36 @@ import (
 
 func TestProcessTransactionSet_WhenContractNotDeployedAndIsPreBuiltNativeContract_ButSafeFromDoubleDeploy(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t)
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
 
-		// first transaction should deploy to transient state
-		h.expectPreBuiltContractNotToBeDeployed()
-		h.expectDeployToWriteDeploymentDataToState(t, ctx)
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
+			// first transaction should deploy to transient state
+			h.expectPreBuiltContractNotToBeDeployed()
+			h.expectDeployToWriteDeploymentDataToState(t, ctx)
+			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
+			})
+
+			// second transaction should read deployment data from transient state
+			h.expectContractToBeDeployedByReadingDeploymentDataFromState(t, ctx)
+			h.expectStateStorageNotRead() // we expect the read to come from transient state, not the state storage service
+			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
+			})
+
+			results, _, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
+				{"Contract1", "method1"},
+				{"Contract1", "method1"},
+			}, DEPLOYMENT_CONTRACT)
+			require.Equal(t, results, []protocol.ExecutionResult{
+				protocol.EXECUTION_RESULT_SUCCESS,
+				protocol.EXECUTION_RESULT_SUCCESS,
+			}, "processTransactionSet returned receipts should match")
+
+			h.verifyNativeContractMethodCalled(t)
+			h.verifyNativeContractInfoRequested(t)
+			h.verifyStateStorageRead(t)
 		})
-
-		// second transaction should read deployment data from transient state
-		h.expectContractToBeDeployedByReadingDeploymentDataFromState(t, ctx)
-		h.expectStateStorageNotRead() // we expect the read to come from transient state, not the state storage service
-		h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-			return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
-		})
-
-		results, _, _, _ := h.processTransactionSet(ctx, []*contractAndMethod{
-			{"Contract1", "method1"},
-			{"Contract1", "method1"},
-		}, DEPLOYMENT_CONTRACT)
-		require.Equal(t, results, []protocol.ExecutionResult{
-			protocol.EXECUTION_RESULT_SUCCESS,
-			protocol.EXECUTION_RESULT_SUCCESS,
-		}, "processTransactionSet returned receipts should match")
-
-		h.verifyNativeContractMethodCalled(t)
-		h.verifyNativeContractInfoRequested(t)
-		h.verifyStateStorageRead(t)
 	})
 }
 

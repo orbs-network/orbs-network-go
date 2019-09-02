@@ -12,42 +12,44 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestSyncLoop(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
 
-		// Set up block source mock
-		sourceMock := newBlockSourceMock(4)
-		sourceMock.When("GetLastBlock").Times(1)
-		sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(1)
+			// Set up block source mock
+			sourceMock := newBlockSourceMock(4)
+			sourceMock.When("GetLastBlock").Times(1)
+			sourceMock.When("ScanBlocks", mock.Any, mock.Any, mock.Any).Times(1)
 
-		// Set up target mock
-		committerMock := &blockPairCommitterMock{}
-		committerHeight := primitives.BlockHeight(0)
-		committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
-			if committedBlockPair.TransactionsBlock.Header.BlockHeight() == committerHeight+1 {
-				committerHeight++
-			}
-			return committerHeight + 1, nil
-		}).Times(5)
+			// Set up target mock
+			committerMock := &blockPairCommitterMock{}
+			committerHeight := primitives.BlockHeight(0)
+			committerMock.When("commitBlockPair", mock.Any, mock.Any).Call(func(ctx context.Context, committedBlockPair *protocol.BlockPairContainer) (primitives.BlockHeight, error) {
+				if committedBlockPair.TransactionsBlock.Header.BlockHeight() == committerHeight+1 {
+					committerHeight++
+				}
+				return committerHeight + 1, nil
+			}).Times(5)
 
-		// run sync loop
-		syncedHeight, err := syncToTopBlock(ctx, sourceMock, committerMock, log.DefaultTestingLogger(t))
-		require.NoError(t, err, "expected syncToTopBlock to execute without error")
-		require.EqualValues(t, 4, committerHeight, "expected syncToTopBlock to advance committer to source height")
-		require.True(t, committerHeight == syncedHeight, "expected syncToTopBlock to return the current block height")
+			// run sync loop
+			syncedHeight, err := syncToTopBlock(ctx, sourceMock, committerMock, harness.Logger)
+			require.NoError(t, err, "expected syncToTopBlock to execute without error")
+			require.EqualValues(t, 4, committerHeight, "expected syncToTopBlock to advance committer to source height")
+			require.True(t, committerHeight == syncedHeight, "expected syncToTopBlock to return the current block height")
 
-		_, err = sourceMock.Verify()
-		require.NoError(t, err)
+			_, err = sourceMock.Verify()
+			require.NoError(t, err)
 
-		_, err = committerMock.Verify()
-		require.NoError(t, err)
+			_, err = committerMock.Verify()
+			require.NoError(t, err)
+		})
 	})
 }
 

@@ -148,6 +148,15 @@ func (n *Network) WaitForTransactionInNodeState(ctx context.Context, txHash prim
 	}
 }
 
+func (n *Network) WaitForTransactionReceiptInTransactionPool(ctx context.Context, txHash primitives.Sha256, nodeIndex int) {
+	blockHeight := n.tamperingBlockPersistences[nodeIndex].WaitForTransaction(ctx, txHash)
+	err := n.transactionPoolBlockHeightTrackers[nodeIndex].WaitForBlock(ctx, blockHeight)
+	if err != nil {
+		instrumentation.DebugPrintGoroutineStacks(n.Logger) // since test timed out, help find deadlocked goroutines
+		panic(fmt.Sprintf("statePersistence.WaitForTransactionInTransactionPool failed: %s", err.Error()))
+	}
+}
+
 func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitives.Sha256) {
 	for i, node := range n.Nodes {
 		if node.Started() {

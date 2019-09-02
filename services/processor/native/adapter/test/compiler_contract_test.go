@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -32,47 +33,50 @@ func TestContract_Compile(t *testing.T) {
 	t.Run("NativeCompiler", compileTest(aNativeCompiler))
 }
 
-func compileTest(newHarness func(t *testing.T) *compilerContractHarness) func(*testing.T) {
+func compileTest(newHarness func(t *testing.T, logger log.Logger) *compilerContractHarness) func(*testing.T) {
 	return func(t *testing.T) {
-		h := newHarness(t)
-		defer h.cleanup()
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(t, parent.Logger)
+			defer h.cleanup()
 
-		// give the test one minute timeout to compile
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
+			// give the test one minute timeout to compile
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
 
-		t.Log("Compiling a valid contract")
+			t.Log("Compiling a valid contract")
 
-		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
-		compilationStartTime := time.Now().UnixNano()
-		contractInfo, err := h.compiler.Compile(ctx, code)
-		compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
-		t.Logf("Compilation time: %d ms", compilationTimeMs)
+			code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+			compilationStartTime := time.Now().UnixNano()
+			contractInfo, err := h.compiler.Compile(ctx, code)
+			compilationTimeMs := (time.Now().UnixNano() - compilationStartTime) / 1000000
+			t.Logf("Compilation time: %d ms", compilationTimeMs)
 
-		require.NoError(t, err, "compilation should succeed")
-		require.NotNil(t, contractInfo, "loaded object should not be nil")
+			require.NoError(t, err, "compilation should succeed")
+			require.NotNil(t, contractInfo, "loaded object should not be nil")
 
-		codePart1 := string(contracts.NativeSourceCodeForCounterPart1(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
-		codePart2 := string(contracts.NativeSourceCodeForCounterPart2(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
-		compilationStartTime = time.Now().UnixNano()
-		contractInfo, err = h.compiler.Compile(ctx, codePart1, codePart2)
-		compilationTimeMs = (time.Now().UnixNano() - compilationStartTime) / 1000000
-		t.Logf("Compilation time: %d ms", compilationTimeMs)
+			codePart1 := string(contracts.NativeSourceCodeForCounterPart1(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+			codePart2 := string(contracts.NativeSourceCodeForCounterPart2(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+			compilationStartTime = time.Now().UnixNano()
+			contractInfo, err = h.compiler.Compile(ctx, codePart1, codePart2)
+			compilationTimeMs = (time.Now().UnixNano() - compilationStartTime) / 1000000
+			t.Logf("Compilation time: %d ms", compilationTimeMs)
 
-		require.NoError(t, err, "compilation of multiple files should succeed")
-		require.NotNil(t, contractInfo, "loaded object should not be nil")
+			require.NoError(t, err, "compilation of multiple files should succeed")
+			require.NotNil(t, contractInfo, "loaded object should not be nil")
 
-		// instantiate the "start()" function of the contract and call it
-		contractInstance, err := types.NewContractInstance(contractInfo)
-		require.NoError(t, err, "create contract instance should succeed")
-		res := reflect.ValueOf(contractInstance.PublicMethods["start"]).Call([]reflect.Value{})
-		require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, res[0].Interface().(uint64), "result of calling start() should match")
+			// instantiate the "start()" function of the contract and call it
+			contractInstance, err := types.NewContractInstance(contractInfo)
+			require.NoError(t, err, "create contract instance should succeed")
+			res := reflect.ValueOf(contractInstance.PublicMethods["start"]).Call([]reflect.Value{})
+			require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, res[0].Interface().(uint64), "result of calling start() should match")
 
-		t.Log("Compiling an invalid contract")
+			t.Log("Compiling an invalid contract")
 
-		invalidCode := "invalid code example"
-		_, err = h.compiler.Compile(ctx, invalidCode)
-		require.Error(t, err, "compile should fail")
+			invalidCode := "invalid code example"
+			_, err = h.compiler.Compile(ctx, invalidCode)
+			require.Error(t, err, "compile should fail")
+		})
+
 	}
 }
 
@@ -81,11 +85,10 @@ type compilerContractHarness struct {
 	cleanup  func()
 }
 
-func aNativeCompiler(t *testing.T) *compilerContractHarness {
+func aNativeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 	tmpDir := test.CreateTempDirForTest(t)
 	cfg := &hardcodedConfig{artifactPath: tmpDir}
-	log := log.DefaultTestingLogger(t)
-	compiler := adapter.NewNativeCompiler(cfg, log, metric.NewRegistry())
+	compiler := adapter.NewNativeCompiler(cfg, logger, metric.NewRegistry())
 	return &compilerContractHarness{
 		compiler: compiler,
 		cleanup: func() {
@@ -94,7 +97,7 @@ func aNativeCompiler(t *testing.T) *compilerContractHarness {
 	}
 }
 
-func aFakeCompiler(t *testing.T) *compilerContractHarness {
+func aFakeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 	compiler := fake.NewCompiler()
 	code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
 	compiler.ProvideFakeContract(contracts.MockForCounter(), code)

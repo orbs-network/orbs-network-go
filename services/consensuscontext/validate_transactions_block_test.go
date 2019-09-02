@@ -26,16 +26,16 @@ func toTxValidatorContext(cfg config.ConsensusContextConfig) *txValidatorContext
 	return toTxValidatorContextWithBc(cfg, false)
 }
 
-func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBc bool) *txValidatorContext {
-	blockProposer := builders.HashObj().WithFirstByte(1).Build()
+func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardCompatible bool) *txValidatorContext {
+	blockProposer := hash.Make32BytesWithFirstByte(1)
 	blockBuilder := builders.BlockPairBuilder()
-	if isBc {
-		blockBuilder.WithBlockProposerAddress(builders.EmptyHash()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
+	if isBackwardCompatible {
+		blockBuilder.WithBlockProposerAddress(hash.MakeEmptyLenBytes()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
 	} else {
 		blockBuilder.WithBlockProposerAddress(blockProposer)
 	}
 	block := blockBuilder.Build()
-	prevBlockHashCopy := builders.HashObj().Build()
+	prevBlockHashCopy := hash.Make32EmptyBytes()
 	copy(prevBlockHashCopy, block.TransactionsBlock.Header.PrevBlockHashPtr())
 
 	input := &services.ValidateTransactionsBlockInput{
@@ -106,7 +106,7 @@ func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *t
 	test.WithContext(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input")
 		}
 		err := validateTxBlockProposer(ctx, vctx)

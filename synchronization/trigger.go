@@ -10,47 +10,36 @@ import (
 	"context"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
-	"sync/atomic"
 	"time"
 )
-
-type Telemetry struct {
-	timesTriggered uint64
-}
 
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
 	govnr.TreeSupervisor
-	d       time.Duration
-	f       func()
-	s       func()
-	logger  logfields.Errorer
-	cancel  context.CancelFunc
-	ticker  *time.Ticker
-	metrics *Telemetry
-	Closed  govnr.ContextEndedChan
-	name    string
+	d      time.Duration
+	f      func()
+	s      func()
+	logger logfields.Errorer
+	cancel context.CancelFunc
+	ticker *time.Ticker
+	Closed govnr.ContextEndedChan
+	name   string
 }
 
 func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &PeriodicalTrigger{
-		ticker:  nil,
-		d:       interval,
-		f:       trigger,
-		s:       onStop,
-		cancel:  cancel,
-		logger:  logger,
-		name:    name,
-		metrics: &Telemetry{},
+		ticker: nil,
+		d:      interval,
+		f:      trigger,
+		s:      onStop,
+		cancel: cancel,
+		logger: logger,
+		name:   name,
 	}
 
 	t.run(subCtx)
 	return t
-}
-
-func (t *PeriodicalTrigger) TimesTriggered() uint64 {
-	return atomic.LoadUint64(&t.metrics.timesTriggered)
 }
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
@@ -60,7 +49,6 @@ func (t *PeriodicalTrigger) run(ctx context.Context) {
 			select {
 			case <-t.ticker.C:
 				t.f()
-				atomic.AddUint64(&t.metrics.timesTriggered, 1)
 			case <-ctx.Done():
 				t.ticker.Stop()
 				if t.s != nil {

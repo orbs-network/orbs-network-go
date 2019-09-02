@@ -49,7 +49,7 @@ type Service struct {
 
 func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *Service {
 	logger := parent.WithTags(LogTag)
-	dispatcher := newMessageDispatcher(metricRegistry)
+	dispatcher := newMessageDispatcher(metricRegistry, logger)
 	s := &Service{
 		transport:       transport,
 		config:          config,
@@ -69,29 +69,27 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 }
 
 func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
-	select {
-	case <-ctx.Done():
+	if ctx.Err() != nil {
 		return
-	default:
-		logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-		if len(payloads) == 0 {
-			logger.Error("transport did not receive any payloads, header missing")
-			return
-		}
-		header := gossipmessages.HeaderReader(payloads[0])
-		if !header.IsValid() {
-			logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
-			return
-		}
-
-		if err := s.headerValidator.validateMessageHeader(header); err != nil {
-			logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
-			return
-		}
-
-		logger.Info("transport message received", log.Stringable("header", header), log.String("gossip-topic", header.StringTopic()))
-		s.messageDispatcher.dispatch(logger, header, payloads[1:])
 	}
+
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+	if len(payloads) == 0 {
+		logger.Error("transport did not receive any payloads, header missing")
+		return
+	}
+	header := gossipmessages.HeaderReader(payloads[0])
+	if !header.IsValid() {
+		logger.Error("transport header is corrupt", log.Bytes("header", payloads[0]))
+		return
+	}
+
+	if err := s.headerValidator.validateMessageHeader(header); err != nil {
+		logger.Error("dropping a received message that isn't valid", log.Error(err), log.Stringable("message-header", header))
+		return
+	}
+
+	s.messageDispatcher.dispatch(ctx, logger, header, payloads[1:])
 }
 
 func (s *Service) String() string {

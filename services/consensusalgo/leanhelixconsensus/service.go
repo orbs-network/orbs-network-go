@@ -184,7 +184,7 @@ func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *
 			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
 			TransactionsBlock:  blockPair.TransactionsBlock,
 			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp(),
-			BlockProposerAddress: blockPair.TransactionsBlock.Header.BlockProposerAddress()}) // TODO NOAM maybe need to ask lean helix lib for proposer
+			BlockProposerAddress: blockPair.TransactionsBlock.Header.BlockProposerAddress()}) // block proposer - tx and rx block assumed to be same.
 	}
 }
 
