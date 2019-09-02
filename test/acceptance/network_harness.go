@@ -169,7 +169,6 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 			network.CreateAndStartNodes(ctx, b.numOfNodesToStart)
 			logger.Info("acceptance network started, running tests")
 			f(tb, ctx, network)
-			cancel()
 		})
 
 	})
