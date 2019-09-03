@@ -12,10 +12,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -49,82 +49,88 @@ func newFake() *fakeAdderRemover {
 
 func TestCommitTransactionReceipts_EnqueuesOnlyNodesTransactionsForNotification(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		rnd := rand.NewControlledRand(t)
-		n1 := []byte{0x1}
-		n2 := []byte{0x2}
+			rnd := rand.NewControlledRand(t)
+			n1 := []byte{0x1}
+			n2 := []byte{0x2}
 
-		fake := newFake()
-		c := &committer{
-			adder:       fake,
-			remover:     fake,
-			logger:      log.DefaultTestingLogger(t),
-			nodeAddress: n1,
-		}
+			fake := newFake()
+			c := &committer{
+				adder:       fake,
+				remover:     fake,
+				logger:      parent.Logger,
+				nodeAddress: n1,
+			}
 
-		tx1 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
-		tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
-		tx3 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
+			tx1 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
+			tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
+			tx3 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
 
-		fake.originFor(tx1, n1)
-		fake.originFor(tx2, n1)
-		fake.originFor(tx3, n2)
+			fake.originFor(tx1, n1)
+			fake.originFor(tx2, n1)
+			fake.originFor(tx3, n2)
 
-		c.commit(ctx, tx1, tx2, tx3)
+			c.commit(ctx, tx1, tx2, tx3)
 
-		require.Contains(t, c.myReceipts, tx1, "a tx from n1 gateway was not enqueued for reporting")
-		require.Contains(t, c.myReceipts, tx2, "a tx from n1 gateway was not enqueued for reporting")
-		require.NotContains(t, c.myReceipts, tx3, "a tx from n2 gateway was not enqueued for reporting")
+			require.Contains(t, c.myReceipts, tx1, "a tx from n1 gateway was not enqueued for reporting")
+			require.Contains(t, c.myReceipts, tx2, "a tx from n1 gateway was not enqueued for reporting")
+			require.NotContains(t, c.myReceipts, tx3, "a tx from n2 gateway was not enqueued for reporting")
+		})
 	})
 }
 
 func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		fake := newFake()
-		c := &committer{
-			adder:       fake,
-			remover:     fake,
-			logger:      log.DefaultTestingLogger(t),
-			blockTime:   1,
-			blockHeight: 2,
-		}
+			fake := newFake()
+			c := &committer{
+				adder:       fake,
+				remover:     fake,
+				logger:      parent.Logger,
+				blockTime:   1,
+				blockHeight: 2,
+			}
 
-		tx1 := builders.TransactionReceipt().Build()
+			tx1 := builders.TransactionReceipt().Build()
 
-		c.commit(ctx, tx1)
+			c.commit(ctx, tx1)
 
-		require.Len(t, fake.committed, 1, "did not add anything to committed pool")
-		require.Equal(t, tx1, fake.committed[0].receipt, "did not add the tx receipt to committed pool")
-		require.Equal(t, c.blockHeight, fake.committed[0].blockHeight, "committed transaction has wrong block height")
-		require.Equal(t, c.blockTime, fake.committed[0].blockTime, "committed transaction has wrong block timestamp")
+			require.Len(t, fake.committed, 1, "did not add anything to committed pool")
+			require.Equal(t, tx1, fake.committed[0].receipt, "did not add the tx receipt to committed pool")
+			require.Equal(t, c.blockHeight, fake.committed[0].blockHeight, "committed transaction has wrong block height")
+			require.Equal(t, c.blockTime, fake.committed[0].blockTime, "committed transaction has wrong block timestamp")
+		})
 	})
 }
 
 func TestCommitTransactionReceipts_NotifiesResultHandlers(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
 
-		rnd := rand.NewControlledRand(t)
-		tx1 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
-		tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
+			rnd := rand.NewControlledRand(t)
+			tx1 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
+			tx2 := builders.TransactionReceipt().WithRandomHash(rnd).Build()
 
-		c := &committer{
-			logger:      log.DefaultTestingLogger(t),
-			myReceipts:  []*protocol.TransactionReceipt{tx1, tx2},
-			blockHeight: 1,
-			blockTime:   2,
-		}
+			c := &committer{
+				logger:      parent.Logger,
+				myReceipts:  []*protocol.TransactionReceipt{tx1, tx2},
+				blockHeight: 1,
+				blockTime:   2,
+			}
 
-		handler := &handlers.MockTransactionResultsHandler{}
-		handler.When("HandleTransactionResults", mock.Any, &handlers.HandleTransactionResultsInput{
-			TransactionReceipts: c.myReceipts,
-			BlockHeight:         c.blockHeight,
-			Timestamp:           c.blockTime,
-		}).Times(1)
+			handler := &handlers.MockTransactionResultsHandler{}
+			handler.When("HandleTransactionResults", mock.Any, &handlers.HandleTransactionResultsInput{
+				TransactionReceipts: c.myReceipts,
+				BlockHeight:         c.blockHeight,
+				Timestamp:           c.blockTime,
+			}).Times(1)
 
-		c.notify(ctx, handler)
+			c.notify(ctx, handler)
 
-		_, err := handler.Verify()
-		require.NoError(t, err, "handler was not invoked as expected")
+			_, err := handler.Verify()
+			require.NoError(t, err, "handler was not invoked as expected")
+		})
 	})
 }

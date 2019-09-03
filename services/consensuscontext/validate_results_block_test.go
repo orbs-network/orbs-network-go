@@ -24,11 +24,11 @@ func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext
 	return toRxValidatorContextWithBc(cfg, false)
 }
 
-func toRxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBc bool) *rxValidatorContext {
-	blockProposer := builders.HashObj().WithFirstByte(1).Build()
+func toRxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardsCompatible bool) *rxValidatorContext {
+	blockProposer := hash.Make32BytesWithFirstByte(1)
 	blockBuilder := builders.BlockPairBuilder()
-	if isBc {
-		blockBuilder.WithBlockProposerAddress(builders.EmptyHash()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
+	if isBackwardsCompatible {
+		blockBuilder.WithBlockProposerAddress(hash.MakeEmptyLenBytes()) // Backwards compatibility - block proposer hashes are size 0 (non-existent)
 	} else {
 		blockBuilder.WithBlockProposerAddress(blockProposer)
 	}
@@ -266,11 +266,11 @@ func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, i
 	}
 }
 
-func TestConsensusContextValidateResultsBlock_TestBlockProposerNotSame(t *testing.T) {
+func TestConsensusContextValidateResultsBlock_TestInputBlockProposerNotSameAsResultsBlockProposer(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vcrx := toRxValidatorContext(cfg)
-		if err := vcrx.input.ResultsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+		if err := vcrx.input.ResultsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input")
 		}
 		err := validateRxBlockProposer(ctx, vcrx)
@@ -278,11 +278,11 @@ func TestConsensusContextValidateResultsBlock_TestBlockProposerNotSame(t *testin
 	})
 }
 
-func TestConsensusContextValidateResultsBlock_TestTxRxBlockProposerNotSame(t *testing.T) {
+func TestConsensusContextValidateResultsBlock_TestTxAndRxBlockProposerNotSame(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vcrx := toRxValidatorContext(cfg)
-		if err := vcrx.input.TransactionsBlock.Header.MutateBlockProposerAddress(builders.HashObj().WithFirstByte(3).Build()); err != nil {
+		if err := vcrx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input of tx block")
 		}
 		err := validateRxBlockProposer(ctx, vcrx)

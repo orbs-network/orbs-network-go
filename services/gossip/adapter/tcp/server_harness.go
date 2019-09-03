@@ -36,10 +36,10 @@ type directHarness struct {
 	listenerMock         *testkit.MockTransportListener
 }
 
-func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *directHarness {
+func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, logger log.Logger) *directHarness {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
 	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
-	transport := makeTransport(ctx, t, cfg)
+	transport := makeTransport(ctx, logger, cfg)
 
 	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort()) // establish connection from test to server port ( test harness ==> SUT )
 
@@ -53,10 +53,9 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context) *dire
 	return h
 }
 
-func makeTransport(ctx context.Context, tb testing.TB, cfg config.GossipTransportConfig) *DirectTransport {
-	log := log.DefaultTestingLogger(tb)
+func makeTransport(ctx context.Context, logger log.Logger, cfg config.GossipTransportConfig) *DirectTransport {
 	registry := metric.NewRegistry()
-	transport := NewDirectTransport(ctx, cfg, log, registry)
+	transport := NewDirectTransport(ctx, cfg, logger, registry)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 		return transport.IsServerListening()

@@ -33,7 +33,7 @@ type blockPair struct {
 
 func BlockPair() *blockPair {
 	// allocate size for empty fields or you'll get "size mismatch" errors from membuffers
-	empty32ByteHash := HashObj().Build()
+	empty32ByteHash := hash.Make32EmptyBytes()
 	createdDate := time.Now()
 	transactions := []*protocol.SignedTransaction{
 		(TransferTransaction().WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6))).Build(),
@@ -312,7 +312,7 @@ func BlockPairBuilder() *blockPairBuilder {
 		protocolVersion:    DEFAULT_TEST_PROTOCOL_VERSION,
 		virtualChainId:     DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 		currentBlockHeight: 1000,
-		blockProposer:      HashObj().Build(),
+		blockProposer:      hash.Make32EmptyBytes(),
 		tiggerEnabled:      true,
 	}
 }

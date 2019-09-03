@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -19,153 +20,165 @@ import (
 )
 
 func TestWriteAtHeight(t *testing.T) {
-	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
-	d := newDriver(t, persistenceMock, 5, nil)
-	persistenceMock.
-		When("Read", primitives.ContractName("c"), "k1").
-		Return((*protocol.StateRecord)(nil), false, nil).
-		Times(1)
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
+		d := newDriver(parent.Logger, persistenceMock, 5, nil)
+		persistenceMock.
+			When("Read", primitives.ContractName("c"), "k1").
+			Return((*protocol.StateRecord)(nil), false, nil).
+			Times(1)
 
-	d.write(1, "c", "k1", "v1")
+		d.write(1, "c", "k1", "v1")
 
-	_, exists, err := d.read(0, "c", "k1")
-	require.NoError(t, err)
-	require.EqualValues(t, false, exists)
+		_, exists, err := d.read(0, "c", "k1")
+		require.NoError(t, err)
+		require.EqualValues(t, false, exists)
 
-	valueAtHeight1, exists, err := d.read(1, "c", "k1")
-	require.NoError(t, err)
-	require.EqualValues(t, true, exists)
-	require.EqualValues(t, "v1", valueAtHeight1)
+		valueAtHeight1, exists, err := d.read(1, "c", "k1")
+		require.NoError(t, err)
+		require.EqualValues(t, true, exists)
+		require.EqualValues(t, "v1", valueAtHeight1)
 
-	_, _, err = d.read(200, "c", "k1")
-	require.Error(t, err)
-	require.EqualError(t, err, "requested height 200 is too new. most recent available block height is 1")
+		_, _, err = d.read(200, "c", "k1")
+		require.Error(t, err)
+		require.EqualError(t, err, "requested height 200 is too new. most recent available block height is 1")
 
-	_, errCalled := persistenceMock.Verify()
-	require.NoError(t, errCalled, "error happened when it should not")
-
+		_, errCalled := persistenceMock.Verify()
+		require.NoError(t, errCalled, "error happened when it should not")
+	})
 }
 
 func TestNoLayers(t *testing.T) {
-	persistenceMock := &StatePersistenceMock{}
-	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
-		Return(nil).
-		Times(2)
-	d := newDriver(t, persistenceMock, 0, nil)
-	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
-	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := &StatePersistenceMock{}
+		persistenceMock.
+			When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
+			Return(nil).
+			Times(2)
+		d := newDriver(parent.Logger, persistenceMock, 0, nil)
+		d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+		d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
 
-	_, _, err := d.read(1, "c", "k")
-	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
+		_, _, err := d.read(1, "c", "k")
+		require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
 
-	_, errCalled := persistenceMock.Verify()
-	require.NoError(t, errCalled, "error happened when it should not")
-
+		_, errCalled := persistenceMock.Verify()
+		require.NoError(t, errCalled, "error happened when it should not")
+	})
 }
 
 func TestWriteAtHeightAndDeleteAtLaterHeight(t *testing.T) {
-	d := newDriver(t, statePersistenceMockWithWriteAnyNoErrors(0), 5, nil)
-	d.write(1, "", "k1", "v1")
-	d.write(2, "", "k1", "")
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		d := newDriver(parent.Logger, statePersistenceMockWithWriteAnyNoErrors(0), 5, nil)
+		d.write(1, "", "k1", "v1")
+		d.write(2, "", "k1", "")
 
-	valueAtHeight1, exists, err := d.read(1, "", "k1")
-	require.NoError(t, err)
-	require.EqualValues(t, true, exists)
-	require.EqualValues(t, "v1", valueAtHeight1)
+		valueAtHeight1, exists, err := d.read(1, "", "k1")
+		require.NoError(t, err)
+		require.EqualValues(t, true, exists)
+		require.EqualValues(t, "v1", valueAtHeight1)
 
-	valueAtHeight2, exists, err := d.read(2, "", "k1")
-	require.NoError(t, err)
-	require.EqualValues(t, false, exists)
-	require.EqualValues(t, "", valueAtHeight2)
+		valueAtHeight2, exists, err := d.read(2, "", "k1")
+		require.NoError(t, err)
+		require.EqualValues(t, false, exists)
+		require.EqualValues(t, "", valueAtHeight2)
+	})
 }
 
 func TestMergeToPersistence(t *testing.T) {
-	var writeCallCount byte = 1
-	persistenceMock := &StatePersistenceMock{}
-	persistenceMock.
-		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
-		Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
-			expectedValue := fmt.Sprintf("v%v", writeCallCount)
-			v := string(diff["c"]["k"].Value())
-			require.EqualValues(t, expectedValue, v)
-			require.EqualValues(t, writeCallCount, height)
-			require.EqualValues(t, writeCallCount, ts)
-			require.EqualValues(t, []byte{0x01}, proposer)
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		var writeCallCount byte = 1
+		persistenceMock := &StatePersistenceMock{}
+		persistenceMock.
+			When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
+			Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
+				expectedValue := fmt.Sprintf("v%v", writeCallCount)
+				v := string(diff["c"]["k"].Value())
+				require.EqualValues(t, expectedValue, v)
+				require.EqualValues(t, writeCallCount, height)
+				require.EqualValues(t, writeCallCount, ts)
+				require.EqualValues(t, []byte{0x01}, proposer)
 			require.EqualValues(t, primitives.Sha256{writeCallCount}, root)
-			writeCallCount++
-			return nil
-		}).
-		Times(2)
-	d := newDriver(t, persistenceMock, 2, nil)
-	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
-	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
-	d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
-	d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
+				writeCallCount++
+				return nil
+			}).
+			Times(2)
+		d := newDriver(parent.Logger, persistenceMock, 2, nil)
+		d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+		d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+		d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
+		d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
 
-	_, errCalled := persistenceMock.Verify()
-	require.NoError(t, errCalled, "error happened when it should not")
+		_, errCalled := persistenceMock.Verify()
+		require.NoError(t, errCalled, "error happened when it should not")
+	})
 }
 
 func TestReadOutOfRange(t *testing.T) {
-	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
-	d := newDriver(t, persistenceMock, 2, nil)
-	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
-	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
-	d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
-	d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := statePersistenceMockWithWriteAnyNoErrors(2)
+		d := newDriver(parent.Logger, persistenceMock, 2, nil)
+		d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+		d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+		d.writeFull(3, 3, []byte{0x01}, "c", "k", "v3")
+		d.writeFull(4, 4, []byte{0x01}, "c", "k", "v4")
 
-	_, _, err := d.read(1, "c", "k")
-	require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
+		_, _, err := d.read(1, "c", "k")
+		require.EqualError(t, err, "requested height 1 is too old. oldest available block height is 2")
 
-	_, err = d.readHash(1)
-	require.EqualError(t, err, "could not locate merkle hash for height 1. oldest available block height is 2")
+		_, err = d.readHash(1)
+		require.EqualError(t, err, "could not locate merkle hash for height 1. oldest available block height is 2")
 
-	_, errCalled := persistenceMock.Verify()
-	require.NoError(t, errCalled, "error happened when it should not")
+		_, errCalled := persistenceMock.Verify()
+		require.NoError(t, errCalled, "error happened when it should not")
+	})
 }
 
 func TestReadHash(t *testing.T) {
-	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
-	d := newDriver(t, persistenceMock, 1, nil)
-	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
-	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
+		d := newDriver(parent.Logger, persistenceMock, 1, nil)
+		d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+		d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
 
-	root, err := d.readHash(1)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Sha256{1}, root)
+		root, err := d.readHash(1)
+		require.NoError(t, err)
+		require.Equal(t, primitives.Sha256{1}, root)
 
-	root, err = d.readHash(2)
-	require.NoError(t, err)
-	require.Equal(t, primitives.Sha256{2}, root)
+		root, err = d.readHash(2)
+		require.NoError(t, err)
+		require.Equal(t, primitives.Sha256{2}, root)
 
-	_, err = d.readHash(3)
-	require.Error(t, err)
+		_, err = d.readHash(3)
+		require.Error(t, err)
 
-	_, errCalled := persistenceMock.Verify()
-	require.NoError(t, errCalled, "error happened when it should not")
+		_, errCalled := persistenceMock.Verify()
+		require.NoError(t, errCalled, "error happened when it should not")
+	})
 }
 
 func TestRevisionEviction(t *testing.T) {
-	persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
-	var evictedMerkleRoots []primitives.Sha256
-	d := newDriver(t, persistenceMock, 1, func(sha256 primitives.Sha256) {
-		evictedMerkleRoots = append(evictedMerkleRoots, sha256)
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := statePersistenceMockWithWriteAnyNoErrors(1)
+		var evictedMerkleRoots []primitives.Sha256
+		d := newDriver(parent.Logger, persistenceMock, 1, func(sha256 primitives.Sha256) {
+			evictedMerkleRoots = append(evictedMerkleRoots, sha256)
+		})
+
+		firstHash, _ := d.readHash(0)
+		d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
+		require.Len(t, evictedMerkleRoots, 0)
+
+		d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
+		require.Equal(t, []primitives.Sha256{firstHash}, evictedMerkleRoots)
 	})
-
-	firstHash, _ := d.readHash(0)
-	d.writeFull(1, 1, []byte{0x01}, "c", "k", "v1")
-	require.Len(t, evictedMerkleRoots, 0)
-
-	d.writeFull(2, 2, []byte{0x01}, "c", "k", "v2")
-	require.Equal(t, []primitives.Sha256{firstHash}, evictedMerkleRoots)
 }
 
 type driver struct {
 	inner *rollingRevisions
 }
 
-func newDriver(tb testing.TB, persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
+func newDriver(logger log.Logger, persistence adapter.StatePersistence, layers int, merkleForgetCallback func(sha256 primitives.Sha256)) *driver {
 	m := newMerkleMock()
 	if merkleForgetCallback != nil {
 		m.When("Forget", mock.Any).Call(merkleForgetCallback).Return(nil).Times(1)
@@ -173,7 +186,7 @@ func newDriver(tb testing.TB, persistence adapter.StatePersistence, layers int, 
 		m.When("Forget", mock.Any).Return(nil).Times(1)
 	}
 	d := &driver{
-		inner: newRollingRevisions(log.DefaultTestingLogger(tb), persistence, layers, m),
+		inner: newRollingRevisions(logger, persistence, layers, m),
 	}
 	return d
 }

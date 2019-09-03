@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -17,7 +18,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
-	"testing"
 )
 
 type harness struct {
@@ -29,8 +29,7 @@ type harness struct {
 	service              services.VirtualMachine
 }
 
-func newHarness(tb testing.TB) *harness {
-	logger := log.DefaultTestingLogger(tb)
+func newHarness(logger log.Logger) *harness {
 
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}
@@ -134,7 +133,7 @@ type contractAndMethod struct {
 }
 
 func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
-	return h.processTransactionSetWithBlockInfo(ctx, 12, 0x777, builders.HashObj().WithFirstByte(5).Build(), contractAndMethods, additionalExpectedStateDiffContracts...)
+	return h.processTransactionSetWithBlockInfo(ctx, 12, 0x777, hash.Make32BytesWithFirstByte(5), contractAndMethods, additionalExpectedStateDiffContracts...)
 }
 
 func (h *harness) processTransactionSetWithBlockInfo(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockProposer primitives.NodeAddress, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {

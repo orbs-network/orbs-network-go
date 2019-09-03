@@ -39,12 +39,13 @@ func (s *service) GetTransactionReceiptProof(parentCtx context.Context, input *s
 	logger.Info("get transaction receipt proof request received")
 
 	txStatusOutput, err := s.getTransactionStatus(ctx, s.config, txHash, tx.TransactionTimestamp())
-	if err != nil || txStatusOutput == nil || txStatusOutput.ClientResponse.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
-		if err != nil || txStatusOutput == nil {
-			logger.Info("get transaction receipt proof failed to get transaction txStatus", log.Error(err))
-		} else {
-			logger.Info("get transaction receipt proof failed: txStatus not committed", log.Stringable("tx-status", txStatusOutput.ClientResponse.TransactionStatus()))
-		}
+	if err != nil || txStatusOutput == nil {
+		logger.Info("get transaction receipt proof failed to get transaction txStatus", log.Error(err))
+		return toGetTxProofOutput(txStatusOutput, nil), err
+	}
+
+	if txStatusOutput.ClientResponse.TransactionStatus() != protocol.TRANSACTION_STATUS_COMMITTED {
+		logger.Info("get transaction receipt proof failed: txStatus not committed", log.Stringable("tx-status", txStatusOutput.ClientResponse.TransactionStatus()))
 		return toGetTxProofOutput(txStatusOutput, nil), err
 	}
 

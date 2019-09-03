@@ -9,22 +9,25 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, false)
-		txCount := uint32(2)
-		h.expectTxPoolToReturnXTransactions(txCount)
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, false)
+			txCount := uint32(2)
+			h.expectTxPoolToReturnXTransactions(txCount)
 
-		txBlock, err := h.requestTransactionsBlock(ctx)
+			txBlock, err := h.requestTransactionsBlock(ctx)
 
-		require.NoError(t, err, "request transactions block failed")
-		require.Len(t, txBlock.SignedTransactions, int(txCount), "wrong number of txs")
+			require.NoError(t, err, "request transactions block failed")
+			require.Len(t, txBlock.SignedTransactions, int(txCount), "wrong number of txs")
 
-		h.verifyTransactionsRequestedFromTransactionPool(t)
+			h.verifyTransactionsRequestedFromTransactionPool(t)
+		})
 	})
 }
 
@@ -32,34 +35,39 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 // Presently if the latter fails, this test will fail too
 func TestCreateBlock_HappyFlow(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, false)
-		txCount := 2
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, false)
+			txCount := 2
 
-		h.expectTxPoolToReturnXTransactions(uint32(txCount))
-		h.expectStateHashToReturn([]byte{1, 2, 3, 4, 5})
+			h.expectTxPoolToReturnXTransactions(uint32(txCount))
+			h.expectStateHashToReturn([]byte{1, 2, 3, 4, 5})
 
-		txBlock, err := h.requestTransactionsBlock(ctx)
-		require.Nil(t, err, "request transactions block failed")
-		h.expectVirtualMachineToReturnXTransactionReceipts(len(txBlock.SignedTransactions))
-		rxBlock, err := h.requestResultsBlock(ctx, txBlock)
-		require.Nil(t, err, "request results block failed")
-		require.Equal(t, txCount, len(rxBlock.TransactionReceipts))
-		h.verifyTransactionsRequestedFromTransactionPool(t)
+			txBlock, err := h.requestTransactionsBlock(ctx)
+			require.Nil(t, err, "request transactions block failed")
+			h.expectVirtualMachineToReturnXTransactionReceipts(len(txBlock.SignedTransactions))
+			rxBlock, err := h.requestResultsBlock(ctx, txBlock)
+			require.Nil(t, err, "request results block failed")
+			require.Equal(t, txCount, len(rxBlock.TransactionReceipts))
+			h.verifyTransactionsRequestedFromTransactionPool(t)
+		})
 	})
+
 }
 
 func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
-		h := newHarness(t, true)
-		txCount := uint32(2)
-		txCountWithTrigger := txCount + 1
-		h.expectTxPoolToReturnXTransactions(txCount)
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, true)
+			txCount := uint32(2)
+			txCountWithTrigger := txCount + 1
+			h.expectTxPoolToReturnXTransactions(txCount)
 
-		txBlock, err := h.requestTransactionsBlock(ctx)
+			txBlock, err := h.requestTransactionsBlock(ctx)
 
-		require.NoError(t, err, "request transactions block failed")
-		require.Len(t, txBlock.SignedTransactions, int(txCountWithTrigger), "wrong number of txs")
+			require.NoError(t, err, "request transactions block failed")
+			require.Len(t, txBlock.SignedTransactions, int(txCountWithTrigger), "wrong number of txs")
 
-		h.verifyTransactionsRequestedFromTransactionPool(t)
+			h.verifyTransactionsRequestedFromTransactionPool(t)
+		})
 	})
 }

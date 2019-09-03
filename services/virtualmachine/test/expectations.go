@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -219,7 +220,7 @@ func (h *harness) expectStateStorageLastCommittedBlockInfoBlockHeightRequested(r
 	outputToReturn := &services.GetLastCommittedBlockInfoOutput{
 		LastCommittedBlockHeight:    returnValue,
 		LastCommittedBlockTimestamp: 1234,
-		BlockProposerAddress:        builders.HashObj().WithFirstByte(1).Build(),
+		BlockProposerAddress:        hash.Make32BytesWithFirstByte(1),
 	}
 
 	h.stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
