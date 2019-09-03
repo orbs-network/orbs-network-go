@@ -26,7 +26,7 @@ export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 # prepare persistent blocks for docker tests
-rm -rf _tmp/blocks
+sudo rm -rf _tmp/blocks
 
 # At the moment Lean Helix doesn't deal well with an existing blocks file
 if [[ $CONSENSUSALGO == "benchmark" ]]; then
