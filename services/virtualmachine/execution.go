@@ -113,7 +113,7 @@ func (s *service) processTransactionSet(
 	return receipts, stateDiffs
 }
 
-func (s *service) getRecentCommittedBlockHeight(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, error) {
+func (s *service) getRecentCommittedBlockInfo(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, error) {
 	output, err := s.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
 	if err != nil {
 		return 0, 0, []byte{}, err

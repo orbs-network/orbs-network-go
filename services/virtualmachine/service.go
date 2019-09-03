@@ -60,7 +60,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 		panic("Run local method with specific block height is not yet supported")
 	}
 
-	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockHeight(ctx)
+	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
 	if err != nil {
 		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
