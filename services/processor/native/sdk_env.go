@@ -53,3 +53,20 @@ func (s *service) SdkEnvGetBlockTimestamp(executionContextId sdkContext.ContextI
 func (s *service) SdkEnvGetVirtualChainId(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) uint32 {
 	return uint32(s.config.VirtualChainId())
 }
+
+func (s *service) SdkEnvGetBlockProposerAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) []byte {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ENV,
+		MethodName:      "getBlockProposerAddress",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
+		panic("getBlockProposerAddress Sdk.Env returned corrupt output value")
+	}
+	return output.OutputArguments[0].BytesValue()
+}

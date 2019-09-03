@@ -37,6 +37,7 @@ type InMemoryStatePersistence struct {
 	fullState  adapter.ChainState
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
+	proposer   primitives.NodeAddress
 	merkleRoot primitives.Sha256
 }
 
@@ -49,6 +50,7 @@ func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence
 		fullState:  adapter.ChainState{},
 		height:     0,
 		ts:         0,
+		proposer:    []byte{},
 		merkleRoot: merkleRoot,
 	}
 }
@@ -64,11 +66,13 @@ func (sp *InMemoryStatePersistence) reportSize() {
 	sp.metrics.numberOfContracts.Update(int64(nContracts))
 }
 
-func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, root primitives.Sha256, diff adapter.ChainState) error {
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
 	sp.height = height
+	sp.proposer = proposer
+	// TOOD noam why not ts ?
 	sp.merkleRoot = root
 
 	for contract, records := range diff {
@@ -101,11 +105,11 @@ func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key s
 	return record, ok, nil
 }
 
-func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.Sha256, error) {
+func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, primitives.Sha256, error) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
-	return sp.height, sp.ts, sp.merkleRoot, nil
+	return sp.height, sp.ts, sp.proposer, sp.merkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {

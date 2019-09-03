@@ -20,7 +20,8 @@ func (s *service) callGlobalPreOrderSystemContract(ctx context.Context, currentB
 
 	// create execution context
 	lastCommittedBlockHeight := currentBlockHeight - 1
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	// currentBlockProposerAddress is nil because in global pre-order it is meaningless.
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, nil, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 
 	// modify execution context

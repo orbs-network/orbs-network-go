@@ -102,13 +102,12 @@ type gossipMessageDispatcher struct {
 // In fact, Block Sync should create a new one-off goroutine per "server request", Consensus should read messages immediately and store them in its own queue,
 // and Transaction Relay shouldn't block for long anyway.
 func newMessageDispatcher(registry metric.Registry, logger log.Logger) (d *gossipMessageDispatcher) {
-	fastHandlersBufferSize := 10 // use with non blocking/io performing topic handlers
 
 	d = &gossipMessageDispatcher{
-		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, fastHandlersBufferSize),
-		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger, fastHandlersBufferSize),
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, 100),   // transaction pool might block on adding new transactions, for instance while committing a block
+		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger, 10),           // low value assuming that handling block sync messages doesn't block
 		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger, 100), // handlers performs I/O operations and require buffering of requests
-		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger, fastHandlersBufferSize),
+		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger, 20),  // under heavy load benchmark consensus has been observed to slow down, failing to pick messages up from the topic fast enough
 	}
 	return
 }

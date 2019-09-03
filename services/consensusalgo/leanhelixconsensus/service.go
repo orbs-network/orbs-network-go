@@ -183,7 +183,8 @@ func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *
 			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
 			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
 			TransactionsBlock:  blockPair.TransactionsBlock,
-			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp()})
+			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp(),
+			BlockProposerAddress: blockPair.TransactionsBlock.Header.BlockProposerAddress()}) // block proposer - tx and rx block assumed to be same.
 	}
 }
 

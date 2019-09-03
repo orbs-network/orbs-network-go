@@ -60,7 +60,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 		panic("Run local method with specific block height is not yet supported")
 	}
 
-	committedBlockHeight, committedBlockTimestamp, err := s.getRecentCommittedBlockHeight(ctx)
+	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
 	if err != nil {
 		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
@@ -71,7 +71,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	}
 
 	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
-	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
@@ -92,7 +92,7 @@ func (s *service) ProcessTransactionSet(ctx context.Context, input *services.Pro
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), logfields.BlockHeight(input.CurrentBlockHeight))
-	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.SignedTransactions)
+	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.BlockProposerAddress, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
 		TransactionReceipts: receipts,

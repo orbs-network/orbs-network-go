@@ -23,7 +23,8 @@ func (s *service) callSystemContract(
 ) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockHeight, blockTimestamp, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	// currentBlockProposerAddress is nil because in call system it is meaningless.
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockHeight, blockTimestamp, nil, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 
 	// modify execution context

@@ -15,10 +15,10 @@ import (
 func TestContext_Load(t *testing.T) {
 	cp := newExecutionContextProvider()
 
-	contextId1, _ := cp.allocateExecutionContext(0, 1, 0x222, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	contextId1, _ := cp.allocateExecutionContext(0, 1, 0x222, []byte{0x01}, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer cp.destroyExecutionContext(contextId1)
 
-	contextId2, _ := cp.allocateExecutionContext(4, 5, 0x666, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	contextId2, _ := cp.allocateExecutionContext(4, 5, 0x666, []byte{0x02}, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer cp.destroyExecutionContext(contextId1)
 
 	t.Logf("%s\n", contextId1)
@@ -29,16 +29,18 @@ func TestContext_Load(t *testing.T) {
 	require.EqualValues(t, 0, c1.lastCommittedBlockHeight, "loaded context with contextId1 should be lastCommittedHeight 1")
 	require.EqualValues(t, 1, c1.currentBlockHeight, "loaded context with contextId1 should be currentHeight 1")
 	require.EqualValues(t, 0x222, c1.currentBlockTimestamp, "loaded context with contextId1 should be currentTimestamp 1")
+	require.EqualValues(t, []byte{0x01}, c1.currentBlockProposerAddress, "loaded context with contextId1 should be currentBlockProposerAddress 0x01")
 
 	c2 := cp.loadExecutionContext(contextId2)
 	require.EqualValues(t, 4, c2.lastCommittedBlockHeight, "loaded context with contextId2 should be lastCommittedHeight 2")
 	require.EqualValues(t, 5, c2.currentBlockHeight, "loaded context with contextId2 should be currentHeight 2")
 	require.EqualValues(t, 0x666, c2.currentBlockTimestamp, "loaded context with contextId2 should be currentTimestamp 2")
+	require.EqualValues(t, []byte{0x02}, c2.currentBlockProposerAddress, "loaded context with contextId2 should be currentBlockProposerAddress 0x02")
 }
 
 func TestContext_ServiceStack(t *testing.T) {
 	cp := newExecutionContextProvider()
-	executionContextId, c := cp.allocateExecutionContext(0, 1, 0x222, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	executionContextId, c := cp.allocateExecutionContext(0, 1, 0x222, []byte{0x01}, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer cp.destroyExecutionContext(executionContextId)
 
 	c.serviceStackPush("Service1")
@@ -65,7 +67,7 @@ func TestContext_ServiceStack(t *testing.T) {
 
 func TestContext_EventList(t *testing.T) {
 	cp := newExecutionContextProvider()
-	executionContextId, c := cp.allocateExecutionContext(0, 1, 0x222, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	executionContextId, c := cp.allocateExecutionContext(0, 1, 0x222, []byte{0x01}, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer cp.destroyExecutionContext(executionContextId)
 
 	c.serviceStackPush("Service1")

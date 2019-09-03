@@ -42,7 +42,7 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 			h := newHarness(parent.Logger)
 			h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-			h.expectStateStorageBlockHeightRequested(12)
+			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 				fmt.Println(err)
@@ -120,7 +120,7 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 			h := newHarness(parent.Logger)
 			h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, nil, uint32(protocol.PROCESSOR_TYPE_NATIVE)) // assume all contracts are deployed
 
-			h.expectStateStorageBlockHeightRequested(12)
+			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				fmt.Println(err)

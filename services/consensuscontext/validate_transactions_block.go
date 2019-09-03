@@ -64,6 +64,17 @@ func validateTxPrevBlockHashPtr(ctx context.Context, vctx *txValidatorContext) e
 	return nil
 }
 
+func validateTxBlockProposer(ctx context.Context, vctx *txValidatorContext) error {
+	expectedBlockProposer := vctx.input.BlockProposerAddress
+	blockProposer := vctx.input.TransactionsBlock.Header.BlockProposerAddress()
+	if len(blockProposer) > 0 { // If tx block header - block proposer is len 0 this is older version and for backward compatibility validate check is skipped
+		if !bytes.Equal(blockProposer, expectedBlockProposer) {
+			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+		}
+	}
+	return nil
+}
+
 func validateTxTransactionsBlockTimestamp(ctx context.Context, vctx *txValidatorContext) error {
 	prevBlockTimestamp := vctx.input.PrevBlockTimestamp
 	currentBlockTimestamp := vctx.input.TransactionsBlock.Header.Timestamp()
@@ -206,6 +217,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		validateTxBlockHeight,
 		validateTxPrevBlockHashPtr,
 		validateTxTransactionsBlockTimestamp,
+		validateTxBlockProposer,
 		validateTransactionsBlockMerkleRoot,
 		validateTransactionsBlockMetadataHash,
 	}
