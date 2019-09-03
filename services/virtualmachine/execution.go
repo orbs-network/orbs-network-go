@@ -30,13 +30,14 @@ func (s *service) runMethod(
 	lastCommittedBlockHeight primitives.BlockHeight,
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
+	currentBlockProposerAddress primitives.NodeAddress,
 	transactionOrQuery TransactionOrQuery,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
 ) (protocol.ExecutionResult, *protocol.ArgumentArray, *protocol.EventsArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, accessScope, transactionOrQuery)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, accessScope, transactionOrQuery)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 	executionContext.batchTransientState = batchTransientState
 
@@ -80,6 +81,7 @@ func (s *service) processTransactionSet(
 	ctx context.Context,
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
+	currentBlockProposerAddress primitives.NodeAddress,
 	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.TransactionReceipt, []*protocol.ContractStateDiff) {
 
@@ -95,7 +97,7 @@ func (s *service) processTransactionSet(
 	for _, signedTransaction := range signedTransactions {
 
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), logfields.BlockHeight(currentBlockHeight))
-		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 		}
@@ -111,12 +113,13 @@ func (s *service) processTransactionSet(
 	return receipts, stateDiffs
 }
 
-func (s *service) getRecentCommittedBlockHeight(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, error) {
-	output, err := s.stateStorage.GetStateStorageBlockHeight(ctx, &services.GetStateStorageBlockHeightInput{})
+func (s *service) getRecentCommittedBlockInfo(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, error) {
+	output, err := s.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, []byte{}, err
 	}
-	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, nil
+
+	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, output.BlockProposerAddress, nil
 }
 
 func encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.ArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {

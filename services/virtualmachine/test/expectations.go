@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -215,22 +216,24 @@ func (h *harness) expectEthereumConnectorGetBlockTimeByNumber(returnError error,
 	h.crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM].When("EthereumGetBlockTimeByNumber", mock.Any, mock.AnyIf("any input", contractMatcher)).Return(outputToReturn, returnError).Times(1)
 }
 
-func (h *harness) expectStateStorageBlockHeightRequested(returnValue primitives.BlockHeight) {
-	outputToReturn := &services.GetStateStorageBlockHeightOutput{
+func (h *harness) expectStateStorageLastCommittedBlockInfoBlockHeightRequested(returnValue primitives.BlockHeight) {
+	outputToReturn := &services.GetLastCommittedBlockInfoOutput{
 		LastCommittedBlockHeight:    returnValue,
 		LastCommittedBlockTimestamp: 1234,
+		BlockProposerAddress:        hash.Make32BytesWithFirstByte(1),
 	}
 
-	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
+	h.stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
 }
 
-func (h *harness) expectStateStorageBlockHeightAndTimestampRequested(returnHeight primitives.BlockHeight, returnTimestamp primitives.TimestampNano) {
-	outputToReturn := &services.GetStateStorageBlockHeightOutput{
+func (h *harness) expectStateStorageLastCommittedBlockInfoRequested(returnHeight primitives.BlockHeight, returnTimestamp primitives.TimestampNano, returnAddress primitives.NodeAddress) {
+	outputToReturn := &services.GetLastCommittedBlockInfoOutput{
 		LastCommittedBlockHeight:    returnHeight,
 		LastCommittedBlockTimestamp: returnTimestamp,
+		BlockProposerAddress:        returnAddress,
 	}
 
-	h.stateStorage.When("GetStateStorageBlockHeight", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
+	h.stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Return(outputToReturn, nil).Times(1)
 }
 
 func (h *harness) verifyStateStorageBlockHeightRequested(t *testing.T) {
