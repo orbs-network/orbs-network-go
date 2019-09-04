@@ -29,6 +29,7 @@ async function eventuallyDeployed({ chainId, nodes }) {
     try {
         await Promise.all(promises);
         versionDeployed = true;
+        console.log('version ', chainSpecificTargetHash, ' deployed on chain id ', chainId);
     } catch (err) {
         console.log(`Version ${chainSpecificTargetHash} might not be deployed on all CI testnet nodes!`);
         console.log('error provided:', err);
