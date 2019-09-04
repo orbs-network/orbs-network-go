@@ -31,8 +31,7 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/*"`: "SDK",
 
 			// Contract external libraries
-			`"github.com/orbs-network/contract-external-libraries-go/v1/keys"`:    "Contract external libraries",
-			`"github.com/orbs-network/contract-external-libraries-go/v1/structs"`: "Contract external libraries",
+			`"github.com/orbs-network/contract-external-libraries-go/v1/*"`: "Contract external libraries",
 
 			// Text
 			`"strings"`:       "Text manipulation",
