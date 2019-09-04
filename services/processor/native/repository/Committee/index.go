@@ -70,9 +70,3 @@ func _split(oneArrayOfAddresses []byte) [][]byte {
 	}
 	return res
 }
-
-func _addressSliceToArray(a []byte) [20]byte {
-	var array [20]byte
-	copy(array[:], a)
-	return array
-}
