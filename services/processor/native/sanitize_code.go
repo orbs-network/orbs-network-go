@@ -55,6 +55,14 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 
 			// Utils
 			`"sort"`: "Sorting collections of primitives",
+
+			// Crypto
+			`"hash"`:                        "Crypto",
+			`"crypto"`:                      "Crypto",
+			`"crypto/*"`:                    "Crypto",
+			`"golang.org/x/crypto"`:         "Crypto",
+			`"golang.org/x/crypto/ed25519"`: "ED25519",
+			`"golang.org/x/crypto/sha3"`:    "SHA-3",
 		},
 		FunctionBlacklist: map[string][]string{
 			"time": {
