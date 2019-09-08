@@ -131,18 +131,16 @@ func TestForwardsTransactionWithFaultySigner(t *testing.T) {
 		harness.Supervise(txForwarder)
 
 		tx := builders.TransferTransaction().Build()
-		anotherTx := builders.TransferTransaction().Build()
 
 		gossip.When("BroadcastForwardedTransactions", mock.Any, mock.Any).Return(nil, nil).Times(0)
 
 		txForwarder.submit(tx)
-		txForwarder.submit(anotherTx)
 
 		require.NoError(t, test.ConsistentlyVerify(cfg.TransactionPoolPropagationBatchingTimeout()*2, gossip), "mocks were not called as expected")
 
-		oneBigHash, _, _ := HashTransactions(tx, anotherTx)
+		oneBigHash, _, _ := HashTransactions(tx)
 		sig, _ := signer.Sign(ctx, oneBigHash)
-		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx, anotherTx)
+		expectTransactionsToBeForwarded(gossip, cfg.NodeAddress(), sig, tx)
 
 		signer.Reset()
 		signer.When("Sign", mock.Any, mock.Any).Return(sig, nil).Times(1)
