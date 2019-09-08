@@ -8,7 +8,7 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
+func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 	newHarness().
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
@@ -31,31 +31,52 @@ func TestLeanHelix_RecoversFromDiskError(t *testing.T) {
 			tamperedNode := r.Intn(len(network.Nodes))
 			t.Log("Tampering with node", tamperedNode)
 
-			if err := network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, 3); err != nil {
+			const livelinessCheckHeightThreshold = 3
+
+			// wait for the network to start closing blocks
+			if err := network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, livelinessCheckHeightThreshold); err != nil {
 				t.Errorf("waiting for block on node %d failed: %s", tamperedNode, err)
 			}
 
+			// tamper with block writes
 			blocksWhichFailedToPersist := make(chan *protocol.BlockPairContainer, 100) // large buffer
 			network.BlockPersistence(tamperedNode).TamperWithBlockWrites(blocksWhichFailedToPersist)
 
+			lastWrittenHeight, err := network.BlockPersistence(tamperedNode).GetLastBlockHeight()
+			require.NoError(t, err)
+
 			// wait for two block write failures to occur
-			tamperedBlock1 := waitForTamperedBlock(ctx, t, blocksWhichFailedToPersist) // consensus/sync
-			tamperedBlock2 := waitForTamperedBlock(ctx, t, blocksWhichFailedToPersist) // sync
+			inspectFailedWriteAttempts := 2
+			for i := 0; i < inspectFailedWriteAttempts; i++ {
+				unwrittenBlock := waitForUnwrittenBlock(ctx, t, blocksWhichFailedToPersist)
 
-			require.Equal(t, heightOf(tamperedBlock1), heightOf(tamperedBlock2), "expected the same height to be attempted after write failure")
+				// typically all block attempts will be of the next expected height. but we are tolerant to previously written block heights as well since they may be retried due to sync race conditions
+				require.True(t, heightOf(unwrittenBlock) <= lastWrittenHeight+1, "any block write attempt is expected to be of (at most) the next unwritten height")
+			}
 
+			// un-tamper with block writes
 			network.BlockPersistence(tamperedNode).ResetTampering()
 
-			// TODO - instead of Eventually, increase the grace period and distance on block tracker
-			var err error
-			require.Truef(t, test.Eventually(30*time.Second, func() bool {
-				err = network.BlockPersistence(tamperedNode).GetBlockTracker().WaitForBlock(ctx, heightOf(tamperedBlock2)+3)
-				return err == nil
-			}), "waiting for block on node %d failed: %s", tamperedNode, err)
+			proceedToHeight := lastWrittenHeight + livelinessCheckHeightThreshold
+			err = eventuallyReachHeight(ctx, network.BlockPersistence(tamperedNode), proceedToHeight)
+			require.NoError(t, err, "waiting for block %d on node %d failed: %s", proceedToHeight, tamperedNode, err)
 		})
 }
 
-func waitForTamperedBlock(ctx context.Context, t testing.TB, failedBlocks chan *protocol.BlockPairContainer) *protocol.BlockPairContainer {
+func eventuallyReachHeight(ctx context.Context, blockPersistence adapter.BlockPersistence, targetHeight primitives.BlockHeight) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	for timeoutCtx.Err() == nil { // until timeout or context dies
+		err := blockPersistence.GetBlockTracker().WaitForBlock(timeoutCtx, targetHeight)
+		if err == nil {
+			return nil // reached expected height
+		}
+	}
+	return timeoutCtx.Err() // why we stopped waiting
+}
+
+func waitForUnwrittenBlock(ctx context.Context, t testing.TB, failedBlocks chan *protocol.BlockPairContainer) *protocol.BlockPairContainer {
 	select {
 	case tamperedBlock := <-failedBlocks:
 		return tamperedBlock
