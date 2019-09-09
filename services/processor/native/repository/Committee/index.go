@@ -7,11 +7,8 @@
 package committee_systemcontract
 
 import (
-	"encoding/hex"
-	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 )
@@ -19,34 +16,13 @@ import (
 // helpers for avoiding reliance on strings throughout the system
 const CONTRACT_NAME = "_Committee"
 const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee"
-const METHOD_UPDATE_REPUTATION = "updateReputation"
+const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses"
+const METHOD_UPDATE_MISSES = "updateMisses"
 
-var PUBLIC = sdk.Export(getOrderedCommittee, updateReputation)
+var PUBLIC = sdk.Export(getOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
 
-const ToleranceLevel = uint32(4)
-const ReputationBottomCap = uint32(10)
-
 func _init() {
-}
-
-func _formatReputation(addr []byte) []byte {
-	return []byte(fmt.Sprintf("Validator_%s_Rep", hex.EncodeToString(addr)))
-}
-
-func _getReputation(addr []byte) uint32 {
-	return state.ReadUint32(_formatReputation(addr))
-}
-
-func _degradeReputation(addr []byte) {
-	currRep := _getReputation(addr)
-	if currRep < ReputationBottomCap {
-		state.WriteUint32(_formatReputation(addr), currRep+1)
-	}
-}
-
-func _clearReputation(addr []byte) {
-	state.Clear(_formatReputation(addr))
 }
 
 func _getElectedValidators() []byte {

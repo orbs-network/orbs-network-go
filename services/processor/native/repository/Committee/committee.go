@@ -16,8 +16,12 @@ import (
 )
 
 func getOrderedCommittee() []byte {
-	elected := _split(_getElectedValidators())
-	return _concat(_getOrderedCommitteeArray(elected))
+	return getOrderedCommitteeForAddresses(_getElectedValidators())
+}
+
+func getOrderedCommitteeForAddresses(addresses []byte) []byte {
+	addressArray := _split(addresses)
+	return _concat(_getOrderedCommitteeArray(addressArray))
 }
 
 func _getOrderedCommitteeArray(addresses[][]byte) [][]byte {
@@ -26,47 +30,45 @@ func _getOrderedCommitteeArray(addresses[][]byte) [][]byte {
 
 	return _orderList(addresses, seedBytes)
 }
+
 func _orderList(addrs [][]byte, seed []byte) [][]byte {
-	addrsToSort := addrsAndGrades{ addrs, make([]float64, len(addrs))}
+	addrsToSort := addrsAndScores{addrs, make([]float64, len(addrs))}
 	for i, addr := range addrs {
-		addrsToSort.grades[i] = _calculateGradeWithReputation(addr, seed)
+		addrsToSort.scores[i] = _calculateScoreWithReputation(addr, seed)
 	}
 	sort.Sort(addrsToSort)
 	return addrsToSort.addresses
 }
 
-func _calculateGradeWithReputation(addr []byte, seed []byte) float64 {
-	rep := _getReputation(addr)
-	return float64(_calculateGrade(addr, seed)) / _calculateReputationMarkDownFactor(rep)
+func _calculateScoreWithReputation(addr []byte, seed []byte) float64 {
+	rep := getReputation(addr)
+	return float64(_calculateScore(addr, seed)) / _reputationAsFactor(rep)
 }
 
-func _calculateGrade(addr []byte, seed []byte) uint32 {
+func _calculateScore(addr []byte, seed []byte) uint32 {
 	random := hash.CalcSha256(addr, seed)
 	return binary.LittleEndian.Uint32(random[hash.SHA256_HASH_SIZE_BYTES-4:])
 }
 
-func _calculateReputationMarkDownFactor(reputation uint32) float64 {
-	if reputation < ToleranceLevel {
-		return 1.0
-	}
+func _reputationAsFactor(reputation uint32) float64 {
 	return math.Pow(2, float64(reputation))
 }
 
-type addrsAndGrades struct {
+type addrsAndScores struct {
 	addresses [][]byte
-	grades    []float64
+	scores    []float64
 }
 
-func (s addrsAndGrades) Len() int {
+func (s addrsAndScores) Len() int {
 	return len(s.addresses)
 }
 
-func (s addrsAndGrades) Swap(i, j int) {
+func (s addrsAndScores) Swap(i, j int) {
 	s.addresses[i], s.addresses[j] = s.addresses[j], s.addresses[i]
-	s.grades[i], s.grades[j] = s.grades[j], s.grades[i]
+	s.scores[i], s.scores[j] = s.scores[j], s.scores[i]
 }
 
 // descending order
-func (s addrsAndGrades) Less(i, j int) bool {
-	return s.grades[i] > s.grades[j] || (s.grades[i] == s.grades[j] && bytes.Compare(s.addresses[i], s.addresses[j]) > 0)
+func (s addrsAndScores) Less(i, j int) bool {
+	return s.scores[i] > s.scores[j] || (s.scores[i] == s.scores[j] && bytes.Compare(s.addresses[i], s.addresses[j]) > 0)
 }

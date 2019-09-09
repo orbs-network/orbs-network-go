@@ -9,11 +9,17 @@ package committee_systemcontract
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/events"
 )
 
-func updateReputation() {
+const TRIGGER_CONTRACT = "_Triggers" // hard coded to avoid recursive import
+
+func updateMisses() {
+	if len(address.GetSignerAddress()) != 0 && !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)){
+		panic(fmt.Errorf("must be called from %s contract only", TRIGGER_CONTRACT))
+	}
 	elected := _split(_getElectedValidators())
 	ordered := _getOrderedCommitteeArray(elected)
 	blockProposer := env.GetBlockProposerAddress()
@@ -41,12 +47,12 @@ func CommitteeMemberReputationSetEvent(address []byte, reputation uint32) {}
 func _updateOrderedCommittee(orderedCommittee [][]byte, blockProposer []byte)  {
 	for _, member := range orderedCommittee {
 		if bytes.Equal(member, blockProposer) {
-			_clearReputation(member)
+			_clearMiss(member)
 			events.EmitEvent(CommitteeMemberReputationSetEvent, member, uint32(0))
 			break
 		} else {
-			_degradeReputation(member)
-			events.EmitEvent(CommitteeMemberReputationSetEvent, member, _getReputation(member))
+			_addMiss(member)
+			events.EmitEvent(CommitteeMemberReputationSetEvent, member, getMisses(member))
 		}
 	}
 }

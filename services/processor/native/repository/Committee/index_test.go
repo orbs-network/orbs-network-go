@@ -7,7 +7,6 @@
 package committee_systemcontract
 
 import (
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
@@ -27,49 +26,6 @@ func makeNodeAddressArray(n int) [][]byte {
 		addrs = append(addrs, makeNodeAddress(i))
 	}
 	return addrs
-}
-
-func TestOrbsCommitteeContract_getReputaion(t *testing.T) {
-	addr := []byte{0xa1}
-	addr2 := []byte{0xa2}
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-
-		// Prepare
-		state.WriteUint32(_formatReputation(addr), 5)
-
-		// assert
-		addrRep := _getReputation(addr)
-		require.True(t, addrRep == 5, "read value for address was not correct")
-		addr2Rep := _getReputation(addr2)
-		require.True(t, addr2Rep == 0, "new addr should start with 0 reputation")
-	})
-}
-
-func TestOrbsCommitteeContract_degradeReputaion(t *testing.T) {
-	addr := []byte{0xa1}
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-
-		// Prepare
-		moreThanRepCap := int(ReputationBottomCap) + 2
-
-		// assert
-		currRep := _getReputation(addr)
-		require.True(t, currRep == 0, "new addr should start with 0 reputation")
-		for i := 0; i < moreThanRepCap;i++ {
-			_degradeReputation(addr)
-			newRep := _getReputation(addr)
-			if i < int(ReputationBottomCap) {
-				require.EqualValues(t, currRep + 1, newRep, "call to degrade should add 1 to reputation")
-			} else {
-				require.EqualValues(t, ReputationBottomCap, newRep, "cannot go over cap of reputation")
-			}
-			currRep = newRep
-		}
-	})
 }
 
 func TestOrbsCommitteeContract_getElectedValidators(t *testing.T) {

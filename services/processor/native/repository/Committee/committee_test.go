@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-func TestOrbsCommitteeContract_getOrderedCommittee_noReputationMarkDown(t *testing.T) {
+func TestOrbsCommitteeContract_getOrderedCommittee_withoutReputation(t *testing.T) {
 	addrs := makeNodeAddressArray(10)
 	blockHeight := 155
 
@@ -30,12 +30,12 @@ func TestOrbsCommitteeContract_getOrderedCommittee_noReputationMarkDown(t *testi
 		seed := make([]byte, 8)
 		binary.LittleEndian.PutUint64(seed, uint64(blockHeight))
 		copyOfAddrs := make([][]byte, 0, len(addrs)) // must copy list to avoid double sorting.
-		gradesUint32 := make([]uint32, 0, len(addrs))
+		scoresUint32 := make([]uint32, 0, len(addrs))
 		for _, addr := range addrs {
 			copyOfAddrs = append(copyOfAddrs, addr)
-			gradesUint32 = append(gradesUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr, seed)[hash.SHA256_HASH_SIZE_BYTES-4:]))
+			scoresUint32 = append(scoresUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr, seed)[hash.SHA256_HASH_SIZE_BYTES-4:]))
 		}
-		toSort := testSort{addresses: copyOfAddrs, grades: gradesUint32}
+		toSort := testSort{addresses: copyOfAddrs, scores: scoresUint32}
 		sort.Sort(toSort)
 
 		// run
@@ -55,21 +55,21 @@ func TestOrbsCommitteeContract_getOrderedCommittee_SimpleReputationMarkDown(t *t
 
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
-		state.WriteUint32(_formatReputation(addrs[0]), 10)
+		state.WriteUint32(_formatMisses(addrs[0]), 10)
 
 		// sort with simplified calculation
 		seed := make([]byte, 8)
 		binary.LittleEndian.PutUint64(seed, uint64(blockHeight))
 		copyOfAddrs := make([][]byte, 0, len(addrs)) // must copy list to avoid double sorting.
-		gradesUint32 := make([]uint32, 0, len(addrs))
+		scoresUint32 := make([]uint32, 0, len(addrs))
 		for i, addr := range addrs {
 			copyOfAddrs = append(copyOfAddrs, addr)
-			gradesUint32 = append(gradesUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr, seed)[hash.SHA256_HASH_SIZE_BYTES-4:]))
+			scoresUint32 = append(scoresUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr, seed)[hash.SHA256_HASH_SIZE_BYTES-4:]))
 			if i == 0 {
-				gradesUint32[0] = gradesUint32[0] / 1024
+				scoresUint32[0] = scoresUint32[0] / 1024
 			}
 		}
-		toSort := testSort{addresses: copyOfAddrs, grades: gradesUint32}
+		toSort := testSort{addresses: copyOfAddrs, scores: scoresUint32}
 		sort.Sort(toSort)
 
 		// run
@@ -88,12 +88,12 @@ func TestOrbsCommitteeContract_orderList_noReputation_noSeed(t *testing.T) {
 
 		// Prepare do calculation in similar way
 		copyOfAddrs := make([][]byte, 0, len(addrs)) // must copy list to avoid double sorting.
-		gradesUint32 := make([]uint32, 0, len(addrs))
+		scoresUint32 := make([]uint32, 0, len(addrs))
 		for _, addr := range addrs {
 			copyOfAddrs = append(copyOfAddrs, addr)
-			gradesUint32 = append(gradesUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr)[hash.SHA256_HASH_SIZE_BYTES-4:]))
+			scoresUint32 = append(scoresUint32, binary.LittleEndian.Uint32(hash.CalcSha256(addr)[hash.SHA256_HASH_SIZE_BYTES-4:]))
 		}
-		toSort := testSort{addresses: copyOfAddrs, grades: gradesUint32}
+		toSort := testSort{addresses: copyOfAddrs, scores: scoresUint32}
 		sort.Sort(toSort)
 
 		// run with empty seed
@@ -106,7 +106,7 @@ func TestOrbsCommitteeContract_orderList_noReputation_noSeed(t *testing.T) {
 
 type testSort struct {
 	addresses [][]byte
-	grades    []uint32
+	scores    []uint32
 }
 
 func (s testSort) Len() int {
@@ -115,37 +115,28 @@ func (s testSort) Len() int {
 
 func (s testSort) Swap(i, j int) {
 	s.addresses[i], s.addresses[j] = s.addresses[j], s.addresses[i]
-	s.grades[i], s.grades[j] = s.grades[j], s.grades[i]
+	s.scores[i], s.scores[j] = s.scores[j], s.scores[i]
 }
 
 // descending order
 func (s testSort) Less(i, j int) bool {
-	return s.grades[i] > s.grades[j]
+	return s.scores[i] > s.scores[j]
 }
 
-func TestOrbsCommitteeContract_calculateGrade(t *testing.T) {
+func TestOrbsCommitteeContract_calculateScore(t *testing.T) {
 	addr := []byte{0xa1, 0x33}
 	var emptySeed = []byte{}
 	nonEmptySeed := []byte{0x44}
 	nonEmptySeedOneBitDiff := []byte{0x43}
 
-	gradeWithEmpty := _calculateGrade(addr, emptySeed)
-	gradeWithNonEmpty := _calculateGrade(addr, nonEmptySeed)
-	gradeWithNonEmptyOneBitDiff := _calculateGrade(addr, nonEmptySeedOneBitDiff)
+	scoreWithEmpty := _calculateScore(addr, emptySeed)
+	scoreWithNonEmpty := _calculateScore(addr, nonEmptySeed)
+	scoreWithNonEmptyOneBitDiff := _calculateScore(addr, nonEmptySeedOneBitDiff)
 
 	shaOfAddrWithNoSeed := hash.CalcSha256(addr)
-	expectedGradeWithEmpty :=  binary.LittleEndian.Uint32(shaOfAddrWithNoSeed[hash.SHA256_HASH_SIZE_BYTES-4:])
+	expectedScoreWithEmpty :=  binary.LittleEndian.Uint32(shaOfAddrWithNoSeed[hash.SHA256_HASH_SIZE_BYTES-4:])
 
-	require.Equal(t, expectedGradeWithEmpty, gradeWithEmpty, "for grade with empty seed doesn't match expected")
-	require.NotEqual(t, gradeWithNonEmpty, gradeWithEmpty, "for grade with and without seed must not match")
-	require.NotEqual(t, gradeWithNonEmpty, gradeWithNonEmptyOneBitDiff, "grade is diff even with one bit difference in seed")
-}
-
-func TestOrbsCommitteeContract_calculateReputationMarkDownFactor(t *testing.T) {
-	markdowns := []float64{1, 1, 1, 1, 16, 32, 64, 128, 256, 512, 1024}
-	require.Len(t, markdowns, int(ReputationBottomCap) + 1, "reputation cap has been change and doesn't fit markdown list")
-	for i := 0; i < len(markdowns) ;i++ {
-		repMarkDown := _calculateReputationMarkDownFactor(uint32(i))
-		require.EqualValues(t, markdowns[i], repMarkDown, "for rep %d markdown is wrong", i)
-	}
+	require.Equal(t, expectedScoreWithEmpty, scoreWithEmpty, "for score with empty seed doesn't match expected")
+	require.NotEqual(t, scoreWithNonEmpty, scoreWithEmpty, "for score with and without seed must not match")
+	require.NotEqual(t, scoreWithNonEmpty, scoreWithNonEmptyOneBitDiff, "score is diff even with one bit difference in seed")
 }

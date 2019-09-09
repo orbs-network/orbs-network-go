@@ -13,13 +13,15 @@ import (
 	"testing"
 )
 
-func TestOrbsCommitteeContract_updateReputation(t *testing.T) {
+func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
+	callerAddress := []byte{0x01}
 	addrs := makeNodeAddressArray(1) // only one addr so that there is no ordering this test only checks the no-panic
 
-	InServiceScope(nil, nil, func(m Mockery) {
+	InServiceScope(nil, callerAddress, func(m Mockery) {
 		_init()
 
 		// prepare
+		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
 		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{addrs[0]})
 		m.MockEnvBlockProposerAddress(addrs[0])
 		m.MockEnvBlockHeight(155)
@@ -27,25 +29,56 @@ func TestOrbsCommitteeContract_updateReputation(t *testing.T) {
 
 		// run & assert
 		require.NotPanics(t, func() {
-			updateReputation()
+			updateMisses()
 		}, "should not panic because it found who to update in committee")
 	})
 }
 
-func TestOrbsCommitteeContract_updateReputation_notFoundPanics(t *testing.T) {
-	addrs := makeNodeAddressArray(1) // only one addr so that there is no ordering this test only checks the no-panic
+func TestOrbsCommitteeContract_updateMisses_SignerExistsPanics(t *testing.T) {
+	signerAddress := AnAddress()
 
-	InServiceScope(nil, nil, func(m Mockery) {
+	InServiceScope(signerAddress, nil, func(m Mockery) {
+		_init()
+
+		// run & assert
+		require.Panics(t, func() {
+			updateMisses()
+		}, "should panic because a signer exists")
+	})
+}
+
+func TestOrbsCommitteeContract_updateMisses_CallerNotTriggerPanics(t *testing.T) {
+	callerAddress := AnAddress()
+
+	InServiceScope(nil, callerAddress, func(m Mockery) {
 		_init()
 
 		// prepare
+		m.MockCallContractAddress(TRIGGER_CONTRACT, []byte{0x01})
+
+		// run & assert
+		require.Panics(t, func() {
+			updateMisses()
+		}, "should panic because a caller that is not tirgger exits exists")
+	})
+}
+
+func TestOrbsCommitteeContract_updateMisses_BlockProducerNotFoundPanics(t *testing.T) {
+	callerAddress := []byte{0x01}
+	addrs := makeNodeAddressArray(1) // only one addr so that there is no ordering this test only checks the no-panic
+
+	InServiceScope(nil, callerAddress, func(m Mockery) {
+		_init()
+
+		// prepare
+		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
 		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{addrs[0]})
 		m.MockEnvBlockProposerAddress(makeNodeAddress(77)) // non-committee address
 		m.MockEnvBlockHeight(155)
 
 		// run & aassert
 		require.Panics(t, func() {
-			updateReputation()
+			updateMisses()
 		}, "should panic because proposer is not part of committee")
 	})
 }
@@ -59,7 +92,7 @@ func TestOrbsCommitteeContract_updateOrderedCommittee(t *testing.T) {
 
 		// prepare // all have
 		for i, addr := range addrs {
-			_degradeReputation(addr)
+			_addMiss(addr)
 			if i < blockProposerInd {
 				m.MockEmitEvent(CommitteeMemberReputationSetEvent, addr, uint32(2))
 			} else if i == blockProposerInd {
@@ -72,7 +105,7 @@ func TestOrbsCommitteeContract_updateOrderedCommittee(t *testing.T) {
 
 		//assert
 		for i, addr := range addrs {
-			reputaion := _getReputation(addr)
+			reputaion := getMisses(addr)
 			if i < blockProposerInd {
 				require.EqualValues(t, 2, reputaion)
 			} else if i == blockProposerInd {
