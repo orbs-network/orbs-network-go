@@ -17,7 +17,7 @@ import (
 const TRIGGER_CONTRACT = "_Triggers" // hard coded to avoid recursive import
 
 func updateMisses() {
-	if len(address.GetSignerAddress()) != 0 && !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)){
+	if !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)){
 		panic(fmt.Errorf("must be called from %s contract only", TRIGGER_CONTRACT))
 	}
 	elected := _split(_getElectedValidators())
@@ -27,7 +27,7 @@ func updateMisses() {
 	if !_isMemberOfOrderedCommittee(ordered, blockProposer) {
 		panic(fmt.Errorf("block proposer address from %x was not found in committee of block height %d", blockProposer, env.GetBlockHeight()))
 	}
-	_updateOrderedCommittee(ordered, blockProposer)
+	_updateMissesByCommitteeOrder(ordered, blockProposer)
 }
 
 /*
@@ -43,16 +43,17 @@ func _isMemberOfOrderedCommittee(orderedCommittee [][]byte, blockProposer []byte
 	return false
 }
 
-func CommitteeMemberReputationSetEvent(address []byte, reputation uint32) {}
-func _updateOrderedCommittee(orderedCommittee [][]byte, blockProposer []byte)  {
+func CommitteeMemberClosedBlock(address []byte) {}
+func CommitteeMemberMissed(address []byte) {}
+func _updateMissesByCommitteeOrder(orderedCommittee [][]byte, blockProposer []byte)  {
 	for _, member := range orderedCommittee {
 		if bytes.Equal(member, blockProposer) {
 			_clearMiss(member)
-			events.EmitEvent(CommitteeMemberReputationSetEvent, member, uint32(0))
+			events.EmitEvent(CommitteeMemberClosedBlock, member)
 			break
 		} else {
 			_addMiss(member)
-			events.EmitEvent(CommitteeMemberReputationSetEvent, member, getMisses(member))
+			events.EmitEvent(CommitteeMemberMissed, member)
 		}
 	}
 }

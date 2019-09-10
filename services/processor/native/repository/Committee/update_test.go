@@ -25,25 +25,12 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{addrs[0]})
 		m.MockEnvBlockProposerAddress(addrs[0])
 		m.MockEnvBlockHeight(155)
-		m.MockEmitEvent(CommitteeMemberReputationSetEvent, addrs[0], uint32(0))
+		m.MockEmitEvent(CommitteeMemberClosedBlock, addrs[0])
 
 		// run & assert
 		require.NotPanics(t, func() {
 			updateMisses()
 		}, "should not panic because it found who to update in committee")
-	})
-}
-
-func TestOrbsCommitteeContract_updateMisses_SignerExistsPanics(t *testing.T) {
-	signerAddress := AnAddress()
-
-	InServiceScope(signerAddress, nil, func(m Mockery) {
-		_init()
-
-		// run & assert
-		require.Panics(t, func() {
-			updateMisses()
-		}, "should panic because a signer exists")
 	})
 }
 
@@ -83,7 +70,7 @@ func TestOrbsCommitteeContract_updateMisses_BlockProducerNotFoundPanics(t *testi
 	})
 }
 
-func TestOrbsCommitteeContract_updateOrderedCommittee(t *testing.T) {
+func TestOrbsCommitteeContract_updateMissesByCommitteeOrder(t *testing.T) {
 	addrs := makeNodeAddressArray(8)
 	blockProposerInd := 3
 
@@ -94,30 +81,30 @@ func TestOrbsCommitteeContract_updateOrderedCommittee(t *testing.T) {
 		for i, addr := range addrs {
 			_addMiss(addr)
 			if i < blockProposerInd {
-				m.MockEmitEvent(CommitteeMemberReputationSetEvent, addr, uint32(2))
+				m.MockEmitEvent(CommitteeMemberMissed, addr)
 			} else if i == blockProposerInd {
-				m.MockEmitEvent(CommitteeMemberReputationSetEvent, addr, uint32(0))
+				m.MockEmitEvent(CommitteeMemberClosedBlock, addr)
 			}
 		}
 
 		// run
-		_updateOrderedCommittee(addrs, addrs[blockProposerInd])
+		_updateMissesByCommitteeOrder(addrs, addrs[blockProposerInd])
 
 		//assert
 		for i, addr := range addrs {
-			reputaion := getMisses(addr)
+			misses := getMisses(addr)
 			if i < blockProposerInd {
-				require.EqualValues(t, 2, reputaion)
+				require.EqualValues(t, 2, misses)
 			} else if i == blockProposerInd {
-				require.EqualValues(t, 0, reputaion)
+				require.EqualValues(t, 0, misses)
 			} else {
-				require.EqualValues(t, 1, reputaion)
+				require.EqualValues(t, 1, misses)
 			}
 		}
 	})
 }
 
-func TestOrbsCommitteeContract_updateOrderedCommittee_notFound(t *testing.T) {
+func TestOrbsCommitteeContract_updateMissesByCommitteeOrder_notFound(t *testing.T) {
 	addrs := makeNodeAddressArray(8)
 	blockProposer := makeNodeAddress(25)
 
@@ -126,11 +113,11 @@ func TestOrbsCommitteeContract_updateOrderedCommittee_notFound(t *testing.T) {
 
 		// prepare
 		for _, addr := range addrs {
-			m.MockEmitEvent(CommitteeMemberReputationSetEvent, addr, uint32(1))
+			m.MockEmitEvent(CommitteeMemberMissed, addr)
 		}
 
 		// run
-		_updateOrderedCommittee(addrs, blockProposer)
+		_updateMissesByCommitteeOrder(addrs, blockProposer)
 
 		// assert done for emit by InService
 	})
