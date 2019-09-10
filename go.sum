@@ -152,6 +152,7 @@ github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+W
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/orbs-network/contract-external-libraries-go v1.0.0 h1:l98GWCl57weWF9SGGf6U1ZlvlFsWwe6Cpfo8gfgtTDg=
+github.com/orbs-network/contract-external-libraries-go v1.0.0/go.mod h1:g0vAR4pVmqxd0u1ZwTjQDcCFDehGS6TLK3q/qBpUUHQ=
 github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-17ee9ed1b882 h1:ItKvmrc2rgyTHIwy2KPqEdTItBqYtoJ1AyJJipSLH2M=
 github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-17ee9ed1b882/go.mod h1:g0vAR4pVmqxd0u1ZwTjQDcCFDehGS6TLK3q/qBpUUHQ=
 github.com/orbs-network/go-mock v0.0.0-20180813130752-890a1ee8d0a1/go.mod h1:Hfj5NDPp07PIkGv5y8g1C0zsMXbrVTPQVIvSuHSHyvo=
@@ -179,6 +180,8 @@ github.com/orbs-network/orbs-client-sdk-go v0.8.1 h1:TGakuxt8MO22SgO9H1BEsnImSY+
 github.com/orbs-network/orbs-client-sdk-go v0.8.1/go.mod h1:G2CJh+3UoKD1S2Z7Kzdt5cAh+kTinKFHLyGeOEUj1sA=
 github.com/orbs-network/orbs-client-sdk-go v0.9.0 h1:tl0wxD8gSCXGO1moMMznqs6RDtHOSD2EbPzWAu++X94=
 github.com/orbs-network/orbs-client-sdk-go v0.9.0/go.mod h1:G2CJh+3UoKD1S2Z7Kzdt5cAh+kTinKFHLyGeOEUj1sA=
+github.com/orbs-network/orbs-contract-sdk v0.0.0-20190828114158-2c8af5a6bad7 h1:Os2+Cm9LxBiZwP9IAxf3JuJnkmGKg//JkdXpTZ/tlh8=
+github.com/orbs-network/orbs-contract-sdk v0.0.0-20190828114158-2c8af5a6bad7/go.mod h1:TCbjeaoiKnI6U7P6PZiiwUxFg1JYuNkilfNqdbKA574=
 github.com/orbs-network/orbs-contract-sdk v1.0.0 h1:vWMnCVEDexUqZDZ44x2eItwsAtwqMka14w129rQzsdM=
 github.com/orbs-network/orbs-contract-sdk v1.0.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a h1:3Tl/amE2K9MajPF4tIe05HaH5XR4TAXNo1dahyU8JNI=
