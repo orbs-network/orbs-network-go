@@ -22,10 +22,11 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 	block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 
 	input := &services.ValidateTransactionsBlockInput{
-		CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
-		TransactionsBlock:  block.TransactionsBlock,
-		PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
-		PrevBlockTimestamp: block.TransactionsBlock.Header.Timestamp() - 1000,
+		CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
+		TransactionsBlock:    block.TransactionsBlock,
+		PrevBlockHash:        block.TransactionsBlock.Header.PrevBlockHashPtr(),
+		PrevBlockTimestamp:   block.TransactionsBlock.Header.Timestamp() - 1000,
+		BlockProposerAddress: block.TransactionsBlock.Header.BlockProposerAddress(),
 	}
 
 	return input
@@ -61,11 +62,12 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 	block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 
 	input := &services.ValidateResultsBlockInput{
-		CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
-		TransactionsBlock:  block.TransactionsBlock,
-		PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
-		PrevBlockTimestamp: block.TransactionsBlock.Header.Timestamp() - 1000,
-		ResultsBlock:       block.ResultsBlock,
+		CurrentBlockHeight:   block.ResultsBlock.Header.BlockHeight(),
+		TransactionsBlock:    block.TransactionsBlock,
+		PrevBlockHash:        block.TransactionsBlock.Header.PrevBlockHashPtr(),
+		PrevBlockTimestamp:   block.TransactionsBlock.Header.Timestamp() - 1000,
+		ResultsBlock:         block.ResultsBlock,
+		BlockProposerAddress: block.ResultsBlock.Header.BlockProposerAddress(),
 	}
 
 	return input

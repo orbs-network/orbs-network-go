@@ -92,7 +92,7 @@ func (d *Driver) ReadKeysFromRevision(ctx context.Context, revision int, contrac
 }
 
 func (d *Driver) GetBlockHeightAndTimestamp(ctx context.Context) (int, int, error) {
-	output, err := d.service.GetStateStorageBlockHeight(ctx, &services.GetStateStorageBlockHeightInput{})
+	output, err := d.service.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
 	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
 }
 

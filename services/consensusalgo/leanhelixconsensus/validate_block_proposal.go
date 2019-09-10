@@ -28,8 +28,8 @@ type validateBlockProposalContext struct {
 }
 
 // Block height is unused - the spec of ValidateBlockProposal() prepares for a height-based config but it is not part of v1
-func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) error {
-	return validateBlockProposalInternal(ctx, block, blockHash, prevBlock, &validateBlockProposalContext{
+func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight lhprimitives.BlockHeight, blockProposer lhprimitives.MemberId, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block) error {
+	return validateBlockProposalInternal(ctx, block, blockHash, blockProposer, prevBlock, &validateBlockProposalContext{
 		validateTransactionsBlock: p.consensusContext.ValidateTransactionsBlock,
 		validateResultsBlock:      p.consensusContext.ValidateResultsBlock,
 		validateBlockHash:         validateBlockHash_Proposal,
@@ -37,7 +37,7 @@ func (p *blockProvider) ValidateBlockProposal(ctx context.Context, blockHeight l
 	})
 }
 
-func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHash lhprimitives.BlockHash, prevBlock lh.Block, vctx *validateBlockProposalContext) error {
+func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHash lhprimitives.BlockHash, blockProposer lhprimitives.MemberId, prevBlock lh.Block, vctx *validateBlockProposalContext) error {
 	blockPair := FromLeanHelixBlock(block)
 
 	if blockPair == nil || blockPair.TransactionsBlock == nil || blockPair.ResultsBlock == nil {
@@ -45,6 +45,8 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 	}
 
 	newBlockHeight := primitives.BlockHeight(1)
+	blockProposerAddress := primitives.NodeAddress(blockProposer) // TODO Noam maybe need an empty convertor in lhprimitives
+
 	var prevTxBlockHash primitives.Sha256
 	var prevRxBlockHash primitives.Sha256
 	//var prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) - 1
@@ -60,21 +62,23 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 	}
 
 	_, err := vctx.validateTransactionsBlock(ctx, &services.ValidateTransactionsBlockInput{
-		CurrentBlockHeight: newBlockHeight,
-		TransactionsBlock:  blockPair.TransactionsBlock,
-		PrevBlockHash:      prevTxBlockHash,
-		PrevBlockTimestamp: prevBlockTimestamp,
+		CurrentBlockHeight:   newBlockHeight,
+		TransactionsBlock:    blockPair.TransactionsBlock,
+		PrevBlockHash:        prevTxBlockHash,
+		PrevBlockTimestamp:   prevBlockTimestamp,
+		BlockProposerAddress: blockProposerAddress,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateTransactionsBlock, newBlockHeight=%d", newBlockHeight)
 	}
 
 	_, err = vctx.validateResultsBlock(ctx, &services.ValidateResultsBlockInput{
-		CurrentBlockHeight: newBlockHeight,
-		ResultsBlock:       blockPair.ResultsBlock,
-		PrevBlockHash:      prevRxBlockHash,
-		TransactionsBlock:  blockPair.TransactionsBlock,
-		PrevBlockTimestamp: prevBlockTimestamp,
+		CurrentBlockHeight:   newBlockHeight,
+		ResultsBlock:         blockPair.ResultsBlock,
+		PrevBlockHash:        prevRxBlockHash,
+		TransactionsBlock:    blockPair.TransactionsBlock,
+		PrevBlockTimestamp:   prevBlockTimestamp,
+		BlockProposerAddress: blockProposerAddress,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateResultsBlock, newBlockHeight=%d", newBlockHeight)

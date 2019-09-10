@@ -29,6 +29,7 @@ type revisionDiff struct {
 	merkleRoot primitives.Sha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
+	proposer   primitives.NodeAddress
 }
 
 type rollingRevisions struct {
@@ -40,13 +41,15 @@ type rollingRevisions struct {
 	currentHeight      primitives.BlockHeight
 	currentTs          primitives.TimestampNano
 	currentMerkleRoot  primitives.Sha256
+	currentProposer	   primitives.NodeAddress
 	persistedHeight    primitives.BlockHeight
 	persistedRoot      primitives.Sha256
 	persistedTs        primitives.TimestampNano
+	persistedProposer  primitives.NodeAddress
 }
 
 func newRollingRevisions(logger log.Logger, persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
-	h, ts, r, err := persist.ReadMetadata()
+	h, ts, pa, r, err := persist.ReadMetadata()
 	if err != nil {
 		panic(fmt.Sprintf("could not load state metadata, err=%s", err.Error()))
 	}
@@ -58,9 +61,11 @@ func newRollingRevisions(logger log.Logger, persist adapter.StatePersistence, tr
 		merkle:             merkle,
 		currentHeight:      h,
 		currentTs:          ts,
+		currentProposer:    pa,
 		currentMerkleRoot:  r,
 		persistedHeight:    h,
 		persistedTs:        ts,
+		persistedProposer:  pa,
 		persistedRoot:      r,
 	}
 
@@ -75,7 +80,11 @@ func (ls *rollingRevisions) getCurrentTimestamp() primitives.TimestampNano {
 	return ls.currentTs
 }
 
-func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, diff adapter.ChainState) error {
+func (ls *rollingRevisions) getCurrentProposerAddress() primitives.NodeAddress {
+	return ls.currentProposer
+}
+
+func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, diff adapter.ChainState) error {
 	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, toMerkleInput(diff))
 	if err != nil {
 		return errors.Wrapf(err, "failed to updated merkle tree")
@@ -86,6 +95,7 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		merkleRoot: newRoot,
 		height:     height,
 		ts:         ts,
+		proposer:   proposer,
 	})
 	ls.currentHeight = height
 	ls.currentTs = ts
@@ -115,7 +125,7 @@ func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
 func (ls *rollingRevisions) evictRevisions() error {
 	for len(ls.revisions) > ls.transientRevisions {
 		d := ls.revisions[0]
-		err := ls.persist.Write(d.height, d.ts, d.merkleRoot, d.diff)
+		err := ls.persist.Write(d.height, d.ts, d.proposer, d.merkleRoot, d.diff)
 		if err != nil {
 			return err
 		}
@@ -123,6 +133,7 @@ func (ls *rollingRevisions) evictRevisions() error {
 
 		ls.persistedHeight = d.height
 		ls.persistedTs = d.ts
+		ls.persistedProposer = d.proposer
 		ls.persistedRoot = d.merkleRoot
 		ls.revisions = ls.revisions[1:]
 	}

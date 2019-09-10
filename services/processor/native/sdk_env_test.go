@@ -32,6 +32,13 @@ func TestSdkEnv_GetBlockTimestamp(t *testing.T) {
 	require.EqualValues(t, height, uint64(12), "block timestamp should be returned")
 }
 
+func TestSdkEnv_GetBlockProposerAddress(t *testing.T) {
+	s := createEnvSdk()
+
+	addr := s.SdkEnvGetBlockProposerAddress(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
+	require.EqualValues(t, addr, []byte{0x01, 0x02}, "block proposer should be returned")
+}
+
 func TestSdkEnv_GetVirtualChainId(t *testing.T) {
 	s := &service{config: config.ForNativeProcessorTests(42)}
 	vcid := s.SdkEnvGetVirtualChainId(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
@@ -57,6 +64,10 @@ func (c *contractSdkEnvCallHandlerStub) HandleSdkCall(ctx context.Context, input
 	case "getBlockTimestamp":
 		return &handlers.HandleSdkCallOutput{
 			OutputArguments: builders.Arguments(uint64(12)),
+		}, nil
+	case "getBlockProposerAddress":
+		return &handlers.HandleSdkCallOutput{
+			OutputArguments: builders.Arguments([]byte{0x01, 0x02}),
 		}, nil
 	default:
 		return nil, errors.New("unknown method")

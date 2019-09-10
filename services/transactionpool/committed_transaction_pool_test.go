@@ -19,8 +19,6 @@ import (
 )
 
 func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
-	t.Parallel()
-
 	test.WithContext(func(ctx context.Context) {
 		p := NewCommittedPool(func() time.Duration { return time.Second }, metric.NewRegistry())
 		ctrlRand := rand.NewControlledRand(t)

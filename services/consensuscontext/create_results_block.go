@@ -23,6 +23,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 		SignedTransactions:    input.TransactionsBlock.SignedTransactions,
 		CurrentBlockHeight:    input.CurrentBlockHeight,
 		CurrentBlockTimestamp: input.TransactionsBlock.Header.Timestamp(),
+		BlockProposerAddress:  input.BlockProposerAddress,
 	})
 	s.metrics.processTransactionsSeInCreateResultsBlock.RecordSince(start)
 	if err != nil {
@@ -65,6 +66,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 			PreExecutionStateMerkleRootHash: preExecutionStateRootHash.StateMerkleRootHash,
 			NumTransactionReceipts:          uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:           uint32(len(output.ContractStateDiffs)),
+			BlockProposerAddress: 			 input.BlockProposerAddress,
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,

@@ -32,10 +32,8 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	newHarness().
 		WithInitialBlocks(blocks).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
-		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+		//AllowingErrors().
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 

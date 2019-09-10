@@ -20,8 +20,8 @@ if [[ "${LAST_COMMIT_MESSAGE}" == *"#extraflaky"* ]]; then
     FAILFAST=""
     TIMEOUT_ACCEPTANCE="500m"
     TIMEOUT_REST="500m"
-    COUNT_ACCEPTANCE=50
-    COUNT_REST=50
+    COUNT_ACCEPTANCE=30
+    COUNT_REST=30
 fi
 
 if [[ $1 == "NIGHTLY" ]]; then
@@ -35,8 +35,8 @@ if [[ $1 == "NIGHTLY" ]]; then
     TIMEOUT_ACCEPTANCE="500m"
     TIMEOUT_REST="500m"
     # The number here have been reduced since we use paralleism 6 to run 500 tests in 6 different processes
-    COUNT_ACCEPTANCE=50
-    COUNT_REST=50
+    COUNT_ACCEPTANCE=30
+    COUNT_REST=30
 fi
 
 if [ "$CIRCLE_NODE_INDEX" == 0 ] || [ "$CIRCLE_NODE_INDEX" == 1 ] || [ "$CIRCLE_NODE_INDEX" == 2 ] || [ "$CIRCLE_NODE_INDEX" == 3 ] || [ -z "$CIRCLE_NODE_INDEX" ]; then
