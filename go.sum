@@ -158,6 +158,8 @@ github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-1
 github.com/orbs-network/go-mock v0.0.0-20180813130752-890a1ee8d0a1/go.mod h1:Hfj5NDPp07PIkGv5y8g1C0zsMXbrVTPQVIvSuHSHyvo=
 github.com/orbs-network/go-mock v1.0.0 h1:H72P5wFQZ+7tIBDrH3/xDLvWS1GjNyIyO9Dg1tC7tgU=
 github.com/orbs-network/go-mock v1.0.0/go.mod h1:vNTkjf76K7Czx7lSNojqdi9DKP5uG81/LKq4PwNGXC8=
+github.com/orbs-network/go-mock v1.0.1 h1:slN/d9GY/inLxflgivn2rpFb7/peFlXmuf7ZKSu36hU=
+github.com/orbs-network/go-mock v1.0.1/go.mod h1:vNTkjf76K7Czx7lSNojqdi9DKP5uG81/LKq4PwNGXC8=
 github.com/orbs-network/gojay v1.3.0 h1:TDqmmbgwHum9oXq1iexd+J+IUBm4/gtlyoOP5HV8rvw=
 github.com/orbs-network/gojay v1.3.0/go.mod h1:xdSp1mz0+DL+c6OLsbZ5qB/Gtygikcr5NdSsU1GsRC0=
 github.com/orbs-network/govnr v0.1.1-0.20190812133439-f80123125782 h1:ppZiet0zkvmNq3dCL7q00y/ZAP0kPXvId2bcMsOJZoM=
