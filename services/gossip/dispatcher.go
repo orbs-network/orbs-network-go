@@ -104,7 +104,7 @@ type gossipMessageDispatcher struct {
 func newMessageDispatcher(registry metric.Registry, logger log.Logger) (d *gossipMessageDispatcher) {
 
 	d = &gossipMessageDispatcher{
-		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, 100),   // transaction pool might block on adding new transactions, for instance while committing a block
+		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, 200),   // transaction pool might block on adding new transactions, for instance while committing a block
 		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger, 10),           // low value assuming that handling block sync messages doesn't block
 		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger, 100), // handlers performs I/O operations and require buffering of requests
 		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger, 20),  // under heavy load benchmark consensus has been observed to slow down, failing to pick messages up from the topic fast enough
