@@ -151,6 +151,9 @@ github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXW
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/orbs-network/contract-external-libraries-go v1.0.0 h1:l98GWCl57weWF9SGGf6U1ZlvlFsWwe6Cpfo8gfgtTDg=
+github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-17ee9ed1b882 h1:ItKvmrc2rgyTHIwy2KPqEdTItBqYtoJ1AyJJipSLH2M=
+github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-17ee9ed1b882/go.mod h1:g0vAR4pVmqxd0u1ZwTjQDcCFDehGS6TLK3q/qBpUUHQ=
 github.com/orbs-network/go-mock v0.0.0-20180813130752-890a1ee8d0a1/go.mod h1:Hfj5NDPp07PIkGv5y8g1C0zsMXbrVTPQVIvSuHSHyvo=
 github.com/orbs-network/go-mock v1.0.0 h1:H72P5wFQZ+7tIBDrH3/xDLvWS1GjNyIyO9Dg1tC7tgU=
 github.com/orbs-network/go-mock v1.0.0/go.mod h1:vNTkjf76K7Czx7lSNojqdi9DKP5uG81/LKq4PwNGXC8=
@@ -162,6 +165,8 @@ github.com/orbs-network/lean-helix-go v0.1.0 h1:5XJGmawQLHP6fU1qQVhGqmy7vGqj7Hax
 github.com/orbs-network/lean-helix-go v0.1.0/go.mod h1:5rwrEDTihwzH87G8padLfRuFOGSgvwZ7iv/yn3hUaB8=
 github.com/orbs-network/lean-helix-go v0.2.0 h1:NypyYNLR8D/fRq2K9GZPRHQusxghXRpcfik0YrLCUGM=
 github.com/orbs-network/lean-helix-go v0.2.0/go.mod h1:5rwrEDTihwzH87G8padLfRuFOGSgvwZ7iv/yn3hUaB8=
+github.com/orbs-network/lean-helix-go v0.2.1-0.20190826114939-2b88a2a2534b h1:msjHsCSRh0DiEkRJ9+ctqoVEwh8KMLcSCNb3r0V/Ks8=
+github.com/orbs-network/lean-helix-go v0.2.1-0.20190826114939-2b88a2a2534b/go.mod h1:5rwrEDTihwzH87G8padLfRuFOGSgvwZ7iv/yn3hUaB8=
 github.com/orbs-network/membuffers v0.0.0-20190324163848-d8b55355b285/go.mod h1:ZsfRFu9R4z2wbLlaDLp6NQ6QeM+2nyraw0QfMmQKUS4=
 github.com/orbs-network/membuffers v0.3.0 h1:EYtF1T/VBsi6DGPVS/Xbcei+Vn86fEJ/jJESFiiAqfg=
 github.com/orbs-network/membuffers v0.3.0/go.mod h1:b6+sJ9+pgca7HHle0e85RDd5zL0Hv360Xec7TGVrGFk=
@@ -172,6 +177,8 @@ github.com/orbs-network/orbs-client-sdk-go v0.8.0 h1:WmgDbIQWEdStDP5hJUvyM6+bfsu
 github.com/orbs-network/orbs-client-sdk-go v0.8.0/go.mod h1:K1mQJTjONOFvQPD9ieiYse1gY1FMd926YYVfeoZJfa4=
 github.com/orbs-network/orbs-client-sdk-go v0.8.1 h1:TGakuxt8MO22SgO9H1BEsnImSY+CcWOS2O2ItDcIMNc=
 github.com/orbs-network/orbs-client-sdk-go v0.8.1/go.mod h1:G2CJh+3UoKD1S2Z7Kzdt5cAh+kTinKFHLyGeOEUj1sA=
+github.com/orbs-network/orbs-client-sdk-go v0.9.0 h1:tl0wxD8gSCXGO1moMMznqs6RDtHOSD2EbPzWAu++X94=
+github.com/orbs-network/orbs-client-sdk-go v0.9.0/go.mod h1:G2CJh+3UoKD1S2Z7Kzdt5cAh+kTinKFHLyGeOEUj1sA=
 github.com/orbs-network/orbs-contract-sdk v1.0.0 h1:vWMnCVEDexUqZDZ44x2eItwsAtwqMka14w129rQzsdM=
 github.com/orbs-network/orbs-contract-sdk v1.0.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a h1:3Tl/amE2K9MajPF4tIe05HaH5XR4TAXNo1dahyU8JNI=
@@ -180,6 +187,10 @@ github.com/orbs-network/orbs-spec v0.0.0-20190724141904-e35d6333ac7e h1:JNo8H2AS
 github.com/orbs-network/orbs-spec v0.0.0-20190724141904-e35d6333ac7e/go.mod h1:JUu42kZ9TWx9cMUj6hOCgngRMxNMUkOpTCIO9MjqMkY=
 github.com/orbs-network/orbs-spec v0.0.0-20190807075255-83ec14da0243 h1:SmXbX+3uiZmjsaxAKiG0ZFVbwY7yH4jwM1qhI94hT8Y=
 github.com/orbs-network/orbs-spec v0.0.0-20190807075255-83ec14da0243/go.mod h1:JUu42kZ9TWx9cMUj6hOCgngRMxNMUkOpTCIO9MjqMkY=
+github.com/orbs-network/orbs-spec v0.0.0-20190822073353-0fcf836e7099 h1:mW41Bg5VMfz8zsc9JLaqPXrIlO1o/D+8H52eILCwF70=
+github.com/orbs-network/orbs-spec v0.0.0-20190822073353-0fcf836e7099/go.mod h1:JUu42kZ9TWx9cMUj6hOCgngRMxNMUkOpTCIO9MjqMkY=
+github.com/orbs-network/orbs-spec v0.0.0-20190827140536-6bf7af9d4370 h1:X8aD58IFfsnKxwj+R0Sp5dc01v03XNNmZ3B+0hUG6J8=
+github.com/orbs-network/orbs-spec v0.0.0-20190827140536-6bf7af9d4370/go.mod h1:JUu42kZ9TWx9cMUj6hOCgngRMxNMUkOpTCIO9MjqMkY=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0 h1:Kn/EQpifQFae+F7HRIoTIipUsSHZNcfQ3HJOhD/b+8M=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
