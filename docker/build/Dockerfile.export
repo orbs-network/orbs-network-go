@@ -4,7 +4,7 @@ RUN apt-get install -y git
 
 RUN mkdir -p /src/_tmp/processor-artifacts/native-src/ && \
     cd /src/_tmp/processor-artifacts/native-src/ && \
-    go mod init native-src && go get github.com/orbs-network/orbs-contract-sdk@v1.0.0 && \
+    go mod init native-src && go get github.com/orbs-network/orbs-contract-sdk@v1.1.0 && \
     go get golang.org/x/crypto@c126467
 
 ADD ./_bin/orbs-node /opt/orbs/

@@ -190,6 +190,8 @@ github.com/orbs-network/orbs-contract-sdk v0.0.0-20190828114158-2c8af5a6bad7 h1:
 github.com/orbs-network/orbs-contract-sdk v0.0.0-20190828114158-2c8af5a6bad7/go.mod h1:TCbjeaoiKnI6U7P6PZiiwUxFg1JYuNkilfNqdbKA574=
 github.com/orbs-network/orbs-contract-sdk v1.0.0 h1:vWMnCVEDexUqZDZ44x2eItwsAtwqMka14w129rQzsdM=
 github.com/orbs-network/orbs-contract-sdk v1.0.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
+github.com/orbs-network/orbs-contract-sdk v1.1.0 h1:XnFgCQZqgX7ErSOAS7mtxc884vqWXRyBZT/fcpwK4eQ=
+github.com/orbs-network/orbs-contract-sdk v1.1.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a h1:3Tl/amE2K9MajPF4tIe05HaH5XR4TAXNo1dahyU8JNI=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a/go.mod h1:9Bv/kJ/Q7cIlIYmlzsBHelseVJmyw2zywuW3TSvQX5g=
 github.com/orbs-network/orbs-spec v0.0.0-20190724141904-e35d6333ac7e h1:JNo8H2ASFC2zZb7UL1e+2kvGzjLuMxTsZBbwQu1bfm8=
