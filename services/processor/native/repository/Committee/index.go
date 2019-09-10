@@ -21,6 +21,7 @@ const METHOD_UPDATE_MISSES = "updateMisses"
 
 var PUBLIC = sdk.Export(getOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
+var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 
 func _init() {
 }
