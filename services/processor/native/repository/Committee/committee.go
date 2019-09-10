@@ -25,10 +25,13 @@ func getOrderedCommitteeForAddresses(addresses []byte) []byte {
 }
 
 func _getOrderedCommitteeArray(addresses[][]byte) [][]byte {
+	return _orderList(addresses, _generateSeed())
+}
+
+func _generateSeed() []byte {
 	seedBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(seedBytes, env.GetBlockHeight())
-
-	return _orderList(addresses, seedBytes)
+	return seedBytes
 }
 
 func _orderList(addrs [][]byte, seed []byte) [][]byte {
