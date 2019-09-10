@@ -6,7 +6,6 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - run: pwd
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.sh
@@ -26,7 +25,6 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - pwd
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.races.sh
