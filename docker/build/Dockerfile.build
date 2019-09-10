@@ -1,10 +1,10 @@
 FROM golang:1.12.9
 
-RUN apt-get install -y git bash
+WORKDIR /src
 
-WORKDIR /go/src/github.com/orbs-network/orbs-network-go/
+RUN apt-get install -y git bash libc6-dev
 
-ADD . /go/src/github.com/orbs-network/orbs-network-go/
+ADD . /src
 
 RUN env
 
