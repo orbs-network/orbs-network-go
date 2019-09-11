@@ -6,11 +6,5 @@ ulimit -S -n 20000
 
 time go_test_junit_report standard -tags "unsafetests" -timeout 10m ./... -failfast
 
-# this test must run separately since zero parallel package tests are allowed concurrently
-. ./test.goroutine-leaks.sh
-
-# this test must run separately since zero parallel package tests are allowed concurrently
-. ./test.memory-leaks.sh
-
 # uncomment to run component tests
 # ./test.components.sh
