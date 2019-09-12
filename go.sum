@@ -172,6 +172,8 @@ github.com/orbs-network/lean-helix-go v0.2.0 h1:NypyYNLR8D/fRq2K9GZPRHQusxghXRpc
 github.com/orbs-network/lean-helix-go v0.2.0/go.mod h1:5rwrEDTihwzH87G8padLfRuFOGSgvwZ7iv/yn3hUaB8=
 github.com/orbs-network/lean-helix-go v0.2.1-0.20190826114939-2b88a2a2534b h1:msjHsCSRh0DiEkRJ9+ctqoVEwh8KMLcSCNb3r0V/Ks8=
 github.com/orbs-network/lean-helix-go v0.2.1-0.20190826114939-2b88a2a2534b/go.mod h1:5rwrEDTihwzH87G8padLfRuFOGSgvwZ7iv/yn3hUaB8=
+github.com/orbs-network/lean-helix-go v0.2.1 h1:t5Kt3MbSuPUdUauvFTbykCEpewSAOIPjS780mLSdk5o=
+github.com/orbs-network/lean-helix-go v0.2.1/go.mod h1:CYJzVWQROmK7DZGW0cFpNFbqLc8RdwIc8+n8uk3+KbM=
 github.com/orbs-network/membuffers v0.0.0-20190324163848-d8b55355b285/go.mod h1:ZsfRFu9R4z2wbLlaDLp6NQ6QeM+2nyraw0QfMmQKUS4=
 github.com/orbs-network/membuffers v0.3.0 h1:EYtF1T/VBsi6DGPVS/Xbcei+Vn86fEJ/jJESFiiAqfg=
 github.com/orbs-network/membuffers v0.3.0/go.mod h1:b6+sJ9+pgca7HHle0e85RDd5zL0Hv360Xec7TGVrGFk=
