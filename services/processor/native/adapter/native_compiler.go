@@ -186,6 +186,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
+		"GO111MODULE=on",
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
