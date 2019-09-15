@@ -2,10 +2,8 @@ FROM golang:1.12.9
 
 RUN apt-get install -y bash git
 
-RUN mkdir -p /src/_tmp/processor-artifacts/native-src/ && \
-    cd /src/_tmp/processor-artifacts/native-src/ && \
-    go mod init native-src && go get github.com/orbs-network/orbs-contract-sdk@v1.2.0 && \
-    go get golang.org/x/crypto@c126467
+RUN mkdir -p /src/_tmp/processor-artifacts/native-src/
+COPY ./_bin/go.mod.template /src/_tmp/processor-artifacts/native-src/go.mod
 
 ADD ./_bin/gamma-server /opt/orbs/
 
