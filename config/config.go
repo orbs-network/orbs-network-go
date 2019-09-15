@@ -59,6 +59,7 @@ type NodeConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
+	ConsensusContextCommitteeUsingContract() bool
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -167,6 +168,7 @@ type ConsensusContextConfig interface {
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
+	ConsensusContextCommitteeUsingContract() bool
 }
 
 type PublicApiConfig interface {

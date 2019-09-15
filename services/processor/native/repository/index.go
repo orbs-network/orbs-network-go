@@ -10,6 +10,7 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkContract"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
+	committee_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
@@ -36,6 +37,10 @@ var PreBuiltContracts = map[string]*sdkContext.ContractInfo{
 	},
 	elections_systemcontract.CONTRACT_NAME: {
 		PublicMethods: elections_systemcontract.PUBLIC,
+		Permission:    sdkContext.PERMISSION_SCOPE_SYSTEM,
+	},
+	committee_systemcontract.CONTRACT_NAME: {
+		PublicMethods: committee_systemcontract.PUBLIC,
 		Permission:    sdkContext.PERMISSION_SCOPE_SYSTEM,
 	},
 	benchmarkcontract.CONTRACT_NAME: {
