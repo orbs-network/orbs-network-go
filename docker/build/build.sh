@@ -9,7 +9,7 @@ if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
     BUILD_FLAG="unsafetests"
 fi
 
-docker build -f ./docker/build/Dockerfile.build \
+docker build --no-cache -f ./docker/build/Dockerfile.build \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --build-arg SEMVER=$SEMVER \
     --build-arg BUILD_FLAG=$BUILD_FLAG \
@@ -21,12 +21,15 @@ docker run --name orbs_build orbs:build sleep 1
 
 export SRC=/src
 
-rm -rf _bin
+rm -rf _bin && mkdir -p _bin _dockerbuild
+rm -f ./_dockerbuild/go.mod.template
+cp ./docker/build/go.mod.template ./_dockerbuild/go.mod.template
+
 docker cp orbs_build:$SRC/_bin .
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
-docker build -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
+./docker/build/build-gamma.sh
 
 # Builds experimental features (extra libraries)
 if [[ $CIRCLE_TAG != v* ]] ;

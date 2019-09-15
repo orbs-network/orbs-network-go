@@ -49,6 +49,7 @@ func ForConsensusContextTests(genesisValidatorNodes map[string]ValidatorNode, tr
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, triggersEnabled)
+	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
 	if genesisValidatorNodes != nil {
 		cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	}
