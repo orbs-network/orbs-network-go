@@ -183,6 +183,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	cmdArgs = append(cmdArgs, sourceFilePaths...)
 
 	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
+	cmd.Dir = artifactsPath
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
