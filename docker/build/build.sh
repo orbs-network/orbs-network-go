@@ -21,9 +21,9 @@ docker run --name orbs_build orbs:build sleep 1
 
 export SRC=/src
 
-rm -rf _bin && mkdir -p _bin
-rm -f ./_bin/go.mod.template
-cp ./docker/build/go.mod.template ./_bin/go.mod.template
+rm -rf _bin && mkdir -p _bin _dockerbuild
+rm -f ./_dockerbuild/go.mod.template
+cp ./docker/build/go.mod.template ./_dockerbuild/go.mod.template
 
 docker cp orbs_build:$SRC/_bin .
 
