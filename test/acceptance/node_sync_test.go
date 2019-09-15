@@ -24,10 +24,7 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 	newHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
-		AllowingErrors(
-			"leader failed to save block to storage",                 // (block already in storage, skipping) TODO(v1) investigate and explain, or fix and remove expected error
-			"all consensus \\d* algos refused to validate the block", //TODO(v1) investigate and explain, or fix and remove expected error
-		).
+		//AllowingErrors().
 		WithSetup(func(ctx context.Context, network *Network) {
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {

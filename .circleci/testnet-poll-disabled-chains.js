@@ -39,7 +39,15 @@ function pollNetworkRemovalByIP({ ip, chainId }) {
                 console.log('Node with IP: ', ip, ' has successfully terminated chainId: ', chainId);
                 clearInterval(pid);
                 resolve();
+            } else {
+                const body = await result.json();
+                if ('Description' in body && body.Description === "ORBS blockchain node") {
+                    console.log('Node with IP: ', ip, ' has successfully terminated chainId: ', chainId);
+                    clearInterval(pid);
+                    resolve();
+                }
             }
+
         }, 5000);
     });
 }
@@ -55,4 +63,3 @@ function pollNetworkRemovalByIP({ ip, chainId }) {
 
     process.exit(0);
 })();
-

@@ -7,10 +7,11 @@
 package e2e
 
 import (
-	"github.com/orbs-network/orbs-network-go/test"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInitialBlockHeight(t *testing.T) {
@@ -33,4 +34,6 @@ func TestInitialBlockHeight(t *testing.T) {
 			return blockHeight >= expectedBlocks
 		}), "expected e2e network to launch with %v blocks", expectedBlocks)
 	})
+
+	//time.Sleep(time.Minute * 5)
 }
