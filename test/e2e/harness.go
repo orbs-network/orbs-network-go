@@ -180,14 +180,26 @@ func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 		}
 
 		lastCommittedTimestamp := int64(m["TransactionPool.LastCommitted.TimeNano"]["Value"].(float64))
-		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
+		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff * -1).UnixNano()
 		return diff >= 0
 	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
 }
 
 func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
-	return config.ForE2E("", 0, 0, primitives.NodeAddress{}, primitives.EcdsaSecp256K1PrivateKey{}, nil, nil, "", "", "", primitives.NodeAddress{}, 0).
-		TransactionPoolNodeSyncRejectTime()
+	return config.ForE2E(
+		"",
+		0,
+		0,
+		primitives.NodeAddress{},
+		primitives.EcdsaSecp256K1PrivateKey{},
+		nil,
+		nil,
+		"",
+		"",
+		"",
+		primitives.NodeAddress{},
+		0,
+	).TransactionPoolNodeSyncRejectTime()
 }
 
 func printTestTime(t *testing.T, msg string, last *time.Time) {

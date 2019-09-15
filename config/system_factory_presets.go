@@ -115,7 +115,20 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 }
 
 // config for end-to-end tests (very similar to production but slightly faster)
-func ForE2E(httpAddress string, virtualChainId primitives.VirtualChainId, gossipListenPort int, nodeAddress primitives.NodeAddress, nodePrivateKey primitives.EcdsaSecp256K1PrivateKey, gossipPeers map[string]GossipPeer, genesisValidatorNodes map[string]ValidatorNode, blockStorageDataDirPrefix string, processorArtifactPath string, ethereumEndpoint string, constantConsensusLeader primitives.NodeAddress, activeConsensusAlgo consensus.ConsensusAlgoType) NodeConfig {
+func ForE2E(
+	httpAddress string,
+	virtualChainId primitives.VirtualChainId,
+	gossipListenPort int,
+	nodeAddress primitives.NodeAddress,
+	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
+	gossipPeers map[string]GossipPeer,
+	genesisValidatorNodes map[string]ValidatorNode,
+	blockStorageDataDirPrefix string,
+	processorArtifactPath string,
+	ethereumEndpoint string,
+	constantConsensusLeader primitives.NodeAddress,
+	activeConsensusAlgo consensus.ConsensusAlgoType,
+) NodeConfig {
 	cfg := defaultProductionConfig()
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
