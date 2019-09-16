@@ -136,7 +136,14 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 	}
 
 	if i < methodType.NumIn() {
+		if methodType.NumIn()-1 == i { // missing a single argument
+			if k := methodType.In(methodType.NumIn() - 1).Kind(); k == reflect.Slice {
+				return res, nil
+			}
+		}
+
 		return nil, errors.Errorf("method '%s' takes %d args but received less", functionNameForErrors, methodType.NumIn())
+
 	}
 
 	return res, nil

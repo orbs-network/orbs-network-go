@@ -54,6 +54,22 @@ func TestPrepareMethodArgumentsForCallWithArrayOfVariableLength(t *testing.T) {
 	require.EqualValues(t, []string{"one", "two"}, outValues[0].Interface().([]string))
 }
 
+func TestPrepareMethodArgumentsForCallWithArrayOfVariableLengthPassingNoArguments(t *testing.T) {
+	s := &service{}
+
+	methodInstance := func(a ...string) []string {
+		return a
+	}
+
+	args := argsToArgumentArray()
+
+	inValues, err := s.prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	require.NoError(t, err)
+
+	outValues := reflect.ValueOf(methodInstance).Call(inValues)
+	require.EqualValues(t, []string{}, outValues[0].Interface().([]string))
+}
+
 func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 	s := &service{}
 
