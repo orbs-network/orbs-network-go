@@ -22,7 +22,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newHarness()
+		h := newAppHarness()
 		lt := time.Now()
 		printTestTime(t, "started", &lt)
 

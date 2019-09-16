@@ -9,6 +9,7 @@ package e2e
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"os"
@@ -29,32 +30,36 @@ func CopyFile(sourcePath string, targetPath string) error {
 	return nil
 }
 
-func GetNodesDataDirs() ([]string, error) {
-	nodeFolders, err := ioutil.ReadDir(blockStorageDataDirPrefix)
+func GetNodesDataDirs(virtualChainId primitives.VirtualChainId) ([]string, error) {
+	nodeFolders, err := ioutil.ReadDir(getVirtualChainDataDir(virtualChainId))
 	if err != nil {
 		return nil, err
 	}
 
 	var nodeDataDirs []string
 	for _, nodeFolder := range nodeFolders {
-		nodeDataDirs = append(nodeDataDirs, filepath.Join(blockStorageDataDirPrefix, nodeFolder.Name(), "blocks"))
+		nodeDataDirs = append(nodeDataDirs, filepath.Join(getVirtualChainDataDir(virtualChainId), nodeFolder.Name(), "blocks"))
 	}
 
 	return nodeDataDirs, nil
 }
 
-func getProcessorArtifactPath() (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp")
+func getVirtualChainDataDir(virtualChainId primitives.VirtualChainId) string {
+	return filepath.Join(blockStorageDataDirPrefix, vChainPathComponent(virtualChainId))
+}
+
+func getProcessorArtifactPath(virtualChainId primitives.VirtualChainId) (string, string) {
+	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp", vChainPathComponent(virtualChainId))
 	return filepath.Join(dir, "processor-artifacts"), dir
 }
 
-func cleanNativeProcessorCache() {
-	_, dirToCleanup := getProcessorArtifactPath()
+func cleanNativeProcessorCache(virtualChainId primitives.VirtualChainId) {
+	_, dirToCleanup := getProcessorArtifactPath(virtualChainId)
 	_ = os.RemoveAll(dirToCleanup)
 }
 
-func cleanBlockStorage() {
-	_ = os.RemoveAll(blockStorageDataDirPrefix)
+func cleanBlockStorage(virtualChainId primitives.VirtualChainId) {
+	_ = os.RemoveAll(getVirtualChainDataDir(virtualChainId))
 }
 
 func deployBlockStorageFiles(targetDir string, logger log.Logger) {
@@ -71,4 +76,8 @@ func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 	if err != nil {
 		panic(fmt.Sprintf("could not copy files %s -> %s", sourceBlocksFilePath, targetBlocksFilePath))
 	}
+}
+
+func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
+	return fmt.Sprintf("vcid_%d", virtualChainId)
 }

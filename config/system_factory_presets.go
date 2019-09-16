@@ -120,6 +120,7 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 // config for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
 	httpAddress string,
+	virtualChainId primitives.VirtualChainId,
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
@@ -132,6 +133,8 @@ func ForE2E(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 	cfg := defaultProductionConfig()
+
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)

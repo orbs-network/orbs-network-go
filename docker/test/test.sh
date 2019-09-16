@@ -26,7 +26,7 @@ export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 # prepare persistent blocks for docker tests
-rm -rf _tmp/blocks
+sudo rm -rf _tmp/blocks
 
 # At the moment Lean Helix doesn't deal well with an existing blocks file
 if [[ $CONSENSUSALGO == "benchmark" ]]; then
@@ -41,7 +41,10 @@ fi
 # run docker-reliant tests
 docker-compose -f ./docker/test/docker-compose.yml up -d
 
-export API_ENDPOINT=http://localhost:8080/api/v1/ \
+export API_ENDPOINT=http://localhost:8082/api/v1/ \
+      MGMT_API_ENDPOINT=http://localhost:8086/api/v1/ \
+      VCHAIN=42 \
+      MGMT_VCHAIN=40 \
       STRESS_TEST_NUMBER_OF_TRANSACTIONS=5000 \
       STRESS_TEST_FAILURE_RATE=20 \
       STRESS_TEST_TARGET_TPS=100 \
