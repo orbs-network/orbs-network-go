@@ -37,7 +37,7 @@ func (c *forwarderConfig) TransactionPoolPropagationBatchSize() uint16 {
 }
 
 func (c *forwarderConfig) TransactionPoolPropagationBatchingTimeout() time.Duration {
-	return 5 * time.Millisecond
+	return 50 * time.Millisecond
 }
 
 type signerConfig struct {
