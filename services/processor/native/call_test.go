@@ -70,6 +70,32 @@ func TestPrepareMethodArgumentsForCallWithArrayOfVariableLengthPassingNoArgument
 	require.EqualValues(t, []string{}, outValues[0].Interface().([]string))
 }
 
+func TestPrepareMethodArgumentsForCallWithArrayOfVariableLengthPassingArgumentsOfDifferentType(t *testing.T) {
+	s := &service{}
+
+	methodInstance := func(a uint32, b ...string) []string {
+		return b
+	}
+
+	args := argsToArgumentArray(uint32(1), "hello", uint32(2))
+
+	_, err := s.prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	require.EqualError(t, err, "method 'funcName' expects arg 2 to be string but it has (Uint32Value)2")
+}
+
+func TestPrepareMethodArgumentsForCallWithArrayOfVariableLengthSkippingByteArrayArgument(t *testing.T) {
+	s := &service{}
+
+	methodInstance := func(a uint32, b []byte) []byte {
+		return b
+	}
+
+	args := argsToArgumentArray(uint32(1))
+
+	_, err := s.prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	require.EqualError(t, err, "method 'funcName' takes 2 args but received less")
+}
+
 func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 	s := &service{}
 
@@ -84,6 +110,19 @@ func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 
 	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 	require.EqualValues(t, [][]byte{[]byte("one"), []byte("two")}, outValues[0].Interface())
+}
+
+func TestPrepareMethodArgumentsForCallWithArrayOfArraysOfStringsPassingTwoByteArrays(t *testing.T) {
+	s := &service{}
+
+	methodInstance := func(a ...[]string) [][]string {
+		return a
+	}
+
+	args := argsToArgumentArray([]byte("one"), []byte("two"))
+
+	_, err := s.prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	require.EqualError(t, err, "method 'funcName' expects arg 0 to be [][]byte but it has (BytesValue)6f6e65")
 }
 
 func TestPrepareMethodArgumentsForCallWithTwoByteArrays(t *testing.T) {
