@@ -7,7 +7,6 @@
 package test
 
 import (
-	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -24,23 +23,11 @@ import (
 )
 
 type harness struct {
-	simAdapter *adapter.EthereumSimulator
 	rpcAdapter adapter.DeployingEthereumConnection
 	connector  services.CrosschainConnector
 	logger     log.Logger
 	address    string
 	config     *ethereumConnectorConfigForTests
-}
-
-func (h *harness) deploySimulatorStorageContract(ctx context.Context, text string) error {
-	address, err := h.simAdapter.DeploySimpleStorageContract(h.simAdapter.GetAuth(), text)
-	h.simAdapter.Commit()
-	if err != nil {
-		return err
-	}
-
-	h.address = hexutil.Encode(address[:])
-	return nil
 }
 
 func (h *harness) getAddress() string {
@@ -80,23 +67,6 @@ func newRpcEthereumConnectorHarness(logger log.Logger, cfg *ethereumConnectorCon
 		rpcAdapter: a,
 		logger:     logger,
 		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger, registry),
-	}
-}
-
-func (h *harness) WithFakeTimeGetter() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTimeGetter(h.simAdapter, h.config, h.logger, metric.NewRegistry())
-	return h
-}
-
-func newSimulatedEthereumConnectorHarness(logger log.Logger) *harness {
-	conn := adapter.NewEthereumSimulatorConnection(logger)
-	cfg := ConfigForSimulatorConnection()
-
-	return &harness{
-		config:     cfg,
-		simAdapter: conn,
-		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger, metric.NewRegistry()),
 	}
 }
 

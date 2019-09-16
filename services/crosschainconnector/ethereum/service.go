@@ -48,20 +48,6 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, confi
 	return s
 }
 
-// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 find way to remove simulator and remove this ctor
-func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.Logger, metrics metric.Factory) services.CrosschainConnector {
-	logger := parent.WithTags(LogTag)
-	blockTimeGetter := timestampfinder.NewFakeBlockTimeGetter(logger)
-	s := &service{
-		connection:      connection,
-		blockTimeGetter: blockTimeGetter,
-		timestampFinder: timestampfinder.NewTimestampFinder(blockTimeGetter, logger, metrics),
-		logger:          logger,
-		config:          config,
-	}
-	return s
-}
-
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 

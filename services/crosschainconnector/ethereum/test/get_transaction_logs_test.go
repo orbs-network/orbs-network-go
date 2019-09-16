@@ -28,12 +28,16 @@ import (
 )
 
 func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger)
-
-			contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), contract.EmitEventAbi, contract.EmitEventBin)
-			h.simAdapter.Commit()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
+			auth, err := h.config.GetAuthFromConfig()
+			require.NoError(t, err)
+			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 			require.NoError(t, err, "failed deploying contract to Ethereum")
 
 			amount := big.NewInt(42)
@@ -41,8 +45,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 			ethAddress := common.BigToAddress(big.NewInt(42000000000))
 			orbsAddress := anOrbsAddress()
 
-			tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "transferOut", tuid, ethAddress, orbsAddress, amount)
-			h.simAdapter.Commit()
+			tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 			require.NoError(t, err, "failed emitting event")
 
 			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
@@ -71,9 +74,13 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 }
 
 func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger)
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
 
 			contractABI, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.abi")
 			require.NoError(t, err, "failed reading contract ABI")
@@ -116,9 +123,13 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 }
 
 func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger)
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
 
 			contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), contract.EmitEventAbi, contract.EmitEventBin)
 			h.simAdapter.Commit()

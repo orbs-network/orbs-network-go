@@ -23,6 +23,10 @@ import (
 )
 
 func TestContractCallBadNodeConfig(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			config := &ethereumConnectorConfigForTests{
@@ -41,12 +45,16 @@ func TestContractCallBadNodeConfig(t *testing.T) {
 }
 
 func TestCallContractWithoutArgs(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger)
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
 			initText := "are belong to us"
 			methodToCall := "getValues"
-			h.deploySimulatorStorageContract(ctx, initText)
+			h.deployRpcStorageContract(initText)
 
 			ethCallData, err := h.packInputArgumentsForSampleStorage(methodToCall, nil)
 			require.NoError(t, err, "this means we couldn't pack the params for ethereum, something is broken with the harness")

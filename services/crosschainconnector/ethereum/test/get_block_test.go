@@ -25,9 +25,13 @@ const TOO_RECENT_TIMESTAMP = primitives.TimestampNano(1506109783000000000) // ma
 const TOO_RECENT_BLOCK_NUMBER = 999999
 
 func TestEthereumGetBlockNumber(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockNumberInput{
 				ReferenceTimestamp: RECENT_TIMESTAMP,
 			}
@@ -39,9 +43,13 @@ func TestEthereumGetBlockNumber(t *testing.T) {
 }
 
 func TestEthereumGetBlockTime(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockTimeInput{
 				ReferenceTimestamp: RECENT_TIMESTAMP,
 			}
@@ -53,9 +61,13 @@ func TestEthereumGetBlockTime(t *testing.T) {
 }
 
 func TestEthereumGetBlockByTime(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockNumberByTimeInput{
 				ReferenceTimestamp: RECENT_TIMESTAMP,
 				EthereumTimestamp:  NON_RECENT_TIMESTAMP,
@@ -68,9 +80,13 @@ func TestEthereumGetBlockByTime(t *testing.T) {
 }
 
 func TestEthereumGetBlockByTimeTooNewFails(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockNumberByTimeInput{
 				ReferenceTimestamp: RECENT_TIMESTAMP,
 				EthereumTimestamp:  TOO_RECENT_TIMESTAMP,
@@ -82,9 +98,13 @@ func TestEthereumGetBlockByTimeTooNewFails(t *testing.T) {
 }
 
 func TestEthereumGetBlockTimeByNumber(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockTimeByNumberInput{
 				ReferenceTimestamp:  RECENT_TIMESTAMP,
 				EthereumBlockNumber: NON_RECENT_BLOCK_NUMBER,
@@ -97,9 +117,13 @@ func TestEthereumGetBlockTimeByNumber(t *testing.T) {
 }
 
 func TestEthereumGetBlockTimeByNumberTooNewFails(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			in := &services.EthereumGetBlockTimeByNumberInput{
 				ReferenceTimestamp:  RECENT_TIMESTAMP,
 				EthereumBlockNumber: TOO_RECENT_BLOCK_NUMBER,
@@ -111,9 +135,13 @@ func TestEthereumGetBlockTimeByNumberTooNewFails(t *testing.T) {
 }
 
 func TestEthereumGetBlockAndTimeInterCalculations(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newSimulatedEthereumConnectorHarness(parent.Logger).WithFakeTimeGetter()
+			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection()).WithFakeTimeGetter()
 			inCurrBlock := &services.EthereumGetBlockNumberInput{
 				ReferenceTimestamp: RECENT_TIMESTAMP,
 			}
