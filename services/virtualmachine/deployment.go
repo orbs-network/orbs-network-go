@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -21,9 +22,15 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 
 	// on failure (contract not deployed), attempt to auto deploy pre-built (in repository) native contract
 	if err != nil {
+		if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
+			return nil, err
+		}
+
+		getInfoErr := err
 		processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
 		if err != nil {
-			return nil, err
+			s.logger.Error("failed contract auto deployment", log.String("contract-name", string(serviceName)), log.Error(err))
+			return nil, getInfoErr
 		}
 	}
 
