@@ -31,16 +31,18 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-		defer cancel()
+	newHarness().
+		AllowingErrors("failed contract auto deployment").
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
 
-		tx := builders.Transaction().WithContract("UnknownContract")
-		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
-		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, resp.TransactionReceipt().ExecutionResult())
-	})
+			tx := builders.Transaction().WithContract("UnknownContract")
+			resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
+			require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
+			require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, resp.TransactionReceipt().ExecutionResult())
+		})
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {

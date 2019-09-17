@@ -46,6 +46,7 @@ func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
+			parent.AllowErrorsMatching("failed contract auto deployment")
 			h := newHarness(parent.Logger)
 
 			h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))
