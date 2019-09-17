@@ -29,7 +29,7 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 		getInfoErr := err
 		processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
 		if err != nil {
-			s.logger.Error("failed contract auto deployment", log.String("contract-name", string(serviceName)), log.Error(err))
+			s.logger.Info("failed contract auto deployment", log.String("contract-name", string(serviceName)), log.Error(err))
 			return nil, getInfoErr
 		}
 	}
