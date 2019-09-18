@@ -179,7 +179,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 
 	// compile
 	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
-	cmdArgs := []string{"build", "-buildmode=plugin", "-o", soFilePath}
+	cmdArgs := []string{"build", "-buildmode=plugin", "-mod=readonly", "-o", soFilePath}
 	cmdArgs = append(cmdArgs, sourceFilePaths...)
 
 	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
