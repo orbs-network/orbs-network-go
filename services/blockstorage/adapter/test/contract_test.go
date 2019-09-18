@@ -299,17 +299,16 @@ func newInMemoryAdapter(logger log.Logger) adapter.BlockPersistence {
 }
 
 func newFilesystemAdapter(logger log.Logger) (adapter.BlockPersistence, func()) {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	conf := newTempFileConfig()
-	cleanup := func() {
-		cancel()
-		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
-	}
 
-	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
+	persistence, err := filesystem.NewBlockPersistence(conf, logger, metric.NewRegistry())
 	if err != nil {
 		panic(err.Error())
+	}
+
+	cleanup := func() {
+		persistence.GracefulShutdown(context.Background())
+		_ = os.RemoveAll(conf.BlockStorageFileSystemDataDir()) // ignore errors - nothing to do
 	}
 
 	return persistence, cleanup

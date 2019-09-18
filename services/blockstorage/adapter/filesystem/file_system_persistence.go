@@ -42,7 +42,7 @@ type blockCodec interface {
 	decode(r io.Reader) (*protocol.BlockPairContainer, int, error)
 }
 
-type FilesystemBlockPersistence struct {
+type BlockPersistence struct {
 	config       config.FilesystemBlockPersistenceConfig
 	bhIndex      *blockHeightIndex
 	metrics      *metrics
@@ -52,12 +52,21 @@ type FilesystemBlockPersistence struct {
 	codec        blockCodec
 }
 
-func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (adapter.BlockPersistence, error) {
+func (f *BlockPersistence) GracefulShutdown(shutdownContext context.Context) {
+	logger := f.logger.WithTags(log.String("filename", blocksFileName(f.config)))
+	if err := f.blockWriter.Close(); err != nil {
+		logger.Error("failed to close blocks file")
+		return
+	}
+	logger.Info("closed blocks file")
+}
+
+func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (*BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
 	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
 
-	file, blocksOffset, err := openBlocksFile(ctx, conf, logger)
+	file, blocksOffset, err := openBlocksFile(conf, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +83,7 @@ func NewBlockPersistence(ctx context.Context, conf config.FilesystemBlockPersist
 		return nil, err
 	}
 
-	adapter := &FilesystemBlockPersistence{
+	adapter := &BlockPersistence{
 		bhIndex:      bhIndex,
 		config:       conf,
 		blockTracker: synchronization.NewBlockTracker(logger, uint64(bhIndex.topBlockHeight), 5),
@@ -101,7 +110,7 @@ func getBlockFileSize(file *os.File) (int64, error) {
 	}
 }
 
-func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (*os.File, int64, error) {
+func openBlocksFile(conf config.FilesystemBlockPersistenceConfig, logger log.Logger) (*os.File, int64, error) {
 	dir := conf.BlockStorageFileSystemDataDir()
 	filename := blocksFileName(conf)
 	err := os.MkdirAll(dir, os.ModePerm)
@@ -113,7 +122,6 @@ func openBlocksFile(ctx context.Context, conf config.FilesystemBlockPersistenceC
 	if err != nil {
 		return nil, 0, errors.Wrapf(err, "failed to open blocks file for writing %s", filename)
 	}
-	closeOnContextDone(ctx, file, logger)
 
 	err = advisoryLockExclusive(file)
 	if err != nil {
@@ -174,7 +182,7 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 
 func writeNewFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) error {
 	header := newBlocksFileHeader(uint32(conf.NetworkType()), uint32(conf.VirtualChainId()))
-	logger.Info("creating new blocks file", log.String("path", blocksFileName(conf)))
+	logger.Info("creating new blocks file", log.String("filename", file.Name()))
 	err := header.write(file)
 	if err != nil {
 		return errors.Wrapf(err, "error writing blocks file header")
@@ -184,18 +192,6 @@ func writeNewFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 		return errors.Wrapf(err, "error writing blocks file header")
 	}
 	return nil
-}
-
-func closeOnContextDone(ctx context.Context, file *os.File, logger log.Logger) {
-	go func() {
-		<-ctx.Done()
-		err := file.Close()
-		if err != nil {
-			logger.Error("failed to close blocks file", log.String("filename", file.Name()))
-			return
-		}
-		logger.Info("closed blocks file", log.String("filename", file.Name()))
-	}()
 }
 
 func advisoryLockExclusive(file *os.File) error {
@@ -238,7 +234,7 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 	return bhIndex, nil
 }
 
-func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
+func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 	f.blockWriter.Lock()
 	defer f.blockWriter.Unlock()
 
@@ -266,7 +262,7 @@ func (f *FilesystemBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPai
 	return true, bh, nil
 }
 
-func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
+func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
 	currentTop := f.bhIndex.topBlockHeight
 	if currentTop < from {
 		return fmt.Errorf("requested unknown block height %d. current height is %d", from, currentTop)
@@ -309,15 +305,15 @@ func (f *FilesystemBlockPersistence) ScanBlocks(from primitives.BlockHeight, pag
 	return nil
 }
 
-func (f *FilesystemBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
+func (f *BlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
 	return f.bhIndex.getLastBlockHeight(), nil
 }
 
-func (f *FilesystemBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
+func (f *BlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) {
 	return f.bhIndex.getLastBlock(), nil
 }
 
-func (f *FilesystemBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
+func (f *BlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	bpc, err := f.getBlockAtHeight(height)
 	if err != nil {
 		return nil, err
@@ -325,7 +321,7 @@ func (f *FilesystemBlockPersistence) GetTransactionsBlock(height primitives.Bloc
 	return bpc.TransactionsBlock, nil
 }
 
-func (f *FilesystemBlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
+func (f *BlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
 	bpc, err := f.getBlockAtHeight(height)
 	if err != nil {
 		return nil, err
@@ -333,7 +329,7 @@ func (f *FilesystemBlockPersistence) GetResultsBlock(height primitives.BlockHeig
 	return bpc.ResultsBlock, nil
 }
 
-func (f *FilesystemBlockPersistence) getBlockAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+func (f *BlockPersistence) getBlockAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
 	var bpc *protocol.BlockPairContainer
 	err := f.ScanBlocks(height, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
 		bpc = page[0]
@@ -342,7 +338,7 @@ func (f *FilesystemBlockPersistence) getBlockAtHeight(height primitives.BlockHei
 	return bpc, err
 }
 
-func (f *FilesystemBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
+func (f *BlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
 	scanFrom, ok := f.bhIndex.getEarliestTxBlockInBucketForTsRange(minBlockTs, maxBlockTs)
 	if !ok {
 		return nil, 0, nil
@@ -373,11 +369,11 @@ func (f *FilesystemBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minB
 	return block, txIndexInBlock, nil
 }
 
-func (f *FilesystemBlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
+func (f *BlockPersistence) GetBlockTracker() *synchronization.BlockTracker {
 	return f.blockTracker
 }
 
-func (f *FilesystemBlockPersistence) blockFileName() string {
+func (f *BlockPersistence) blockFileName() string {
 	return blocksFileName(f.config)
 }
 
