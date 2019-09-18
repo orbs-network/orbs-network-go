@@ -53,15 +53,16 @@ type BlockPersistence struct {
 }
 
 func (f *BlockPersistence) GracefulShutdown(shutdownContext context.Context) {
+	logger := f.logger.WithTags(log.String("filename", blocksFileName(f.config)))
 	if err := f.blockWriter.Close(); err != nil {
-		f.logger.Error("failed to close blocks file")
+		logger.Error("failed to close blocks file")
 		return
 	}
-	f.logger.Info("closed blocks file")
+	logger.Info("closed blocks file")
 }
 
 func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (*BlockPersistence, error) {
-	logger := parent.WithTags(log.String("adapter", "block-storage"), log.String("filename", blocksFileName(conf)))
+	logger := parent.WithTags(log.String("adapter", "block-storage"))
 
 	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
 
@@ -181,7 +182,7 @@ func validateFileHeader(file *os.File, conf config.FilesystemBlockPersistenceCon
 
 func writeNewFileHeader(file *os.File, conf config.FilesystemBlockPersistenceConfig, logger log.Logger) error {
 	header := newBlocksFileHeader(uint32(conf.NetworkType()), uint32(conf.VirtualChainId()))
-	logger.Info("creating new blocks file")
+	logger.Info("creating new blocks file", log.String("filename", file.Name()))
 	err := header.write(file)
 	if err != nil {
 		return errors.Wrapf(err, "error writing blocks file header")
