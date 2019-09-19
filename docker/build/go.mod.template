@@ -7,6 +7,6 @@ go 1.12
 // so that built contracts won't break the system.
 
 require (
-    github.com/orbs-network/orbs-contract-sdk v1.1.0
+    github.com/orbs-network/orbs-contract-sdk v1.2.0
     golang.org/x/crypto c126467
 )
