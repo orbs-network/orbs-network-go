@@ -119,15 +119,10 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	if err != nil {
 
 		// add all available modules to error output for troubleshooting
-		cmd := exec.Command("go", "list", "-m")
-		out, _ := cmd.CombinedOutput()
+		out, _ := runGoCommand(ctx, artifactsPath, "list", "-m")
 		dep := string(out)
 
-		cmd = exec.Command("pwd")
-		out, _ = cmd.CombinedOutput()
-		pwd := string(out)
-
-		return nil, errors.Wrap(err, fmt.Sprintf("could not build a shared object module %s at %s", dep, pwd))
+		return nil, errors.Wrap(err, fmt.Sprintf("could not build a shared object. module %s at %s", dep, artifactsPath))
 	}
 
 	logger.Info("loading shared object", log.String("so-path", soFilePath))
@@ -188,21 +183,8 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	// compile
-	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
-	cmdArgs := []string{"build", "-buildmode=plugin", "-mod=readonly", "-o", soFilePath}
-	cmdArgs = append(cmdArgs, sourceFilePaths...)
-
-	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
-	cmd.Dir = artifactsPath
-	cmd.Env = []string{
-		"GOPATH=" + getGOPATH(),
-		"PATH=" + os.Getenv("PATH"),
-		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
-		"GO111MODULE=on",
-		// "GOGC=off", (this improves compilation time by a small factor)
-	}
-	out, err := cmd.CombinedOutput()
-
+	args := append([]string{"build", "-buildmode=plugin", "-mod=readonly", "-o", soFilePath}, sourceFilePaths...)
+	out, err := runGoCommand(ctx, artifactsPath, args...)
 	if err != nil {
 		buildOutput := string(out)
 		buildOutput = strings.Replace(buildOutput, "# command-line-arguments\n", "", 1) // "go build", invoked with a file name, puts this odd message before any compile errors; strip it.
@@ -211,6 +193,21 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	return soFilePath, nil
+}
+
+func runGoCommand(ctx context.Context, workDir string, cmdArgs ...string) ([]byte, error) {
+	goCmd := path.Join(runtime.GOROOT(), "bin", "go")
+	cmd := exec.CommandContext(ctx, goCmd, cmdArgs...)
+	cmd.Dir = workDir
+	cmd.Env = []string{
+		"GOPATH=" + getGOPATH(),
+		"PATH=" + os.Getenv("PATH"),
+		"GOCACHE=" + filepath.Join(workDir, GC_CACHE_PATH),
+		"GO111MODULE=on",
+		// "GOGC=off", (this improves compilation time by a small factor)
+	}
+	out, err := cmd.CombinedOutput()
+	return out, err
 }
 
 func loadSharedObject(soFilePath string) (*sdkContext.ContractInfo, error) {
