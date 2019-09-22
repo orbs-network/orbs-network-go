@@ -119,7 +119,7 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	if err != nil {
 
 		// add all available modules to error output for troubleshooting
-		cmd := exec.Command("go", "list", "-m", "-f", "'{{.ImportPath}} --> {{.Dir}}'", "all")
+		cmd := exec.Command("go", "list", "-m", "all")
 		out, _ := cmd.CombinedOutput()
 		dep := string(out)
 
