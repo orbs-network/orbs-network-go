@@ -2,10 +2,10 @@ FROM golang:1.12.9
 
 RUN apt-get install -y git
 
-RUN mkdir -p /src/_tmp/processor-artifacts/native-src/
-COPY ./_dockerbuild/go.mod.template /src/_tmp/processor-artifacts/native-src/go.mod
+RUN mkdir -p /src/_tmp/processor-artifacts/
+COPY ./_dockerbuild/go.mod.template /src/_tmp/processor-artifacts/go.mod
 
-RUN cd /src/_tmp/processor-artifacts/native-src/ && go mod download && echo "Downloaded dependencies:" && go list -m all
+RUN cd /src/_tmp/processor-artifacts/ && go mod download && echo "Downloaded dependencies:" && go list -m all
 
 ADD ./_bin/orbs-node /opt/orbs/
 
