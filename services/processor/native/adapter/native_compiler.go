@@ -119,11 +119,15 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	if err != nil {
 
 		// add all available modules to error output for troubleshooting
-		cmd := exec.Command("go", "list", "-m", "all")
+		cmd := exec.Command("go", "list", "-m")
 		out, _ := cmd.CombinedOutput()
 		dep := string(out)
 
-		return nil, errors.Wrap(err, fmt.Sprintf("could not build a shared object:\n%s", dep))
+		cmd = exec.Command("pwd")
+		out, _ = cmd.CombinedOutput()
+		pwd := string(out)
+
+		return nil, errors.Wrap(err, fmt.Sprintf("could not build a shared object module %s at %s", dep, pwd))
 	}
 
 	logger.Info("loading shared object", log.String("so-path", soFilePath))
@@ -194,7 +198,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 		"GOPATH=" + getGOPATH(),
 		"PATH=" + os.Getenv("PATH"),
 		"GOCACHE=" + filepath.Join(artifactsPath, GC_CACHE_PATH),
-		//"GO111MODULE=on",
+		"GO111MODULE=on",
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	out, err := cmd.CombinedOutput()
