@@ -87,7 +87,6 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 
 	// copy go.mod file:
 	err := os.MkdirAll(processorArtifactPath, 0755)
-	//exec.Command("mkdir", "-p", targetGoModPath).Run()
 	if err != nil {
 		panic(fmt.Sprintf("failed to make dir: %s", err.Error()))
 	}
