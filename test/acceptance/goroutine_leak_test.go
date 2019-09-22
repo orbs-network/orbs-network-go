@@ -32,7 +32,8 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 
 	numGoroutineBefore := runtime.NumGoroutine()
-	pprof.Lookup("goroutine").WriteTo(before, 1)
+	pprof.WriteHeapProfile(before)
+	//pprof.Lookup("goroutine").WriteTo(before, 1)
 
 	t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
 	t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
@@ -43,7 +44,7 @@ func TestGoroutineLeaks_OnSystemShutdown(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // give goroutines time to terminate
 
 	numGoroutineAfter := runtime.NumGoroutine()
-	pprof.Lookup("goroutine").WriteTo(after, 1)
+	pprof.WriteHeapProfile(after)
 
 	require.Equal(t, numGoroutineBefore, numGoroutineAfter, "number of goroutines should be equal, compare /tmp/gorou-shutdown-before.out and /tmp/gorou-shutdown-after.out to see stack traces of the leaks")
 }
