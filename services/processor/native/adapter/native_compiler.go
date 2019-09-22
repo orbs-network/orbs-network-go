@@ -117,7 +117,13 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePaths, artifactsPath)
 	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not build a shared object")
+
+		// add all available modules to error output for troubleshooting
+		cmd := exec.Command("go", "list", "-m", "-f", "'{{.ImportPath}} --> {{.Dir}}'", "all")
+		out, _ := cmd.CombinedOutput()
+		dep := string(out)
+
+		return nil, errors.Wrap(err, fmt.Sprintf("could not build a shared object:\n%s", dep))
 	}
 
 	logger.Info("loading shared object", log.String("so-path", soFilePath))
