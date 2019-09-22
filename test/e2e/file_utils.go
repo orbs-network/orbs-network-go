@@ -49,7 +49,7 @@ func getVirtualChainDataDir(virtualChainId primitives.VirtualChainId) string {
 }
 
 func getProcessorArtifactPath(virtualChainId primitives.VirtualChainId) (string, string) {
-	dir := filepath.Join(config.GetCurrentSourceFileDirPath(), "_tmp", vChainPathComponent(virtualChainId))
+	dir := filepath.Join(os.TempDir(), "orbs", "processorArtifacts", vChainPathComponent(virtualChainId))
 	return filepath.Join(dir, "processor-artifacts"), dir
 }
 
@@ -80,4 +80,23 @@ func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 
 func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 	return fmt.Sprintf("vcid_%d", virtualChainId)
+}
+
+func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string {
+	processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
+
+	// copy go.mod file:
+	err := os.MkdirAll(processorArtifactPath, 0755)
+	//exec.Command("mkdir", "-p", targetGoModPath).Run()
+	if err != nil {
+		panic(fmt.Sprintf("failed to make dir: %s", err.Error()))
+	}
+
+	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", "go.mod.template")
+	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")
+	err = CopyFile(sourceGoModPath, targetGoModPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to copy go.mod file: %s", err.Error()))
+	}
+	return processorArtifactPath
 }
