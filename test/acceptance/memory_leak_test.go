@@ -127,7 +127,8 @@ func TestMemoryLeaks_DuringRuntime(t *testing.T) {
 	deltaMemBytes := memUsageAfterBytes - memUsageBeforeBytes
 	allowedMemIncreaseCalculatedFromMemBefore := uint64(0.1 * float64(memUsageBeforeBytes))
 	allowedMemIncreaseInAbsoluteBytes := uint64(1 * 1024 * 1024) // 1MB
-	t.Logf("")
+	t.Logf("Pre-run: %d bytes, during-run: %d bytes, added %d bytes",
+		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes)
 
 	require.Conditionf(t, func() bool {
 		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
