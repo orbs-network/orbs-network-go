@@ -131,6 +131,7 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
+			parent.AllowErrorsMatching("failed to lazily deploy system contract")
 			h := newHarness(parent.Logger)
 
 			h.expectSystemContractCalled(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_INFO, errors.New("not deployed"), uint32(0))

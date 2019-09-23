@@ -28,16 +28,17 @@ import (
 const blocksFilename = "blocks"
 
 func NewFilesystemAdapterDriver(logger log.Logger, conf config.FilesystemBlockPersistenceConfig) (adapter.BlockPersistence, func(), error) {
-	ctx, cancelCtx := context.WithCancel(context.Background())
 
-	persistence, err := filesystem.NewBlockPersistence(ctx, conf, logger, metric.NewRegistry())
+	persistence, err := filesystem.NewBlockPersistence(conf, logger, metric.NewRegistry())
 	if err != nil {
 		return nil, nil, err
 	}
 
 	closeAdapter := func() {
-		cancelCtx()
-		time.Sleep(500 * time.Millisecond) // time to release any lock
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+
+		persistence.GracefulShutdown(ctx)
 	}
 
 	return persistence, closeAdapter, nil
