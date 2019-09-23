@@ -80,6 +80,61 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes, beforeProf, afterProf)
 }
 
+func TestMemoryLeaks_DuringRuntime(t *testing.T) {
+	dir := os.Getenv("PPROF_DIR")
+	absPath, err := filepath.Abs("../../" + dir)
+
+	require.NoError(t, err)
+
+	t.Log("Will save profiling results in " + absPath)
+
+	beforeProf := absPath + "/mem-runtime-before.prof"
+	afterProf := absPath + "/mem-runtime-after.prof"
+	before, err := os.Create(beforeProf)
+	defer before.Close()
+	require.NoError(t, err)
+	after, err := os.Create(afterProf)
+	defer after.Close()
+	require.NoError(t, err)
+
+	var warmups = 2
+	var repetitions = 5
+	var memUsageBeforeBytes uint64
+	var memUsageAfterBytes uint64
+	for i := 0; i < warmups; i++ {
+		t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
+		t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
+		t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
+		if i == warmups-1 {
+			memUsageBeforeBytes = getMemUsageBytes()
+			pprof.WriteHeapProfile(before)
+		}
+	}
+
+	for i := 0; i < repetitions; i++ {
+		t.Run("TestGazillionTxWhileDuplicatingMessages", TestGazillionTxWhileDuplicatingMessages)
+		t.Run("TestGazillionTxWhileDroppingMessages", TestGazillionTxWhileDroppingMessages)
+		t.Run("TestGazillionTxWhileDelayingMessages", TestGazillionTxWhileDelayingMessages)
+		if i == repetitions-1 {
+			memUsageAfterBytes = getMemUsageBytes()
+			pprof.WriteHeapProfile(after)
+		}
+	}
+	if memUsageAfterBytes < memUsageBeforeBytes {
+		return // its okay if the after is less in memory, no leak (and the rest of the math will overflow)
+	}
+
+	deltaMemBytes := memUsageAfterBytes - memUsageBeforeBytes
+	allowedMemIncreaseCalculatedFromMemBefore := uint64(0.1 * float64(memUsageBeforeBytes))
+	allowedMemIncreaseInAbsoluteBytes := uint64(1 * 1024 * 1024) // 1MB
+	t.Logf("")
+
+	require.Conditionf(t, func() bool {
+		return deltaMemBytes < allowedMemIncreaseCalculatedFromMemBefore || deltaMemBytes < allowedMemIncreaseInAbsoluteBytes
+	}, "Heap size increased too much during runtime.\nPre-run: %d bytes, during-run: %d bytes, added %d bytes. \nThis is more than 10%% of initial memory and more than the allowed addition of %d bytes. \nCompare %s and %s to see memory consumers",
+		memUsageBeforeBytes, memUsageAfterBytes, deltaMemBytes, allowedMemIncreaseInAbsoluteBytes, beforeProf, afterProf)
+}
+
 func sleepAndGC(t testing.TB) {
 	before := getMemUsageBytes()
 	time.Sleep(400 * time.Millisecond)
