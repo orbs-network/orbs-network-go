@@ -95,7 +95,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 		}
 
 		nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
-		processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
+		processorArtifactPath := setUpProcessorArtifactPath(virtualChainId)
 
 		cfg := config.
 			ForE2E(

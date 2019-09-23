@@ -2,7 +2,7 @@
 name: Failed Test
 about: A test has failed in CI (usually flakiness)
 title: ''
-labels: ''
+labels: flakiness
 assignees: ''
 
 ---
