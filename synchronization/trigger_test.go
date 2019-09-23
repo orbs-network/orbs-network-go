@@ -12,26 +12,17 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-type report struct {
-	message string
-	fields  []*log.Field
-}
+type nopLoggingErrorer struct{}
 
-type collector struct {
-	errors chan report
-}
+func (c *nopLoggingErrorer) Error(message string, fields ...*log.Field) {}
 
-func (c *collector) Error(message string, fields ...*log.Field) {
-	c.errors <- report{message, fields}
-}
-
-func mockLogger() *collector {
-	c := &collector{errors: make(chan report)}
-	return c
+func mockLogger() *nopLoggingErrorer {
+	return &nopLoggingErrorer{}
 }
 
 func TestPeriodicalTriggerStartsOk(t *testing.T) {
@@ -43,12 +34,13 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 		case fromTrigger <- struct{}{}:
 		case <-stop:
 			return
+		default: // protect against a deadlock when p fires a second time before close(stop) is called
 		}
 	}
 	tickTime := time.Microsecond
 	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
-	<-fromTrigger // test will block if the trigger did not happen
+	<-fromTrigger // test will block if the trigger never fires
 
 	close(stop)
 	p.Stop()
@@ -140,21 +132,18 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
 
 		logger := mockLogger()
-		x := 0
+		var handlerInvocationCount uint32
 		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, logger, func() {
-			x++
+			atomic.AddUint32(&handlerInvocationCount, 1)
 			panic("we should not see this other than the logs")
 		}, nil)
 
-		// more than one error means more than one panic means it recovers correctly
-		for i := 0; i < 2; i++ {
-			<-logger.errors
-		}
+		// a second invocation of the handler means the trigger recovered from the first panic
+		require.True(t, test.Eventually(1*time.Second, func() bool {
+			return atomic.LoadUint32(&handlerInvocationCount) >= 2
+		}), "expected trigger to have ticked more than once (even though it panics) but it ticked %d", atomic.LoadUint32(&handlerInvocationCount))
 
 		p.Stop()
-
-		require.True(t, x > 1, "expected trigger to have ticked more than once (even though it panics) but it ticked %d", x)
-
 	})
 
 }
