@@ -117,7 +117,7 @@ func (h *harness) expectNativeContractInfoRequested(expectedContractName primiti
 		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	}
 
-	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).Times(1)
+	h.processors[protocol.PROCESSOR_TYPE_NATIVE].When("GetContractInfo", mock.Any, mock.AnyIf(fmt.Sprintf("Contract equals %s", expectedContractName), contractMatcher)).Return(outputToReturn, returnError).AtLeast(1)
 }
 
 func (h *harness) verifyNativeContractInfoRequested(t *testing.T) {
