@@ -107,16 +107,29 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 		case reflect.Slice:
 			switch methodTypeIn.Elem().Kind() {
 			case reflect.Uint8:
+				if !arg.IsTypeBytesValue() {
+					return nil, errors.Errorf("method '%s' expects arg %d to be []byte but it has %s", functionNameForErrors, i, arg.StringType())
+				}
 				res = append(res, reflect.ValueOf(arg.BytesValue()))
 			case reflect.String:
-				res = append(res, reflect.ValueOf(arg.StringStringValue()))
+				if methodType.IsVariadic() && !arg.IsTypeStringValue() {
+					return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", functionNameForErrors, i, arg.StringType())
+				}
+				res = append(res, reflect.ValueOf(arg.StringValue()))
 			case reflect.Uint32:
+				if methodType.IsVariadic() && !arg.IsTypeUint32Value() {
+					return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", functionNameForErrors, i, arg.StringType())
+				}
 				res = append(res, reflect.ValueOf(arg.Uint32Value()))
 			case reflect.Uint64:
+				if methodType.IsVariadic() && !arg.IsTypeUint64Value() {
+					return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", functionNameForErrors, i, arg.StringType())
+				}
 				res = append(res, reflect.ValueOf(arg.Uint64Value()))
 			case reflect.Slice:
-				if !arg.IsTypeBytesValue() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be bytes but it has %s", functionNameForErrors, i, arg.StringType())
+				if methodType.IsVariadic() && (!arg.IsTypeBytesValue() ||
+					(methodTypeIn.Elem().Elem().Kind() != reflect.Uint8)) { // check that element of slice-of-slice is defined as byte
+					return nil, errors.Errorf("method '%s' expects arg %d to be [][]byte but it has %s", functionNameForErrors, i, arg.StringType())
 				}
 				res = append(res, reflect.ValueOf(arg.BytesValue()))
 			default:
@@ -128,15 +141,12 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 
 	}
 
-	// Handle case of overflow unless the last argument was an array (supposedly of variable length)
-	if i > methodType.NumIn() && methodType.NumIn() > 0 {
-		if k := methodType.In(methodType.NumIn() - 1).Kind(); k != reflect.Slice {
-			return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
-		}
-	}
-
-	if i < methodType.NumIn() {
+	if methodType.IsVariadic() { // determine dangling array
+		return res, nil
+	} else if i < methodType.NumIn() {
 		return nil, errors.Errorf("method '%s' takes %d args but received less", functionNameForErrors, methodType.NumIn())
+	} else if i > methodType.NumIn() {
+		return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
 	}
 
 	return res, nil

@@ -115,6 +115,14 @@ func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey
 	return
 }
 
+func (h *harness) eventuallyRunQueryWithoutError(timeout time.Duration, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+	test.Eventually(timeout, func() bool {
+		response, err = h.runQuery(senderPublicKey, contractName, methodName, args...)
+		return err == nil
+	})
+	return response, err
+}
+
 func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
 	payload, err := h.client.CreateQuery(senderPublicKey, contractName, methodName, args...)
 	if err != nil {

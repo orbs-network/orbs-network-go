@@ -5,4 +5,5 @@
 # and a flag indicating whether the checkout was a branch checkout (changing branches, flag=1) or a file checkout
 # (retrieving a file from the index, flag=0). This hook cannot affect the outcome of git checkout.
 
-./git-submodule-checkout.sh
+# enable if rolling back from go-modules to vendoring with git-sub-modules
+# ./git-submodule-checkout.sh

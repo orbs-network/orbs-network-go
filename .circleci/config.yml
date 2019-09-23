@@ -193,6 +193,8 @@ workflows:
 
       - races
 
+      - memory_leaks
+
       - deploy_new_chain_pr_only:
           requires:
             - e2e
