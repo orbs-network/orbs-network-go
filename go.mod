@@ -23,7 +23,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.2-0.20190922110733-b2836aacc7bd
+	github.com/orbs-network/lean-helix-go v0.2.2
 	github.com/orbs-network/membuffers v0.3.1-0.20190828124049-c5be4a9e4684
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.2.0
