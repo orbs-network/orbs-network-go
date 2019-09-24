@@ -12,37 +12,31 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
-type nopLoggingErrorer struct{}
+type nopLogger struct{}
 
-func (c *nopLoggingErrorer) Error(message string, fields ...*log.Field) {}
+func (c *nopLogger) Error(message string, fields ...*log.Field) {}
 
-func mockLogger() *nopLoggingErrorer {
-	return &nopLoggingErrorer{}
+func newNopLogger() *nopLogger {
+	return &nopLogger{}
 }
 
 func TestPeriodicalTriggerStartsOk(t *testing.T) {
-	logger := mockLogger()
-	fromTrigger := make(chan struct{})
-	stop := make(chan struct{})
+	logger := newNopLogger()
+	var handlerInvocationCount uint32
 	trigger := func() {
-		select {
-		case fromTrigger <- struct{}{}:
-		case <-stop:
-			return
-		default: // protect against a deadlock when p fires a second time before close(stop) is called
-		}
+		atomic.AddUint32(&handlerInvocationCount, 1)
 	}
 	tickTime := time.Microsecond
 	p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", tickTime, logger, trigger, nil)
 
-	<-fromTrigger // test will block if the trigger never fires
+	requireAtomicGreaterThan(t, &handlerInvocationCount, 0, "expected trigger to have ticked once promptly")
 
-	close(stop)
 	p.Stop()
 }
 
@@ -105,7 +99,7 @@ func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() {}, func() { close(ch) })
 		harness.Supervise(p)
 		cancel()
-		time.Sleep(time.Millisecond) // yield
+		runtime.Gosched() // yield
 		_, ok := <-ch
 		require.False(t, ok, "expected trigger stop action to close the channel")
 
@@ -131,21 +125,22 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
 
-		logger := mockLogger()
+		logger := newNopLogger()
 		var handlerInvocationCount uint32
 		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, logger, func() {
 			atomic.AddUint32(&handlerInvocationCount, 1)
 			panic("we should not see this other than the logs")
 		}, nil)
 
-		// a second invocation of the handler means the trigger recovered from the first panic
-		var lastObservedInvocationCount uint32
-		require.True(t, test.Eventually(1*time.Second, func() bool {
-			lastObservedInvocationCount = atomic.LoadUint32(&handlerInvocationCount)
-			return lastObservedInvocationCount >= 2
-		}), "expected trigger to have ticked more than once (even though it panics) but it ticked %d", lastObservedInvocationCount)
+		requireAtomicGreaterThan(t, &handlerInvocationCount, 1, "expected trigger to have ticked more than once even though it panics")
 
 		p.Stop()
 	})
 
+}
+
+func requireAtomicGreaterThan(t *testing.T, counterPtr *uint32, val uint32, msgAndArgs ...interface{}) {
+	require.True(t, test.Eventually(1*time.Second, func() bool {
+		return atomic.LoadUint32(counterPtr) > val
+	}), msgAndArgs...)
 }
