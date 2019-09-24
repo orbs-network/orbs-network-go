@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
-	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -99,7 +98,6 @@ func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() {}, func() { close(ch) })
 		harness.Supervise(p)
 		cancel()
-		runtime.Gosched() // yield
 		_, ok := <-ch
 		require.False(t, ok, "expected trigger stop action to close the channel")
 
