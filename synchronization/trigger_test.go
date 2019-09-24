@@ -139,9 +139,11 @@ func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
 		}, nil)
 
 		// a second invocation of the handler means the trigger recovered from the first panic
+		var lastObservedInvocationCount uint32
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return atomic.LoadUint32(&handlerInvocationCount) >= 2
-		}), "expected trigger to have ticked more than once (even though it panics) but it ticked %d", atomic.LoadUint32(&handlerInvocationCount))
+			lastObservedInvocationCount = atomic.LoadUint32(&handlerInvocationCount)
+			return lastObservedInvocationCount >= 2
+		}), "expected trigger to have ticked more than once (even though it panics) but it ticked %d", lastObservedInvocationCount)
 
 		p.Stop()
 	})
