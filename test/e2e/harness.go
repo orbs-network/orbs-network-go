@@ -69,11 +69,11 @@ func newAppHarness() *harness {
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+func (h *harness) deployContract(from *keys.Ed25519KeyPair, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
 	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
-	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
+	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, processorType, code...)
 
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to deploy native contract")
@@ -97,6 +97,14 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 	return executionResult, txStatus, err
 }
 
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+	return h.deployContract(from, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
+}
+
+func (h *harness) deployJSContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+	return h.deployContract(from, contractName, orbsClient.PROCESSOR_TYPE_JAVASCRIPT, code...)
+}
+
 func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
 	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
@@ -106,8 +114,8 @@ func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byt
 	return
 }
 
-func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (response *codec.SendTransactionResponse, txId string, err error) {
-	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
+func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (response *codec.SendTransactionResponse, txId string, err error) {
+	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, processorType, code...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -169,6 +177,19 @@ func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult, "expected deploy contract to succeed")
 }
 
+func (h *harness) deployJSContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
+
+	h.waitUntilTransactionPoolIsReady(t)
+
+	dcExResult, dcTxStatus, dcErr := h.deployJSContract(keyPair, contractName, contractBytes...)
+
+	fmt.Println("result---", dcExResult)
+
+	require.Nil(t, dcErr, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult, "expected deploy contract to succeed")
+}
+
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
@@ -180,7 +201,7 @@ func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 		}
 
 		lastCommittedTimestamp := int64(m["TransactionPool.LastCommitted.TimeNano"]["Value"].(float64))
-		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff * -1).UnixNano()
+		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
 		return diff >= 0
 	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
 }

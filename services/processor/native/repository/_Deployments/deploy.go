@@ -9,7 +9,7 @@ package deployments_systemcontract
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
-	committee_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
@@ -75,7 +75,10 @@ func deployService(serviceName string, processorType uint32, code ...[]byte) {
 	} else {
 		panic("contract doesn't have any code")
 	}
-	service.CallMethod(serviceName, "_init")
+
+	if existingProcessorType == 1 {
+		service.CallMethod(serviceName, "_init")
+	}
 }
 
 // Function was made go "public" to allow testing, it is not public in the contract.

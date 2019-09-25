@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const TIMES_TO_RUN_EACH_TEST = 2
+const TIMES_TO_RUN_EACH_TEST = 1
 
 func TestMain(m *testing.M) {
 	exitCode := 0

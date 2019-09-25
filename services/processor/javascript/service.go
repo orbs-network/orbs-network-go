@@ -8,6 +8,9 @@ package javascript
 
 import (
 	"context"
+	"fmt"
+	"github.com/netoneko/orbs-network-javascript-plugin/worker"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -21,16 +24,24 @@ var LogTag = log.Service("processor-javascript")
 type service struct {
 	logger log.Logger
 
-	mutex                        *sync.RWMutex
-	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
-	contractsUnderMutex          map[primitives.ContractName]string
+	mutex               *sync.RWMutex
+	sdkHandler          handlers.ContractSdkCallHandler
+	contractsUnderMutex map[primitives.ContractName]string
+
+	worker *func(handler sdkContext.SdkHandler) worker.Worker
 }
 
 func NewJavaScriptProcessor(logger log.Logger) services.Processor {
+	worker, err := loadPlugin()
+	if err != nil {
+		panic(fmt.Sprintf("Could not load plugin: %s", err))
+	}
+
 	return &service{
 		logger:              logger.WithTags(LogTag),
 		mutex:               &sync.RWMutex{},
 		contractsUnderMutex: make(map[primitives.ContractName]string),
+		worker:              worker,
 	}
 }
 
@@ -39,7 +50,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.contractSdkHandlerUnderMutex = handler
+	s.sdkHandler = handler
 }
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
@@ -83,7 +94,7 @@ func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	return s.contractSdkHandlerUnderMutex
+	return s.sdkHandler
 }
 
 func (s *service) getContractFromRepository(contractName primitives.ContractName) string {
