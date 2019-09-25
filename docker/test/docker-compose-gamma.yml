@@ -1,0 +1,7 @@
+version: '2.1'
+
+services:
+  ganache:
+    image: orbsnetwork/gamma:experimental
+    ports:
+      - 8080:8080

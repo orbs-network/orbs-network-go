@@ -108,6 +108,7 @@ jobs:
           name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
+      - run: ./docker/test/gamma-e2e.sh
       - run: ./.circleci/release-internal.sh
       - store_test_results:
           path: _reports
