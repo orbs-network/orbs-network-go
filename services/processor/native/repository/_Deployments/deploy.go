@@ -76,9 +76,7 @@ func deployService(serviceName string, processorType uint32, code ...[]byte) {
 		panic("contract doesn't have any code")
 	}
 
-	if existingProcessorType == 1 {
-		service.CallMethod(serviceName, "_init")
-	}
+	service.CallMethod(serviceName, "_init")
 }
 
 // Function was made go "public" to allow testing, it is not public in the contract.

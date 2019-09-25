@@ -39,6 +39,13 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 
 		h.deployJSContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
 			[]byte(`
+const key = new Uint8Array([1, 2, 3]);
+
+function _init() {
+	State.WriteString(key, "Station to Station")
+	return 0
+}
+
 function get() {
 	return 100
 }
@@ -46,8 +53,6 @@ function get() {
 function getSignerAddress() {
 	return Address.GetSignerAddress()
 }
-
-const key = new Uint8Array([1, 2, 3]);
 
 function saveName(value) {
 	State.WriteString(key, value)
@@ -90,11 +95,11 @@ function getName() {
 			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getName")
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-				return response.OutputArguments[0].(string) == ""
+				return response.OutputArguments[0].(string) == "Station to Station"
 			}
 			return false
 		})
-		require.True(t, ok, "getName should return empty string")
+		require.True(t, ok, "getName should return initial state")
 
 		printTestTime(t, "send transaction - start", &lt)
 		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "saveName", "Diamond Dogs")
