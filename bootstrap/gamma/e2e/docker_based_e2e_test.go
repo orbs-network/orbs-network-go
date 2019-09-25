@@ -17,7 +17,9 @@ import (
 func TestDeployContractAgainstDockerizedGammaInstance(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	endpoint := os.Getenv("API_ENDPOINT")
-	require.NotEmpty(t, endpoint)
+	if endpoint == "" {
+		t.Skip("API_ENDPOINT not provided, skipping docker-based test")
+	}
 
 	owner := keys.Ed25519KeyPairForTests(5)
 	client := orbs.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
