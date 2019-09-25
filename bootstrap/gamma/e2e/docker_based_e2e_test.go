@@ -24,7 +24,7 @@ func TestDeployContractAgainstDockerizedGammaInstance(t *testing.T) {
 	owner := keys.Ed25519KeyPairForTests(5)
 	client := orbs.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 	start := uint64(rnd.Int31())
-	contractName := fmt.Sprintf("counter_%d", start)
+	contractName := fmt.Sprintf("counter%d", start)
 
 	tx, txId, err := client.CreateDeployTransaction(owner.PublicKey(), owner.PrivateKey(), contractName, orbs.PROCESSOR_TYPE_NATIVE, []byte(contracts.NativeSourceCodeForCounter(start)))
 	require.NoError(t, err, "failed creating deploy transaction")
