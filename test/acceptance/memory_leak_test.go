@@ -23,6 +23,7 @@ import (
 // therefore, this file is marked on top with a build flag ("memoryleak") meaning without this flag it won't build or run
 // to run this test, add to the go command "-tags memoryleak", this is done in test.sh while making sure it's the only test running
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
+	t.Skip("This test is not useful, we only care about memory leaks during runtime and this is covered by the monitoring project 'marvin': https://github.com/orbs-network/marvin")
 	dir := os.Getenv("PPROF_DIR")
 	absPath, err := filepath.Abs("../../" + dir)
 
@@ -81,6 +82,7 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 }
 
 func TestMemoryLeaks_DuringRuntime(t *testing.T) {
+	t.Skip("This test is incorrect - should modify it to take memory samples within TestGazillion instead, see https://github.com/orbs-network/orbs-network-go/issues/1346")
 	dir := os.Getenv("PPROF_DIR")
 	absPath, err := filepath.Abs("../../" + dir)
 
