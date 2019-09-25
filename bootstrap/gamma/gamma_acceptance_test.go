@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package e2e
+package gamma
 
 import (
 	"fmt"
@@ -24,14 +24,14 @@ func testGammaWithJSONConfig(t *testing.T, configJSON string) {
 		return
 	}
 
-	endpoint := runGammaOnRandomPort(t, configJSON)
-	defer shutdown(t, endpoint)
+	endpoint := RunOnRandomPort(t, configJSON)
+	defer Shutdown(t, endpoint)
 
 	sender, _ := orbsClient.CreateAccount()
 	transferTo, _ := orbsClient.CreateAccount()
 	client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 
-	sendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
+	SendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
 	require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 2)), "Gamma did not close a block")
 }
 
@@ -41,8 +41,8 @@ func testGammaWithEmptyBlocks(t *testing.T, configJSON string) {
 		return
 	}
 
-	endpoint := runGammaOnRandomPort(t, configJSON)
-	defer shutdown(t, endpoint)
+	endpoint := RunOnRandomPort(t, configJSON)
+	defer Shutdown(t, endpoint)
 
 	require.NoError(t, test.RetryAndLog(WAIT_FOR_BLOCK_TIMEOUT, log.GetLogger(), waitForBlock(endpoint, 5)), "Gamma did not reach desired block")
 }
@@ -64,17 +64,17 @@ func TestGammaWithEmptyBlocks_LeanHelix(t *testing.T) {
 }
 
 func TestGammaSetBlockTime(t *testing.T) {
-	endpoint := runGammaOnRandomPort(t, "")
-	defer shutdown(t, endpoint)
+	endpoint := RunOnRandomPort(t, "")
+	defer Shutdown(t, endpoint)
 
-	timeTravel(t, endpoint, 10*time.Second)
+	TimeTravel(t, endpoint, 10*time.Second)
 
 	sender, _ := orbsClient.CreateAccount()
 	transferTo, _ := orbsClient.CreateAccount()
 	client := orbsClient.NewClient(endpoint, 42, codec.NETWORK_TYPE_TEST_NET)
 
 	desiredTime := time.Now().Add(10 * time.Second)
-	response := sendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
+	response := SendTransaction(t, client, sender, "BenchmarkToken", "transfer", uint64(671), transferTo.AddressAsBytes())
 
 	require.WithinDuration(t, desiredTime, response.BlockTimestamp, 1*time.Second, "new block time did not increase") // we check within a delta to prevent flakiness
 }
