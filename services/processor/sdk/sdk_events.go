@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package javascript
+package sdk
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 
 	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
-	argsArgumentArray := argsToArgumentArray(args...)
+	argsArgumentArray := ArgsToArgumentArray(args...)
 	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
 		panic(errors.Wrap(err, "incorrect types given to event emit").Error())
@@ -55,8 +55,10 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 }
 
+// FIXME should be implemented
 func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
-	panic("not implemented")
-	//_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
-	//return err
+	return nil
+	//	panic("not implemented")
+	//	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
+	//	return err
 }

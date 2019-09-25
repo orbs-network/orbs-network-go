@@ -11,6 +11,7 @@ package javascript
 import (
 	"github.com/netoneko/orbs-network-javascript-plugin/worker"
 	"github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"plugin"
@@ -33,7 +34,7 @@ func loadPlugin() (*func(handler context.SdkHandler) worker.Worker, error) {
 func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.ArgumentArray) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
 	//panic("not implemented")
 
-	w := (*s.worker)(s)
+	w := (*s.worker)(sdk.NewSDK(s.sdkHandler))
 	contractOutArgs, contractOutErr, err := w.ProcessMethodCall([]byte(executionContextId), code, string(methodName), args.Raw())
 	return protocol.ArgumentArrayReader(contractOutArgs), contractOutErr, err
 }
