@@ -9,7 +9,6 @@ package e2e
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -47,18 +46,28 @@ function get() {
 function getSignerAddress() {
 	return Address.GetSignerAddress()
 }
+
+const key = new Uint8Array([1, 2, 3]);
+
+function saveName(value) {
+	State.WriteString(key, value)
+	return 0
+}
+
+function getName() {
+	return State.ReadString(key)
+}
 `))
 
 		printTestTime(t, "send deploy - end", &lt)
 
-		//// check counter
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
 			printTestTime(t, "run query - start", &lt)
 			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
 			printTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-				return response.OutputArguments[0].(uint32) == 100 //counterStart
+				return response.OutputArguments[0].(uint32) == 100
 			}
 			return false
 		})
@@ -71,50 +80,41 @@ function getSignerAddress() {
 			printTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-				fmt.Println("YYY", hex.EncodeToString(response.OutputArguments[0].([]byte)))
-				fmt.Println("NNN", hex.EncodeToString(OwnerOfAllSupply.PublicKey()))
 				return bytes.Equal(response.OutputArguments[0].([]byte), signerAddress)
 			}
 			return false
 		})
-		require.True(t, ok, "get counter should return counter start")
+		require.True(t, ok, "getSignerAddress should return signer address")
 
-		//// check counter
-		//ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		//	printTestTime(t, "run query - start", &lt)
-		//	response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
-		//	printTestTime(t, "run query - end", &lt)
-		//
-		//	if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-		//		return response.OutputArguments[0] == 100 //counterStart
-		//	}
-		//	return false
-		//})
-		//require.True(t, ok, "get counter should return counter start")
-		//
-		//// transaction to add to the counter
-		//amount := uint64(17)
-		//
-		//printTestTime(t, "send transaction - start", &lt)
-		//response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", uint64(amount))
-		//printTestTime(t, "send transaction - end", &lt)
-		//
-		//require.NoError(t, err, "add transaction should not return error")
-		//require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		//require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
-		//
-		//// check counter
-		//ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		//	response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
-		//
-		//	if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
-		//		return response.OutputArguments[0] == counterStart+amount
-		//	}
-		//	return false
-		//})
-		//
-		//require.True(t, ok, "get counter should return counter start plus added value")
-		//printTestTime(t, "done", &lt)
+		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getName")
+
+			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
+				return response.OutputArguments[0].(string) == ""
+			}
+			return false
+		})
+		require.True(t, ok, "getName should return empty string")
+
+		printTestTime(t, "send transaction - start", &lt)
+		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "saveName", "Diamond Dogs")
+		printTestTime(t, "send transaction - end", &lt)
+
+		require.NoError(t, err, "add transaction should not return error")
+		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
+		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+
+		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getName")
+
+			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
+				return response.OutputArguments[0].(string) == "Diamond Dogs"
+			}
+			return false
+		})
+
+		require.True(t, ok, "getName should return name")
+		printTestTime(t, "done", &lt)
 
 	})
 }
