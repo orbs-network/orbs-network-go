@@ -134,7 +134,6 @@ jobs:
   ganache_related_tests:
     machine:
       image: ubuntu-1604:201903-01
-    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
