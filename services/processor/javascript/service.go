@@ -9,8 +9,8 @@ package javascript
 import (
 	"context"
 	"fmt"
-	"github.com/netoneko/orbs-network-javascript-plugin/worker"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-javascript-plugin/worker"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
