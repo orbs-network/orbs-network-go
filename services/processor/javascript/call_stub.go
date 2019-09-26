@@ -35,6 +35,6 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	//panic("not implemented")
 
 	w := (*s.worker)(sdk.NewSDK(s.sdkHandler))
-	contractOutArgs, contractOutErr, err := w.ProcessMethodCall([]byte(executionContextId), code, string(methodName), args.Raw())
-	return protocol.ArgumentArrayReader(contractOutArgs), contractOutErr, err
+	contractOutArgs, contractOutErr, err := w.ProcessMethodCall(executionContextId, code, methodName, args)
+	return contractOutArgs, contractOutErr, err
 }
