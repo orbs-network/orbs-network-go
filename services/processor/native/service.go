@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,6 +22,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"sync"
 	"time"
 )
 
@@ -28,13 +30,14 @@ var LogTag = log.Service("processor-native")
 
 type Repository interface {
 	ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error)
-	SetSdkHandler(handler handlers.ContractSdkCallHandler)
 }
 
 type service struct {
 	logger     log.Logger
 	config     config.NativeProcessorConfig
 	sdkHandler handlers.ContractSdkCallHandler
+
+	cache *contractCache
 
 	repository          Repository
 	compilingRepository *CompilingRepository //TODO remove when refactor is done
@@ -55,20 +58,15 @@ func getMetrics(m metric.Factory) *metrics {
 func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
 	logger := parentLogger.WithTags(LogTag)
 
-	compilingRepository := &CompilingRepository{
-		compiler:                compiler,
-		logger:                  logger,
-		sanitizer:               createSanitizer(),
-		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
-		contractCompilationTime: metricFactory.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
-	}
-	compilingRepository.contracts.deployedCache = make(map[string]*sdkContext.ContractInfo)
+	compilingRepository := NewCompilingRepository(compiler, logger, metricFactory)
+
 	s := &service{
-		repository:          &CompositeRepository{Nested: []Repository{&PrebuiltRepository{}, compilingRepository}},
+		repository:          &CompositeRepository{Nested: []Repository{repository.NewPrebuilt(), compilingRepository}},
 		compilingRepository: compilingRepository,
 		config:              config,
 		logger:              logger,
 		metrics:             getMetrics(metricFactory),
+		cache:               newContractCache(),
 	}
 
 	return s
@@ -178,5 +176,37 @@ func (s *service) retrieveContractAndMethodInstances(contractInfo *sdkContext.Co
 }
 
 func (s *service) retrieveContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	return s.repository.ContractInfo(ctx, executionContextId, contractName)
+	contractInfo := s.cache.infoByName(contractName)
+	if contractInfo != nil {
+		return contractInfo, nil
+	}
+
+	contractInfo, err := s.repository.ContractInfo(ctx, executionContextId, contractName)
+	if err == nil {
+		s.cache.addInfo(contractName, contractInfo)
+	}
+	return contractInfo, err
+}
+
+func (c *contractCache) infoByName(contractName string) *sdkContext.ContractInfo {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.contractInfo[contractName]
+}
+
+func (c *contractCache) addInfo(contractName string, contractInfo *sdkContext.ContractInfo) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.contractInfo[contractName] = contractInfo
+}
+
+type contractCache struct {
+	sync.RWMutex
+	contractInfo map[string]*sdkContext.ContractInfo
+}
+
+func newContractCache() *contractCache {
+	return &contractCache{contractInfo: make(map[string]*sdkContext.ContractInfo)}
 }

@@ -11,7 +11,6 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -19,7 +18,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"sync"
 	"time"
 )
 
@@ -41,31 +39,22 @@ func (c *CompositeRepository) ContractInfo(ctx context.Context, executionContext
 	return nil, nil
 }
 
-func (c *CompositeRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
-}
-
-type PrebuiltRepository struct {}
-
-func (r *PrebuiltRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	contractInfo, found := repository.PreBuiltContracts[contractName]
-	if found {
-		return contractInfo, nil
+func NewCompilingRepository(compiler adapter.Compiler, logger log.Logger, metricFactory metric.Factory) *CompilingRepository {
+	compilingRepository := &CompilingRepository{
+		compiler:                compiler,
+		logger:                  logger,
+		sanitizer:               createSanitizer(),
+		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
+		contractCompilationTime: metricFactory.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
 	}
-
-	return nil, nil
+	return compilingRepository
 }
-
-func (r *PrebuiltRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {}
 
 type CompilingRepository struct {
 	compiler   adapter.Compiler
 	sdkHandler handlers.ContractSdkCallHandler
 	logger     log.Logger
 
-	contracts struct {
-		sync.RWMutex
-		deployedCache map[string]*sdkContext.ContractInfo
-	}
 	sanitizer *sanitizer.Sanitizer
 
 	deployedContracts       *metric.Gauge
@@ -78,13 +67,6 @@ func (r *CompilingRepository) SetSdkHandler(handler handlers.ContractSdkCallHand
 }
 
 func (r *CompilingRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	// 1. try deployed artifact cache (if already compiled)
-	contractInfo := r.getDeployedContractInfoFromCache(contractName)
-	if contractInfo != nil {
-		return contractInfo, nil
-	}
-
-	// 2. try deployable code from state (if not yet compiled)
 	return r.retrieveDeployedContractInfoFromState(ctx, executionContextId, contractName)
 }
 
@@ -117,8 +99,6 @@ func (r *CompilingRepository) retrieveDeployedContractInfoFromState(ctx context.
 	if newContractInfo == nil {
 		return nil, errors.Errorf("compilation and load of deployable contract '%s' did not return a valid symbol", contractName)
 	}
-
-	r.addDeployedContractInfoToCache(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
 
 	r.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
 
@@ -237,18 +217,4 @@ func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContext
 	}
 
 	return arg0.Uint32Value(), nil
-}
-
-func (r *CompilingRepository) getDeployedContractInfoFromCache(contractName string) *sdkContext.ContractInfo {
-	r.contracts.RLock()
-	defer r.contracts.RUnlock()
-
-	return r.contracts.deployedCache[contractName]
-}
-
-func (r *CompilingRepository) addDeployedContractInfoToCache(contractName string, contractInfo *sdkContext.ContractInfo) {
-	r.contracts.Lock()
-	defer r.contracts.Unlock()
-
-	r.contracts.deployedCache[contractName] = contractInfo
 }
