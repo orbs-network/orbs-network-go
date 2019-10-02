@@ -83,7 +83,6 @@ type NodeConfig interface {
 
 	// processor
 	ProcessorArtifactPath() string
-	ProcessorSanitizeDeployedContracts() bool
 	ProcessorPerformWarmUpCompilation() bool
 
 	// ethereum connector (crosschain)
@@ -210,7 +209,6 @@ type EthereumCrosschainConnectorConfig interface {
 }
 
 type NativeProcessorConfig interface {
-	ProcessorSanitizeDeployedContracts() bool
 	VirtualChainId() primitives.VirtualChainId
 }
 

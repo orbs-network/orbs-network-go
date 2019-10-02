@@ -14,60 +14,61 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
-	"sync"
 	"time"
 )
 
 var LogTag = log.Service("processor-native")
 
+type Repository interface {
+	ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error)
+	RetrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error)
+	SetSdkHandler(handler handlers.ContractSdkCallHandler)
+}
+
 type service struct {
 	logger     log.Logger
 	config     config.NativeProcessorConfig
-	compiler   adapter.Compiler
 	sdkHandler handlers.ContractSdkCallHandler
-	sanitizer  *sanitizer.Sanitizer
 
-	contracts struct {
-		sync.RWMutex
-		instances     map[string]*types.ContractInstance
-		deployedCache map[string]*sdkContext.ContractInfo
-	}
+	repository Repository
 
 	metrics *metrics
 }
 
 type metrics struct {
-	deployedContracts       *metric.Gauge
-	processCallTime         *metric.Histogram
-	contractCompilationTime *metric.Histogram
+	processCallTime *metric.Histogram
 }
 
 func getMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		deployedContracts:       m.NewGauge("Processor.Native.DeployedContracts.Count"),
-		processCallTime:         m.NewLatency("Processor.Native.ProcessCallTime.Millis", 10*time.Second),
-		contractCompilationTime: m.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
+		processCallTime: m.NewLatency("Processor.Native.ProcessCallTime.Millis", 10*time.Second),
 	}
 }
 
-func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, logger log.Logger, metricFactory metric.Factory) services.Processor {
-	s := &service{
-		compiler: compiler,
-		config:   config,
-		logger:   logger.WithTags(LogTag),
-		metrics:  getMetrics(metricFactory),
+func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
+	logger := parentLogger.WithTags(LogTag)
+
+	repository := &compositeRepository{
+		compiler:                compiler,
+		logger:                  logger,
+		sanitizer:               createSanitizer(),
+		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
+		contractCompilationTime: metricFactory.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
 	}
-
-	s.sanitizer = s.createSanitizer()
-
-	s.contracts.instances = initializePreBuiltContractInstances()
-	s.contracts.deployedCache = make(map[string]*sdkContext.ContractInfo)
+	repository.contracts.instances = initializePreBuiltContractInstances()
+	repository.contracts.deployedCache = make(map[string]*sdkContext.ContractInfo)
+	s := &service{
+		repository: repository,
+		config:     config,
+		logger:     logger,
+		metrics:    getMetrics(metricFactory),
+	}
 
 	return s
 }
@@ -75,6 +76,7 @@ func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessor
 // runs once on system initialization (called by the virtual machine constructor)
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
 	s.sdkHandler = handler
+	s.repository.SetSdkHandler(handler)
 }
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
@@ -90,12 +92,8 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		}, err
 	}
 
-	// setup context for the contract sdk
-	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), s, contractInfo.Permission)
-	defer sdkContext.PopContext(sdkContext.ContextId(input.ContextId))
-
 	// get the method and check permissions
-	contractInstance, methodInstance, err := s.retrieveContractAndMethodInstances(string(input.ContractName), string(input.MethodName), input.CallingPermissionScope)
+	contractInstance, methodInstance, err := s.repository.RetrieveContractAndMethodInstances(string(input.ContractName), string(input.MethodName), input.CallingPermissionScope)
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
@@ -103,6 +101,10 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
+
+	// setup context for the contract sdk
+	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), s, contractInfo.Permission)
+	defer sdkContext.PopContext(sdkContext.ContextId(input.ContextId))
 
 	start := time.Now()
 	defer s.metrics.processCallTime.RecordSince(start)
@@ -149,32 +151,4 @@ func (s *service) GetContractInfo(ctx context.Context, input *services.GetContra
 	return &services.GetContractInfoOutput{
 		PermissionScope: protocol.ExecutionPermissionScope(contractInfo.Permission),
 	}, nil
-}
-
-func (s *service) getContractInstance(contractName string) *types.ContractInstance {
-	s.contracts.RLock()
-	defer s.contracts.RUnlock()
-
-	return s.contracts.instances[contractName]
-}
-
-func (s *service) addContractInstance(contractName string, instance *types.ContractInstance) {
-	s.contracts.Lock()
-	defer s.contracts.Unlock()
-
-	s.contracts.instances[contractName] = instance
-}
-
-func (s *service) getDeployedContractInfoFromCache(contractName string) *sdkContext.ContractInfo {
-	s.contracts.RLock()
-	defer s.contracts.RUnlock()
-
-	return s.contracts.deployedCache[contractName]
-}
-
-func (s *service) addDeployedContractInfoToCache(contractName string, contractInfo *sdkContext.ContractInfo) {
-	s.contracts.Lock()
-	defer s.contracts.Unlock()
-
-	s.contracts.deployedCache[contractName] = contractInfo
 }

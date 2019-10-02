@@ -11,6 +11,7 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/pkg/errors"
+	"strings"
 	"sync"
 )
 
@@ -40,14 +41,14 @@ func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.Contract
 		panic("fake compiler does not support multiple files in contracts")
 	}
 
-	c.provided[code[0]] = fakeContractInfo
+	c.provided[strings.TrimSpace(code[0])] = fakeContractInfo
 }
 
 func (c *fakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	contractInfo, found := c.provided[code[0]]
+	contractInfo, found := c.provided[strings.TrimSpace(code[0])]
 	if !found {
 		return nil, errors.New("fake contract for given code was not previously provided with ProvideFakeContract()")
 	}

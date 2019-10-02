@@ -36,7 +36,7 @@ func TestDeployAndCallContractThatCallsEthereum(t *testing.T) {
 
 			readResponse := readStringFromEthereumReaderAt(ctx, network, addressOfContractInEthereum)
 
-			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, readResponse.QueryResult().ExecutionResult())
+			require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS.String(), readResponse.QueryResult().ExecutionResult().String())
 			require.EqualValues(t, "foobar", extractStringValueFrom(readResponse))
 
 		})
@@ -66,7 +66,7 @@ func readStringFromEthereumReaderAt(ctx context.Context, network *Network, addre
 func deployOrbsContractCallingEthereum(parent context.Context, network *Network) {
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
-	ethereumReaderCode := "[placeholder for contract code which doesn't matter because native compiler is mocked]"
+	ethereumReaderCode := "package main" // content doesn't actually matter as long as it passes sanitation
 	network.MockContract(&sdkContext.ContractInfo{
 		PublicMethods: ethereum_caller_mock.PUBLIC,
 		SystemMethods: ethereum_caller_mock.SYSTEM,
