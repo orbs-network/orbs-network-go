@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -24,25 +23,47 @@ import (
 	"time"
 )
 
-func initializePreBuiltContractInstances() map[string]*types.ContractInstance {
-	res := make(map[string]*types.ContractInstance)
-	for contractName, contractInfo := range repository.PreBuiltContracts {
-		instance, err := types.NewContractInstance(contractInfo)
-		if err == nil {
-			res[contractName] = instance
-		}
-	}
-	return res
+type CompositeRepository struct {
+	Nested []Repository
 }
 
-type compositeRepository struct {
+func (c *CompositeRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+	for _, repo := range c.Nested {
+		contractInfo, err := repo.ContractInfo(ctx, executionContextId, contractName)
+		if err != nil {
+			return nil, err
+		}
+		if contractInfo != nil {
+			return contractInfo, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (c *CompositeRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
+}
+
+type PrebuiltRepository struct {}
+
+func (r *PrebuiltRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+	contractInfo, found := repository.PreBuiltContracts[contractName]
+	if found {
+		return contractInfo, nil
+	}
+
+	return nil, nil
+}
+
+func (r *PrebuiltRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {}
+
+type CompilingRepository struct {
 	compiler   adapter.Compiler
 	sdkHandler handlers.ContractSdkCallHandler
 	logger     log.Logger
 
 	contracts struct {
 		sync.RWMutex
-		instances     map[string]*types.ContractInstance
 		deployedCache map[string]*sdkContext.ContractInfo
 	}
 	sanitizer *sanitizer.Sanitizer
@@ -52,65 +73,25 @@ type compositeRepository struct {
 	contractCompilationTime *metric.Histogram
 }
 
-func (r *compositeRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
+func (r *CompilingRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
 	r.sdkHandler = handler
 }
 
-func (r *compositeRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	// 1. try pre-built repository
-	contractInfo, found := repository.PreBuiltContracts[contractName]
-	if found {
-		return contractInfo, nil
-	}
-
-	// 2. try deployed artifact cache (if already compiled)
-	contractInfo = r.getDeployedContractInfoFromCache(contractName)
+func (r *CompilingRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+	// 1. try deployed artifact cache (if already compiled)
+	contractInfo := r.getDeployedContractInfoFromCache(contractName)
 	if contractInfo != nil {
 		return contractInfo, nil
 	}
 
-	// 3. try deployable code from state (if not yet compiled)
+	// 2. try deployable code from state (if not yet compiled)
 	return r.retrieveDeployedContractInfoFromState(ctx, executionContextId, contractName)
 }
 
-func (s *compositeRepository) ContractInstance(contractName string) *types.ContractInstance {
-	s.contracts.RLock()
-	defer s.contracts.RUnlock()
-
-	return s.contracts.instances[contractName]
-}
-
-func (s *service) retrieveContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	return s.repository.ContractInfo(ctx, executionContextId, contractName)
-}
-
-func (s *compositeRepository) RetrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error) {
-	contractInstance = s.ContractInstance(contractName)
-	if contractInstance == nil {
-		return nil, nil, errors.Errorf("contract instance not found for contract '%s'", contractName)
-	}
-
-	methodInstance, found := contractInstance.PublicMethods[methodName]
-	if found {
-		return contractInstance, methodInstance, nil
-	}
-
-	methodInstance, found = contractInstance.SystemMethods[methodName]
-	if found {
-		if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
-			return contractInstance, methodInstance, nil
-		} else {
-			return nil, nil, errors.Errorf("only system contracts can run method '%s'", methodName)
-		}
-	}
-
-	return nil, nil, errors.Errorf("method '%s' not found on contract '%s'", methodName, contractName)
-}
-
-func (s *compositeRepository) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+func (r *CompilingRepository) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
 	start := time.Now()
 
-	rawCodeFiles, err := s.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
+	rawCodeFiles, err := r.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +99,7 @@ func (s *compositeRepository) retrieveDeployedContractInfoFromState(ctx context.
 	var code []string
 
 	for _, rawCodeFile := range rawCodeFiles {
-		sanitizedCode, err := s.sanitizeDeployedSourceCode(rawCodeFile)
+		sanitizedCode, err := r.sanitizeDeployedSourceCode(rawCodeFile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 		}
@@ -129,7 +110,7 @@ func (s *compositeRepository) retrieveDeployedContractInfoFromState(ctx context.
 	ctx, cancel := context.WithTimeout(context.Background(), adapter.MAX_COMPILATION_TIME)
 	defer cancel()
 
-	newContractInfo, err := s.compiler.Compile(ctx, code...)
+	newContractInfo, err := r.compiler.Compile(ctx, code...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
 	}
@@ -137,31 +118,26 @@ func (s *compositeRepository) retrieveDeployedContractInfoFromState(ctx context.
 		return nil, errors.Errorf("compilation and load of deployable contract '%s' did not return a valid symbol", contractName)
 	}
 
-	instance, err := types.NewContractInstance(newContractInfo)
-	if err != nil {
-		return nil, errors.Errorf("instance initialization of deployable contract '%s' failed", contractName)
-	}
-	s.addContractInstance(contractName, instance)
-	s.addDeployedContractInfoToCache(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
+	r.addDeployedContractInfoToCache(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
 
-	s.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
+	r.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
 
-	s.deployedContracts.Inc()
-	s.contractCompilationTime.RecordSince(start)
+	r.deployedContracts.Inc()
+	r.contractCompilationTime.RecordSince(start)
 	// only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil
 }
 
-func (s *compositeRepository) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
-	codeParts, err := s.getCodeParts(ctx, executionContextId, contractName)
+func (r *CompilingRepository) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
+	codeParts, err := r.getCodeParts(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
 	var results []string
 	for i := uint32(0); i < codeParts; i++ {
-		part, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
+		part, err := r.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
 		if err != nil {
 			return nil, err
 		}
@@ -171,11 +147,11 @@ func (s *compositeRepository) getFullCodeOfDeploymentSystemContract(ctx context.
 	return results, nil
 }
 
-func (s *compositeRepository) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
+func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PART)
 
-	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
@@ -216,11 +192,11 @@ func (s *compositeRepository) callGetCodeOfDeploymentSystemContract(ctx context.
 	return string(arg0.BytesValue()), nil
 }
 
-func (s *compositeRepository) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
+func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PARTS)
 
-	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
@@ -263,23 +239,16 @@ func (s *compositeRepository) getCodeParts(ctx context.Context, executionContext
 	return arg0.Uint32Value(), nil
 }
 
-func (s *compositeRepository) addContractInstance(contractName string, instance *types.ContractInstance) {
-	s.contracts.Lock()
-	defer s.contracts.Unlock()
+func (r *CompilingRepository) getDeployedContractInfoFromCache(contractName string) *sdkContext.ContractInfo {
+	r.contracts.RLock()
+	defer r.contracts.RUnlock()
 
-	s.contracts.instances[contractName] = instance
+	return r.contracts.deployedCache[contractName]
 }
 
-func (s *compositeRepository) getDeployedContractInfoFromCache(contractName string) *sdkContext.ContractInfo {
-	s.contracts.RLock()
-	defer s.contracts.RUnlock()
+func (r *CompilingRepository) addDeployedContractInfoToCache(contractName string, contractInfo *sdkContext.ContractInfo) {
+	r.contracts.Lock()
+	defer r.contracts.Unlock()
 
-	return s.contracts.deployedCache[contractName]
-}
-
-func (s *compositeRepository) addDeployedContractInfoToCache(contractName string, contractInfo *sdkContext.ContractInfo) {
-	s.contracts.Lock()
-	defer s.contracts.Unlock()
-
-	s.contracts.deployedCache[contractName] = contractInfo
+	r.contracts.deployedCache[contractName] = contractInfo
 }
