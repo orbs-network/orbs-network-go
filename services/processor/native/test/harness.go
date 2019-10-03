@@ -38,7 +38,7 @@ func newHarness(logger log.Logger) *harness {
 
 	registry := metric.NewRegistry()
 
-	config := &nativeProcessorConfigForTests{}
+	config := &NativeProcessorConfigForTests{}
 
 	service := native.NewNativeProcessor(compiler, config, logger, registry)
 	service.RegisterContractSdkCallHandler(sdkCallHandler)

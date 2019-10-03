@@ -71,7 +71,7 @@ func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessor
 	}
 }
 
-func NewNativeProcessorWithRepository(repository Repository, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
+func NewProcessorWithContractRepository(repository Repository, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
 	logger := parentLogger.WithTags(LogTag)
 
 	return &service{
@@ -195,9 +195,14 @@ func (s *service) retrieveContractInfo(ctx context.Context, executionContextId p
 	}
 
 	contractInfo, err := s.repository.ContractInfo(ctx, executionContextId, contractName)
-	if err == nil {
-		s.cache.addInfo(contractName, contractInfo)
+	if err != nil {
+		return nil, err
 	}
+	if contractInfo == nil {
+		return nil, errors.Errorf("Contract %s was not found", contractName)
+	}
+
+	s.cache.addInfo(contractName, contractInfo)
 	return contractInfo, err
 }
 

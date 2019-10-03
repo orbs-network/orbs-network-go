@@ -24,7 +24,7 @@ func TestContextId_Simple(t *testing.T) {
 
 			var CONTEXT_ID = []byte{0x17, 0x18}
 
-			call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
+			call := ProcessCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
 			h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
 
 			_, err := h.service.ProcessCall(ctx, call)
@@ -45,7 +45,7 @@ func TestContextId_MultipleGoroutines(t *testing.T) {
 				var CONTEXT_ID = sdkContext.ContextId([]byte{0x17, byte(i + 17)})
 
 				go func() {
-					call := processCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
+					call := ProcessCallInput().WithContextId(CONTEXT_ID).WithMethod("BenchmarkContract", "set").WithArgs(uint64(66)).Build()
 					h.expectSdkCallMadeWithExecutionContextId(CONTEXT_ID)
 
 					time.Sleep(5 * time.Millisecond)
