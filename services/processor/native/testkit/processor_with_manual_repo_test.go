@@ -2,7 +2,6 @@ package testkit
 
 import (
 	"context"
-	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	benchmarkcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkContract"
@@ -22,8 +21,7 @@ func TestProcessorCanCallContractWithManualRepository(t *testing.T) {
 			r := NewRepository()
 			p := native.NewProcessorWithContractRepository(r, cfg, harness.Logger, metric.NewRegistry())
 
-			r.Register(benchmarkcontract.CONTRACT_NAME, benchmarkcontract.PUBLIC, benchmarkcontract.SYSTEM, benchmarkcontract.EVENTS, sdkContext.PERMISSION_SCOPE_SERVICE)
-
+			r.Register(benchmarkcontract.CONTRACT_NAME, benchmarkcontract.PUBLIC, benchmarkcontract.SYSTEM, benchmarkcontract.EVENTS)
 			call := processorTests.ProcessCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
 
 			output, err := p.ProcessCall(ctx, call)
