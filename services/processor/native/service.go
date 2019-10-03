@@ -58,24 +58,37 @@ func getMetrics(m metric.Factory) *metrics {
 func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
 	logger := parentLogger.WithTags(LogTag)
 
-	compilingRepository := NewCompilingRepository(compiler, logger, metricFactory)
+	compilingRepository := NewCompilingRepository(compiler, parentLogger, metricFactory)
+	compositeRepository := &CompositeRepository{Nested: []Repository{repository.NewPrebuilt(), compilingRepository}}
 
-	s := &service{
-		repository:          &CompositeRepository{Nested: []Repository{repository.NewPrebuilt(), compilingRepository}},
+	return &service{
+		repository:          compositeRepository,
 		compilingRepository: compilingRepository,
 		config:              config,
 		logger:              logger,
 		metrics:             getMetrics(metricFactory),
 		cache:               newContractCache(),
 	}
+}
 
-	return s
+func NewNativeProcessorWithRepository(repository Repository, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
+	logger := parentLogger.WithTags(LogTag)
+
+	return &service{
+		repository: repository,
+		config:     config,
+		logger:     logger,
+		metrics:    getMetrics(metricFactory),
+		cache:      newContractCache(),
+	}
 }
 
 // runs once on system initialization (called by the virtual machine constructor)
 func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCallHandler) {
 	s.sdkHandler = handler
-	s.compilingRepository.SetSdkHandler(handler)
+	if s.compilingRepository != nil {
+		s.compilingRepository.SetSdkHandler(handler)
+	}
 }
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
@@ -152,8 +165,8 @@ func (s *service) GetContractInfo(ctx context.Context, input *services.GetContra
 	}, nil
 }
 
-func (s *service) retrieveContractAndMethodInstances(contractInfo *sdkContext.ContractInfo, contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error) {
-	contractInstance, err = types.NewContractInstance(contractInfo) //TODO cache
+func (s *service) retrieveContractAndMethodInstances(contractInfo *sdkContext.ContractInfo, contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (*types.ContractInstance, types.MethodInstance, error) {
+	contractInstance, err := s.getContractInstance(contractInfo, contractName)
 	if err != nil {
 		return nil, nil, errors.Errorf("error creating contract instance for contract %s", contractName)
 	}
@@ -188,6 +201,20 @@ func (s *service) retrieveContractInfo(ctx context.Context, executionContextId p
 	return contractInfo, err
 }
 
+func (s *service) getContractInstance(contractInfo *sdkContext.ContractInfo, contractName string) (*types.ContractInstance, error) {
+	contractInstance := s.cache.instanceByNam(contractName)
+	if contractInstance != nil {
+		return contractInstance, nil
+	}
+
+	contractInstance, err := types.NewContractInstance(contractInfo)
+	if err != nil {
+		return nil, err
+	}
+	s.cache.addInstance(contractName, contractInstance)
+	return contractInstance, nil
+}
+
 func (c *contractCache) infoByName(contractName string) *sdkContext.ContractInfo {
 	c.RLock()
 	defer c.RUnlock()
@@ -202,11 +229,29 @@ func (c *contractCache) addInfo(contractName string, contractInfo *sdkContext.Co
 	c.contractInfo[contractName] = contractInfo
 }
 
+func (c *contractCache) instanceByNam(contractName string) *types.ContractInstance {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.contractInstances[contractName]
+}
+
+func (c *contractCache) addInstance(contractName string, contractInstance *types.ContractInstance) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.contractInstances[contractName] = contractInstance
+}
+
 type contractCache struct {
 	sync.RWMutex
-	contractInfo map[string]*sdkContext.ContractInfo
+	contractInfo      map[string]*sdkContext.ContractInfo
+	contractInstances map[string]*types.ContractInstance
 }
 
 func newContractCache() *contractCache {
-	return &contractCache{contractInfo: make(map[string]*sdkContext.ContractInfo)}
+	return &contractCache{
+		contractInfo:      make(map[string]*sdkContext.ContractInfo),
+		contractInstances: make(map[string]*types.ContractInstance),
+	}
 }

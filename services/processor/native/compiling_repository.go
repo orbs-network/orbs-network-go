@@ -42,7 +42,7 @@ func (c *CompositeRepository) ContractInfo(ctx context.Context, executionContext
 func NewCompilingRepository(compiler adapter.Compiler, logger log.Logger, metricFactory metric.Factory) *CompilingRepository {
 	compilingRepository := &CompilingRepository{
 		compiler:                compiler,
-		logger:                  logger,
+		logger:                  logger.WithTags(log.Service("compiling-contract-repository")),
 		sanitizer:               createSanitizer(),
 		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
 		contractCompilationTime: metricFactory.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
