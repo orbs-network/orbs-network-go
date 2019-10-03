@@ -57,6 +57,7 @@ func TestOrbsElectionResultsContract_updateElectionResults(t *testing.T) {
 		setPastElection(currIndex, currTime, currBlockNumber, currentBlockHeight, currElected, currOrbsElected)
 		_setNumberOfElections(currIndex)
 		_setValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
+		m.MockEnvBlockHeight(5000000)
 
 		// call
 		_setElectedValidators(newElected, newTime, newBlockNumber)
@@ -84,6 +85,7 @@ func TestOrbsElectionResultsContract_updateElectionResults_Empty(t *testing.T) {
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 		_setValidatorOrbsAddress(newElected[0][:], newElectedOrbs[0][:])
+		m.MockEnvBlockHeight(5000000)
 
 		// call
 		_setElectedValidators(newElected, newTime, newBlockNumber)
@@ -108,6 +110,7 @@ func TestOrbsElectionResultsContract_updateElectionResults_WrongBlockNumber(t *t
 		_init()
 		_setElectedValidatorsBlockNumberAtIndex(currIndex, currBlockNumber)
 		_setNumberOfElections(currIndex)
+		m.MockEnvBlockHeight(5000000)
 
 		// call
 		require.Panics(t, func() {

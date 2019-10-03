@@ -25,6 +25,10 @@ func ArgumentsBuilders(args ...interface{}) (res []*protocol.ArgumentBuilder) {
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)})
 		case []byte:
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)})
+		case [20]byte:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.([20]byte)})
+		case [32]byte:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.([32]byte)})
 		}
 	}
 	return
