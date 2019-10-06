@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
@@ -21,6 +22,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"sync"
+	"time"
 )
 
 const (
@@ -48,7 +50,8 @@ type Service struct {
 
 	nodeSync *internodesync.BlockSync
 
-	metrics *metrics
+	metrics        *metrics
+	notifyNodeSync chan struct{}
 }
 
 type metrics struct {
@@ -68,11 +71,12 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &Service{
-		persistence: persistence,
-		gossip:      gossip,
-		logger:      logger,
-		config:      config,
-		metrics:     newMetrics(metricFactory),
+		persistence:    persistence,
+		gossip:         gossip,
+		logger:         logger,
+		config:         config,
+		metrics:        newMetrics(metricFactory),
+		notifyNodeSync: make(chan struct{}),
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
@@ -82,6 +86,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))
 	}
 	s.Supervise(s.nodeSync)
+	s.Supervise(s.startNotifyNodeSync(ctx))
 
 	lastBlock, err := persistence.GetLastBlock()
 	if err != nil {
@@ -125,4 +130,24 @@ func (s *Service) appendHandlerUnderLock(handler handlers.ConsensusBlocksHandler
 	s.consensusBlocksHandlers.Lock()
 	defer s.consensusBlocksHandlers.Unlock()
 	s.consensusBlocksHandlers.handlers = append(s.consensusBlocksHandlers.handlers, handler)
+}
+
+func (s *Service) startNotifyNodeSync(ctx context.Context) govnr.ShutdownWaiter {
+	return govnr.Forever(ctx, "node sync commit updater", logfields.GovnrErrorer(s.logger), func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-s.notifyNodeSync:
+				s.notifyNodeSyncOfCommittedBlock(ctx)
+			}
+		}
+	})
+}
+
+func (s *Service) notifyNodeSyncOfCommittedBlock(ctx context.Context) {
+	shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+	defer cancel()
+	s.nodeSync.HandleBlockCommitted(shortCtx)
+
 }
