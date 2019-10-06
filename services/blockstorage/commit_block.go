@@ -9,14 +9,12 @@ package blockstorage
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"time"
 )
 
 func (s *Service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -63,11 +61,11 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 	s.metrics.lastCommittedTime.Update(int64(input.BlockPair.TransactionsBlock.Header.Timestamp()))
 
 	if notifyNodeSync {
-		govnr.Once(logfields.GovnrErrorer(logger), func() {
-			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
-			defer cancel()
-			s.nodeSync.HandleBlockCommitted(shortCtx)
-		})
+		select {
+		case s.notifyNodeSync <- struct{}{}:
+		default:
+			s.logger.Info("can't update node sync of committed block because previous update hasn't returned yet")
+		}
 	}
 
 	logger.Info("committed a block", logfields.BlockHeight(proposedBlockHeight), log.Int("num-transactions", len(input.BlockPair.TransactionsBlock.SignedTransactions)))
