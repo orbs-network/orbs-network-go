@@ -345,6 +345,10 @@ func (c *config) ProcessorArtifactPath() string {
 	return c.kv[PROCESSOR_ARTIFACT_PATH].StringValue
 }
 
+func (c *config) ProcessorSanitizeDeployedContracts() bool {
+	return c.kv[PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS].BoolValue
+}
+
 func (c *config) ProcessorPerformWarmUpCompilation() bool {
 	return c.kv[PROCESSOR_PERFORM_WARM_UP_COMPILATION].BoolValue
 }

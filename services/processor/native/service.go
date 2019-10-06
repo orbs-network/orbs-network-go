@@ -58,7 +58,7 @@ func getMetrics(m metric.Factory) *metrics {
 func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
 	logger := parentLogger.WithTags(LogTag)
 
-	compilingRepository := NewCompilingRepository(compiler, parentLogger, metricFactory)
+	compilingRepository := NewCompilingRepository(compiler, config, parentLogger, metricFactory)
 	compositeRepository := &CompositeRepository{Nested: []Repository{repository.NewPrebuilt(), compilingRepository}}
 
 	return &service{

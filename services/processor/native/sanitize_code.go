@@ -10,10 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 )
 
-func (r *CompilingRepository) sanitizeDeployedSourceCode(code string) (string, error) {
-	return r.sanitizer.Process(code)
-}
-
 func createSanitizer() *sanitizer.Sanitizer {
 	return sanitizer.NewSanitizer(SanitizerConfigForProduction())
 }

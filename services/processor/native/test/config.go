@@ -11,6 +11,10 @@ import "github.com/orbs-network/orbs-spec/types/go/primitives"
 type NativeProcessorConfigForTests struct {
 }
 
+func (c *NativeProcessorConfigForTests) ProcessorSanitizeDeployedContracts() bool {
+	return true
+}
+
 func (c *NativeProcessorConfigForTests) VirtualChainId() primitives.VirtualChainId {
 	return 42
 }

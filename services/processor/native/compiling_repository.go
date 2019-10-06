@@ -9,6 +9,7 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
@@ -39,9 +40,10 @@ func (c *CompositeRepository) ContractInfo(ctx context.Context, executionContext
 	return nil, nil
 }
 
-func NewCompilingRepository(compiler adapter.Compiler, logger log.Logger, metricFactory metric.Factory) *CompilingRepository {
+func NewCompilingRepository(compiler adapter.Compiler, cfg config.NativeProcessorConfig, logger log.Logger, metricFactory metric.Factory) *CompilingRepository {
 	compilingRepository := &CompilingRepository{
 		compiler:                compiler,
+		config:                  cfg,
 		logger:                  logger.WithTags(log.Service("compiling-contract-repository")),
 		sanitizer:               createSanitizer(),
 		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
@@ -60,6 +62,7 @@ type CompilingRepository struct {
 	deployedContracts       *metric.Gauge
 	processCallTime         *metric.Histogram
 	contractCompilationTime *metric.Histogram
+	config                  config.NativeProcessorConfig
 }
 
 func (r *CompilingRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
@@ -79,7 +82,6 @@ func (r *CompilingRepository) retrieveDeployedContractInfoFromState(ctx context.
 	}
 
 	var code []string
-
 	for _, rawCodeFile := range rawCodeFiles {
 		sanitizedCode, err := r.sanitizeDeployedSourceCode(rawCodeFile)
 		if err != nil {
@@ -107,6 +109,14 @@ func (r *CompilingRepository) retrieveDeployedContractInfoFromState(ctx context.
 	// only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil
+}
+
+func (r *CompilingRepository) sanitizeDeployedSourceCode(code string) (string, error) {
+	if r.config.ProcessorSanitizeDeployedContracts() {
+		return r.sanitizer.Process(code)
+	}
+
+	return code, nil
 }
 
 func (r *CompilingRepository) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
