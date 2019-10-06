@@ -180,7 +180,7 @@ func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
 }
 
 func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.T) {
-	require.NoError(t, test.EventuallyVerify(10*time.Millisecond, h.gossip), "broadcast should be sent")
+	require.NoError(t, test.EventuallyVerify(50*time.Millisecond, h.gossip), "broadcast should be sent")
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
