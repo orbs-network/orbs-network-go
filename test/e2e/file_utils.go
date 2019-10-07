@@ -84,6 +84,15 @@ func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 	return fmt.Sprintf("vcid_%d", virtualChainId)
 }
 
+/**
+	These functions are used to align & update the orbs-contract-sdk version found
+	in our main go.mod file of orbs-network-go to the go.mod used for contract compilations
+	being run in the e2e tests. This harness copies the template go.mod (same as happens during a CI docker build for our binary) 
+	to mimick the same behavior. If these functions are not used, the go.mod template would not contain a valid version of the SDK to import
+	by the compiler and native contract deployments will fail to build.
+
+	The template doesn't contain the same version as in the main go.mod file to keep things DRY and avoid mismatches
+**/
 func getMainProjectSDKVersion(pathToMainGoMod string) string {
 	sdkVersion := ""
 
