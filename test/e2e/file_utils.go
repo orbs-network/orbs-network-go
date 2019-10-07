@@ -12,7 +12,9 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
+	"strings"
 	"os"
+	"bytes"	
 	"path/filepath"
 )
 
@@ -82,6 +84,48 @@ func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 	return fmt.Sprintf("vcid_%d", virtualChainId)
 }
 
+/**
+	These functions are used to align & update the orbs-contract-sdk version found
+	in our main go.mod file of orbs-network-go to the go.mod used for contract compilations
+	being run in the e2e tests. This harness copies the template go.mod (same as happens during a CI docker build for our binary) 
+	to mimick the same behavior. If these functions are not used, the go.mod template would not contain a valid version of the SDK to import
+	by the compiler and native contract deployments will fail to build.
+
+	The template doesn't contain the same version as in the main go.mod file to keep things DRY and avoid mismatches
+**/
+func getMainProjectSDKVersion(pathToMainGoMod string) string {
+	sdkVersion := ""
+
+	input, err := ioutil.ReadFile(pathToMainGoMod)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read file: %s", err.Error()))
+	}
+
+	goModLines := strings.Split(string(input), "\n")
+	for _, line := range goModLines {
+		if strings.Contains(line, "orbs-contract-sdk") {
+			sdkParts := strings.Split(strings.Trim(line, "\t\n"), " ")
+			sdkVersion = sdkParts[1]
+		}
+	}	
+
+	return sdkVersion
+}
+
+func replaceSDKVersion(targetFilePath string, sdkVersion string) {
+	input, err := ioutil.ReadFile(targetFilePath)
+
+	if err != nil {
+		panic(fmt.Sprintf("failed to open e2e go.mod file for reading: %s", err.Error()))
+	}
+
+	output := bytes.Replace(input, []byte("SDK_VER"), []byte(sdkVersion), -1)
+
+	if err = ioutil.WriteFile(targetFilePath, output, 0666); err != nil {
+		panic(fmt.Sprintf("failed to re-write e2e go.mod file: %s", err.Error()))
+	}
+}
+
 func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string {
 	processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
 
@@ -91,11 +135,18 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 		panic(fmt.Sprintf("failed to make dir: %s", err.Error()))
 	}
 
+	mainGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "go.mod")
+	sdkVersion := getMainProjectSDKVersion(mainGoModPath)
+	
 	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", "go.mod.template")
 	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")
 	err = CopyFile(sourceGoModPath, targetGoModPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to copy go.mod file: %s", err.Error()))
 	}
+
+	fmt.Println("the target go.mod is at:", targetGoModPath, sdkVersion)
+	replaceSDKVersion(targetGoModPath, sdkVersion)
+
 	return processorArtifactPath
 }
