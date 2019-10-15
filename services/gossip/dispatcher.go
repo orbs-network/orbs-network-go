@@ -21,8 +21,9 @@ import (
 type handlerFunc func(ctx context.Context, header *gossipmessages.Header, payloads [][]byte)
 
 type gossipMessage struct {
-	header   *gossipmessages.Header
-	payloads [][]byte
+	header         *gossipmessages.Header
+	payloads       [][]byte
+	tracingContext *trace.Context
 }
 
 type meteredTopicChannel struct {
@@ -37,12 +38,13 @@ type meteredTopicChannel struct {
 func (c *meteredTopicChannel) send(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("transport message received", log.Stringable("header", header), log.Int("topic-size", len(c.ch)))
+	tracingContext, _ := trace.FromContext(ctx)
 
 	select {
 	default:
 		c.droppedMessages.Inc()
 		return errors.Errorf("buffer full")
-	case c.ch <- gossipMessage{header: header, payloads: payloads}: //TODO should the channel have *gossipMessage as type?
+	case c.ch <- gossipMessage{header: header, payloads: payloads, tracingContext: tracingContext}: //TODO should the channel have *gossipMessage as type?
 		c.updateMetrics()
 		return nil
 	}
@@ -60,7 +62,8 @@ func (c *meteredTopicChannel) run(ctx context.Context, logger log.Logger, handle
 				c.drain()
 				return
 			case message := <-c.ch:
-				handler(ctx, message.header, message.payloads)
+				ctxWithTrace := trace.PropagateContext(ctx, message.tracingContext)
+				handler(ctxWithTrace, message.header, message.payloads)
 				c.updateMetrics()
 			}
 		}

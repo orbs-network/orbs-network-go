@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
@@ -78,6 +79,47 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 
 		require.NoError(t, test.EventuallyVerify(1*time.Second, trh, bsh), "mocks were not invoked as expected")
 
+	})
+}
+
+func TestGossipDispatcherPropagatesTracingContext(t *testing.T) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
+		cfg := &conf{}
+
+		genesisValidatorNodes := make(map[string]config.ValidatorNode)
+		for _, address := range nodeAddresses {
+			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
+		}
+		transport := memory.NewTransport(ctx, harness.Logger, genesisValidatorNodes)
+		defer transport.GracefulShutdown(ctx)
+
+		g := gossip.NewGossip(ctx, transport, cfg, harness.Logger, metric.NewRegistry())
+		trh := &gossiptopics.MockTransactionRelayHandler{}
+		g.RegisterTransactionRelayHandler(trh)
+
+		harness.Supervise(transport)
+		harness.Supervise(g)
+
+		contextWithTrace := trace.NewContext(ctx, "foo")
+		originalTracingContext, _ := trace.FromContext(contextWithTrace)
+
+		trh.When("HandleForwardedTransactions", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) {
+			propagatedTracingContext, ok := trace.FromContext(ctx)
+			require.True(t, ok, "tracing context did not propagate to topic handler")
+
+			require.NotEmpty(t, propagatedTracingContext.NestedFields())
+			require.Equal(t, propagatedTracingContext.NestedFields(), originalTracingContext.NestedFields())
+		}).Times(1)
+
+		require.NoError(t, transport.Send(contextWithTrace, &adapter.TransportData{
+			SenderNodeAddress:      []byte{0x02},
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{cfg.NodeAddress()},
+			Payloads:               aTransactionRelayRequest(t),
+		}))
+
+		require.NoError(t, test.EventuallyVerify(100*time.Millisecond, trh))
 	})
 }
 
