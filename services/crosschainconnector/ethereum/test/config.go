@@ -41,13 +41,6 @@ func (c *ethereumConnectorConfigForTests) GetAuthFromConfig() (*bind.TransactOpt
 	return bind.NewKeyedTransactor(key), nil
 }
 
-func ConfigForSimulatorConnection() *ethereumConnectorConfigForTests {
-	return &ethereumConnectorConfigForTests{
-		finalityTimeComponent:   100 * time.Millisecond,
-		finalityBlocksComponent: 3,
-	}
-}
-
 func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 	var cfg ethereumConnectorConfigForTests
 
@@ -58,6 +51,15 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 	if privateKey := os.Getenv("ETHEREUM_PRIVATE_KEY"); privateKey != "" {
 		cfg.privateKeyHex = privateKey
 	}
+
+	cfg.finalityTimeComponent = 1 * time.Second
+	cfg.finalityBlocksComponent = 1
+
+	return &cfg
+}
+
+func ConfigForNopTests() *ethereumConnectorConfigForTests {
+	var cfg ethereumConnectorConfigForTests
 
 	cfg.finalityTimeComponent = 1 * time.Second
 	cfg.finalityBlocksComponent = 1

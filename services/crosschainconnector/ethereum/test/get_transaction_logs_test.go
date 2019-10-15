@@ -80,7 +80,8 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
+			cfg := ConfigForExternalRPCConnection()
+			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)
 
 			contractABI, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.abi")
 			require.NoError(t, err, "failed reading contract ABI")
@@ -88,14 +89,15 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 			contractBin, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.bin")
 			require.NoError(t, err, "failed reading contract binary")
 
-			contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), string(contractABI), string(contractBin))
-			h.simAdapter.Commit()
+			auth, err := cfg.GetAuthFromConfig()
+			require.NoError(t, err, "failed reading auth from config")
+
+			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, string(contractABI), string(contractBin))
 			require.NoError(t, err, "failed deploying contract to Ethereum")
 
 			addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}, {0x7, 0x8}, {0x9}}
 
-			tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "fire", addresses)
-			h.simAdapter.Commit()
+			tx, err := deployedContract.Transact(auth, "fire", addresses)
 			require.NoError(t, err, "failed emitting event")
 
 			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
@@ -129,10 +131,13 @@ func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T)
 
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
+			cfg := ConfigForExternalRPCConnection()
+			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)
 
-			contractAddress, deployedContract, err := h.simAdapter.DeployEthereumContract(h.simAdapter.GetAuth(), contract.EmitEventAbi, contract.EmitEventBin)
-			h.simAdapter.Commit()
+			auth, err := cfg.GetAuthFromConfig()
+			require.NoError(t, err, "failed reading auth from config")
+
+			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 			require.NoError(t, err, "failed deploying contract to Ethereum")
 
 			amount := big.NewInt(42)
@@ -140,8 +145,7 @@ func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T)
 			ethAddress := common.BigToAddress(big.NewInt(42000000000))
 			orbsAddress := anOrbsAddress()
 
-			tx, err := deployedContract.Transact(h.simAdapter.GetAuth(), "transferOut", tuid, ethAddress, orbsAddress, amount)
-			h.simAdapter.Commit()
+			tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 			require.NoError(t, err, "failed emitting event")
 
 			incorrectContractAddress := "0x6C94224Eb459535C752D2684F3654a0D71e32516" // taken from somewhere else
