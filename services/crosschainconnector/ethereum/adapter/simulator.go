@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/orbs-network/scribe/log"
 	"math/big"
@@ -77,6 +76,6 @@ func (es *EthereumSimulator) Commit() {
 	es.mu.simClient.Commit()
 }
 
-func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+func (es *EthereumSimulator) HeaderByNumber(ctx context.Context, number *big.Int) (*BlockNumberAndTime, error) {
 	return nil, nil
 }

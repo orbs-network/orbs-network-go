@@ -75,7 +75,7 @@ func (c *EthereumRpcConnection) updateConnectionStatus(ctx context.Context, m *m
 		ethError = err
 		m.lastBlock.Update(0)
 	} else {
-		m.lastBlock.Update(header.Number.Int64())
+		m.lastBlock.Update(header.BlockNumber)
 	}
 
 	return ethError
