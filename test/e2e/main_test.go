@@ -19,17 +19,19 @@ const TIMES_TO_RUN_EACH_TEST = 2
 func TestMain(m *testing.M) {
 	exitCode := 0
 
-	bootstrap := getConfig().bootstrap
-
-	if bootstrap {
-		n := NewInProcessE2ENetwork()
+	config := getConfig()
+	if config.bootstrap {
+		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid)
+		appNetwork := NewInProcessE2EAppNetwork(config.appVcid)
 
 		exitCode = m.Run()
-		n.GracefulShutdownAndWipeDisk()
+		appNetwork.GracefulShutdownAndWipeDisk()
+		mgmtNetwork.GracefulShutdownAndWipeDisk()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		n.WaitUntilShutdown(shutdownCtx)
+		appNetwork.WaitUntilShutdown(shutdownCtx)
+		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
 
 	} else {
 		exitCode = m.Run()

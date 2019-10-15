@@ -20,7 +20,6 @@ import (
 )
 
 type GracefulShutdowner interface {
-	govnr.ShutdownWaiter
 	GracefulShutdown(shutdownContext context.Context)
 }
 

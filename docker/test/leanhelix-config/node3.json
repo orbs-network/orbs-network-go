@@ -1,4 +1,5 @@
 {
+  "virtual-chain-id": 42,
   "node-address": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
   "active-consensus-algo": 2,
   "lean-helix-show-debug": true,
@@ -17,5 +18,6 @@
   "ethereum-endpoint": "http://192.168.199.6:8545",
   "logger-full-log": true,
   "processor-sanitize-deployed-contracts": false,
-  "signer-endpoint": "http://192.168.199.11:7777"
+  "signer-endpoint": "http://192.168.199.11:7777",
+  "profiling": true
 }

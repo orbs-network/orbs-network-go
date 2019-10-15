@@ -15,6 +15,7 @@ import (
 
 type writerSyncer interface {
 	io.Writer
+	io.Closer
 	Sync() error
 }
 
@@ -22,6 +23,10 @@ type blockWriter struct {
 	sync.Mutex
 	ws    writerSyncer
 	codec blockCodec
+}
+
+func (bw *blockWriter) Close() error {
+	return bw.ws.Close()
 }
 
 func newBlockWriter(ws writerSyncer, codec blockCodec) *blockWriter {

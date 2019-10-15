@@ -25,7 +25,7 @@ func TestContractWhitelist(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newHarness()
+		h := newAppHarness()
 		lt := time.Now()
 		printTestTime(t, "started", &lt)
 
@@ -43,7 +43,8 @@ func TestContractWhitelist(t *testing.T) {
 
 		printTestTime(t, "send deploy - end", &lt)
 
-		sha2Response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
+		// first query after contract deployment requires error tolerance (service-sync race)
+		sha2Response, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
 		require.NoError(t, err)
 		sha2ExpectedValue := sha256.Sum256([]byte(contractName))
 		require.EqualValues(t, sha2ExpectedValue[:], sha2Response.OutputArguments[0])

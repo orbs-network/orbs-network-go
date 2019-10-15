@@ -8,6 +8,7 @@ package testkit
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -21,9 +22,17 @@ type failingTamperer struct {
 	transport *TamperingTransport
 }
 
+type messageDroppedByTamperer struct {
+	Data *adapter.TransportData
+}
+
+func (e *messageDroppedByTamperer) Error() string {
+	return fmt.Sprintf("tampering transport intentionally failed to send: %v", e.Data)
+}
+
 func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
-		return &adapter.ErrTransportFailed{Data: data}, true
+		return &messageDroppedByTamperer{Data: data}, true
 	}
 
 	return nil, false

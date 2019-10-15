@@ -21,9 +21,9 @@ require (
 	github.com/karalabe/usb v0.0.0-20190819132248-550797b1cad8 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
-	github.com/orbs-network/go-mock v1.0.1
+	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.1
+	github.com/orbs-network/lean-helix-go v0.2.3
 	github.com/orbs-network/membuffers v0.3.1-0.20190828124049-c5be4a9e4684
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.2.0

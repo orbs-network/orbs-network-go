@@ -25,11 +25,12 @@ import (
 
 type Node struct {
 	govnr.TreeSupervisor
-	logic      NodeLogic
-	cancelFunc context.CancelFunc
-	httpServer *httpserver.HttpServer
-	transport  *tcp.DirectTransport
-	logger     log.Logger
+	logic            NodeLogic
+	cancelFunc       context.CancelFunc
+	httpServer       *httpserver.HttpServer
+	transport        *tcp.DirectTransport
+	logger           log.Logger
+	blockPersistence *filesystem.BlockPersistence
 }
 
 func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
@@ -45,7 +46,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
 	metricRegistry := getMetricRegistry(nodeConfig)
 
-	blockPersistence, err := filesystem.NewBlockPersistence(ctx, nodeConfig, nodeLogger, metricRegistry)
+	blockPersistence, err := filesystem.NewBlockPersistence(nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
 		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
 	}
@@ -58,11 +59,12 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
 
 	n := &Node{
-		logger:     nodeLogger,
-		cancelFunc: ctxCancel,
-		logic:      nodeLogic,
-		transport:  transport,
-		httpServer: httpServer,
+		logger:           nodeLogger,
+		cancelFunc:       ctxCancel,
+		logic:            nodeLogic,
+		transport:        transport,
+		httpServer:       httpServer,
+		blockPersistence: blockPersistence,
 	}
 
 	ethereumConnection.ReportConnectionStatus(ctx)
@@ -77,5 +79,5 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 func (n *Node) GracefulShutdown(shutdownContext context.Context) {
 	n.logger.Info("Shutting down")
 	n.cancelFunc()
-	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport)
+	supervised.ShutdownAllGracefully(shutdownContext, n.httpServer, n.transport, n.blockPersistence)
 }

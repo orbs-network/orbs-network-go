@@ -81,6 +81,7 @@ atlassian-ide-plugin.xml
 _logs/
 _out/
 _reports/
+_dockerbuild/
 
 # binaries
 _bin

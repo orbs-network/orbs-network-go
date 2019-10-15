@@ -9,6 +9,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -23,6 +24,7 @@ type TransportData struct {
 
 type Transport interface {
 	supervised.GracefulShutdowner
+	govnr.ShutdownWaiter
 	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
 	Send(ctx context.Context, data *TransportData) error // TODO don't return error. misleading meaning. use panics instead
 }
@@ -30,21 +32,6 @@ type Transport interface {
 type TransportListener interface {
 	fmt.Stringer // TODO smelly
 	OnTransportMessageReceived(ctx context.Context, payloads [][]byte)
-}
-
-type ErrCorruptData struct {
-}
-
-func (e *ErrCorruptData) Error() string {
-	return fmt.Sprintf("transport data is corrupt and missing required fields")
-}
-
-type ErrTransportFailed struct {
-	Data *TransportData
-}
-
-func (e *ErrTransportFailed) Error() string {
-	return fmt.Sprintf("transport failed to send: %v", e.Data)
 }
 
 func (d *TransportData) TotalSize() (res int) {

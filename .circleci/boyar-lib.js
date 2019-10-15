@@ -1,5 +1,11 @@
 const fetch = require('node-fetch');
 
+const vChainIdOffsetByType = { // values must be ordinal integers
+    "MGMT": 0,
+    "APP": 1,
+};
+const vChainTypesCount=Object.keys(vChainIdOffsetByType).length;
+
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
     return (chainIndex !== -1) ? configuration.chains[chainIndex] : false;
@@ -92,8 +98,23 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
-function getPrChainNumber(prNumber) {
-    return 100000 + prNumber;
+function getAllPrChainIds(prNumber) {
+    const chainIds = [];
+    for (let aChainType in vChainIdOffsetByType) {
+        chainIds.push(getPrChainId(prNumber, aChainType))
+    }
+    return chainIds;
+}
+
+// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
+function getPrChainId(prNumber, vChainType) {
+    let offset = vChainIdOffsetByType[vChainType];
+
+    if (offset === undefined) {
+        throw `Unknown virtual chain type ${vChainType}`
+    }
+
+    return 100000 + (prNumber * vChainTypesCount + offset) % 1000000;
 }
 
 async function getClosedPullRequests(page = 1) {
@@ -105,7 +126,8 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
-    getPrChainNumber,
+    getPrChainId,
+    getAllPrChainIds,
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,

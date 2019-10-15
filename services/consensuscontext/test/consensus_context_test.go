@@ -20,6 +20,7 @@ func TestRequestOrderingCommittee_ReturnsMaxCommitteeSizeMembers_WhenCommitteeSi
 		h := newHarness(harness.Logger, false)
 		blockHeight := primitives.BlockHeight(1)
 		genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
+		h.expectVirtualMachineToReturnGenesisCommittee()
 
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,
@@ -41,6 +42,7 @@ func TestRequestOrderingCommittee_ReturnsAllGenesisValidators_WhenCommitteeSizeI
 		h := newHarness(harness.Logger, false)
 		blockHeight := primitives.BlockHeight(1)
 		genesisValidatorsSize := len(h.config.GenesisValidatorNodes())
+		h.expectVirtualMachineToReturnGenesisCommittee()
 
 		input := &services.RequestCommitteeInput{
 			CurrentBlockHeight: blockHeight,

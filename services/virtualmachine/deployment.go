@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -21,9 +22,21 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 
 	// on failure (contract not deployed), attempt to auto deploy pre-built (in repository) native contract
 	if err != nil {
+		if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
+			return nil, err
+		}
+
+		getInfoErr := err
+
+		err = s.hasDeployableCode(ctx, serviceName)
+		if err != nil {
+			return nil, getInfoErr
+		}
+
 		processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
 		if err != nil {
-			return nil, err
+			s.logger.Error("failed to lazily deploy system contract", log.String("contract-name", string(serviceName)), log.Error(err))
+			return nil, getInfoErr
 		}
 	}
 
@@ -42,12 +55,9 @@ func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context,
 		return 0, errors.Errorf("context accessScope is %s instead of read-write needed for auto deployment", executionContext.accessScope)
 	}
 
-	// make sure this is a native contract
-	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(ctx, &services.GetContractInfoInput{
-		ContractName: serviceName,
-	})
+	err := s.hasDeployableCode(ctx, serviceName)
 	if err != nil {
-		return 0, errors.Wrap(err, "attempting to auto deploy native contract")
+		return 0, errors.Wrap(err, "failed to auto deploy native contract")
 	}
 
 	// auto deploy native contract
@@ -58,6 +68,14 @@ func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context,
 
 	// auto deploy native contract was successful
 	return protocol.PROCESSOR_TYPE_NATIVE, nil
+}
+
+func (s *service) hasDeployableCode(ctx context.Context, serviceName primitives.ContractName) error {
+	// make sure this is a native contract
+	_, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].GetContractInfo(ctx, &services.GetContractInfoInput{
+		ContractName: serviceName,
+	})
+	return err
 }
 
 func (s *service) callGetInfoOfDeploymentSystemContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {

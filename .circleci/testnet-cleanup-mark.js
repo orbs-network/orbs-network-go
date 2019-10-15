@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const configFilePath = path.join(process.cwd(), 'config.json');
-const { getClosedPullRequests, getPrChainNumber, getBoyarChainConfigurationById, markChainForRemoval } = require('./boyar-lib');
+const { getClosedPullRequests, getBoyarChainConfigurationById, markChainForRemoval, getAllPrChainIds } = require('./boyar-lib');
 
 // Read the Boyar config from file
 // We use this const variable as a solid base to start modifying
@@ -19,19 +19,22 @@ const configuration = require(configFilePath);
 
     for (let key in closedPRs) {
         let aClosedPR = closedPRs[key];
-        let aClosedPRChainId = getPrChainNumber(aClosedPR.number);
+        const vChainIds = getAllPrChainIds(aClosedPR.number);
 
-        if (getBoyarChainConfigurationById(configuration, aClosedPRChainId) !== false) {
-            console.log(`Chain for PR ${aClosedPR.number} (${aClosedPR.title}) already closed`);
-            console.log(`PR User: ${aClosedPR.login}`)
-            console.log('--- MARKED for sweeping..');
-            console.log('');
-            updatedConfiguration = markChainForRemoval(configuration, aClosedPRChainId);
-            removeCounter++;
+        for (let chainId of vChainIds) {
+            if (getBoyarChainConfigurationById(configuration, chainId) !== false) {
+                console.log(`Chain for PR ${aClosedPR.number} (PR ${aClosedPR.title}, VCHAIN ${chainId}) already closed`);
+                console.log(`PR User: ${aClosedPR.login}`);
+                console.log('--- MARKED for sweeping..');
+                console.log('');
+
+                updatedConfiguration = markChainForRemoval(configuration, chainId);
+                removeCounter++;
+            }
         }
     }
 
-    console.log('Total networks to remove: ', removeCounter);
+    console.log('Total vChains to remove: ', removeCounter);
 
     if (removeCounter > 0) {
         fs.writeFileSync(configFilePath, JSON.stringify(updatedConfiguration, 2, 2));

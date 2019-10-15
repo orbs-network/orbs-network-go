@@ -40,8 +40,11 @@ func defaultProductionConfig() mutableNodeConfig {
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
 
-	// don't auto start triggers // TODO NOAM should this be false or true ?
+	// don't auto start triggers
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
+
+	// don't auto start committee using contract
+	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, false)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -117,6 +120,7 @@ func ForProduction(processorArtifactPath string) mutableNodeConfig {
 // config for end-to-end tests (very similar to production but slightly faster)
 func ForE2E(
 	httpAddress string,
+	virtualChainId primitives.VirtualChainId,
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
@@ -129,6 +133,8 @@ func ForE2E(
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 ) NodeConfig {
 	cfg := defaultProductionConfig()
+
+	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
@@ -145,6 +151,10 @@ func ForE2E(
 
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
+
+	// have triggers and committee
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
+	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -208,7 +218,8 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 24*time.Hour) // ridiculously long timeout to reflect "forever"
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
+	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)

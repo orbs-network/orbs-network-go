@@ -108,6 +108,7 @@ jobs:
           name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
+      - run: ./docker/test/gamma-e2e.sh
       - run: ./.circleci/release-internal.sh
       - store_test_results:
           path: _reports
@@ -124,7 +125,7 @@ jobs:
 
   deploy_testnet:
     docker:
-      - image: circleci/node:11.2.0
+      - image: itamararjuan/golang_with_node_aws
     steps:
       - checkout
       - run: ./.circleci/set-aws-credentials.sh
@@ -133,7 +134,6 @@ jobs:
   ganache_related_tests:
     machine:
       image: ubuntu-1604:201903-01
-    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
@@ -141,26 +141,26 @@ jobs:
       - run: ./docker/test/ganache-related-test.sh
       - store_test_results:
           path: _reports
-    
+
   e2e_testnet_benchmark:
     docker:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
       - run: sleep 300
-      - run: ./.circleci/e2e-testnet.sh 42
+      - run: ./.circleci/e2e-testnet.sh 42 40
 
   e2e_testnet_leanhelix:
     docker:
-    - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.12.9
     steps:
-    - checkout
-    - run: sleep 300
-    - run: ./.circleci/e2e-testnet.sh 2013
+      - checkout
+      - run:  sleep 300
+      - run: ./.circleci/e2e-testnet.sh 2013 2011
 
   deploy_new_chain_pr_only:
     docker:
-    - image: itamararjuan/golang_with_node_aws
+      - image: itamararjuan/golang_with_node_aws
     working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
@@ -179,8 +179,8 @@ jobs:
   release:
     machine: true
     steps:
-    - checkout
-    - run: ./.circleci/release.sh
+      - checkout
+      - run: ./.circleci/release.sh
 
 workflows:
   version: 2
@@ -192,6 +192,8 @@ workflows:
               only: /^v.*/
 
       - races
+
+      - memory_leaks
 
       - deploy_new_chain_pr_only:
           requires:
@@ -217,12 +219,12 @@ workflows:
             branches:
               only:
                 - master
-      # - e2e_testnet_benchmark:
-      #     requires:
-      #       - deploy_testnet
-      # - e2e_testnet_leanhelix:
-      #     requires:
-      #       - deploy_testnet
+      - e2e_testnet_benchmark:
+          requires:
+            - deploy_testnet
+      - e2e_testnet_leanhelix:
+          requires:
+            - deploy_testnet
       - release:
           requires:
             - tests
@@ -243,5 +245,3 @@ workflows:
                 - master
     jobs:
       - nightly
-
-

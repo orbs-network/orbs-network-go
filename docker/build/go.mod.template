@@ -1,0 +1,12 @@
+module processor_native_src
+
+go 1.12
+
+// This go.mod is inserted into the Docker images we deliver for testnet/mainnet usage
+// To instruct the native compiler to use the correct versions for these go modules
+// so that built contracts won't break the system.
+
+require (
+	github.com/orbs-network/orbs-contract-sdk SDK_VER
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+)

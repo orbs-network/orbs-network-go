@@ -1,0 +1,21 @@
+{
+  "virtual-chain-id": 40,
+  "node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+  "benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+  "genesis-validator-addresses": [
+    "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+    "d27e2e7398e2582f63d0800330010b3e58952ff6",
+    "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
+    "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17"
+  ],
+  "topology-nodes": [
+    {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.22","port":4400},
+    {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.23","port":4400},
+    {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.24","port":4400},
+    {"address":"c056dfc0d1fbc7479db11e61d1b0b57612bf7f17","ip":"192.168.199.25","port":4400}
+  ],
+  "ethereum-endpoint": "http://192.168.199.6:8545",
+  "logger-full-log": true,
+  "processor-sanitize-deployed-contracts": false,
+  "signer-endpoint": "http://192.168.199.9:7777"
+}

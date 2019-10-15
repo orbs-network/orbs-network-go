@@ -8,8 +8,10 @@ package test
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
@@ -23,17 +25,17 @@ import (
 	"time"
 )
 
-var validatorNodeAddressesForTest = []primitives.NodeAddress{
-	primitives.NodeAddress("dfc06c5be24a67adee80b35ab4f147bb1a35c55f"),
-	primitives.NodeAddress("92d469d7c004cc0b24a192d9457836bf38effa27"),
-	primitives.NodeAddress("a899b318e65915aa2de02841eeb72fe51fddad96"),
-	primitives.NodeAddress("58e7ed8169a151602b1349c990c84ca2fb2f62eb"),
-	primitives.NodeAddress("23f97918acf48728d3f25a39a5f091a1a9574c52"),
-	primitives.NodeAddress("07492c6612f78a47d7b6a18a17792a01917dec74"),
-	primitives.NodeAddress("43a4dbbf7a672c6689dbdd662fd89a675214b00d"),
-	primitives.NodeAddress("469bd276271aa6d59e387018cf76bd00f55c7029"),
-	primitives.NodeAddress("102073b28749be1e3daf5e5947605ec7d43c3183"),
-	primitives.NodeAddress("70d92324eb8d24b7c7ed646e1996f94dcd52934a"),
+var validatorNodeAddressesForTest = []string{
+	"dfc06c5be24a67adee80b35ab4f147bb1a35c55f",
+	"92d469d7c004cc0b24a192d9457836bf38effa27",
+	"a899b318e65915aa2de02841eeb72fe51fddad96",
+	"58e7ed8169a151602b1349c990c84ca2fb2f62eb",
+	"23f97918acf48728d3f25a39a5f091a1a9574c52",
+	"07492c6612f78a47d7b6a18a17792a01917dec74",
+	"43a4dbbf7a672c6689dbdd662fd89a675214b00d",
+	"469bd276271aa6d59e387018cf76bd00f55c7029",
+	"102073b28749be1e3daf5e5947605ec7d43c3183",
+	"70d92324eb8d24b7c7ed646e1996f94dcd52934a",
 }
 
 type harness struct {
@@ -108,6 +110,21 @@ func (h *harness) expectVirtualMachineToReturnXTransactionReceipts(receiptsCount
 	h.virtualMachine.When("ProcessTransactionSet", mock.Any, mock.Any).Return(output, nil)
 }
 
+func (h *harness) expectVirtualMachineToReturnGenesisCommittee() {
+	nodes := h.config.GenesisValidatorNodes()
+	addresses := make([]byte, 0, len(nodes)*digest.NODE_ADDRESS_SIZE_BYTES)
+	for _, value := range nodes {
+		addresses = append(addresses, value.NodeAddress()[:]...)
+	}
+	args := &protocol.ArgumentArrayBuilder{Arguments: []*protocol.ArgumentBuilder{{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: addresses}}}
+
+	output := &services.CallSystemContractOutput{
+		CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+		OutputArgumentArray: args.Build(),
+	}
+	h.virtualMachine.When("CallSystemContract", mock.Any, mock.Any).Return(output, nil)
+}
+
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	ok, _ := h.transactionPool.Verify()
 
@@ -130,7 +147,8 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 	state := &services.MockStateStorage{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for _, nodeAddress := range validatorNodeAddressesForTest {
-		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
+		bytes, _ := hex.DecodeString(nodeAddress)
+		genesisValidatorNodes[nodeAddress] = config.NewHardCodedValidatorNode(bytes)
 	}
 
 	cfg := config.ForConsensusContextTests(genesisValidatorNodes, enableTriggers)

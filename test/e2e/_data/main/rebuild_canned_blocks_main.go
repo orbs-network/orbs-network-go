@@ -24,7 +24,7 @@ func main() {
 
 	clearBlocksFile()
 
-	n := e2e.NewInProcessE2ENetwork()
+	n := e2e.NewInProcessE2EAppNetwork(42)
 
 	time.Sleep(time.Minute) // accumulate blocks
 
@@ -46,7 +46,7 @@ func clearBlocksFile() {
 }
 
 func extractBlocksFile() {
-	nodeFolders, err := e2e.GetNodesDataDirs()
+	nodeFolders, err := e2e.GetNodesDataDirs(42)
 	if err != nil {
 		fmt.Printf("error searching for e2e blocks file floders: %s", err)
 		os.Exit(1)

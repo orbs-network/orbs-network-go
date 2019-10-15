@@ -1,4 +1,5 @@
 {
+  "virtual-chain-id": 42,
   "node-address": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17",
   "node-private-key": "1e404ba4e421cedf58dcc3dddcee656569afc7904e209612f7de93e1ad710300",
   "benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
