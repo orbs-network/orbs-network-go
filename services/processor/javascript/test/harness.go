@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/javascript"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -20,6 +21,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
+type config struct {
+	path string
+}
+
+func (c *config) ProcessorPluginPath() string {
+	return c.path
+}
+
+func (c *config) VirtualChainId() primitives.VirtualChainId {
+	return 42
+}
 
 type harness struct {
 	sdkCallHandler *handlers.MockContractSdkCallHandler
@@ -30,7 +43,9 @@ func newHarness(logger log.Logger) *harness {
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
-	service := javascript.NewJavaScriptProcessor(logger)
+	service := javascript.NewJavaScriptProcessor(logger, &config{
+		"./dummy_plugin.bin",
+	})
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
 	return &harness{

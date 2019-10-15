@@ -23,6 +23,8 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
+	t.Skip("not implemented")
+
 	runMultipleTimes(t, func(t *testing.T) {
 
 		h := newAppHarness()

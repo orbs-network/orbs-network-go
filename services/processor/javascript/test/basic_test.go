@@ -8,49 +8,43 @@ package test
 
 import (
 	"context"
-	"fmt"
-	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/services/processor/javascript"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/scribe/log"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/contracts"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
+	"os/exec"
 	"testing"
 )
 
-type config struct {
-	path string
-}
-
-func (c *config) ProcessorPluginPath() string {
-	return c.path
-}
-
-func (c *config) VirtualChainId() primitives.VirtualChainId {
-	return 42
-}
-
-func TestService(t *testing.T) {
-	logger := log.DefaultTestingLogger(t)
-	processor := javascript.NewJavaScriptProcessor(logger, &config{
-		"./dummy_plugin.bin",
-	})
-
-	mockVm := &services.MockVirtualMachine{}
-	processor.RegisterContractSdkCallHandler(mockVm)
-
-	mockVm.When("HandleSdkCall", mock.Any, mock.Any).Return(nil).Times(1)
-
-	out, err := processor.ProcessCall(context.TODO(), &services.ProcessCallInput{
-		ContextId:              []byte("test"),
-		ContractName:           "Hello",
-		MethodName:             "hello",
-		AccessScope:            protocol.ACCESS_SCOPE_READ_WRITE,
-		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
-		InputArgumentArray:     protocol.ArgumentArrayReader(nil),
-	})
-
+// go build -buildmode=plugin -o ./services/processor/javascript/test/dummy_plugin.bin ./services/processor/plugins/dummy/
+func TestProcessCall_WithLoadablePluginSucceeds(t *testing.T) {
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", "dummy_plugin.bin", "../../plugins/dummy/")
+	out, err := cmd.CombinedOutput()
+	require.Empty(t, out)
 	require.NoError(t, err)
-	fmt.Println(out)
+
+	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			h := newHarness(parent.Logger)
+			input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
+			codeOutput := builders.ArgumentsArray([]byte(contracts.JavaScriptSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE, builders.ArgumentsArray(string(input.ContractName)), codeOutput, nil)
+
+			output, err := h.service.ProcessCall(ctx, input)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+
+			t.Log("First call should getCode for compilation")
+			h.verifySdkCallMade(t)
+
+			output, err = h.service.ProcessCall(ctx, input)
+			require.NoError(t, err, "call should succeed")
+			require.Equal(t, contracts.MOCK_COUNTER_CONTRACT_START_FROM, output.OutputArgumentArray.ArgumentsIterator().NextArguments().Uint64Value(), "call return value should be counter value")
+
+			t.Log("Make sure second call does not getCode again")
+			h.verifySdkCallMade(t)
+		})
+	})
 }
