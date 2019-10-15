@@ -10,7 +10,8 @@ import (
 	"context"
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-javascript-plugin/worker"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/services/processor"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -28,11 +29,11 @@ type service struct {
 	sdkHandler          handlers.ContractSdkCallHandler
 	contractsUnderMutex map[primitives.ContractName]string
 
-	worker *func(handler sdkContext.SdkHandler) worker.Worker
+	worker func(handler sdkContext.SdkHandler) processor.StatelessProcessor
 }
 
-func NewJavaScriptProcessor(logger log.Logger) services.Processor {
-	worker, err := loadPlugin()
+func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessorConfig) services.Processor {
+	worker, err := loadPlugin(config.ProcessorPluginPath())
 	if err != nil {
 		panic(fmt.Sprintf("Could not load plugin: %s", err))
 	}
