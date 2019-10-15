@@ -8,12 +8,12 @@ package timestampfinder
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"math/big"
 )
 
 type adapterHeaderFetcher interface {
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*adapter.BlockNumberAndTime, error)
 }
 
 type EthereumBasedBlockTimeGetter struct {
@@ -36,8 +36,8 @@ func (f *EthereumBasedBlockTimeGetter) GetTimestampForBlockNumber(ctx context.Co
 	}
 
 	return &BlockNumberAndTime{
-		BlockNumber:   header.Number.Int64(),
-		BlockTimeNano: secondsToNano(header.Time.Int64()),
+		BlockNumber:   header.BlockNumber,
+		BlockTimeNano: secondsToNano(header.TimeInSeconds),
 	}, nil
 }
 
