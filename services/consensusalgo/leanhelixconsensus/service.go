@@ -105,6 +105,7 @@ func NewLeanHelixConsensusAlgo(
 		KeyManager:          mgr,
 		ElectionTimeoutOnV0: config.LeanHelixConsensusRoundTimeoutInterval(),
 		Logger:              NewLoggerWrapper(parentLogger, config.LeanHelixShowDebug()),
+		OnElectionCB:        s.onElection,
 	}
 
 	logger.Info("NewLeanHelixConsensusAlgo() instantiating NewLeanHelix()", log.String("election-timeout", leanHelixConfig.ElectionTimeoutOnV0.String()))
@@ -180,10 +181,10 @@ func (s *Service) validateBlockExecutionIfYoung(ctx context.Context, blockPair *
 
 		// ignore results - we only execute the transactions so that logs are printed in an audit node
 		_, _ = s.blockProvider.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-			CurrentBlockHeight: blockPair.TransactionsBlock.Header.BlockHeight(),
-			PrevBlockHash:      blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock:  blockPair.TransactionsBlock,
-			PrevBlockTimestamp: prevBlockPair.TransactionsBlock.Header.Timestamp(),
+			CurrentBlockHeight:   blockPair.TransactionsBlock.Header.BlockHeight(),
+			PrevBlockHash:        blockPair.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:    blockPair.TransactionsBlock,
+			PrevBlockTimestamp:   prevBlockPair.TransactionsBlock.Header.Timestamp(),
 			BlockProposerAddress: blockPair.TransactionsBlock.Header.BlockProposerAddress()}) // block proposer - tx and rx block assumed to be same.
 	}
 }

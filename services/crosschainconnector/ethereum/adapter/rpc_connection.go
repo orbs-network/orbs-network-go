@@ -8,7 +8,6 @@ package adapter
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -43,7 +42,7 @@ func (rpc *EthereumRpcConnection) dial() (*ethclient.Client, error) {
 	return ethclient.Dial(rpc.config.EthereumEndpoint())
 }
 
-func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *big.Int) (*BlockNumberAndTime, error) {
 	client, err := rpc.dial()
 	if err != nil {
 		return nil, err
@@ -59,5 +58,8 @@ func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *bi
 		return nil, errors.New("ethereum returned nil header without error")
 	}
 
-	return header, nil
+	return &BlockNumberAndTime{
+		TimeInSeconds: header.Time.Int64(),
+		BlockNumber:   header.Number.Int64(),
+	}, nil
 }

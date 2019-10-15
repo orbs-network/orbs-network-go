@@ -5,4 +5,5 @@
 # This hook cannot affect the outcome of git merge and is not executed, if the merge failed due to conflicts.
 #
 
-./git-submodule-checkout.sh
+# enable if rolling back from go-modules to vendoring with git-sub-modules
+# ./git-submodule-checkout.sh

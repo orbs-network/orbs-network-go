@@ -108,6 +108,7 @@ jobs:
           name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
+      - run: ./docker/test/gamma-e2e.sh
       - run: ./.circleci/release-internal.sh
       - store_test_results:
           path: _reports
@@ -133,7 +134,6 @@ jobs:
   ganache_related_tests:
     machine:
       image: ubuntu-1604:201903-01
-    working_directory: /home/circleci/.go_workspace/src/github.com/orbs-network/orbs-network-go/
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
