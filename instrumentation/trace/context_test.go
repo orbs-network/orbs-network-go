@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/require"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -62,4 +63,32 @@ func TestTranslateToRequestAndBack(t *testing.T) {
 	require.Equal(t, ep.name, ep2.name)
 	require.Equal(t, ep.requestId, ep2.requestId)
 	require.True(t, ep.created.Equal(ep2.created))
+}
+
+func TestValidateRequestIdFormat(t *testing.T) {
+	const nodeId = "testNodeId"
+	const entryPoint = "testEntryPoint"
+
+	ctx := ContextWithNodeId(context.Background(), nodeId)
+	ctxWithTracingCtx := NewContext(ctx, entryPoint)
+	tracingCtx, ok := FromContext(ctxWithTracingCtx)
+	require.True(t, ok)
+
+	requestId := tracingCtx.requestId
+	fields := strings.Split(requestId, "-")
+	require.Equal(t, fields[0], entryPoint, "expected entry point in request id to match")
+	require.Equal(t, fields[1], nodeId, "expected node id in request id to match")
+}
+
+func TestValidateRequestIdFormatWhenNodeIdNotAvailable(t *testing.T) {
+	const entryPoint = "testEntryPoint"
+
+	ctxWithTracingCtx := NewContext(context.Background(), entryPoint)
+	tracingCtx, ok := FromContext(ctxWithTracingCtx)
+	require.True(t, ok)
+
+	requestId := tracingCtx.requestId
+	fields := strings.Split(requestId, "-")
+	require.Equal(t, fields[0], entryPoint, "expected entry point in request id to match")
+	require.Equal(t, fields[1], defaultNodeId, "expected node id in request id to match the default id")
 }

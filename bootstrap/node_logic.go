@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/servicesync"
@@ -48,7 +49,7 @@ type nodeLogic struct {
 }
 
 func NewNodeLogic(
-	ctx context.Context,
+	parentCtx context.Context,
 	gossipTransport gossipAdapter.Transport,
 	blockPersistence blockStorageAdapter.BlockPersistence,
 	statePersistence stateStorageAdapter.StatePersistence,
@@ -61,6 +62,8 @@ func NewNodeLogic(
 	nodeConfig config.NodeConfig,
 	ethereumConnection ethereumAdapter.EthereumConnection,
 ) NodeLogic {
+
+	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
 	config.NewValidator(logger).ValidateNodeLogic(nodeConfig)
 
