@@ -44,7 +44,8 @@ type Service struct {
 	handlers        gossipListeners
 	headerValidator *headerValidator
 
-	messageDispatcher *gossipMessageDispatcher
+	messageDispatcher             *gossipMessageDispatcher
+	forwarededTransactionFailures *metric.Gauge
 }
 
 func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *Service {
@@ -57,7 +58,8 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 		handlers:        gossipListeners{},
 		headerValidator: newHeaderValidator(config, parent),
 
-		messageDispatcher: dispatcher,
+		messageDispatcher:             dispatcher,
+		forwarededTransactionFailures: metricRegistry.NewGauge("Gossip.Topic.TransactionRelay.Errors.Count"),
 	}
 	transport.RegisterListener(s, s.config.NodeAddress())
 	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))

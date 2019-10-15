@@ -60,6 +60,8 @@ func (s *Service) receivedForwardedTransactions(ctx context.Context, header *gos
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	message, err := codec.DecodeForwardedTransactions(payloads)
 	if err != nil {
+		logger.Info("DecodeForwardedTransactions failed", log.Error(err))
+		s.forwarededTransactionFailures.Inc()
 		return
 	}
 
@@ -74,6 +76,7 @@ func (s *Service) receivedForwardedTransactions(ctx context.Context, header *gos
 		_, err := l.HandleForwardedTransactions(ctx, &gossiptopics.ForwardedTransactionsInput{Message: message})
 		if err != nil {
 			logger.Info("HandleForwardedTransactions failed", log.Error(err))
+			s.forwarededTransactionFailures.Inc()
 		}
 	}
 }
