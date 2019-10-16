@@ -1,4 +1,3 @@
-
 // Copyright 2019 the orbs-network-go authors
 // This file is part of the orbs-network-go library in the Orbs project.
 //

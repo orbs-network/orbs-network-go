@@ -41,7 +41,7 @@ type Network struct {
 	inmemory.Network
 
 	tamperingTransport                 testGossipAdapter.Tamperer
-	ethereumConnection                 *ethereumAdapter.EthereumSimulator
+	ethereumConnection                 *ethereumAdapter.NopEthereumAdapter
 	fakeCompiler                       *fake.FakeCompiler
 	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
@@ -96,7 +96,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
-	sharedEthereumSimulator := ethereumAdapter.NewEthereumSimulatorConnection(testLogger)
+	sharedEthereumSimulator := &ethereumAdapter.NopEthereumAdapter{}
 
 	var tamperingBlockPersistences []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	var dumpingStatePersistences []harnessStateStorageAdapter.DumpingStatePersistence
@@ -167,10 +167,6 @@ func (n *Network) WaitForTransactionInState(ctx context.Context, txHash primitiv
 
 func (n *Network) TransportTamperer() testGossipAdapter.Tamperer {
 	return n.tamperingTransport
-}
-
-func (n *Network) EthereumSimulator() *ethereumAdapter.EthereumSimulator {
-	return n.ethereumConnection
 }
 
 func (n *Network) DeployBenchmarkTokenContract(ctx context.Context, ownerAddressIndex int) callcontract.BenchmarkTokenClient {

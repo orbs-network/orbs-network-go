@@ -41,13 +41,6 @@ func (c *ethereumConnectorConfigForTests) GetAuthFromConfig() (*bind.TransactOpt
 	return bind.NewKeyedTransactor(key), nil
 }
 
-func ConfigForSimulatorConnection() *ethereumConnectorConfigForTests {
-	return &ethereumConnectorConfigForTests{
-		finalityTimeComponent:   100 * time.Millisecond,
-		finalityBlocksComponent: 3,
-	}
-}
-
 func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 	var cfg ethereumConnectorConfigForTests
 

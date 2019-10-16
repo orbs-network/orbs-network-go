@@ -29,11 +29,8 @@ import (
 func TestEthereumNodeAdapter_CallContract(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
-			adapter, auth, commit := createSimulator(harness.Logger)
-			t.Run("Simulator Adapter", testCallContract(ctx, adapter, auth, commit))
-
 			if runningWithDocker() {
-				adapter, auth, commit = createRpcClient(harness.Logger)
+				adapter, auth, commit := createRpcClient(harness.Logger)
 				t.Run("RPC Adapter", testCallContract(ctx, adapter, auth, commit))
 			} else {
 				t.Skip("skipping, external tests disabled")
@@ -46,11 +43,8 @@ func TestEthereumNodeAdapter_CallContract(t *testing.T) {
 func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
-			adapter, auth, commit := createSimulator(harness.Logger)
-			t.Run("Simulator Adapter", testGetLogs(ctx, adapter, auth, commit))
-
 			if runningWithDocker() {
-				adapter, auth, commit = createRpcClient(harness.Logger)
+				adapter, auth, commit := createRpcClient(harness.Logger)
 				t.Run("RPC Adapter", testGetLogs(ctx, adapter, auth, commit))
 			} else {
 				t.Skip("skipping, external tests disabled")
@@ -138,10 +132,3 @@ func createRpcClient(logger log.Logger) (adapter.DeployingEthereumConnection, *b
 	return a, auth, func() {}
 }
 
-func createSimulator(logger log.Logger) (adapter.DeployingEthereumConnection, *bind.TransactOpts, func()) {
-	a := adapter.NewEthereumSimulatorConnection(logger)
-	opts := a.GetAuth()
-	commit := a.Commit
-
-	return a, opts, commit
-}
