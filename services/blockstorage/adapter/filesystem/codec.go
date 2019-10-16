@@ -518,7 +518,7 @@ func readChunk(reader io.Reader, budget *readingBudget) ([]byte, error) {
 	}
 
 	chunk := make([]byte, chunkLength)
-	n, err := reader.Read(chunk)
+	n, err := io.ReadFull(reader, chunk)
 	if err != nil {
 		return nil, err
 	}

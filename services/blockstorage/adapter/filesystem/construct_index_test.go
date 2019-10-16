@@ -7,6 +7,7 @@
 package filesystem
 
 import (
+	"bufio"
 	"bytes"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -50,6 +51,71 @@ func TestConstructIndexFromReader(t *testing.T) {
 		require.EqualValues(t, totalBytesRead, blockHeightIndex.heightOffset[primitives.BlockHeight(numBlocks)+1], "expected next block offset to be the buffer size")
 	})
 
+}
+
+func newBlockFileReadStream(t *testing.T, ctrlRand *rand.ControlledRand, numBlocks int32, codec *codec) (io.Reader, chan int) {
+	blocksQueue := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+
+	pr, pw := io.Pipe()
+
+	done := make(chan int)
+	go func() {
+		for _, blockPair := range blocksQueue {
+			_, err := codec.encode(blockPair, pw)
+			require.NoError(t, err, "expected codec to successfully encode a block pair")
+		}
+		_ = pw.Close()
+		close(done)
+	}()
+
+	return pr, done
+}
+
+func TestBuildIndexSucceedsIndexingFromReader(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		const numBlocks = 17
+
+		ctrlRand := rand.NewControlledRand(t)
+		codec := newCodec(1024 * 1024)
+		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, codec)
+
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+
+		<-done
+	})
+}
+
+func TestBuildIndexHandlesSmallBufferedReader(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		const numBlocks = 17
+
+		ctrlRand := rand.NewControlledRand(t)
+		codec := newCodec(1024 * 1024)
+		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, codec)
+
+		rBuffered := bufio.NewReaderSize(r, 1)
+		bhIndex, err := buildIndex(rBuffered, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed with a buffered reader")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+
+		<-done
+	})
+}
+
+func TestBuildIndexHandlesEmptyFile(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		codec := newCodec(1024 * 1024)
+
+		r := bytes.NewReader(make([]byte, 0, 0))
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(0), "expected block height to be zero")
+	})
 }
 
 type mockCodec struct {

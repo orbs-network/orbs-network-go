@@ -7,6 +7,7 @@
 package filesystem
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -213,6 +214,7 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 }
 
 func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec) (*blockHeightIndex, error) {
+	r = bufio.NewReaderSize(r, 1024*1024)
 	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
 	offset := int64(firstBlockOffset)
 	for {
