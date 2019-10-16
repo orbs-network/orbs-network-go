@@ -7,6 +7,7 @@
 package test
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -26,12 +27,7 @@ type harness struct {
 	rpcAdapter adapter.DeployingEthereumConnection
 	connector  services.CrosschainConnector
 	logger     log.Logger
-	address    string
 	config     *ethereumConnectorConfigForTests
-}
-
-func (h *harness) getAddress() string {
-	return h.address
 }
 
 func (h *harness) deployRpcStorageContract(text string) (string, error) {
@@ -47,7 +43,9 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) {
+func (h *harness) moveBlocksInGanache(t *testing.T, ctx context.Context, count int, blockGapInSeconds int) {
+	blockBefore, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+	require.NoError(t, err, "failed getting block number")
 	c, err := rpc.Dial(h.config.endpoint)
 	require.NoError(t, err, "failed creating Ethereum rpc client")
 	//start := time.Now()
@@ -55,6 +53,10 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed increasing time")
 		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
+	blockAfter, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+	require.NoError(t, err, "failed getting block number")
+
+	h.logger.Info("moved ganache to the future", log.Int("blocks", count), log.Stringable("before", blockBefore), log.Stringable("after", blockAfter))
 
 }
 

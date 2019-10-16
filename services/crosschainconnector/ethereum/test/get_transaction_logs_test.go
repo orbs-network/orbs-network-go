@@ -35,10 +35,16 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
+			h.moveBlocksInGanache(t, ctx, 100, 1) // pad Ganache nicely so that any previous test doesn't affect this one
+
 			auth, err := h.config.GetAuthFromConfig()
 			require.NoError(t, err)
 			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, contract.EmitEventAbi, contract.EmitEventBin)
 			require.NoError(t, err, "failed deploying contract to Ethereum")
+
+			blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			t.Logf("block at deploy: %s", blockAtDeploy)
 
 			amount := big.NewInt(42)
 			tuid := big.NewInt(33)
@@ -47,13 +53,20 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 
 			tx, err := deployedContract.Transact(auth, "transferOut", tuid, ethAddress, orbsAddress, amount)
 			require.NoError(t, err, "failed emitting event")
+			blockAfterEmit, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			t.Logf("block after emit: %s", blockAfterEmit)
+
+			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
+			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent*2), 1)                                                                                     // finality blocks + block we will request below of because of the finder algo
+			referenceTime := time.Unix(blockAtDeploy.TimeInSeconds, 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+			t.Logf("reference time: %d", referenceTime.UnixNano())
 
 			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 				EthereumContractAddress: contractAddress.Hex(),
 				EthereumTxhash:          tx.Hash().Hex(),
 				EthereumEventName:       "TransferredOut",
 				EthereumJsonAbi:         contract.EmitEventAbi,
-				ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
+				ReferenceTimestamp:      primitives.TimestampNano(referenceTime.UnixNano()),
 			})
 			require.NoError(t, err, "failed getting logs")
 
@@ -82,6 +95,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			cfg := ConfigForExternalRPCConnection()
 			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)
+			h.moveBlocksInGanache(t, ctx, 100, 1) // pad Ganache nicely so that any previous test doesn't affect this one
 
 			contractABI, err := readFile("../contract/EmitAddressArrayEvent_sol_EmitAddressArrayEvent.abi")
 			require.NoError(t, err, "failed reading contract ABI")
@@ -94,18 +108,26 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 
 			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, string(contractABI), string(contractBin))
 			require.NoError(t, err, "failed deploying contract to Ethereum")
+			blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			t.Logf("block at deploy: %s", blockAtDeploy)
 
 			addresses := []common.Address{{0x1, 0x2, 0x3}, {0x4, 0x5, 0x6}, {0x7, 0x8}, {0x9}}
 
 			tx, err := deployedContract.Transact(auth, "fire", addresses)
 			require.NoError(t, err, "failed emitting event")
 
+			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
+			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent*2), 1)                                                                                     // finality blocks + block we will request below of because of the finder algo
+			referenceTime := time.Unix(blockAtDeploy.TimeInSeconds, 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+			t.Logf("reference time: %d", referenceTime.UnixNano())
+
 			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
 				EthereumContractAddress: contractAddress.Hex(),
 				EthereumTxhash:          tx.Hash().Hex(),
 				EthereumEventName:       "Vote",
 				EthereumJsonAbi:         string(contractABI),
-				ReferenceTimestamp:      primitives.TimestampNano(time.Now().UnixNano()),
+				ReferenceTimestamp:      primitives.TimestampNano(referenceTime.UnixNano()),
 			})
 			require.NoError(t, err, "failed getting logs")
 

@@ -8,6 +8,7 @@ package adapter
 
 import (
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,6 +22,10 @@ import (
 type BlockNumberAndTime struct {
 	TimeInSeconds int64
 	BlockNumber   int64
+}
+
+func (b *BlockNumberAndTime) String() string {
+	return fmt.Sprintf("%d@%d", b.BlockNumber, b.TimeInSeconds)
 }
 
 type ethereumAdapterConfig interface {
