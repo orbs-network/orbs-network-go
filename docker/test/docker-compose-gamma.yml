@@ -1,7 +1,7 @@
 version: '2.1'
 
 services:
-  ganache:
+  gamma:
     image: orbs:gamma-server # this is the pre-release image name
     ports:
       - 8080:8080
