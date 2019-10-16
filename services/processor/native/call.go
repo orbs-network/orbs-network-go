@@ -14,17 +14,17 @@ import (
 	"reflect"
 )
 
-func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
+func processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
 			contractOutputErr = errors.Errorf("%s", r)
-			contractOutputArgs = s.createMethodOutputArgsWithString(contractOutputErr.Error())
+			contractOutputArgs = createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
 
 	// verify input args
-	inValues, err := s.prepareMethodInputArgsForCall(methodInstance, args, functionNameForErrors)
+	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, functionNameForErrors)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -33,7 +33,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 
 	// create output args
-	contractOutputArgs, err = s.createMethodOutputArgs(methodInstance, outValues, functionNameForErrors)
+	contractOutputArgs, err = createMethodOutputArgs(methodInstance, outValues, functionNameForErrors)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +42,7 @@ func (s *service) processMethodCall(executionContextId primitives.ExecutionConte
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
+func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()
 
@@ -81,6 +81,20 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", functionNameForErrors, i, arg.StringType())
 			}
 			res = append(res, reflect.ValueOf(arg.StringValue()))
+		case reflect.Array:
+			if methodTypeIn.Elem().Kind() == reflect.Uint8 {
+				if methodTypeIn.Len() == 20 {
+					if !arg.IsTypeBytes20Value() {
+						return nil, errors.Errorf("method '%s' expects arg %d to be [20]byte but it has %s", functionNameForErrors, i, arg.StringType())
+					}
+					res = append(res, reflect.ValueOf(arg.Bytes20Value()))
+				} else if methodTypeIn.Len() == 32 {
+					if !arg.IsTypeBytes32Value() {
+						return nil, errors.Errorf("method '%s' expects arg %d to be [32]byte but it has %s", functionNameForErrors, i, arg.StringType())
+					}
+					res = append(res, reflect.ValueOf(arg.Bytes32Value()))
+				}
+			}
 		case reflect.Slice:
 			switch methodTypeIn.Elem().Kind() {
 			case reflect.Uint8:
@@ -103,6 +117,20 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 					return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", functionNameForErrors, i, arg.StringType())
 				}
 				res = append(res, reflect.ValueOf(arg.Uint64Value()))
+			case reflect.Array:
+				if methodTypeIn.Elem().Kind() == reflect.Uint8 {
+					if methodTypeIn.Len() == 20 {
+						if methodType.IsVariadic() && !arg.IsTypeBytes20Value() {
+							return nil, errors.Errorf("method '%s' expects arg %d to be [20]byte but it has %s", functionNameForErrors, i, arg.StringType())
+						}
+						res = append(res, reflect.ValueOf(arg.Bytes20Value()))
+					} else if methodTypeIn.Len() == 32 {
+						if methodType.IsVariadic() && !arg.IsTypeBytes32Value() {
+							return nil, errors.Errorf("method '%s' expects arg %d to be [32]byte but it has %s", functionNameForErrors, i, arg.StringType())
+						}
+						res = append(res, reflect.ValueOf(arg.Bytes32Value()))
+					}
+				}
 			case reflect.Slice:
 				if methodType.IsVariadic() && (!arg.IsTypeBytesValue() ||
 					(methodTypeIn.Elem().Elem().Kind() != reflect.Uint8)) { // check that element of slice-of-slice is defined as byte
@@ -129,7 +157,7 @@ func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInsta
 	return res, nil
 }
 
-func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
+func createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
 	res := []*protocol.ArgumentBuilder{}
 	for i, arg := range args {
 		k := arg.Kind()
@@ -140,6 +168,14 @@ func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, ar
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)})
 		case reflect.String:
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
+		case reflect.Array:
+			if arg.Type().Elem().Kind() == reflect.Uint8 {
+				if arg.Len() == 20 {
+					res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.Interface().([20]byte)})
+				} else if arg.Len() == 32 {
+					res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.Interface().([32]byte)})
+				}
+			}
 		case reflect.Slice:
 			if arg.Type().Elem().Kind() != reflect.Uint8 {
 				return nil, errors.Errorf("method '%s' output arg %d slice type is not byte", functionNameForErrors, i)
@@ -154,7 +190,7 @@ func (s *service) createMethodOutputArgs(methodInstance types.MethodInstance, ar
 	}).Build(), nil
 }
 
-func (s *service) createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
+func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
 	return (&protocol.ArgumentArrayBuilder{
 		Arguments: []*protocol.ArgumentBuilder{
 			{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
