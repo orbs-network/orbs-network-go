@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -71,7 +71,7 @@ func (h *harness) expectPreBuiltContractNotToBeDeployed() {
 func (h *harness) expectDeployToWriteDeploymentDataToState(t *testing.T, ctx context.Context) {
 	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_DEPLOY_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 		t.Log("Transaction: deploy writes deployment data to state")
-		_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "write", DEPLOYMENT_DATA_STATE_KEY_NAME, DEPLOYMENT_DATA_STATE_KEY_VALUE)
+		_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_STATE, "write", DEPLOYMENT_DATA_STATE_KEY_NAME, DEPLOYMENT_DATA_STATE_KEY_VALUE)
 		require.NoError(t, err, "handleSdkCall should succeed")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil
 	})
@@ -80,7 +80,7 @@ func (h *harness) expectDeployToWriteDeploymentDataToState(t *testing.T, ctx con
 func (h *harness) expectContractToBeDeployedByReadingDeploymentDataFromState(t *testing.T, ctx context.Context) {
 	h.expectNativeContractMethodCalled(DEPLOYMENT_CONTRACT, DEPLOYMENT_GET_INFO_METHOD, func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 		t.Log("Transaction: read should return the deployment data")
-		res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "read", DEPLOYMENT_DATA_STATE_KEY_NAME)
+		res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_STATE, "read", DEPLOYMENT_DATA_STATE_KEY_NAME)
 		require.NoError(t, err, "handleSdkCall should not fail")
 		require.Equal(t, DEPLOYMENT_DATA_STATE_KEY_VALUE, res[0].BytesValue(), "handleSdkCall result should be equal")
 		return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(protocol.PROCESSOR_TYPE_NATIVE)), nil

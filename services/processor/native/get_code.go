@@ -13,6 +13,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -119,7 +121,7 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 
 	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
-		OperationName: SDK_OPERATION_NAME_SERVICE,
+		OperationName: sdk.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
@@ -135,7 +137,7 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToArgumentArray(string(contractName), index).Raw(),
+				BytesValue: builders.ArgumentsArray(string(contractName), index).Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
@@ -164,7 +166,7 @@ func (s *service) getCodeParts(ctx context.Context, executionContextId primitive
 
 	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
-		OperationName: SDK_OPERATION_NAME_SERVICE,
+		OperationName: sdk.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
@@ -180,7 +182,7 @@ func (s *service) getCodeParts(ctx context.Context, executionContextId primitive
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToArgumentArray(string(contractName)).Raw(),
+				BytesValue: builders.ArgumentsArray(string(contractName)).Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,

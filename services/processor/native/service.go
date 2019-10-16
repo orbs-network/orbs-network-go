@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -91,7 +92,8 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	}
 
 	// setup context for the contract sdk
-	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), s, contractInfo.Permission)
+	// FIXME move SDK to service property
+	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), sdk.NewSDK(s.sdkHandler), contractInfo.Permission)
 	defer sdkContext.PopContext(sdkContext.ContextId(input.ContextId))
 
 	// get the method and check permissions

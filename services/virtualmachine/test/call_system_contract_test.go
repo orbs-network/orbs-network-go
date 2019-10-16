@@ -8,7 +8,7 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -28,7 +28,7 @@ func TestCallSystemContract_Success(t *testing.T) {
 				require.EqualValues(t, builders.ArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), inputArgs, "call system contract should propagate matching input args")
 
 				t.Log("Read state key from contract (to make sure height is correct)")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_STATE, "read", []byte{0x01})
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, []byte{0xaa, 0xbb}, res[0].BytesValue(), "handleSdkCall result should be equal")
 

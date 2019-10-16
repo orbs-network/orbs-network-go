@@ -10,8 +10,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -29,7 +29,7 @@ func TestSdkAddress_GetSignerAddressWithoutContextFails(t *testing.T) {
 
 			h := newHarness(parent.Logger)
 
-			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 			require.Error(t, err, "handleSdkCall should fail")
 		})
 	})
@@ -44,7 +44,7 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 
 			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 				fmt.Println(err)
 				require.Error(t, err, "handleSdkCall should fail since not signed")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -71,20 +71,20 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetSignerAddress in the first contract")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
 				signerAddressRes = res[0].BytesValue()
 
 				t.Log("CallMethod on a different contract")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 			h.expectNativeContractMethodCalled("Contract2", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetSignerAddress in the second contract")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "signer address should be a valid address")
 				require.Equal(t, signerAddressRes, res[0].BytesValue(), "signer address should be equal to the first call")
@@ -107,7 +107,7 @@ func TestSdkAddress_GetCallerAddressWithoutContextFails(t *testing.T) {
 
 			h := newHarness(parent.Logger)
 
-			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 			require.Error(t, err, "handleSdkCall should fail")
 		})
 	})
@@ -122,7 +122,7 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 
 			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				fmt.Println(err)
 				require.Error(t, err, "handleSdkCall should fail since not signed")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -150,38 +150,38 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetCallerAddress in the first contract (1)")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 				initialCallerAddress = res[0].BytesValue()
 
 				t.Log("CallMethod on a different contract (1->1.2)")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				t.Log("CallMethod on a different contract (1->1.4)")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract4", "method1", builders.ArgumentsArray().Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract4", "method1", builders.ArgumentsArray().Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 			h.expectNativeContractMethodCalled("Contract2", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetCallerAddress in the second contract (1.2)")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 				require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
 				firstCallerAddress = res[0].BytesValue()
 
 				t.Log("CallMethod on a different contract (1.2->1.2.3)")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract3", "method1", builders.ArgumentsArray().Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract3", "method1", builders.ArgumentsArray().Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 			h.expectNativeContractMethodCalled("Contract3", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetCallerAddress in the third contract (1.2.3)")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 				require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
@@ -190,7 +190,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 			})
 			h.expectNativeContractMethodCalled("Contract4", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetCallerAddress in the fourth contract (1.4)")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "caller address should be a valid address")
 				require.NotEqual(t, initialCallerAddress, res[0].BytesValue(), "called address should be different from the initial call")
@@ -214,7 +214,7 @@ func TestSdkAddress_GetOwnAddressWithoutContextFails(t *testing.T) {
 
 			h := newHarness(parent.Logger)
 
-			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, native.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
+			_, err := h.handleSdkCall(ctx, EXAMPLE_CONTEXT_ID, sdk.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
 			require.Error(t, err, "handleSdkCall should fail")
 		})
 	})
@@ -232,20 +232,20 @@ func TestSdkAddress_GetOwnAddress(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetOwnAddress in the first contract")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "own address should be a valid address")
 				require.EqualValues(t, expectedAddress1, res[0].BytesValue(), "own address should match first contract")
 
 				t.Log("CallMethod on a different contract")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 			h.expectNativeContractMethodCalled("Contract2", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("GetOwnAddress in the second contract")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getOwnAddress")
 				require.NoError(t, err, "handleSdkCall should succeed")
 				require.Equal(t, digest.CLIENT_ADDRESS_SIZE_BYTES, len(res[0].BytesValue()), "own address should be a valid address")
 				require.EqualValues(t, expectedAddress2, res[0].BytesValue(), "own address should match second contract")

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/processor/javascript"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -60,7 +60,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(expectedKey []byte, returnValue
 	stateReadCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
+			input.OperationName == sdk.SDK_OPERATION_NAME_STATE &&
 			input.MethodName == "read" &&
 			len(input.InputArguments) == 1 &&
 			(expectedKey == nil || bytes.Equal(input.InputArguments[0].BytesValue(), expectedKey))
@@ -77,7 +77,7 @@ func (h *harness) expectSdkCallMadeWithStateWrite(expectedKey []byte, expectedVa
 	stateWriteCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.OperationName == native.SDK_OPERATION_NAME_STATE &&
+			input.OperationName == sdk.SDK_OPERATION_NAME_STATE &&
 			input.MethodName == "write" &&
 			len(input.InputArguments) == 2 &&
 			(expectedKey == nil || bytes.Equal(input.InputArguments[0].BytesValue(), expectedKey)) &&
@@ -91,7 +91,7 @@ func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName st
 	serviceCallMethodCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.OperationName == native.SDK_OPERATION_NAME_SERVICE &&
+			input.OperationName == sdk.SDK_OPERATION_NAME_SERVICE &&
 			input.MethodName == "callMethod" &&
 			len(input.InputArguments) == 3 &&
 			input.InputArguments[0].StringValue() == expectedContractName &&
@@ -113,7 +113,7 @@ func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
 	addressGetCallerCallMatcher := func(i interface{}) bool {
 		input, ok := i.(*handlers.HandleSdkCallInput)
 		return ok &&
-			input.OperationName == native.SDK_OPERATION_NAME_ADDRESS &&
+			input.OperationName == sdk.SDK_OPERATION_NAME_ADDRESS &&
 			input.MethodName == "getCallerAddress"
 	}
 

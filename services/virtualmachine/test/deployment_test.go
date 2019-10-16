@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -81,7 +81,7 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContrac
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("CallMethod on non deployed contract")
-				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
+				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_SERVICE, "callMethod", "Contract2", "method1", builders.ArgumentsArray().Raw())
 				require.Error(t, err, "handleSdkCall should fail")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
