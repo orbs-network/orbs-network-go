@@ -14,30 +14,8 @@ import (
 	"reflect"
 )
 
-func (s *service) retrieveContractAndMethodInstances(contractName string, methodName string, permissionScope protocol.ExecutionPermissionScope) (contractInstance *types.ContractInstance, methodInstance types.MethodInstance, err error) {
-	contractInstance = s.getContractInstance(contractName)
-	if contractInstance == nil {
-		return nil, nil, errors.Errorf("contract instance not found for contract '%s'", contractName)
-	}
-
-	methodInstance, found := contractInstance.PublicMethods[methodName]
-	if found {
-		return contractInstance, methodInstance, nil
-	}
-
-	methodInstance, found = contractInstance.SystemMethods[methodName]
-	if found {
-		if permissionScope == protocol.PERMISSION_SCOPE_SYSTEM {
-			return contractInstance, methodInstance, nil
-		} else {
-			return nil, nil, errors.Errorf("only system contracts can run method '%s'", methodName)
-		}
-	}
-
-	return nil, nil, errors.Errorf("method '%s' not found on contract '%s'", methodName, contractName)
-}
-
 func processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			contractOutputErr = errors.Errorf("%s", r)

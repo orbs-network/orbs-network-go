@@ -24,27 +24,27 @@ func TestProcessCall_Permissions(t *testing.T) {
 	}{
 		{
 			name:          "UnknownMethodFails",
-			input:         processCallInput().WithUnknownMethod().Build(),
+			input:         ProcessCallInput().WithUnknownMethod().Build(),
 			expectedError: true,
 		},
 		{
 			name:          "PublicMethodSucceeds",
-			input:         processCallInput().WithPublicMethod().Build(),
+			input:         ProcessCallInput().WithPublicMethod().Build(),
 			expectedError: false,
 		},
 		{
 			name:          "InternalMethodFails",
-			input:         processCallInput().WithInternalMethod().Build(),
+			input:         ProcessCallInput().WithInternalMethod().Build(),
 			expectedError: true,
 		},
 		{
 			name:          "SystemMethodFails",
-			input:         processCallInput().WithSystemMethod().Build(),
+			input:         ProcessCallInput().WithSystemMethod().Build(),
 			expectedError: true,
 		},
 		{
 			name:             "SystemMethodUnderSystemPermissionsSucceeds",
-			input:            processCallInput().WithSystemMethod().WithSystemPermissions().Build(),
+			input:            ProcessCallInput().WithSystemMethod().WithSystemPermissions().Build(),
 			expectedError:    false,
 			expectedSdkWrite: true,
 		},

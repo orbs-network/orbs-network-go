@@ -23,7 +23,7 @@ type processCall struct {
 
 var EXAMPLE_CONTEXT_ID = []byte{0x17, 0x18}
 
-func processCallInput() *processCall {
+func ProcessCallInput() *processCall {
 	p := &processCall{
 		input: &services.ProcessCallInput{
 			ContextId:              EXAMPLE_CONTEXT_ID,

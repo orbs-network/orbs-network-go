@@ -9,30 +9,24 @@ package fake
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/pkg/errors"
+	"strings"
 	"sync"
 )
 
-type FakeCompiler interface {
-	adapter.Compiler
-	// Does not support multi-file fakes!
-	ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string)
-}
-
-type fakeCompiler struct {
+type FakeCompiler struct {
 	mutex    *sync.RWMutex
 	provided map[string]*sdkContext.ContractInfo
 }
 
-func NewCompiler() *fakeCompiler {
-	return &fakeCompiler{
+func NewCompiler() *FakeCompiler {
+	return &FakeCompiler{
 		mutex:    &sync.RWMutex{},
 		provided: make(map[string]*sdkContext.ContractInfo),
 	}
 }
 
-func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string) {
+func (c *FakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.ContractInfo, code ...string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -40,14 +34,14 @@ func (c *fakeCompiler) ProvideFakeContract(fakeContractInfo *sdkContext.Contract
 		panic("fake compiler does not support multiple files in contracts")
 	}
 
-	c.provided[code[0]] = fakeContractInfo
+	c.provided[strings.TrimSpace(code[0])] = fakeContractInfo
 }
 
-func (c *fakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
+func (c *FakeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	contractInfo, found := c.provided[code[0]]
+	contractInfo, found := c.provided[strings.TrimSpace(code[0])]
 	if !found {
 		return nil, errors.New("fake contract for given code was not previously provided with ProvideFakeContract()")
 	}

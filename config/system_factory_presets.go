@@ -233,8 +233,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
-	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, false)
-
 	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
