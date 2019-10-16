@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	config2 "github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/processor/javascript"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -21,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"os/exec"
+	"path"
 	"testing"
 )
 
@@ -130,7 +132,9 @@ func (h *harness) verifySdkCallMade(t *testing.T) {
 }
 
 func BuildDummyPlugin(src string, target string) {
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", target, src)
+	root := config2.GetProjectSourceRootPath()
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(root, target), path.Join(root, src))
+	cmd.Dir = root
 	cmd.Env = append(os.Environ(), "GO111MODULES=on")
 	out, err := cmd.CombinedOutput()
 	if err != nil {

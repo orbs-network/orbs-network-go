@@ -18,7 +18,7 @@ import (
 )
 
 func TestProcessCall_WithLoadablePluginSucceeds(t *testing.T) {
-	BuildDummyPlugin("../../plugins/dummy/", "dummy_plugin.bin")
+	BuildDummyPlugin("services/processor/plugins/dummy/", "services/processor/javascript/test/dummy_plugin.bin")
 
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {

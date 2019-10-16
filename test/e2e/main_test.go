@@ -20,7 +20,7 @@ const TIMES_TO_RUN_EACH_TEST = 1
 func TestMain(m *testing.M) {
 	exitCode := 0
 
-	test.BuildDummyPlugin("../../services/processor/plugins/dummy/", "dummy_plugin.bin")
+	test.BuildDummyPlugin("services/processor/plugins/dummy/", "test/e2e/dummy_plugin.bin")
 
 	config := getConfig()
 	if config.bootstrap {
