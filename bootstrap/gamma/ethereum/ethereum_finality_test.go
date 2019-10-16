@@ -106,6 +106,8 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		require.NoError(t, err, "failed connecting to Ganache")
 		ethereumRpc := ethclient.NewClient(ethRpc)
 
+		ensureFinalityInGanacheAndGamma(t, gammaEndpoint, ethRpc) // move to the future a bit to ensure finality before the test even starts interacting with Ganache
+
 		loggerContractAddress, _, loggerContract, err := eth.DeployLogger(auth, ethereumRpc)
 		require.NoError(t, err, "failed deploying Logger contract to Ganache")
 

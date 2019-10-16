@@ -63,6 +63,10 @@ func ArgumentArrayToArgs(ArgumentArray *protocol.ArgumentArray) []interface{} {
 			res = append(res, Argument.StringValue())
 		case protocol.ARGUMENT_TYPE_BYTES_VALUE:
 			res = append(res, Argument.BytesValue())
+		case protocol.ARGUMENT_TYPE_BYTES_20_VALUE:
+			res = append(res, Argument.Bytes20Value())
+		case protocol.ARGUMENT_TYPE_BYTES_32_VALUE:
+			res = append(res, Argument.Bytes32Value())
 		}
 	}
 	return res

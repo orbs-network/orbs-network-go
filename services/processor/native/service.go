@@ -86,7 +86,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, err
 	}
@@ -101,7 +101,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
@@ -113,7 +113,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	logger.Info("processor executing contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName))
 
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
-	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
+	outputArgs, contractErr, err := processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
 		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
 	}
@@ -122,7 +122,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: s.createMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}

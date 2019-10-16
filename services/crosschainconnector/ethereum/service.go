@@ -48,20 +48,6 @@ func NewEthereumCrosschainConnector(connection adapter.EthereumConnection, confi
 	return s
 }
 
-// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 find way to remove simulator and remove this ctor
-func NewEthereumCrosschainConnectorWithFakeTimeGetter(connection adapter.EthereumConnection, config config.EthereumCrosschainConnectorConfig, parent log.Logger, metrics metric.Factory) services.CrosschainConnector {
-	logger := parent.WithTags(LogTag)
-	blockTimeGetter := timestampfinder.NewFakeBlockTimeGetter(logger)
-	s := &service{
-		connection:      connection,
-		blockTimeGetter: blockTimeGetter,
-		timestampFinder: timestampfinder.NewTimestampFinder(blockTimeGetter, logger, metrics),
-		logger:          logger,
-		config:          config,
-	}
-	return s
-}
-
 func (s *service) EthereumCallContract(ctx context.Context, input *services.EthereumCallContractInput) (*services.EthereumCallContractOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -179,11 +165,6 @@ func (s *service) EthereumGetBlockNumber(ctx context.Context, input *services.Et
 		return nil, err
 	}
 
-	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
-	if blockNumberAndTime == nil {
-		return nil, errors.Errorf("failed getting an actual current block number from Ethereum")
-	}
-
 	return &services.EthereumGetBlockNumberOutput{
 		EthereumBlockNumber: uint64(blockNumberAndTime.BlockNumber),
 	}, nil
@@ -193,11 +174,6 @@ func (s *service) EthereumGetBlockNumberByTime(ctx context.Context, input *servi
 	blockNumberAndTime, err := s.timestampFinder.FindBlockByTimestamp(ctx, input.EthereumTimestamp)
 	if err != nil {
 		return nil, err
-	}
-
-	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
-	if blockNumberAndTime == nil {
-		return nil, errors.Errorf("failed getting an actual current block number from Ethereum")
 	}
 
 	err = s.verifyBlockNumberIsFinalitySafe(ctx, uint64(blockNumberAndTime.BlockNumber), input.ReferenceTimestamp)
@@ -216,11 +192,6 @@ func (s *service) EthereumGetBlockTime(ctx context.Context, input *services.Ethe
 		return nil, err
 	}
 
-	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
-	if blockNumberAndTime == nil {
-		return nil, errors.Errorf("failed getting an actual current block number from Ethereum")
-	}
-
 	return &services.EthereumGetBlockTimeOutput{
 		EthereumTimestamp: blockNumberAndTime.BlockTimeNano,
 	}, nil
@@ -230,11 +201,6 @@ func (s *service) EthereumGetBlockTimeByNumber(ctx context.Context, input *servi
 	blockNumberAndTime, err := s.blockTimeGetter.GetTimestampForBlockNumber(ctx, big.NewInt(int64(input.EthereumBlockNumber)))
 	if err != nil {
 		return nil, err
-	}
-
-	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator returns nil from FindBlockByTimestamp
-	if blockNumberAndTime == nil {
-		return nil, errors.Errorf("failed getting an actual current block number from Ethereum")
 	}
 
 	err = s.verifyBlockNumberIsFinalitySafe(ctx, uint64(blockNumberAndTime.BlockNumber), input.ReferenceTimestamp)

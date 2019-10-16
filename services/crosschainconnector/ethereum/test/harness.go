@@ -24,27 +24,10 @@ import (
 )
 
 type harness struct {
-	simAdapter *adapter.EthereumSimulator
 	rpcAdapter adapter.DeployingEthereumConnection
 	connector  services.CrosschainConnector
 	logger     log.Logger
-	address    string
 	config     *ethereumConnectorConfigForTests
-}
-
-func (h *harness) deploySimulatorStorageContract(ctx context.Context, text string) error {
-	address, err := h.simAdapter.DeploySimpleStorageContract(h.simAdapter.GetAuth(), text)
-	h.simAdapter.Commit()
-	if err != nil {
-		return err
-	}
-
-	h.address = hexutil.Encode(address[:])
-	return nil
-}
-
-func (h *harness) getAddress() string {
-	return h.address
 }
 
 func (h *harness) deployRpcStorageContract(text string) (string, error) {
@@ -60,7 +43,9 @@ func (h *harness) deployRpcStorageContract(text string) (string, error) {
 	return hexutil.Encode(address[:]), nil
 }
 
-func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds int) {
+func (h *harness) moveBlocksInGanache(t *testing.T, ctx context.Context, count int, blockGapInSeconds int) {
+	blockBefore, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+	require.NoError(t, err, "failed getting block number")
 	c, err := rpc.Dial(h.config.endpoint)
 	require.NoError(t, err, "failed creating Ethereum rpc client")
 	//start := time.Now()
@@ -68,6 +53,10 @@ func (h *harness) moveBlocksInGanache(t *testing.T, count int, blockGapInSeconds
 		require.NoError(t, c.Call(struct{}{}, "evm_increaseTime", blockGapInSeconds), "failed increasing time")
 		require.NoError(t, c.Call(struct{}{}, "evm_mine"), "failed increasing time")
 	}
+	blockAfter, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+	require.NoError(t, err, "failed getting block number")
+
+	h.logger.Info("moved ganache to the future", log.Int("blocks", count), log.Stringable("before", blockBefore), log.Stringable("after", blockAfter))
 
 }
 
@@ -80,23 +69,6 @@ func newRpcEthereumConnectorHarness(logger log.Logger, cfg *ethereumConnectorCon
 		rpcAdapter: a,
 		logger:     logger,
 		connector:  ethereum.NewEthereumCrosschainConnector(a, cfg, logger, registry),
-	}
-}
-
-func (h *harness) WithFakeTimeGetter() *harness {
-	h.connector = ethereum.NewEthereumCrosschainConnectorWithFakeTimeGetter(h.simAdapter, h.config, h.logger, metric.NewRegistry())
-	return h
-}
-
-func newSimulatedEthereumConnectorHarness(logger log.Logger) *harness {
-	conn := adapter.NewEthereumSimulatorConnection(logger)
-	cfg := ConfigForSimulatorConnection()
-
-	return &harness{
-		config:     cfg,
-		simAdapter: conn,
-		logger:     logger,
-		connector:  ethereum.NewEthereumCrosschainConnector(conn, cfg, logger, metric.NewRegistry()),
 	}
 }
 

@@ -143,9 +143,8 @@ func TestOrbsCommitteeContract_isMemberOfOrderedCommittee_notFound(t *testing.T)
 		_init()
 
 		// run & assert
-		for i := 2; i < 256;i++ {
+		for i := 2; i < 256; i++ {
 			require.False(t, _isMemberOfOrderedCommittee(addrs, makeNodeAddress(i)))
 		}
 	})
 }
-

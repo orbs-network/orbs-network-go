@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"time"
 )
+
 const CALL_COMMITTEE_CONTRACT_INTERVAL = 200 * time.Millisecond
 
 func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
@@ -115,7 +116,7 @@ func (s *service) generateGenesisCommittee(ctx context.Context, currentBlockHeig
 }
 
 func generateGenesisCommitteeAddresses(nodes map[string]config.ValidatorNode) []byte {
-	res := make([]byte, 0, len(nodes) * digest.NODE_ADDRESS_SIZE_BYTES)
+	res := make([]byte, 0, len(nodes)*digest.NODE_ADDRESS_SIZE_BYTES)
 	for _, value := range nodes {
 		res = append(res, value.NodeAddress()...)
 	}
@@ -154,7 +155,7 @@ func (s *service) callGetOrderedCommitteeForAddressesSystemContractUntilSuccess(
 func (s *service) callGetOrderedCommitteeForAddressesSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, addresses []byte) ([]primitives.NodeAddress, error) {
 	systemContractName := primitives.ContractName(committee_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(committee_systemcontract.METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES)
-	inputArgs := &protocol.ArgumentArrayBuilder{Arguments:[]*protocol.ArgumentBuilder{{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: addresses}}}
+	inputArgs := &protocol.ArgumentArrayBuilder{Arguments: []*protocol.ArgumentBuilder{{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: addresses}}}
 
 	output, err := s.virtualMachine.CallSystemContract(ctx, &services.CallSystemContractInput{
 		BlockHeight:        blockHeight,
