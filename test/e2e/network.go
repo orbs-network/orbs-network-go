@@ -111,6 +111,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 				ethereumEndpoint,
 				leaderKeyPair.NodeAddress(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+				dummyPluginPath(),
 			)
 
 		if deployBlocksFile {

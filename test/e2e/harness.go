@@ -228,6 +228,7 @@ func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
 		"",
 		primitives.NodeAddress{},
 		0,
+		dummyPluginPath(),
 	).TransactionPoolNodeSyncRejectTime()
 }
 

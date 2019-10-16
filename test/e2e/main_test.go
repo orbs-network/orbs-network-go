@@ -8,7 +8,6 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/services/processor/javascript/test"
 	"golang.org/x/net/context"
 	"os"
 	"testing"
@@ -20,7 +19,7 @@ const TIMES_TO_RUN_EACH_TEST = 1
 func TestMain(m *testing.M) {
 	exitCode := 0
 
-	test.BuildDummyPlugin("services/processor/plugins/dummy/", "test/e2e/dummy_plugin.bin")
+	buildDummyPlugin()
 
 	config := getConfig()
 	if config.bootstrap {
