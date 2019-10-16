@@ -188,7 +188,7 @@ func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
 		}
 
 		lastCommittedTimestamp := int64(m["TransactionPool.LastCommitted.TimeNano"]["Value"].(float64))
-		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff * -1).UnixNano()
+		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
 		return diff >= 0
 	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
 }

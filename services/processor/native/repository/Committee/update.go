@@ -17,7 +17,7 @@ import (
 const TRIGGER_CONTRACT = "_Triggers" // hard coded to avoid recursive import
 
 func updateMisses() {
-	if !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)){
+	if !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)) {
 		panic(fmt.Errorf("must be called from %s contract only", TRIGGER_CONTRACT))
 	}
 	elected := _split(_getElectedValidators())
@@ -33,7 +33,7 @@ func updateMisses() {
 /*
  The separation between isMember and update is because panic of transaction deletes ContractStateDiff but not Events Emitted.
  So first need to see if blockProposer is in the committee (if not panic) and only then do the update
- */
+*/
 func _isMemberOfOrderedCommittee(orderedCommittee [][]byte, blockProposer []byte) bool {
 	for _, member := range orderedCommittee {
 		if bytes.Equal(member, blockProposer) {
@@ -44,8 +44,8 @@ func _isMemberOfOrderedCommittee(orderedCommittee [][]byte, blockProposer []byte
 }
 
 func CommitteeMemberClosedBlock(address []byte) {}
-func CommitteeMemberMissed(address []byte) {}
-func _updateMissesByCommitteeOrder(orderedCommittee [][]byte, blockProposer []byte)  {
+func CommitteeMemberMissed(address []byte)      {}
+func _updateMissesByCommitteeOrder(orderedCommittee [][]byte, blockProposer []byte) {
 	for _, member := range orderedCommittee {
 		if bytes.Equal(member, blockProposer) {
 			_clearMiss(member)

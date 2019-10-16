@@ -7,15 +7,15 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
-	"strings"
 	"os"
-	"bytes"	
 	"path/filepath"
+	"strings"
 )
 
 const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
@@ -87,7 +87,7 @@ func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 /**
 	These functions are used to align & update the orbs-contract-sdk version found
 	in our main go.mod file of orbs-network-go to the go.mod used for contract compilations
-	being run in the e2e tests. This harness copies the template go.mod (same as happens during a CI docker build for our binary) 
+	being run in the e2e tests. This harness copies the template go.mod (same as happens during a CI docker build for our binary)
 	to mimick the same behavior. If these functions are not used, the go.mod template would not contain a valid version of the SDK to import
 	by the compiler and native contract deployments will fail to build.
 
@@ -107,7 +107,7 @@ func getMainProjectSDKVersion(pathToMainGoMod string) string {
 			sdkParts := strings.Split(strings.Trim(line, "\t\n"), " ")
 			sdkVersion = sdkParts[1]
 		}
-	}	
+	}
 
 	return sdkVersion
 }
@@ -137,7 +137,7 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 
 	mainGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "go.mod")
 	sdkVersion := getMainProjectSDKVersion(mainGoModPath)
-	
+
 	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", "go.mod.template")
 	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")
 	err = CopyFile(sourceGoModPath, targetGoModPath)

@@ -24,7 +24,7 @@ func getOrderedCommitteeForAddresses(addresses []byte) []byte {
 	return _concat(_getOrderedCommitteeArray(addressArray))
 }
 
-func _getOrderedCommitteeArray(addresses[][]byte) [][]byte {
+func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
 	return _orderList(addresses, _generateSeed())
 }
 

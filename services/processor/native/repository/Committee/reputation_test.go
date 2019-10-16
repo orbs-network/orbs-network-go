@@ -43,10 +43,10 @@ func TestOrbsCommitteeContract_addMiss(t *testing.T) {
 		// assert
 		curr := getMisses(addr)
 		require.True(t, curr == 0, "new addr should start with 0 misses")
-		for i := 0; i < moreThanRepCap;i++ {
+		for i := 0; i < moreThanRepCap; i++ {
 			_addMiss(addr)
 			newMiss := getMisses(addr)
-			require.EqualValues(t, curr+ 1, newMiss, "call to degrade should add 1 to misses")
+			require.EqualValues(t, curr+1, newMiss, "call to degrade should add 1 to misses")
 			curr = newMiss
 		}
 	})
@@ -62,7 +62,7 @@ func TestOrbsCommitteeContract_getReputation(t *testing.T) {
 		moreThanRepCap := int(ReputationBottomCap) + 2
 
 		// assert
-		for i := 0; i < moreThanRepCap;i++ {
+		for i := 0; i < moreThanRepCap; i++ {
 			rep := getReputation(addr)
 			miss := getMisses(addr)
 			if i < int(ToleranceLevel) {

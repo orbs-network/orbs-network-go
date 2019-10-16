@@ -22,7 +22,7 @@ func makeNodeAddress(a int) []byte {
 
 func makeNodeAddressArray(n int) [][]byte {
 	addrs := make([][]byte, 0, n)
-	for i := 1; i <= n;i++ {
+	for i := 1; i <= n; i++ {
 		addrs = append(addrs, makeNodeAddress(i))
 	}
 	return addrs
