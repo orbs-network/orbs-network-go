@@ -24,7 +24,7 @@ func TestBenchmarkContract_SimpleCalculation(t *testing.T) {
 
 			t.Log("Runs BenchmarkContract.add to add two numbers")
 
-			call := processCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
+			call := ProcessCallInput().WithMethod("BenchmarkContract", "add").WithArgs(uint64(12), uint64(27)).Build()
 
 			output, err := h.service.ProcessCall(ctx, call)
 			require.NoError(t, err, "call should succeed")
@@ -42,7 +42,7 @@ func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 
 			t.Log("Runs BenchmarkContract.set to save a value in state")
 
-			call := processCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).Build()
+			call := ProcessCallInput().WithMethod("BenchmarkContract", "set").WithArgs(value).Build()
 			h.expectSdkCallMadeWithStateWrite(nil, nil)
 
 			output, err := h.service.ProcessCall(ctx, call)
@@ -53,7 +53,7 @@ func TestBenchmarkContract_StateReadWrite(t *testing.T) {
 
 			t.Log("Runs BenchmarkContract.get to read that value back from state")
 
-			call = processCallInput().WithMethod("BenchmarkContract", "get").Build()
+			call = ProcessCallInput().WithMethod("BenchmarkContract", "get").Build()
 			h.expectSdkCallMadeWithStateRead(nil, uint64ToBytes(value))
 
 			output, err = h.service.ProcessCall(ctx, call)
@@ -72,7 +72,7 @@ func TestBenchmarkContract_EmitEvent(t *testing.T) {
 
 			t.Log("Runs BenchmarkContract.giveBirth to emit an event")
 
-			call := processCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
+			call := ProcessCallInput().WithMethod("BenchmarkContract", "giveBirth").WithArgs("John Snow").Build()
 			h.expectSdkCallMadeWithEventsEmit("BabyBorn", builders.ArgumentsArray("John Snow", uint32(3)), nil)
 
 			output, err := h.service.ProcessCall(ctx, call)

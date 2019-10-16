@@ -22,7 +22,7 @@ func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
-			input := processCallInput().WithUnknownContract().Build()
+			input := ProcessCallInput().WithUnknownContract().Build()
 			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE_PARTS, builders.ArgumentsArray(string(input.ContractName)), builders.ArgumentsArray(), errors.New("contract not deployed"))
 
 			_, err := h.service.ProcessCall(ctx, input)
@@ -52,7 +52,9 @@ func TestProcessCall_WithDeployableContractThatCompiles(t *testing.T) {
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
-			input := processCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
+			h.compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
+
+			input := ProcessCallInput().WithDeployableCounterContract(contracts.MOCK_COUNTER_CONTRACT_START_FROM).Build()
 			codeOutput := builders.ArgumentsArray([]byte(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
 			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE_PART, builders.ArgumentsArray(string(input.ContractName), uint32(0)), codeOutput, nil)
 			h.expectSdkCallMadeWithServiceCallMethod(deployments_systemcontract.CONTRACT_NAME, deployments_systemcontract.METHOD_GET_CODE_PARTS, builders.ArgumentsArray(string(input.ContractName)), builders.ArgumentsArray(uint32(1)), nil)

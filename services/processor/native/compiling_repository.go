@@ -9,10 +9,11 @@ package native
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -21,46 +22,68 @@ import (
 	"time"
 )
 
-func initializePreBuiltContractInstances() map[string]*types.ContractInstance {
-	res := make(map[string]*types.ContractInstance)
-	for contractName, contractInfo := range repository.PreBuiltContracts {
-		instance, err := types.NewContractInstance(contractInfo)
-		if err == nil {
-			res[contractName] = instance
+type CompositeRepository struct {
+	Nested []Repository
+}
+
+func (c *CompositeRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+	for _, repo := range c.Nested {
+		contractInfo, err := repo.ContractInfo(ctx, executionContextId, contractName)
+		if err != nil {
+			return nil, err
+		}
+		if contractInfo != nil {
+			return contractInfo, nil
 		}
 	}
-	return res
+
+	return nil, nil
 }
 
-func (s *service) retrieveContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
-	// 1. try pre-built repository
-	contractInfo, found := repository.PreBuiltContracts[contractName]
-	if found {
-		return contractInfo, nil
+func NewCompilingRepository(compiler adapter.Compiler, cfg config.NativeProcessorConfig, logger log.Logger, metricFactory metric.Factory) *CompilingRepository {
+	compilingRepository := &CompilingRepository{
+		compiler:                compiler,
+		config:                  cfg,
+		logger:                  logger.WithTags(log.Service("compiling-contract-repository")),
+		sanitizer:               createSanitizer(),
+		deployedContracts:       metricFactory.NewGauge("Processor.Native.DeployedContracts.Count"),
+		contractCompilationTime: metricFactory.NewLatency("Processor.Native.ContractCompilationTime.Millis", 10*time.Second),
 	}
-
-	// 2. try deployed artifact cache (if already compiled)
-	contractInfo = s.getDeployedContractInfoFromCache(contractName)
-	if contractInfo != nil {
-		return contractInfo, nil
-	}
-
-	// 3. try deployable code from state (if not yet compiled)
-	return s.retrieveDeployedContractInfoFromState(ctx, executionContextId, contractName)
+	return compilingRepository
 }
 
-func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+type CompilingRepository struct {
+	compiler   adapter.Compiler
+	sdkHandler handlers.ContractSdkCallHandler
+	logger     log.Logger
+
+	sanitizer *sanitizer.Sanitizer
+
+	deployedContracts       *metric.Gauge
+	processCallTime         *metric.Histogram
+	contractCompilationTime *metric.Histogram
+	config                  config.NativeProcessorConfig
+}
+
+func (r *CompilingRepository) SetSdkHandler(handler handlers.ContractSdkCallHandler) {
+	r.sdkHandler = handler
+}
+
+func (r *CompilingRepository) ContractInfo(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
+	return r.retrieveDeployedContractInfoFromState(ctx, executionContextId, contractName)
+}
+
+func (r *CompilingRepository) retrieveDeployedContractInfoFromState(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (*sdkContext.ContractInfo, error) {
 	start := time.Now()
 
-	rawCodeFiles, err := s.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
+	rawCodeFiles, err := r.getFullCodeOfDeploymentSystemContract(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
 	var code []string
-
 	for _, rawCodeFile := range rawCodeFiles {
-		sanitizedCode, err := s.sanitizeDeployedSourceCode(rawCodeFile)
+		sanitizedCode, err := r.sanitizeDeployedSourceCode(rawCodeFile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "source code for contract '%s' failed security sandbox audit", contractName)
 		}
@@ -71,7 +94,7 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 	ctx, cancel := context.WithTimeout(context.Background(), adapter.MAX_COMPILATION_TIME)
 	defer cancel()
 
-	newContractInfo, err := s.compiler.Compile(ctx, code...)
+	newContractInfo, err := r.compiler.Compile(ctx, code...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "compilation of deployable contract '%s' failed", contractName)
 	}
@@ -79,31 +102,32 @@ func (s *service) retrieveDeployedContractInfoFromState(ctx context.Context, exe
 		return nil, errors.Errorf("compilation and load of deployable contract '%s' did not return a valid symbol", contractName)
 	}
 
-	instance, err := types.NewContractInstance(newContractInfo)
-	if err != nil {
-		return nil, errors.Errorf("instance initialization of deployable contract '%s' failed", contractName)
-	}
-	s.addContractInstance(contractName, instance)
-	s.addDeployedContractInfoToCache(contractName, newContractInfo) // must add after instance to avoid race (when somebody RunsMethod at same time)
+	r.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
 
-	s.logger.Info("compiled and loaded deployable contract successfully", log.String("contract", contractName))
-
-	s.metrics.deployedContracts.Inc()
-	s.metrics.contractCompilationTime.RecordSince(start)
+	r.deployedContracts.Inc()
+	r.contractCompilationTime.RecordSince(start)
 	// only want to log meter on success (so this line is not under defer)
 
 	return newContractInfo, nil
 }
 
-func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
-	codeParts, err := s.getCodeParts(ctx, executionContextId, contractName)
+func (r *CompilingRepository) sanitizeDeployedSourceCode(code string) (string, error) {
+	if r.config.ProcessorSanitizeDeployedContracts() {
+		return r.sanitizer.Process(code)
+	}
+
+	return code, nil
+}
+
+func (r *CompilingRepository) getFullCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) ([]string, error) {
+	codeParts, err := r.getCodeParts(ctx, executionContextId, contractName)
 	if err != nil {
 		return nil, err
 	}
 
 	var results []string
 	for i := uint32(0); i < codeParts; i++ {
-		part, err := s.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
+		part, err := r.callGetCodeOfDeploymentSystemContract(ctx, executionContextId, contractName, i)
 		if err != nil {
 			return nil, err
 		}
@@ -113,11 +137,11 @@ func (s *service) getFullCodeOfDeploymentSystemContract(ctx context.Context, exe
 	return results, nil
 }
 
-func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
+func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PART)
 
-	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
@@ -158,11 +182,11 @@ func (s *service) callGetCodeOfDeploymentSystemContract(ctx context.Context, exe
 	return string(arg0.BytesValue()), nil
 }
 
-func (s *service) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
+func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PARTS)
 
-	output, err := s.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
+	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",

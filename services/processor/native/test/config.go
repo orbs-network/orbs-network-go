@@ -8,13 +8,13 @@ package test
 
 import "github.com/orbs-network/orbs-spec/types/go/primitives"
 
-type nativeProcessorConfigForTests struct {
+type NativeProcessorConfigForTests struct {
 }
 
-func (c *nativeProcessorConfigForTests) ProcessorSanitizeDeployedContracts() bool {
-	return false
+func (c *NativeProcessorConfigForTests) ProcessorSanitizeDeployedContracts() bool {
+	return true
 }
 
-func (c *nativeProcessorConfigForTests) VirtualChainId() primitives.VirtualChainId {
+func (c *NativeProcessorConfigForTests) VirtualChainId() primitives.VirtualChainId {
 	return 42
 }

@@ -27,7 +27,7 @@ func TestProcessCall_Errors(t *testing.T) {
 	}{
 		{
 			name:           "ThatThrowsError",
-			input:          processCallInput().WithMethod("BenchmarkContract", "throw").Build(),
+			input:          ProcessCallInput().WithMethod("BenchmarkContract", "throw").Build(),
 			expectedError:  true,
 			expectedResult: protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT,
 			expectedOutput: builders.ArgumentsArray("example error returned by contract"),

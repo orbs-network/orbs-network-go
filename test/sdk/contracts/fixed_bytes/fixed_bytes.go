@@ -4,6 +4,7 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
+
 const CONTRACT_NAME = "fixedBytes"
 
 var PUBLIC = sdk.Export(getAddress, setAddress, getHash, setHash)
@@ -27,4 +28,3 @@ func getHash() [32]byte {
 func setHash(addr [32]byte) {
 	state.WriteBytes32([]byte("bytes32"), addr)
 }
-

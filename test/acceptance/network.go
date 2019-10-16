@@ -42,7 +42,7 @@ type Network struct {
 
 	tamperingTransport                 testGossipAdapter.Tamperer
 	ethereumConnection                 *ethereumAdapter.NopEthereumAdapter
-	fakeCompiler                       fake.FakeCompiler
+	fakeCompiler                       *fake.FakeCompiler
 	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
 	dumpingStatePersistences           []testStateStorageAdapter.DumpingStatePersistence
 	stateBlockHeightTrackers           []*synchronization.BlockTracker

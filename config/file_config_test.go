@@ -198,13 +198,6 @@ func TestConfig_EthereumEndpoint(t *testing.T) {
 	require.EqualValues(t, "http://172.31.1.100:8545", cfg.EthereumEndpoint())
 }
 
-func TestConfig_ContractCodeSanitation(t *testing.T) {
-	cfg, err := newEmptyFileConfig(`{"PROCESSOR-SANITIZE-DEPLOYED-CONTRACTS":true}`)
-	require.NoError(t, err)
-
-	require.EqualValues(t, true, cfg.ProcessorSanitizeDeployedContracts())
-}
-
 func TestConfig_E2EConfigFile(t *testing.T) {
 	content, err := ioutil.ReadFile("../docker/test/benchmark-config/node1.json")
 	require.NoError(t, err, "failed reading config file")

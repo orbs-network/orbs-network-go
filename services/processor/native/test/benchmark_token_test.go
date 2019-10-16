@@ -25,7 +25,7 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 
 			t.Log("Runs BenchmarkToken.getBalance")
 
-			call := processCallInput().WithMethod("BenchmarkToken", "getBalance").WithArgs([]byte(targetAddress)).Build()
+			call := ProcessCallInput().WithMethod("BenchmarkToken", "getBalance").WithArgs([]byte(targetAddress)).Build()
 			h.expectSdkCallMadeWithStateRead(targetAddress, uint64ToBytes(balance))
 
 			output, err := h.service.ProcessCall(ctx, call)
@@ -47,7 +47,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 
 			t.Log("Runs BenchmarkToken.transfer")
 
-			call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
+			call := ProcessCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
 			h.expectSdkCallMadeWithAddressGetCaller(callerAddress)
 			h.expectSdkCallMadeWithStateRead(callerAddress, uint64ToBytes(callerBalance))
 			h.expectSdkCallMadeWithStateWrite(callerAddress, uint64ToBytes(callerBalance-amount))
@@ -62,7 +62,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 
 			t.Log("Runs BenchmarkToken.getBalance")
 
-			call = processCallInput().WithMethod("BenchmarkToken", "getBalance").WithArgs([]byte(callerAddress)).Build()
+			call = ProcessCallInput().WithMethod("BenchmarkToken", "getBalance").WithArgs([]byte(callerAddress)).Build()
 			h.expectSdkCallMadeWithStateRead(callerAddress, uint64ToBytes(callerBalance-amount))
 
 			output, err = h.service.ProcessCall(ctx, call)
@@ -84,7 +84,7 @@ func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
 
 			t.Log("Runs BenchmarkToken.transfer large amount")
 
-			call := processCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
+			call := ProcessCallInput().WithMethod("BenchmarkToken", "transfer").WithArgs(amount, []byte(targetAddress)).Build()
 			h.expectSdkCallMadeWithAddressGetCaller(callerAddress)
 			h.expectSdkCallMadeWithStateRead(callerAddress, uint64ToBytes(callerBalance))
 
