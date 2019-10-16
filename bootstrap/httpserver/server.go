@@ -9,6 +9,7 @@ package httpserver
 import (
 	"context"
 	"fmt"
+	membuffers "github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -18,7 +19,6 @@ import (
 	"net/http/pprof"
 	"time"
 
-	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -67,10 +67,10 @@ func (ln TcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) *HttpServer {
+func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, metricRegistry metric.Registry) *HttpServer {
 	server := &HttpServer{
 		logger:             logger.WithTags(LogTag),
-		publicApi:          publicApi,
+		publicApi:          nil,
 		metricRegistry:     metricRegistry,
 		config:             cfg,
 		ChanShutdownWaiter: supervised.NewChanWaiter("NodeHttpServer"),
@@ -119,15 +119,29 @@ func (s *HttpServer) GracefulShutdown(shutdownContext context.Context) {
 
 }
 
+func (s *HttpServer) RegisterPublicApi(publicApi services.PublicApi) {
+	s.publicApi = publicApi
+}
+
 func (s *HttpServer) createRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
-	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
-	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionAsyncHandler)))
-	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
-	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
-	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
-	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(s.getBlockHandler)))
+	wrapHandlerWithPublicApiChecker := func(f http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if s.publicApi == nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+			} else {
+				f(w, r)
+			}
+		}
+	}
+
+	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.sendTransactionHandler))))
+	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.sendTransactionAsyncHandler))))
+	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.runQueryHandler))))
+	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.getTransactionStatusHandler))))
+	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.getTransactionReceiptProofHandler))))
+	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(wrapHandlerWithPublicApiChecker(s.getBlockHandler))))
 	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
 	router.Handle("/metrics.json", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
 	router.Handle("/metrics.prometheus", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsPrometheus)))

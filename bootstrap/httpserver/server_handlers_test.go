@@ -8,6 +8,7 @@ package httpserver
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -222,6 +223,51 @@ func TestHttpServer_Robots(t *testing.T) {
 	})
 }
 
+func TestPublicApiResponds503UntilPublicApiIsRegistered(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		h := newHarnessWithUnregisteredPublicApi(harness)
+		defer h.server.Shutdown()
+		port := h.server.Port()
+
+		request := (&client.GetBlockRequestBuilder{BlockHeight: 1}).Build()
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://127.0.0.1:%d/api/v1/get-block", port), bytes.NewReader(request.Raw()))
+
+		//defer h.server.GracefulShutdown()
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err, "expected HTTP request to succeed")
+		defer resp.Body.Close()
+
+		require.Equal(t, resp.StatusCode, 503, "expected publicapi endpoint to respond with HTTP 503")
+
+		response := &client.GetBlockResponseBuilder{
+			RequestResult: aCompletedResult(),
+		}
+		h.onGetBlock().Return(&services.GetBlockOutput{ClientResponse: response.Build()})
+
+		h.server.RegisterPublicApi(h.publicApi)
+
+		resp, err = http.DefaultClient.Do(req)
+		require.NoError(t, err, "expected HTTP request to succeed")
+		defer resp.Body.Close()
+
+		require.Equal(t, resp.StatusCode, 200, "expected publicapi endpoint to respond with http 200")
+	})
+}
+
+func TestNonPublicApiIsAvailableImmediately(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		h := newHarnessWithUnregisteredPublicApi(harness)
+		defer h.server.Shutdown()
+		port := h.server.Port()
+
+		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/robots.txt", port))
+		require.NoError(t, err, "expected HTTP request to succeed")
+		defer resp.Body.Close()
+
+		require.Equal(t, resp.StatusCode, 200, "expected robots.txt endpoint to respond with HTTP 200")
+	})
+}
+
 func aCompletedResult() *client.RequestResultBuilder {
 	return &client.RequestResultBuilder{
 		RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
@@ -321,10 +367,16 @@ func (h *harness) getBlock() *httptest.ResponseRecorder {
 }
 
 func newHarness(parent *with.LoggingHarness) *harness {
+	h := newHarnessWithUnregisteredPublicApi(parent)
+	h.server.RegisterPublicApi(h.publicApi)
+	return h
+}
+
+func newHarnessWithUnregisteredPublicApi(parent *with.LoggingHarness) *harness {
 	papiMock := &services.MockPublicApi{}
 	return &harness{
 		LoggingHarness: parent,
 		publicApi:      papiMock,
-		server:         NewHttpServer(NewServerConfig(":0", false), parent.Logger, papiMock, metric.NewRegistry()),
+		server:         NewHttpServer(NewServerConfig(":0", false), parent.Logger, metric.NewRegistry()),
 	}
 }
