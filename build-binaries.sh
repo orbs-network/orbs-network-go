@@ -7,6 +7,8 @@ time go build -o _bin/orbs-node -ldflags "-X $CONFIG_PKG.SemanticVersion=$SEMVER
 
 time go build -o _bin/orbs-signer -ldflags "-w -extldflags '-static' -X $CONFIG_PKG.SemanticVersion=$SEMVER -X $CONFIG_PKG.CommitVersion=$GIT_COMMIT" -tags "$BUILD_FLAG" -a bootstrap/signer/main/main.go
 
+time go build -o _bin/orbs-dummy-plugin -buildmode plugin ./services/processor/plugins/dummy/
+
 if [ "$SKIP_DEVTOOLS" == "" ]; then
     time go build -o _bin/gamma-server -ldflags "-X $CONFIG_PKG.SemanticVersion=$SEMVER -X $CONFIG_PKG.CommitVersion=$GIT_COMMIT" -tags "$BUILD_FLAG" -a bootstrap/gamma/main/main.go
 fi
