@@ -272,7 +272,7 @@ func TemplateForGamma(
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
-	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
 
 	return cfg
 }
