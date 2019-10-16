@@ -18,6 +18,9 @@ type entryPointKeyType string
 
 const entryPointKey entryPointKeyType = "ep"
 const RequestId = "request-id"
+const NodeIdCtxKey = "node-id"
+
+const defaultNodeId = "none"
 
 type Context struct {
 	created   time.Time
@@ -28,6 +31,10 @@ type Context struct {
 const RequestTraceName = "X-ORBS-NAME"
 const RequestTraceTime = "X-ORBS-CREATED"
 const RequestTraceRequestId = "X-ORBS-ID"
+
+func ContextWithNodeId(ctx context.Context, nodeId string) context.Context {
+	return context.WithValue(ctx, NodeIdCtxKey, nodeId)
+}
 
 func NewFromRequest(ctx context.Context, request *http.Request) context.Context {
 	name := request.Header.Get(RequestTraceName)
@@ -56,10 +63,14 @@ func (c *Context) WriteTraceToRequest(request *http.Request) {
 
 func NewContext(parent context.Context, name string) context.Context {
 	now := time.Now()
+	nodeId := parent.Value(NodeIdCtxKey)
+	if nodeId == nil {
+		nodeId = defaultNodeId
+	}
 	ep := &Context{
 		name:      name,
 		created:   now,
-		requestId: fmt.Sprintf("%s-%d", name, now.UnixNano()),
+		requestId: fmt.Sprintf("%s-%s-%d", name, nodeId, now.UnixNano()),
 	}
 	return context.WithValue(parent, entryPointKey, ep)
 }

@@ -37,5 +37,3 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	}
 	return res, nil
 }
-
-

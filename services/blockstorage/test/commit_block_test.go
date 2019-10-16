@@ -8,9 +8,11 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -196,5 +198,17 @@ func TestCommitBlockReturnsErrorIfBlockInFuture(t *testing.T) {
 		require.EqualError(t, err, "attempt to write future block 1000. current top height is 2", "block height was mutate to be invalid, should return an error")
 		require.EqualValues(t, 2, harness.numOfWrittenBlocks(), "only 2 blocks should have been written")
 		harness.verifyMocks(t, 1)
+	})
+}
+
+func TestCommitBlockUpdatesSync_NoRacesOnShutdown(t *testing.T) {
+	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+		harness := newBlockStorageHarness(parent).withSyncBroadcast(1)
+
+		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Timeout(20*time.Millisecond).Return(&handlers.HandleBlockConsensusOutput{}, nil).AtLeast(1)
+		harness.start(ctx)
+
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithHeight(1).Build())
+		require.NoError(t, err)
 	})
 }

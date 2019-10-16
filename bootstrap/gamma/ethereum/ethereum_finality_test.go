@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package e2e
+package ethereum
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/e2e/contracts/calc/eth"
 	"github.com/stretchr/testify/require"
@@ -91,7 +92,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 
 	test.WithContext(func(ctx context.Context) {
 
-		gammaEndpoint := runGammaOnRandomPort(t, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
+		gammaEndpoint := gamma.RunOnRandomPort(t, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
 
 		contractOwner, _ := orbsClient.CreateAccount()
 		orbs := orbsClient.NewClient(gammaEndpoint, 42, codec.NETWORK_TYPE_TEST_NET)
@@ -105,18 +106,20 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		require.NoError(t, err, "failed connecting to Ganache")
 		ethereumRpc := ethclient.NewClient(ethRpc)
 
+		ensureFinalityInGanacheAndGamma(t, gammaEndpoint, ethRpc) // move to the future a bit to ensure finality before the test even starts interacting with Ganache
+
 		loggerContractAddress, _, loggerContract, err := eth.DeployLogger(auth, ethereumRpc)
 		require.NoError(t, err, "failed deploying Logger contract to Ganache")
 
-		deployContract(t, orbs, contractOwner, "LogCalculator", []byte(ORBS_CALC_CONTRACT))
+		gamma.DeployContract(t, orbs, contractOwner, "LogCalculator", []byte(ORBS_CALC_CONTRACT))
 
 		txHashes := sendEthTransactions(t, loggerContract, auth, 25)
 
 		ensureFinalityInGanacheAndGamma(t, gammaEndpoint, ethRpc)
 
-		sendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
+		gamma.SendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
 
-		queryRes := sendQuery(t, orbs, contractOwner, "LogCalculator", "sum", strings.Join(txHashes, ","))
+		queryRes := gamma.SendQuery(t, orbs, contractOwner, "LogCalculator", "sum", strings.Join(txHashes, ","))
 
 		require.EqualValues(t, 325, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
 	})
@@ -125,7 +128,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 
 func ensureFinalityInGanacheAndGamma(t *testing.T, gammaEndpoint string, ethRpc *rpc.Client) {
 	finalityTime := 120 * time.Second
-	timeTravel(t, gammaEndpoint, finalityTime)
+	gamma.TimeTravel(t, gammaEndpoint, finalityTime)
 	moveBlocksInGanache(t, ethRpc, int(finalityTime.Seconds()), 1)
 }
 

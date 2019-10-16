@@ -112,19 +112,18 @@ func (h *harness) expectVirtualMachineToReturnXTransactionReceipts(receiptsCount
 
 func (h *harness) expectVirtualMachineToReturnGenesisCommittee() {
 	nodes := h.config.GenesisValidatorNodes()
-	addresses := make([]byte, 0, len(nodes) * digest.NODE_ADDRESS_SIZE_BYTES)
+	addresses := make([]byte, 0, len(nodes)*digest.NODE_ADDRESS_SIZE_BYTES)
 	for _, value := range nodes {
 		addresses = append(addresses, value.NodeAddress()[:]...)
 	}
-    args := &protocol.ArgumentArrayBuilder{Arguments:[]*protocol.ArgumentBuilder{{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: addresses}}}
+	args := &protocol.ArgumentArrayBuilder{Arguments: []*protocol.ArgumentBuilder{{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: addresses}}}
 
 	output := &services.CallSystemContractOutput{
-		CallResult: protocol.EXECUTION_RESULT_SUCCESS,
-		OutputArgumentArray:  args.Build(),
+		CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+		OutputArgumentArray: args.Build(),
 	}
 	h.virtualMachine.When("CallSystemContract", mock.Any, mock.Any).Return(output, nil)
 }
-
 
 func (h *harness) verifyTransactionsRequestedFromTransactionPool(t *testing.T) {
 	ok, _ := h.transactionPool.Verify()

@@ -22,7 +22,7 @@ func appendAndOrder(newAddr []byte, addrs [][]byte) [][]byte {
 func appendAndOrderWithSeed(newAddr []byte, addrs [][]byte, seed []byte) [][]byte {
 	currScore := _calculateScoreWithReputation(newAddr, seed)
 	addrs = append(addrs, newAddr)
-	for i := len(addrs) - 1; i > 0;i-- {
+	for i := len(addrs) - 1; i > 0; i-- {
 		if currScore > _calculateScoreWithReputation(addrs[i-1], seed) {
 			addrs[i], addrs[i-1] = addrs[i-1], addrs[i]
 		} else {
@@ -120,15 +120,14 @@ func TestOrbsCommitteeContract_calculateScoreWithReputation(t *testing.T) {
 		// rep with factor (2^5)
 		state.WriteUint32(_formatMisses(addr), 5)
 		score = _calculateScoreWithReputation(addr, _generateSeed())
-		require.EqualValues(t, float64(scoreWithOutRep) / float64(32), score)
+		require.EqualValues(t, float64(scoreWithOutRep)/float64(32), score)
 
 		// rep with factor (2^10) miss is above cap
 		state.WriteUint32(_formatMisses(addr), 11)
 		score = _calculateScoreWithReputation(addr, _generateSeed())
-		require.EqualValues(t, float64(scoreWithOutRep) / float64(1024), score)
+		require.EqualValues(t, float64(scoreWithOutRep)/float64(1024), score)
 	})
 }
-
 
 func TestOrbsCommitteeContract_calculateScore(t *testing.T) {
 	addr := []byte{0xa1, 0x33}
@@ -141,7 +140,7 @@ func TestOrbsCommitteeContract_calculateScore(t *testing.T) {
 	scoreWithNonEmptyOneBitDiff := _calculateScore(addr, nonEmptySeedOneBitDiff)
 
 	shaOfAddrWithNoSeed := hash.CalcSha256(addr)
-	expectedScoreWithEmpty :=  binary.LittleEndian.Uint32(shaOfAddrWithNoSeed[hash.SHA256_HASH_SIZE_BYTES-4:])
+	expectedScoreWithEmpty := binary.LittleEndian.Uint32(shaOfAddrWithNoSeed[hash.SHA256_HASH_SIZE_BYTES-4:])
 
 	require.Equal(t, expectedScoreWithEmpty, scoreWithEmpty, "for score with empty seed doesn't match expected")
 	require.NotEqual(t, scoreWithNonEmpty, scoreWithEmpty, "for score with and without seed must not match")

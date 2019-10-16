@@ -18,8 +18,6 @@ const FAKE_CLIENT_NUMBER_OF_BLOCKS = 1000000
 const FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS = 1500000000
 const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS = 1506108784
 
-var LastTimestampInFake = time.Unix(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS, 0)
-
 type FakeBlockTimeGetter struct {
 	data        map[int64]int64 // block number -> timestamp in seconds
 	logger      log.Logger

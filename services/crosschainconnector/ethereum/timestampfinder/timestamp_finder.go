@@ -9,7 +9,6 @@ package timestampfinder
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -66,11 +65,6 @@ func NewTimestampFinder(btg BlockTimeGetter, logger log.Logger, metrics metric.F
 func (f *finder) FindBlockByTimestamp(ctx context.Context, referenceTimestampNano primitives.TimestampNano) (*BlockNumberAndTime, error) {
 	start := time.Now()
 	f.metrics.totalTimesCalled.Inc()
-
-	// TODO	https://github.com/orbs-network/orbs-network-go/issues/1214 simulator doesn't support headers and blocks
-	if f.isEthereumSimulator() {
-		return nil, nil
-	}
 
 	var err error
 	below, above := f.getLastResultCache()
@@ -189,13 +183,4 @@ func (f *finder) setLastResultCache(below *BlockNumberAndTime, above *BlockNumbe
 	f.lastResultCache.above = &BlockNumberAndTime{BlockNumber: above.BlockNumber, BlockTimeNano: above.BlockTimeNano}
 	f.metrics.lastBlockFound.Update(below.BlockNumber)
 	f.metrics.lastBlockTimeStamp.Update(int64(time.Duration(below.BlockTimeNano) / time.Second))
-}
-
-func (f *finder) isEthereumSimulator() bool {
-	if ethBasedBlockTimeGetter, ok := f.btg.(*EthereumBasedBlockTimeGetter); ok {
-		if _, ok := ethBasedBlockTimeGetter.ethereum.(*adapter.EthereumSimulator); ok {
-			return true
-		}
-	}
-	return false
 }
