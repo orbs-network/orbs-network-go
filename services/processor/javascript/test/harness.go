@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
+	"os"
 	"os/exec"
 	"testing"
 )
@@ -130,6 +131,7 @@ func (h *harness) verifySdkCallMade(t *testing.T) {
 
 func BuildDummyPlugin(src string, target string) {
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", target, src)
+	cmd.Env = append(os.Environ(), "GO111MODULES=on")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		panic(fmt.Sprintf("failed to compile dummy plugin: %s\n%s", err, string(out)))
