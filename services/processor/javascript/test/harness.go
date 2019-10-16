@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"testing"
 )
 
@@ -135,9 +136,23 @@ func BuildDummyPlugin(src string, target string) {
 	root := config2.GetProjectSourceRootPath()
 	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(root, target), path.Join(root, src))
 	cmd.Dir = root
-	cmd.Env = append(os.Environ(), "GO111MODULES=on")
+	cmd.Env = []string{
+		"GOPATH=" + getGOPATH(),
+		"PATH=" + os.Getenv("PATH"),
+		"GO111MODULE=on",
+		"HOME=" + os.Getenv("HOME"),
+	}
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		panic(fmt.Sprintf("failed to compile dummy plugin: %s\n%s", err, string(out)))
 	}
+}
+
+func getGOPATH() string {
+	res := os.Getenv("GOPATH")
+	if res == "" {
+		return filepath.Join(os.Getenv("HOME"), "go")
+	}
+	return res
 }

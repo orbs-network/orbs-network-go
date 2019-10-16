@@ -9,6 +9,7 @@ package config
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -191,7 +192,7 @@ func ForE2E(
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetNodePrivateKey(nodePrivateKey)
 
-	cfg.SetString(PROCESSOR_PLUGIN_PATH, "dummy_plugin.bin")
+	cfg.SetString(PROCESSOR_PLUGIN_PATH, path.Join(GetProjectSourceRootPath(), "test/e2e/dummy_plugin.bin"))
 
 	return cfg
 }
