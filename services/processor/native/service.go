@@ -71,11 +71,12 @@ func NewNativeProcessor(compiler adapter.Compiler, config config.NativeProcessor
 	}
 }
 
-func NewProcessorWithContractRepository(repository Repository, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
+func NewProcessorWithContractRepository(repo Repository, config config.NativeProcessorConfig, parentLogger log.Logger, metricFactory metric.Factory) services.Processor {
 	logger := parentLogger.WithTags(LogTag)
+	compositeRepository := &CompositeRepository{Nested: []Repository{repository.NewPrebuilt(), repo}}
 
 	return &service{
-		repository: repository,
+		repository: compositeRepository,
 		config:     config,
 		logger:     logger,
 		metrics:    getMetrics(metricFactory),
