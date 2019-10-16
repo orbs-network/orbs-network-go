@@ -21,24 +21,22 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 	processorType, err := s.callGetInfoOfDeploymentSystemContract(ctx, executionContext, serviceName)
 
 	// on failure (contract not deployed), attempt to auto deploy pre-built (in repository) native contract
-	if err != nil {
-		if processorType == protocol.PROCESSOR_TYPE_NATIVE {
-			if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
-				return nil, err
-			}
+	if err != nil && processorType == protocol.PROCESSOR_TYPE_RESERVED {
+		if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
+			return nil, err
+		}
 
-			getInfoErr := err
+		getInfoErr := err
 
-			err = s.hasDeployableCode(ctx, serviceName)
-			if err != nil {
-				return nil, getInfoErr
-			}
+		err = s.hasDeployableCode(ctx, serviceName)
+		if err != nil {
+			return nil, getInfoErr
+		}
 
-			processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
-			if err != nil {
-				s.logger.Error("failed to lazily deploy system contract", log.String("contract-name", string(serviceName)), log.Error(err))
-				return nil, getInfoErr
-			}
+		processorType, err = s.attemptToAutoDeployPreBuiltNativeContract(ctx, executionContext, serviceName)
+		if err != nil {
+			s.logger.Error("failed to lazily deploy system contract", log.String("contract-name", string(serviceName)), log.Error(err))
+			return nil, getInfoErr
 		}
 	}
 
