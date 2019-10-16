@@ -58,15 +58,6 @@ func ConfigForExternalRPCConnection() *ethereumConnectorConfigForTests {
 	return &cfg
 }
 
-func ConfigForNopTests() *ethereumConnectorConfigForTests {
-	var cfg ethereumConnectorConfigForTests
-
-	cfg.finalityTimeComponent = 1 * time.Second
-	cfg.finalityBlocksComponent = 1
-
-	return &cfg
-}
-
 func runningWithDocker() bool {
 	return os.Getenv("ETHEREUM_ENDPOINT") != ""
 }
