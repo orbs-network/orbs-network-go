@@ -16,26 +16,26 @@ import (
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
 	govnr.TreeSupervisor
-	d      time.Duration
-	f      func()
-	s      func()
-	logger logfields.Errorer
-	cancel context.CancelFunc
-	ticker *time.Ticker
-	Closed govnr.ContextEndedChan
-	name   string
+	interval time.Duration
+	handler  func()
+	onStop   func()
+	logger   logfields.Errorer
+	cancel   context.CancelFunc
+	ticker   *time.Ticker
+	Closed   govnr.ContextEndedChan
+	name     string
 }
 
 func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &PeriodicalTrigger{
-		ticker: nil,
-		d:      interval,
-		f:      trigger,
-		s:      onStop,
-		cancel: cancel,
-		logger: logger,
-		name:   name,
+		ticker:   nil,
+		interval: interval,
+		handler:  trigger,
+		onStop:   onStop,
+		cancel:   cancel,
+		logger:   logger,
+		name:     name,
 	}
 
 	t.run(subCtx)
@@ -43,16 +43,16 @@ func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Durati
 }
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
-	t.ticker = time.NewTicker(t.d)
+	t.ticker = time.NewTicker(t.interval)
 	h := govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
 		for {
 			select {
 			case <-t.ticker.C:
-				t.f()
+				t.handler()
 			case <-ctx.Done():
 				t.ticker.Stop()
-				if t.s != nil {
-					go t.s()
+				if t.onStop != nil {
+					go t.onStop()
 				}
 				return
 			}
