@@ -39,7 +39,7 @@ func TestDeployContractAgainstDockerizedGammaInstance(t *testing.T) {
 		return deployResponse.RequestStatus == codec.REQUEST_STATUS_IN_PROCESS
 	}))
 
-	require.True(t, test.Eventually(5*time.Second, func() bool {
+	require.True(t, test.Eventually(10*time.Second, func() bool {
 		statusResponse, err := client.GetTransactionStatus(txId)
 		if err != nil {
 			return false
