@@ -191,6 +191,8 @@ func ForE2E(
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetNodePrivateKey(nodePrivateKey)
 
+	cfg.SetString(PROCESSOR_PLUGIN_PATH, "dummy_plugin.bin")
+
 	return cfg
 }
 

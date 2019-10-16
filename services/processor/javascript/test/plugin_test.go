@@ -14,16 +14,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
-	"os/exec"
 	"testing"
 )
 
-// go build -buildmode=plugin -o ./services/processor/javascript/test/dummy_plugin.bin ./services/processor/plugins/dummy/
 func TestProcessCall_WithLoadablePluginSucceeds(t *testing.T) {
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", "dummy_plugin.bin", "../../plugins/dummy/")
-	out, err := cmd.CombinedOutput()
-	require.Empty(t, out)
-	require.NoError(t, err)
+	BuildDummyPlugin("../../plugins/dummy/", "dummy_plugin.bin")
 
 	test.WithContext(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {

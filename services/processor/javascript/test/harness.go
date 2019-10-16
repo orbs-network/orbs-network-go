@@ -8,7 +8,7 @@ package test
 
 import (
 	"bytes"
-	"encoding/binary"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/processor/javascript"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
+	"os/exec"
 	"testing"
 )
 
@@ -127,8 +128,10 @@ func (h *harness) verifySdkCallMade(t *testing.T) {
 	require.NoError(t, err, "sdkCallHandler should be called as expected")
 }
 
-func uint64ToBytes(num uint64) []byte {
-	res := make([]byte, 8)
-	binary.LittleEndian.PutUint64(res, num)
-	return res
+func BuildDummyPlugin(src string, target string) {
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", target, src)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		panic(fmt.Sprintf("failed to compile dummy plugin: %s\n%s", err, string(out)))
+	}
 }

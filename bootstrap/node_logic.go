@@ -70,8 +70,7 @@ func NewNodeLogic(
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, nodeConfig, logger, metricRegistry)
-	// FIXME pass nodeConfig
-	processors[protocol.PROCESSOR_TYPE_JAVASCRIPT] = javascript.NewJavaScriptProcessor(logger)
+	processors[protocol.PROCESSOR_TYPE_JAVASCRIPT] = javascript.NewJavaScriptProcessor(logger, nodeConfig)
 
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = ethereum.NewEthereumCrosschainConnector(ethereumConnection, nodeConfig, logger, metricRegistry)

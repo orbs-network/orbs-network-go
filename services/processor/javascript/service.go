@@ -33,9 +33,14 @@ type service struct {
 }
 
 func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessorConfig) services.Processor {
-	worker, err := loadPlugin(config.ProcessorPluginPath())
-	if err != nil {
-		panic(fmt.Sprintf("Could not load plugin: %s", err))
+	var worker func(handler sdkContext.SdkHandler) processor.StatelessProcessor
+	var err error
+
+	if config.ProcessorPluginPath() != "" {
+		worker, err = loadPlugin(config.ProcessorPluginPath())
+		if err != nil {
+			panic(fmt.Sprintf("Could not load plugin: %s", err))
+		}
 	}
 
 	return &service{
