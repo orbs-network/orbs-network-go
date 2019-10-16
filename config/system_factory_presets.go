@@ -272,6 +272,11 @@ func TemplateForGamma(
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
+	// This is super important - The warmup compilation is disabled for gamma for a good reason since the plugins system
+	// and Go's built-in race detector don't play along very well and we keep getting strange error when turning this on.
+	// Around plugins the problem usually is a version mismatch for the warmup compilation for orbs-contract-sdk
+	// The reason being the race detector is instrumenting the code of the package thus causing it to not be the same binary result
+	// As the version of the package within the compiled plugin therefore the warmup compilation fails.
 	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
 
 	return cfg
