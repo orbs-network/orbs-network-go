@@ -56,6 +56,6 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 }
 
 func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
-	_, err := s.prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
+	_, err := prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	return err
 }
