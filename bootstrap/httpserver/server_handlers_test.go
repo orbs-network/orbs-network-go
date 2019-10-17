@@ -231,7 +231,7 @@ func TestHttpServer_Robots(t *testing.T) {
 	})
 }
 
-func TestPublicApiResponds503UntilPublicApiIsRegistered(t *testing.T) {
+func TestHttpServer_PublicApiResponds503UntilRegistered(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		withUnregisteredPublicApiServerHarness(parent, func(h *harness) {
 			resp, err := h.GetBlockThroughHTTP()
@@ -256,7 +256,7 @@ func TestPublicApiResponds503UntilPublicApiIsRegistered(t *testing.T) {
 	})
 }
 
-func TestNonPublicApiIsAvailableImmediately(t *testing.T) {
+func TestHttpServer_NonPublicApiIsAvailableImmediately(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		withUnregisteredPublicApiServerHarness(parent, func(h *harness) {
 			resp, err := h.GetRobotsTxtThroughHTTP()
