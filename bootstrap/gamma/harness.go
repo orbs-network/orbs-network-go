@@ -69,10 +69,17 @@ func DeployContract(t *testing.T, orbs *orbsClient.OrbsClient, account *orbsClie
 	SendTransaction(t, orbs, account, "_Deployments", "deployService", "LogCalculator", uint32(protocol.PROCESSOR_TYPE_NATIVE), []byte(code))
 }
 
-func SendQuery(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.OrbsAccount, contractName string, method string, args ...interface{}) *codec.RunQueryResponse {
+func SendQuery(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.OrbsAccount, minBlockHeight uint64, contractName string, method string, args ...interface{}) *codec.RunQueryResponse {
 	q, err := orbs.CreateQuery(sender.PublicKey, contractName, method, args...)
 	require.NoError(t, err, "failed creating query %s.%s", contractName, method)
-	res, err := orbs.SendQuery(q)
+
+	// Allow no more than 10 seconds for the network to sync
+	var res *codec.RunQueryResponse
+	require.True(t, test.Eventually(10*time.Second, func() bool {
+		res, err = orbs.SendQuery(q)
+		return err != nil || res.BlockHeight >= minBlockHeight
+	}), "network did not sync - unable to obtain response for a lower bound block height")
+
 	require.NoError(t, err, "failed sending query %s.%s", contractName, method)
 	require.EqualValues(t, codec.REQUEST_STATUS_COMPLETED.String(), res.RequestStatus.String(), "failed calling %s.%s", contractName, method)
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), res.ExecutionResult.String(), "failed calling %s.%s", contractName, method)
