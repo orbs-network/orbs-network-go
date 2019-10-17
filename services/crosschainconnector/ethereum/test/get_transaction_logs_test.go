@@ -57,8 +57,12 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 			t.Logf("block after emit: %s", blockAfterEmit)
 
 			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
-			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent*2), 1)                                                                                     // finality blocks + block we will request below of because of the finder algo
-			referenceTime := time.Unix(blockAtDeploy.TimeInSeconds, 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent*2), 1) // finality blocks + block we will request below of because of the finder algo
+
+			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+
 			t.Logf("reference time: %d", referenceTime.UnixNano())
 
 			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
