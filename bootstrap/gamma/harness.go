@@ -73,12 +73,12 @@ func SendQuery(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.Orb
 	q, err := orbs.CreateQuery(sender.PublicKey, contractName, method, args...)
 	require.NoError(t, err, "failed creating query %s.%s", contractName, method)
 
-	// Allow no more than 10 seconds for the network to sync
+	// Allow no more than 10 seconds for state storage to process previous blocks
 	var res *codec.RunQueryResponse
 	require.True(t, test.Eventually(10*time.Second, func() bool {
 		res, err = orbs.SendQuery(q)
 		return err != nil || res.BlockHeight >= minBlockHeight
-	}), "network did not sync - unable to obtain response for a lower bound block height")
+	}), "state storage is out of sync")
 
 	require.NoError(t, err, "failed sending query %s.%s", contractName, method)
 	require.EqualValues(t, codec.REQUEST_STATUS_COMPLETED.String(), res.RequestStatus.String(), "failed calling %s.%s", contractName, method)
