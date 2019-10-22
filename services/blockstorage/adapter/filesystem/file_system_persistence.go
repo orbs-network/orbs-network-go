@@ -72,7 +72,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 		return nil, err
 	}
 
-	bhIndex, err := buildIndex(file, blocksOffset, logger, codec)
+	bhIndex, err := buildIndex(bufio.NewReaderSize(file, 1024*1024), blocksOffset, logger, codec)
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err
@@ -214,7 +214,6 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 }
 
 func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec) (*blockHeightIndex, error) {
-	r = bufio.NewReaderSize(r, 1024*1024)
 	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
 	offset := int64(firstBlockOffset)
 	for {
@@ -291,7 +290,7 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		for uint8(len(page)) < pageSize {
 			aBlock, _, err := f.codec.decode(file)
 			if err != nil {
-				if err == io.EOF {
+				if err == io.EOF || err == io.ErrUnexpectedEOF {
 					eof = true
 					break
 				}

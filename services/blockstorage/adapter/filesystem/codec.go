@@ -291,6 +291,8 @@ func (c *codec) writeDynamicBlockSectionWithChecksum(w io.Writer, messages []mem
 }
 
 // TODO V1 see https://tree.taiga.io/project/orbs-network/us/681
+// TODO in case of a truncated file, the error could be either EOF or ErrUnexpectedEOF - consider changing
+//  this behaviour
 func (c *codec) decode(r io.Reader) (*protocol.BlockPairContainer, int, error) {
 	checkSum := crc32.New(crc32.MakeTable(crc32.Castagnoli))
 	tr := io.TeeReader(r, checkSum)
@@ -521,9 +523,6 @@ func readChunk(reader io.Reader, budget *readingBudget) ([]byte, error) {
 	n, err := io.ReadFull(reader, chunk)
 	if err != nil {
 		return nil, err
-	}
-	if n != len(chunk) {
-		return nil, fmt.Errorf("read %d bytes in block chuck while expecting %d", n, len(chunk))
 	}
 
 	budget.bytesRead += n
