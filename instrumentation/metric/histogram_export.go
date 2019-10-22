@@ -37,11 +37,11 @@ func (h histogramExport) LogRow() []*log.Field {
 func (h histogramExport) PrometheusRow() []*prometheusRow {
 	name := h.PrometheusName()
 	return []*prometheusRow{
-		{name, 0.01, strconv.FormatFloat(h.Min, 'f', -1, 64)},
-		{name, 0.5, strconv.FormatFloat(h.Min, 'f', -1, 64)},
-		{name, 0.95, strconv.FormatFloat(h.Min, 'f', -1, 64)},
-		{name, 0.99, strconv.FormatFloat(h.Min, 'f', -1, 64)},
-		{name, 0.999, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0, strconv.FormatFloat(h.Min, 'f', -1, 64)},
+		{name, 0.5, strconv.FormatFloat(h.P50, 'f', -1, 64)},
+		{name, 0.95, strconv.FormatFloat(h.P95, 'f', -1, 64)},
+		{name, 0.99, strconv.FormatFloat(h.P99, 'f', -1, 64)},
+		{name, 1, strconv.FormatFloat(h.Max, 'f', -1, 64)},
 	}
 }
 
