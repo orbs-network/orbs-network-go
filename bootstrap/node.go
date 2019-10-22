@@ -46,6 +46,8 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
 	metricRegistry := getMetricRegistry(nodeConfig)
 
+	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
+
 	blockPersistence, err := filesystem.NewBlockPersistence(nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
 		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
@@ -56,7 +58,8 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
 	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
-	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, nodeLogic.PublicApi(), metricRegistry)
+
+	httpServer.RegisterPublicApi(nodeLogic.PublicApi())
 
 	n := &Node{
 		logger:           nodeLogger,

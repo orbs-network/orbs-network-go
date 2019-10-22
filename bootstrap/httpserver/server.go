@@ -9,6 +9,7 @@ package httpserver
 import (
 	"context"
 	"fmt"
+	membuffers "github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
@@ -16,9 +17,9 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
+	"strings"
 	"time"
 
-	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -67,10 +68,10 @@ func (ln TcpKeepAliveListener) Accept() (net.Conn, error) {
 	return tc, nil
 }
 
-func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, publicApi services.PublicApi, metricRegistry metric.Registry) *HttpServer {
+func NewHttpServer(cfg config.HttpServerConfig, logger log.Logger, metricRegistry metric.Registry) *HttpServer {
 	server := &HttpServer{
 		logger:             logger.WithTags(LogTag),
-		publicApi:          publicApi,
+		publicApi:          nil,
 		metricRegistry:     metricRegistry,
 		config:             cfg,
 		ChanShutdownWaiter: supervised.NewChanWaiter("NodeHttpServer"),
@@ -119,21 +120,62 @@ func (s *HttpServer) GracefulShutdown(shutdownContext context.Context) {
 
 }
 
+func (s *HttpServer) RegisterPublicApi(publicApi services.PublicApi) {
+	s.publicApi = publicApi
+}
+
+// Allows handler to be called via XHR requests from any host
+func wrapHandlerWithCORS(f func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			f(w, r)
+		}
+	}
+}
+
+func (s *HttpServer) wrapHandlerWithPublicApiChecker(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.publicApi == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			f(w, r)
+		}
+	}
+}
+
+func (s *HttpServer) registerHttpHandler(router *http.ServeMux, urlPath string, withCORS bool, handler http.HandlerFunc) {
+	if withCORS {
+		handler = wrapHandlerWithCORS(handler)
+	}
+
+	if strings.HasPrefix(urlPath, "/api") {
+		handler = s.wrapHandlerWithPublicApiChecker(handler)
+	}
+
+	router.Handle(urlPath, handler)
+}
+
 func (s *HttpServer) createRouter() *http.ServeMux {
 	router := http.NewServeMux()
 
-	router.Handle("/api/v1/send-transaction", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionHandler)))
-	router.Handle("/api/v1/send-transaction-async", http.HandlerFunc(wrapHandlerWithCORS(s.sendTransactionAsyncHandler)))
-	router.Handle("/api/v1/run-query", http.HandlerFunc(wrapHandlerWithCORS(s.runQueryHandler)))
-	router.Handle("/api/v1/get-transaction-status", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionStatusHandler)))
-	router.Handle("/api/v1/get-transaction-receipt-proof", http.HandlerFunc(wrapHandlerWithCORS(s.getTransactionReceiptProofHandler)))
-	router.Handle("/api/v1/get-block", http.HandlerFunc(wrapHandlerWithCORS(s.getBlockHandler)))
-	router.Handle("/metrics", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
-	router.Handle("/metrics.json", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsJSON)))
-	router.Handle("/metrics.prometheus", http.HandlerFunc(wrapHandlerWithCORS(s.dumpMetricsAsPrometheus)))
-	router.Handle("/robots.txt", http.HandlerFunc(s.robots))
-	router.Handle("/debug/logs/filter-on", http.HandlerFunc(s.filterOn))
-	router.Handle("/debug/logs/filter-off", http.HandlerFunc(s.filterOff))
+	s.registerHttpHandler(router, "/api/v1/send-transaction", true, s.sendTransactionHandler)
+	s.registerHttpHandler(router, "/api/v1/send-transaction-async", true, s.sendTransactionAsyncHandler)
+	s.registerHttpHandler(router, "/api/v1/run-query", true, s.runQueryHandler)
+	s.registerHttpHandler(router, "/api/v1/get-transaction-status", true, s.getTransactionStatusHandler)
+	s.registerHttpHandler(router, "/api/v1/get-transaction-receipt-proof", true, s.getTransactionReceiptProofHandler)
+	s.registerHttpHandler(router, "/api/v1/get-block", true, s.getBlockHandler)
+	s.registerHttpHandler(router, "/metrics", true, s.dumpMetricsAsJSON)
+	s.registerHttpHandler(router, "/metrics.json", true, s.dumpMetricsAsJSON)
+	s.registerHttpHandler(router, "/metrics.prometheus", true, s.dumpMetricsAsPrometheus)
+	s.registerHttpHandler(router, "/robots.txt", false, s.robots)
+	s.registerHttpHandler(router, "/debug/logs/filter-on", false, s.filterOn)
+	s.registerHttpHandler(router, "/debug/logs/filter-off", false, s.filterOff)
 
 	router.Handle("/", http.HandlerFunc(wrapHandlerWithCORS(s.Index)))
 
@@ -223,19 +265,4 @@ func registerPprof(router *http.ServeMux) {
 	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
-}
-
-// Allows handler to be called via XHR requests from any host
-func wrapHandlerWithCORS(f func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "*")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			f(w, r)
-		}
-	}
 }
