@@ -53,8 +53,11 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 			t.Logf("block at deploy: %d | %d", blockAtDeploy.BlockNumber, blockAtDeploy.TimeInSeconds)
 
 			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
-			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent+1), 1)                                                                                      // finality blocks + block we will request below of because of the finder algo
-			referenceTime := time.Unix(blockAtStart.TimeInSeconds, 0).Add(+h.config.finalityTimeComponent + time.Duration(h.config.finalityBlocksComponent+1)*time.Second) // we need time.Now()-finality to be: [ . . we-want-to-be-here . . lastBlock . . t.N()]
+			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent+1), 1) // finality blocks + block we will request below of because of the finder algo
+
+			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
 
 			methodToCall := "getValues"
 			parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
