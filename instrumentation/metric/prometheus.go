@@ -26,6 +26,7 @@ func prometheusName(name string) string {
 	return strings.Replace(name, ".", "_", -1)
 }
 
+// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
 func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
 	var labels []string
 	pairsCopy := pairs[:]

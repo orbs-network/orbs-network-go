@@ -175,6 +175,7 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 	}, nil)
 }
 
+// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
 func (r *inMemoryRegistry) ExportPrometheus() string {
 	metrics := r.ExportAll()
 
