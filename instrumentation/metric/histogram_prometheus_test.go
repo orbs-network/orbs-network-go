@@ -27,13 +27,11 @@ func Test_PrometheusFormatterForHistogram(t *testing.T) {
 	}
 
 	metrics := r.ExportAll()
-	prometheusStrings := MetricsToPrometheusStrings(metrics, nil)
 	promStr := r.ExportPrometheus()
-	fmt.Println(prometheusStrings)
 	require.Regexp(t, "# TYPE Some_Latency histogram", promStr)
 	for _, row := range metrics["Some.Latency"].PrometheusRow() {
 		expectedStr := fmt.Sprintf("Some_Latency{quantile=\"%s\"} %s",
-			QuantileAsStr(row.quantile), row.value)
+			quantileAsStr(row.quantile), row.value)
 		require.Regexp(t, expectedStr, promStr)
 	}
 }
@@ -48,13 +46,11 @@ func Test_PrometheusFormatterForHistogramWithParams(t *testing.T) {
 	}
 
 	metrics := r.ExportAll()
-	prometheusStrings := MetricsToPrometheusStrings(metrics, nil)
 	promStr := r.ExportPrometheus()
-	fmt.Println(prometheusStrings)
 	require.Regexp(t, "# TYPE Some_Latency histogram", promStr)
 	for _, row := range metrics["Some.Latency"].PrometheusRow() {
 		expectedStr := fmt.Sprintf("Some_Latency{vcid=\"100000\",quantile=\"%s\"} %s",
-			QuantileAsStr(row.quantile), row.value)
+			quantileAsStr(row.quantile), row.value)
 		require.Regexp(t, expectedStr, promStr)
 	}
 

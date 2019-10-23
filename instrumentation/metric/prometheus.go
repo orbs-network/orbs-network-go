@@ -31,7 +31,7 @@ func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
 	pairsCopy := pairs[:]
 
 	if r.quantile >= 0 {
-		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"quantile", QuantileAsStr(r.quantile)})
+		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"quantile", quantileAsStr(r.quantile)})
 	}
 
 	for _, p := range pairsCopy {
@@ -45,7 +45,7 @@ func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
 	return ""
 }
 
-func QuantileAsStr(quantile float64) string {
+func quantileAsStr(quantile float64) string {
 	return strconv.FormatFloat(quantile, 'f', -1, 64)
 }
 
