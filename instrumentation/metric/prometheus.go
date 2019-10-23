@@ -12,9 +12,9 @@ import (
 )
 
 type prometheusRow struct {
-	name     string
-	quantile float64
-	value    string
+	name            string
+	aggregationType string
+	value           string
 }
 
 type prometheusKeyValuePair struct {
@@ -26,25 +26,30 @@ func prometheusName(name string) string {
 	return strings.Replace(name, ".", "_", -1)
 }
 
-func (r *prometheusRow) wrapParams(pairs ...prometheusKeyValuePair) string {
-	var params []string
+// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
+func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
+	var labels []string
 	pairsCopy := pairs[:]
 
-	if r.quantile > 0 {
-		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"quantile", strconv.FormatFloat(r.quantile, 'f', -1, 64)})
+	if len(r.aggregationType) > 0 {
+		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"aggregation", r.aggregationType})
 	}
 
 	for _, p := range pairsCopy {
-		params = append(params, p.name+`="`+p.value+`"`)
+		labels = append(labels, p.name+`="`+p.value+`"`)
 	}
 
-	if len(params) > 0 {
-		return `{` + strings.Join(params, ",") + `}`
+	if len(labels) > 0 {
+		return `{` + strings.Join(labels, ",") + `}`
 	}
 
 	return ""
 }
 
-func (r *prometheusRow) String(pairs ...prometheusKeyValuePair) string {
-	return r.name + r.wrapParams(pairs...) + " " + r.value
+func quantileAsStr(quantile float64) string {
+	return strconv.FormatFloat(quantile, 'f', -1, 64)
+}
+
+func (r *prometheusRow) String(labelKeyValues ...prometheusKeyValuePair) string {
+	return r.name + r.wrapLabels(labelKeyValues...) + " " + r.value
 }
