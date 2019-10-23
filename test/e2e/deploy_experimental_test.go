@@ -9,6 +9,8 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-client-sdk-go/codec"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -38,16 +40,18 @@ func TestContractExperimentalLibraries(t *testing.T) {
 			[]byte(contractSource))
 
 		printTestTime(t, "send deploy - end", &lt)
-		//
-		//// first query after contract deployment requires error tolerance (service-sync race)
-		//sha2Response, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
-		//require.NoError(t, err)
-		//sha2ExpectedValue := sha256.Sum256([]byte(contractName))
-		//require.EqualValues(t, sha2ExpectedValue[:], sha2Response.OutputArguments[0])
-		//
-		//sha3Response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "sha3_256", []byte(contractName))
-		//require.NoError(t, err)
-		//sha3ExpectedValue := sha3.Sum256([]byte(contractName))
-		//require.EqualValues(t, sha3ExpectedValue[:], sha3Response.OutputArguments[0])
+
+		printTestTime(t, "send transaction - start", &lt)
+		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", "Diamond Dogs")
+		printTestTime(t, "send transaction - end", &lt)
+
+		require.NoError(t, err, "add transaction should not return error")
+		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
+		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+
+		queryResponse, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
+		require.NoError(t, err)
+		require.EqualValues(t, "Diamond Dogs", queryResponse.OutputArguments[0])
+
 	})
 }
