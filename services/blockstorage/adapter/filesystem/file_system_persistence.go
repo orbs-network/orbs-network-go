@@ -7,6 +7,7 @@
 package filesystem
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -71,7 +72,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 		return nil, err
 	}
 
-	bhIndex, err := buildIndex(file, blocksOffset, logger, codec)
+	bhIndex, err := buildIndex(bufio.NewReaderSize(file, 1024*1024), blocksOffset, logger, codec)
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err
@@ -289,7 +290,7 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		for uint8(len(page)) < pageSize {
 			aBlock, _, err := f.codec.decode(file)
 			if err != nil {
-				if err == io.EOF {
+				if err == io.EOF || err == io.ErrUnexpectedEOF {
 					eof = true
 					break
 				}
