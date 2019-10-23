@@ -74,12 +74,12 @@ func TestGauge_ExportPrometheus(t *testing.T) {
 	require.Regexp(t, "Ethereum_Node_LastBlock 5123441", updatedResult)
 }
 
-func TestGauge_ExportPrometheusWithParams(t *testing.T) {
+func TestGauge_ExportPrometheusWithLabels(t *testing.T) {
 	bytes, _ := hex.DecodeString("0123456789abcdef")
 	r := NewRegistry().WithVirtualChainId(100000).WithNodeAddress(primitives.NodeAddress(bytes))
 	status := r.NewGauge("Ethereum.Node.LastBlock")
 	status.Update(5123441)
 
-	resultWithParams := r.ExportPrometheus()
-	require.Regexp(t, "Ethereum_Node_LastBlock{vcid=\"100000\",node=\"0123456789abcdef\"} 5123441", resultWithParams)
+	resultWithLabels := r.ExportPrometheus()
+	require.Regexp(t, "Ethereum_Node_LastBlock{vcid=\"100000\",node=\"0123456789abcdef\"} 5123441", resultWithLabels)
 }

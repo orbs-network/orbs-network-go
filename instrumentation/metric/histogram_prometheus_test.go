@@ -30,8 +30,8 @@ func Test_PrometheusFormatterForHistogramWithLabels(t *testing.T) {
 	promStr := r.ExportPrometheus()
 	require.Regexp(t, "# TYPE Some_Latency histogram", promStr)
 	for _, row := range metrics["Some.Latency"].PrometheusRow() {
-		expectedStr := fmt.Sprintf("Some_Latency{vcid=\"100000\",quantile=\"%s\"} %s",
-			quantileAsStr(row.quantile), row.value)
+		expectedStr := fmt.Sprintf("Some_Latency{vcid=\"100000\",aggregation=\"%s\"} %s",
+			row.aggregationType, row.value)
 		require.Regexp(t, expectedStr, promStr)
 	}
 }

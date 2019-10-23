@@ -12,9 +12,9 @@ import (
 )
 
 type prometheusRow struct {
-	name     string
-	quantile float64
-	value    string
+	name            string
+	aggregationType string
+	value           string
 }
 
 type prometheusKeyValuePair struct {
@@ -31,8 +31,8 @@ func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
 	var labels []string
 	pairsCopy := pairs[:]
 
-	if r.quantile >= 0 {
-		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"quantile", quantileAsStr(r.quantile)})
+	if len(r.aggregationType) > 0 {
+		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"aggregation", r.aggregationType})
 	}
 
 	for _, p := range pairsCopy {
