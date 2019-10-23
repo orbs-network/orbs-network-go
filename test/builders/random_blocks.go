@@ -13,11 +13,15 @@ import (
 )
 
 func RandomizedBlockChain(numBlocks int32, ctrlRand *rand.ControlledRand) []*protocol.BlockPairContainer {
+	return RandomizedBlockChainWithLimit(numBlocks, ctrlRand, 200, 200)
+}
+
+func RandomizedBlockChainWithLimit(numBlocks int32, ctrlRand *rand.ControlledRand, maxTransactions uint32, maxStateDiffs uint32) []*protocol.BlockPairContainer {
 	blocks := make([]*protocol.BlockPairContainer, 0, numBlocks)
 
 	var prev *protocol.BlockPairContainer
 	for bi := 1; bi <= cap(blocks); bi++ {
-		newBlock := RandomizedBlock(primitives.BlockHeight(bi), ctrlRand, prev)
+		newBlock := RandomizedBlockWithLimit(primitives.BlockHeight(bi), ctrlRand, prev, maxTransactions, maxStateDiffs)
 		blocks = append(blocks, newBlock)
 		prev = newBlock
 	}
@@ -25,10 +29,14 @@ func RandomizedBlockChain(numBlocks int32, ctrlRand *rand.ControlledRand) []*pro
 }
 
 func RandomizedBlock(h primitives.BlockHeight, ctrlRand *rand.ControlledRand, prev *protocol.BlockPairContainer) *protocol.BlockPairContainer {
+	return RandomizedBlockWithLimit(h, ctrlRand, prev, 200, 200)
+}
+
+func RandomizedBlockWithLimit(h primitives.BlockHeight, ctrlRand *rand.ControlledRand, prev *protocol.BlockPairContainer, maxTransactions uint32, maxStateDiffs uint32) *protocol.BlockPairContainer {
 	builder := BlockPair().
 		WithHeight(h).
-		WithTransactions(ctrlRand.Uint32() % 200).
-		WithStateDiffs(ctrlRand.Uint32() % 200).
+		WithTransactions(ctrlRand.Uint32() % maxTransactions).
+		WithStateDiffs(ctrlRand.Uint32() % maxStateDiffs).
 		WithReceiptsForTransactions().
 		WithEmptyLeanHelixBlockProof()
 	if prev != nil {
