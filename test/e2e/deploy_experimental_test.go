@@ -41,6 +41,10 @@ func TestContractExperimentalLibraries(t *testing.T) {
 
 		printTestTime(t, "send deploy - end", &lt)
 
+		// warmup call
+		_, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
+		require.NoError(t, err)
+
 		printTestTime(t, "send transaction - start", &lt)
 		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", "Diamond Dogs")
 		printTestTime(t, "send transaction - end", &lt)
