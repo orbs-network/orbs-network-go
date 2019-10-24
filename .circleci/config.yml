@@ -150,6 +150,7 @@ jobs:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42 40
       - store_test_results:
@@ -160,6 +161,7 @@ jobs:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 2013 2011
       - store_test_results:
