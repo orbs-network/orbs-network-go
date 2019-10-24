@@ -3,7 +3,7 @@
 export VCHAIN=$1
 export MGMT_VCHAIN=$2
 
-. ../test.common.sh
+. ./test.common.sh
 
 export API_ENDPOINT=http://35.167.243.123/vchains/$VCHAIN/ \
     MGMT_API_ENDPOINT=http://35.167.243.123/vchains/$MGMT_VCHAIN/ \
