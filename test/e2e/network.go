@@ -13,11 +13,11 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
+	"math/rand"
 	"os"
 	"time"
 )
@@ -57,6 +57,11 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	cleanBlockStorage(h.virtualChainId)
 }
 
+var randSeq = rand.New(rand.NewSource(int64(os.Getpid()) ^ time.Now().UTC().UnixNano()))
+
+const firstEphemeralPort = 49152 // https://en.wikipedia.org/wiki/Ephemeral_port
+const maxPort = 65535
+
 func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool) *inProcessE2ENetwork {
 	net := &inProcessE2ENetwork{
 		virtualChainId: virtualChainId,
@@ -64,9 +69,10 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
+	firstRandomPort := firstEphemeralPort + randSeq.Intn(maxPort-LOCAL_NETWORK_SIZE-firstEphemeralPort)
 
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		gossipPortByNodeIndex = append(gossipPortByNodeIndex, test.RandomPort())
+		gossipPortByNodeIndex = append(gossipPortByNodeIndex, firstRandomPort+i)
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
