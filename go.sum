@@ -223,6 +223,10 @@ github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f/go.mod h1:o
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0 h1:Kn/EQpifQFae+F7HRIoTIipUsSHZNcfQ3HJOhD/b+8M=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
+github.com/orbs-network/scribe v0.2.0 h1:ueLz8FGedwmSO9w5FwQiDZMudwuk6RMas0rjH2LYUwA=
+github.com/orbs-network/scribe v0.2.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
+github.com/orbs-network/scribe v0.2.1 h1:LekU8VvKHpC7AQUsDDZu0yWbMZ0FIabtwoQV+66vLRs=
+github.com/orbs-network/scribe v0.2.1/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
 github.com/pborman/uuid v1.2.0 h1:J7Q5mO4ysT1dv8hyrUGHb9+ooztCXu1D8MY8DZYsu3g=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
