@@ -185,6 +185,8 @@ Occasionally, local tests with `go test` will pass but the same tests on Docker 
 * We recommend working on the project with [GoLand](https://www.jetbrains.com/go/) IDE. Recommended settings:
   * Under `Preferences | Editor | Code Style | Go` make sure `Use tab character` is checked
 
+* We reccommend using the same version of Go as per our CI (1.12.9 at the time this line is written)
+  * To change Go SDK version in GoLand, go to `Preferences | Go | GOROOT`, click the `+` button, choose `Download`, and choose the version you want to use for this project. As soon as the selected SDK version is installed, GoLand will notify you in the Event Log window. Then go to `Preferences | Go | GOPATH` and under `Project GOPATH` choose the location of the SDK you have installed.
 * For easy testing, under `Run | Edit Configurations` add these `Go Test` configurations:
   * "Fast" with `Directory` set to project root and `-short` flag added to `Go tool arguments`
   * "All" with `Directory` set to project root

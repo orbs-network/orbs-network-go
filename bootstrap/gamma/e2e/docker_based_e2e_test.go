@@ -29,7 +29,7 @@ func TestDeployContractAgainstDockerizedGammaInstance(t *testing.T) {
 	tx, txId, err := client.CreateDeployTransaction(owner.PublicKey(), owner.PrivateKey(), contractName, orbs.PROCESSOR_TYPE_NATIVE, []byte(contracts.NativeSourceCodeForCounter(start)))
 	require.NoError(t, err, "failed creating deploy transaction")
 
-	require.True(t, test.Eventually(5*time.Second, func() bool {
+	require.True(t, test.Eventually(10*time.Second, func() bool {
 		deployResponse, err := client.SendTransactionAsync(tx)
 		json, _ := deployResponse.MarshalJSON()
 		t.Log(string(json))
@@ -39,7 +39,7 @@ func TestDeployContractAgainstDockerizedGammaInstance(t *testing.T) {
 		return deployResponse.RequestStatus == codec.REQUEST_STATUS_IN_PROCESS
 	}))
 
-	require.True(t, test.Eventually(5*time.Second, func() bool {
+	require.True(t, test.Eventually(10*time.Second, func() bool {
 		statusResponse, err := client.GetTransactionStatus(txId)
 		if err != nil {
 			return false

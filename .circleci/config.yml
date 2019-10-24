@@ -150,16 +150,22 @@ jobs:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42 40
+      - store_test_results:
+          path: _reports
 
   e2e_testnet_leanhelix:
     docker:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
-      - run:  sleep 300
+      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 2013 2011
+      - store_test_results:
+          path: _reports
 
   deploy_new_chain_pr_only:
     docker:
