@@ -40,3 +40,19 @@ func (d *TransportData) TotalSize() (res int) {
 	}
 	return
 }
+
+func (d *TransportData) Clone() *TransportData {
+	var payloads [][]byte
+	if d.Payloads != nil {
+		payloads = make([][]byte, len(d.Payloads))
+		for i, payload := range d.Payloads {
+			payloads[i] = append(payload[:0:0], payload...)
+		}
+	}
+	return &TransportData{
+		SenderNodeAddress:      d.SenderNodeAddress,
+		RecipientMode:          d.RecipientMode,
+		RecipientNodeAddresses: append(d.RecipientNodeAddresses[:0:0], d.RecipientNodeAddresses...),
+		Payloads:               payloads,
+	}
+}

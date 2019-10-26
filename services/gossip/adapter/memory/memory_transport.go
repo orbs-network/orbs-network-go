@@ -37,17 +37,24 @@ type message struct {
 type memoryTransport struct {
 	sync.RWMutex
 	govnr.TreeSupervisor
-	peers map[string]*peer
+	peers    map[string]*peer
+	transmit adapter.TransmitFunc
 }
 
 func NewTransport(ctx context.Context, logger log.Logger, validators map[string]config.ValidatorNode) *memoryTransport {
-	transport := &memoryTransport{peers: make(map[string]*peer)}
+	transport := &memoryTransport{
+		peers:    make(map[string]*peer),
+		transmit: nil,
+	}
+	transport.transmit = func(ctx context.Context, peerAddress primitives.NodeAddress, data *adapter.TransportData) {
+		transport.peers[peerAddress.KeyForMap()].send(ctx, data)
+	}
 
 	transport.Lock()
 	defer transport.Unlock()
 	for _, node := range validators {
 		nodeAddress := node.NodeAddress().KeyForMap()
-		peer := newPeer(ctx, logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
+		peer := newPeer(ctx, node.NodeAddress(), logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
 		transport.peers[nodeAddress] = peer
 		transport.Supervise(peer)
 	}
@@ -69,37 +76,59 @@ func (p *memoryTransport) RegisterListener(listener adapter.TransportListener, n
 	p.peers[string(nodeAddress)].attach(listener)
 }
 
-func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+func defaultInterceptor(ctx context.Context, peerAddress primitives.NodeAddress, data *adapter.TransportData, transmit adapter.TransmitFunc) error {
+	transmit(ctx, peerAddress, data)
+	return nil
+}
+
+func (p *memoryTransport) SendWithInterceptor(ctx context.Context, data *adapter.TransportData, intercept adapter.InterceptorFunc) error {
+	if intercept == nil {
+		intercept = defaultInterceptor
+	}
+
+	var err error
+
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for key, peer := range p.peers {
 			if key != data.SenderNodeAddress.KeyForMap() {
-				peer.send(ctx, data)
+				_err := intercept(ctx, peer.nodeAddress, data, p.transmit)
+				if _err != nil {
+					err = _err
+				}
 			}
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, k := range data.RecipientNodeAddresses {
-			p.peers[k.KeyForMap()].send(ctx, data)
+			_err := intercept(ctx, k, data, p.transmit)
+			if _err != nil {
+				err = _err
+			}
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_ALL_BUT_LIST:
 		panic("Not implemented")
 	}
 
-	return nil
+	return err
+}
+
+func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData) error {
+	return p.SendWithInterceptor(ctx, data, nil)
 }
 
 type peer struct {
 	govnr.TreeSupervisor
-	socket   chan message
-	listener chan adapter.TransportListener
-	logger   log.Logger
-	cancel   context.CancelFunc
+	socket      chan message
+	listener    chan adapter.TransportListener
+	logger      log.Logger
+	cancel      context.CancelFunc
+	nodeAddress primitives.NodeAddress
 }
 
-func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
+func newPeer(parent context.Context, nodeAddress primitives.NodeAddress, logger log.Logger, totalPeers int) *peer {
 	ctx, cancel := context.WithCancel(parent)
 	p := &peer{
 		// channel is buffered on purpose, otherwise the whole network is synced on transport
@@ -107,10 +136,11 @@ func newPeer(parent context.Context, logger log.Logger, totalPeers int) *peer {
 		// we decided not to separate sockets between every 2 peers (like tcp transport) because:
 		//  1) nodes in production tend to broadcast messages, so traffic is usually combined anyways
 		//  2) the implementation complexity to mimic tcp transport isn't justified
-		socket:   make(chan message, SEND_QUEUE_MAX_MESSAGES*totalPeers),
-		listener: make(chan adapter.TransportListener),
-		logger:   logger,
-		cancel:   cancel,
+		socket:      make(chan message, SEND_QUEUE_MAX_MESSAGES*totalPeers),
+		listener:    make(chan adapter.TransportListener),
+		logger:      logger,
+		cancel:      cancel,
+		nodeAddress: nodeAddress,
 	}
 
 	p.Supervise(govnr.Forever(ctx, "In-memory transport peer", logfields.GovnrErrorer(logger), func() {
