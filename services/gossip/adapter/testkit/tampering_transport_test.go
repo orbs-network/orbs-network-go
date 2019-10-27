@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
+	"time"
 )
 
 type tamperingHarness struct {
@@ -110,19 +111,15 @@ func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				const iterations = 5
 
-				signals := make(chan byte, iterations*2)
+				const numNodes = 2
+				signals := make(chan byte, iterations*numNodes)
 
 				c.transport.Fail(everySecondTime())
-
-				receiveCount := 0
-
 				c.firstListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
-					receiveCount++
 				}).AtMost(iterations)
 				c.secondListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
-					receiveCount++
 				}).AtMost(iterations)
 
 				for i := byte(0); i < iterations; i++ {
@@ -131,7 +128,13 @@ func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
 					require.Equal(t, i, n, "expected the current iteration number")
 				}
 
-				require.Equal(t, iterations, receiveCount, "expected one receive per iteration")
+				timeout, cancel := context.WithTimeout(ctx, 1*time.Millisecond)
+				defer cancel()
+				select {
+				case <-timeout.Done(): // OK
+				case <-signals:
+					t.Fatalf("expected no more signals to arrive after reading %d signals", iterations)
+				}
 			})
 		})
 	})
