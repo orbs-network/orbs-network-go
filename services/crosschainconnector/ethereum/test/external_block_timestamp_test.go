@@ -57,7 +57,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 
 			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 			require.NoError(t, err, "failed to get latest block in ganache")
-			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
 
 			methodToCall := "getValues"
 			parsedABI, err := abi.JSON(strings.NewReader(contract.SimpleStorageABI))
@@ -87,7 +87,7 @@ func TestFullFlowWithVaryingTimestamps(t *testing.T) {
 			ethereum.ABIUnpackFunctionOutputArguments(parsedABI, ret, methodToCall, output.EthereumAbiPackedOutput)
 			require.Equal(t, expectedTextFromEthereum, ret.StringValue, "text part from eth")
 
-			timeAtStart := time.Unix(blockAtStart.TimeInSeconds, 0)
+			timeAtStart := time.Unix(int64(blockAtStart.TimeInSeconds), 0)
 			input = builders.EthereumCallContractInput().
 				WithTimestamp(timeAtStart).
 				WithContractAddress(contractAddress).

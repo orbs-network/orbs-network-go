@@ -61,7 +61,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 
 			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 			require.NoError(t, err, "failed to get latest block in ganache")
-			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
 
 			t.Logf("reference time: %d", referenceTime.UnixNano())
 
@@ -126,7 +126,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 
 			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 			require.NoError(t, err, "failed to get latest block in ganache")
-			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
 
 			t.Logf("reference time: %d", referenceTime.UnixNano())
 
