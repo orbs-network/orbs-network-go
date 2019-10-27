@@ -92,8 +92,7 @@ type corruptingTamperer struct {
 
 func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (error, bool) {
 	if o.predicate(data) {
-		// An odd iteration count will ensure at least one corruption
-		for i := 0; i < 11; i++ {
+		for i := 0; i < 11; i++ { // An odd iteration count will ensure at least one corruption
 			if len(data.Payloads) == 0 {
 				continue
 			}
