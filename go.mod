@@ -24,10 +24,10 @@ require (
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/lean-helix-go v0.2.3
-	github.com/orbs-network/membuffers v0.3.1
+	github.com/orbs-network/membuffers v0.3.2
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
-	github.com/orbs-network/orbs-contract-sdk v1.3.0
-	github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f
+	github.com/orbs-network/orbs-contract-sdk v1.4.0
+	github.com/orbs-network/orbs-spec v0.0.0-20191027130304-725c98062090
 	github.com/orbs-network/scribe v0.1.0
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1

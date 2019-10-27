@@ -189,6 +189,8 @@ github.com/orbs-network/membuffers v0.3.1-0.20190828124049-c5be4a9e4684 h1:PY66o
 github.com/orbs-network/membuffers v0.3.1-0.20190828124049-c5be4a9e4684/go.mod h1:b6+sJ9+pgca7HHle0e85RDd5zL0Hv360Xec7TGVrGFk=
 github.com/orbs-network/membuffers v0.3.1 h1:oetITw7utAsyFZ/K+pVS8yuc/EDZyiTcNHJYAYwBPHQ=
 github.com/orbs-network/membuffers v0.3.1/go.mod h1:Ah/UJHcf1djuXrt8rACXQFIMv8gpE80JO3cphOTQDQA=
+github.com/orbs-network/membuffers v0.3.2 h1:dpUJXBTjvFkNputqIjCfBJnAJszZALtfuWcf9hGvg/4=
+github.com/orbs-network/membuffers v0.3.2/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
 github.com/orbs-network/orbs-client-sdk-go v0.6.2 h1:mUHkJKR8ROvIfSvTGK1ZcbUfGvOZoVJl4P5q3zMRa/A=
 github.com/orbs-network/orbs-client-sdk-go v0.6.2/go.mod h1:MwiZaimllXb/jzMBvGRNeuf86QdSrx9gYFBxacZLCZ8=
 github.com/orbs-network/orbs-client-sdk-go v0.7.0/go.mod h1:K1mQJTjONOFvQPD9ieiYse1gY1FMd926YYVfeoZJfa4=
@@ -208,6 +210,8 @@ github.com/orbs-network/orbs-contract-sdk v1.2.0 h1:TX/oTR9+DrVHsYw6mqpEnQ2SVwCY
 github.com/orbs-network/orbs-contract-sdk v1.2.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-contract-sdk v1.3.0 h1:XPmcBRTRrOkEtz3waICuStSqRJordwg/Kqpbxyyqnuo=
 github.com/orbs-network/orbs-contract-sdk v1.3.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
+github.com/orbs-network/orbs-contract-sdk v1.4.0 h1:lbpo83A4cIQPzvyloVmNk/cVP6MO5BEn+zw0/Vg+OeI=
+github.com/orbs-network/orbs-contract-sdk v1.4.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a h1:3Tl/amE2K9MajPF4tIe05HaH5XR4TAXNo1dahyU8JNI=
 github.com/orbs-network/orbs-spec v0.0.0-20190702065947-c6cfaf7cd01a/go.mod h1:9Bv/kJ/Q7cIlIYmlzsBHelseVJmyw2zywuW3TSvQX5g=
 github.com/orbs-network/orbs-spec v0.0.0-20190724141904-e35d6333ac7e h1:JNo8H2ASFC2zZb7UL1e+2kvGzjLuMxTsZBbwQu1bfm8=
@@ -220,6 +224,8 @@ github.com/orbs-network/orbs-spec v0.0.0-20190827140536-6bf7af9d4370 h1:X8aD58IF
 github.com/orbs-network/orbs-spec v0.0.0-20190827140536-6bf7af9d4370/go.mod h1:JUu42kZ9TWx9cMUj6hOCgngRMxNMUkOpTCIO9MjqMkY=
 github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f h1:j4nAn8XVrngm+TeROICA3Cq0uBOA2oT4Ezf/xoBaYo4=
 github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f/go.mod h1:oQVJjG5JTO8zsaU7DUFYvoXLOb06fGQZBADo66IMzGw=
+github.com/orbs-network/orbs-spec v0.0.0-20191027130304-725c98062090 h1:Py5YS5dKlOD8KnKIVgUbVNl1ttku1OH831BNXnZF6Q8=
+github.com/orbs-network/orbs-spec v0.0.0-20191027130304-725c98062090/go.mod h1:tun/2f3PycO5lhYQtISnbW3WgGhru1FhpECEg39Or+A=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0 h1:Kn/EQpifQFae+F7HRIoTIipUsSHZNcfQ3HJOhD/b+8M=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
@@ -367,6 +373,7 @@ golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20190422165155-953cdadca894/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190502145724-3ef323f4f1fd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20190515120540-06a5c4944438 h1:khxRGsvPk4n2y8I/mLLjp7e5dMTJmH75wvqS6nMwUtY=
 golang.org/x/sys v0.0.0-20190515120540-06a5c4944438/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190606165138-5da285871e9c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20190624142023-c5567b49c5d0/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
