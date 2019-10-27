@@ -1,8 +1,5 @@
 #!/bin/bash -e
 
-# Disabling this for the time being - so we can test the RC for v1.2.0
-exit 0
-
 aws --version
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

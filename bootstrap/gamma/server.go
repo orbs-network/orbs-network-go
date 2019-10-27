@@ -64,7 +64,8 @@ func StartGammaServer(config ServerConfig) *Server {
 	rootLogger.Info("finished creating development network")
 
 	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
-		rootLogger, network.PublicApi(0), network.MetricRegistry(0))
+		rootLogger, network.MetricRegistry(0))
+	httpServer.RegisterPublicApi(network.PublicApi(0))
 
 	s := &Server{
 		network:    network,

@@ -52,6 +52,110 @@ func TestConstructIndexFromReader(t *testing.T) {
 
 }
 
+func newBlockFileReadStream(t *testing.T, ctrlRand *rand.ControlledRand, numBlocks int32, maxTransactions uint32, maxStateDiffs uint32, codec *codec) (io.Reader, chan int) {
+	blocksQueue := builders.RandomizedBlockChainWithLimit(numBlocks, ctrlRand, maxTransactions, maxStateDiffs)
+
+	pr, pw := io.Pipe()
+
+	done := make(chan int)
+	go func() {
+		for _, blockPair := range blocksQueue {
+			_, err := codec.encode(blockPair, pw)
+			require.NoError(t, err, "expected codec to successfully encode a block pair")
+		}
+		_ = pw.Close()
+		close(done)
+	}()
+
+	return pr, done
+}
+
+func OneByteAtATimeReader(t *testing.T, r io.Reader) (io.Reader, chan int) {
+	pr, pw := io.Pipe()
+
+	done := make(chan int)
+	go func() {
+		defer pw.Close()
+		defer close(done)
+
+		b := make([]byte, 1)
+
+		var err error
+		var n int
+		for err == nil {
+			n, err = io.ReadFull(r, b)
+			if err == io.EOF {
+				break
+			}
+			require.NoError(t, err, "expected a byte from the stream or EOF")
+			require.Equal(t, 1, n, "expected exactly one byte from the stream")
+
+			n, err = pw.Write(b)
+			require.NoError(t, err, "Expected a successful write")
+			require.Equal(t, 1, n, "expected exactly one byte to be written")
+		}
+	}()
+
+	return pr, done
+}
+
+func TestBuildIndexSucceedsIndexingFromReader(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		const numBlocks = 17
+		const maxTransactions = 200
+		const maxStateDiffs = 200
+
+		ctrlRand := rand.NewControlledRand(t)
+		codec := newCodec(1024 * 1024)
+		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, maxTransactions, maxStateDiffs, codec)
+
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+
+		<-done
+	})
+}
+
+// The purpose of this test is to assure that buildIndex handles the case where a reader returns less bytes than
+// requested, even when more will be available in a subsequent read.
+// (this is the behaviour of the buffered reader we use for reading the block file)
+// To test this, we wrap the file reader with a reader that only returns one byte at a time.
+func TestBuildIndexHandlesPartialReads(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		// This test reads the file one byte at a time which is slow, so we use a small chain
+		const numBlocks = 2
+		const maxTransactions = 30
+		const maxStateDiffs = 30
+
+		ctrlRand := rand.NewControlledRand(t)
+		codec := newCodec(1024 * 1024)
+		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, maxTransactions, maxStateDiffs, codec)
+
+		rBuffered, done2 := OneByteAtATimeReader(t, r)
+		bhIndex, err := buildIndex(rBuffered, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed with a buffered reader")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+
+		<-done
+		<-done2
+	})
+}
+
+func TestBuildIndexHandlesEmptyFile(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		codec := newCodec(1024 * 1024)
+
+		r := bytes.NewReader(make([]byte, 0, 0))
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected buildIndex to succeed")
+		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(0), "expected block height to be zero")
+	})
+}
+
 type mockCodec struct {
 	mock.Mock
 }

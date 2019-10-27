@@ -16,5 +16,23 @@
 #
 #   <local ref> <local sha1> <remote ref> <remote sha1>
 #
+protected_branch='master'
+current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+should_abort=0
+if [ $protected_branch = $current_branch ]
+then
+    read -p "You're about to push master, is that what you intended? [y|n] " -n 1 -r < /dev/tty
+    echo
+    if echo $REPLY | grep -v -E '^[Yy]$' > /dev/null
+    then
+      should_abort=1 # push will not execute
+    fi
+fi
 
+if [ $should_abort = 1 ]
+then
+  exit 1
+fi
+
+echo "running all tests"
 go test ./...
