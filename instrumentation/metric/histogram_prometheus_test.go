@@ -8,36 +8,30 @@
 package metric
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
-func Test_PrometheusFormatterForHistogram(t *testing.T) {
-	r := NewRegistry()
-	status := r.NewHistogram("Some.Latency", 10000)
-
-	result := r.ExportPrometheus()
-
-	require.Regexp(t, "# TYPE Some_Latency histogram", result)
-	require.Regexp(t, "Some_Latency{quantile=\"0.01\"} 0", result)
-	require.Regexp(t, "Some_Latency{quantile=\"0.5\"} 0", result)
-	require.Regexp(t, "Some_Latency{quantile=\"0.99\"} 0", result)
-	require.Regexp(t, "Some_Latency{quantile=\"0.999\"} 0$", result)
-
-	status.RecordSince(time.Now())
-	updatedResult := r.ExportPrometheus()
-	require.Regexp(t, "Some_Latency{quantile=\"0.01\"} 0.00", updatedResult)
-	require.Regexp(t, "Some_Latency{quantile=\"0.5\"} 0.00", updatedResult)
-	require.Regexp(t, "Some_Latency{quantile=\"0.99\"} 0.00", updatedResult)
-	require.Regexp(t, "Some_Latency{quantile=\"0.999\"} 0.00", updatedResult)
-}
-
-func Test_PrometheusFormatterForHistogramWithParams(t *testing.T) {
+// This does NOT test correctness of Histogram
+// (e.g. that calculation of quantiles for given values is correct)
+// It only verifies the accurate conversion of metric values into Prometheus format.
+func Test_PrometheusFormatterForHistogramWithLabels(t *testing.T) {
 	r := NewRegistry().WithVirtualChainId(100000)
-	status := r.NewHistogram("Some.Latency", 10000)
-	status.RecordSince(time.Now())
+	const SEC = int64(time.Second)
+	histo := r.NewHistogram("Some.Latency", 1000*SEC)
 
-	resultWithParams := r.ExportPrometheus()
-	require.Regexp(t, "Some_Latency{vcid=\"100000\",quantile=\"0.01\"} 0.00", resultWithParams)
+	for i := 0; i < 1000; i++ {
+		histo.Record(int64(i) * SEC)
+	}
+
+	metrics := r.ExportAll()
+	promStr := r.ExportPrometheus()
+	require.Regexp(t, "# TYPE Some_Latency histogram", promStr)
+	for _, row := range metrics["Some.Latency"].PrometheusRow() {
+		expectedStr := fmt.Sprintf("Some_Latency{vcid=\"100000\",aggregation=\"%s\"} %s",
+			row.aggregationType, row.value)
+		require.Regexp(t, expectedStr, promStr)
+	}
 }

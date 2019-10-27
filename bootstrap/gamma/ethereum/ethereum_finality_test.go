@@ -117,9 +117,9 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 
 		ensureFinalityInGanacheAndGamma(t, gammaEndpoint, ethRpc)
 
-		gamma.SendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
+		res := gamma.SendTransaction(t, orbs, contractOwner, "LogCalculator", "bind", loggerContractAddress.Bytes(), []byte(eth.LoggerABI)) // this happens AFTER moving time forwards so that a block with the new time is closed
 
-		queryRes := gamma.SendQuery(t, orbs, contractOwner, "LogCalculator", "sum", strings.Join(txHashes, ","))
+		queryRes := gamma.SendQuery(t, orbs, contractOwner, res.BlockHeight, "LogCalculator", "sum", strings.Join(txHashes, ","))
 
 		require.EqualValues(t, 325, queryRes.OutputArguments[0], "did not get expected logs from Ethereum")
 	})

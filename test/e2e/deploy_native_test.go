@@ -38,8 +38,8 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		printTestTime(t, "send deploy - start", &lt)
 
 		h.deployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
-			[]byte(contracts.NativeSourceCodeForCounterPart1(counterStart)),
-			[]byte(contracts.NativeSourceCodeForCounterPart2(counterStart)))
+			contracts.NativeSourceCodeForCounterPart1(counterStart),
+			contracts.NativeSourceCodeForCounterPart2(counterStart))
 
 		printTestTime(t, "send deploy - end", &lt)
 
@@ -78,6 +78,13 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		})
 
 		require.True(t, ok, "get counter should return counter start plus added value")
+
+		printTestTime(t, "attempting to deploy again to assert we can't deploy the same contract twice", &lt)
+
+		dcExResult, _, _ := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
+
+		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, dcExResult, "expected deploy contract to fail")
+
 		printTestTime(t, "done", &lt)
 
 	})

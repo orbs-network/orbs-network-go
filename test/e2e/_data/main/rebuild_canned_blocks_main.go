@@ -24,7 +24,7 @@ func main() {
 
 	clearBlocksFile()
 
-	n := e2e.NewInProcessE2EAppNetwork(42)
+	n := e2e.NewInProcessE2EAppNetwork(42, e2e.NewLoggerRandomer())
 
 	time.Sleep(time.Minute) // accumulate blocks
 
