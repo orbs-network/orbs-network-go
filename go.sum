@@ -153,6 +153,8 @@ github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXW
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
+github.com/orbs-network/contract-external-libraries-go v0.0.0 h1:rCxTW0olmkYBvXJ0o16ICFNsbmaI/BU556/1LGo4tzo=
+github.com/orbs-network/contract-external-libraries-go v0.0.0/go.mod h1:g0vAR4pVmqxd0u1ZwTjQDcCFDehGS6TLK3q/qBpUUHQ=
 github.com/orbs-network/contract-external-libraries-go v1.0.0 h1:l98GWCl57weWF9SGGf6U1ZlvlFsWwe6Cpfo8gfgtTDg=
 github.com/orbs-network/contract-external-libraries-go v1.0.0/go.mod h1:g0vAR4pVmqxd0u1ZwTjQDcCFDehGS6TLK3q/qBpUUHQ=
 github.com/orbs-network/contract-external-libraries-go v1.0.1-0.20190904130307-17ee9ed1b882 h1:ItKvmrc2rgyTHIwy2KPqEdTItBqYtoJ1AyJJipSLH2M=
