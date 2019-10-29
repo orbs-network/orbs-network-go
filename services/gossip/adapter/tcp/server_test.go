@@ -185,3 +185,15 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 		})
 	})
 }
+
+//func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
+//	test.WithContext(func(ctx context.Context) {
+//
+//		l1, err := net.Listen("tcp", "127.0.0.1:")
+//		require.NoError(t, err, "failed listening to port")
+//		port := l1.Addr().(*net.TCPAddr).Port
+//
+//		NewDirectTransport()
+//	})
+//}
+//

@@ -58,7 +58,7 @@ func makeTransport(ctx context.Context, logger log.Logger, cfg config.GossipTran
 	transport := NewDirectTransport(ctx, cfg, logger, registry)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-		return transport.IsServerListening()
+		return transport.server.IsListening()
 	})
 	return transport
 }

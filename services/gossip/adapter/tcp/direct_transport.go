@@ -50,20 +50,13 @@ type lockableClientConnections struct {
 	config GossipPeers // this is important - use own copy of peers, otherwise nodes in e2e tests that run in process can mutate each other's config
 }
 
-type lockableTransportServer struct {
-	sync.RWMutex
-	listener  adapter.TransportListener
-	listening bool
-	port      int
-}
-
 type DirectTransport struct {
 	atomicConfig atomic.Value
 	logger       log.Logger
 
 	clientConnections *lockableClientConnections
 
-	server *lockableTransportServer
+	server *transportServer
 
 	metrics        *metrics
 	metricRegistry metric.Registry
@@ -73,13 +66,9 @@ type DirectTransport struct {
 
 func getMetrics(registry metric.Registry) *metrics {
 	return &metrics{
-		incomingConnectionAcceptSuccesses: registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
-		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
-		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
 		outgoingConnectionSendErrors:      registry.NewGauge("Gossip.OutgoingConnection.SendErrors.Count"),
 		outgoingConnectionKeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors.Count"),
 		outgoingConnectionSendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors.Count"),
-		activeIncomingConnections:         registry.NewGauge("Gossip.IncomingConnection.Active.Count"),
 		activeOutgoingConnections:         registry.NewGauge("Gossip.OutgoingConnection.Active.Count"),
 		outgoingMessageSize:               registry.NewHistogram("Gossip.OutgoingConnection.MessageSize.Bytes", MAX_PAYLOAD_SIZE_BYTES),
 	}
@@ -93,7 +82,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 		metricRegistry: registry,
 
 		clientConnections: newLockableClientConnections(),
-		server:            newDirectTransportServer(),
+		server:            newDirectTransportServer(config, logger.WithTags(log.String("component", "tcp-transport-server")), registry),
 
 		metrics: getMetrics(registry),
 
@@ -104,7 +93,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 
 	// server goroutine
 	handle := govnr.Forever(serverCtx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
-		t.serverMainLoop(serverCtx, config.GossipListenPort())
+		t.server.mainLoop(serverCtx)
 	})
 	t.serverClosed = handle.Done()
 	handle.MarkSupervised() // TODO use real supervision
@@ -115,14 +104,6 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	}
 
 	return t
-}
-
-func newDirectTransportServer() *lockableTransportServer {
-	return &lockableTransportServer{
-		listener:  nil,
-		listening: false,
-		port:      0,
-	}
 }
 
 func newLockableClientConnections() *lockableClientConnections {
@@ -220,17 +201,7 @@ func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData)
 }
 
 func (t *DirectTransport) GetServerPort() int {
-	t.server.Lock()
-	defer t.server.Unlock()
-
-	return t.server.port
-}
-
-func (t *DirectTransport) setServerPort(v int) {
-	t.server.Lock()
-	defer t.server.Unlock()
-
-	t.server.port = v
+	return t.server.getPort()
 }
 
 func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
