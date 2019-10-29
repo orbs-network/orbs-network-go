@@ -226,6 +226,8 @@ github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f h1:j4nAn8XV
 github.com/orbs-network/orbs-spec v0.0.0-20191003091449-76b81202e94f/go.mod h1:oQVJjG5JTO8zsaU7DUFYvoXLOb06fGQZBADo66IMzGw=
 github.com/orbs-network/orbs-spec v0.0.0-20191027130304-725c98062090 h1:Py5YS5dKlOD8KnKIVgUbVNl1ttku1OH831BNXnZF6Q8=
 github.com/orbs-network/orbs-spec v0.0.0-20191027130304-725c98062090/go.mod h1:tun/2f3PycO5lhYQtISnbW3WgGhru1FhpECEg39Or+A=
+github.com/orbs-network/orbs-spec v0.0.0-20191029121602-b5af15c91a90 h1:q4IQsP6nuxsDZ6WIurB6LjBzdEoUP0iBkffsFJNGTtI=
+github.com/orbs-network/orbs-spec v0.0.0-20191029121602-b5af15c91a90/go.mod h1:tun/2f3PycO5lhYQtISnbW3WgGhru1FhpECEg39Or+A=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0 h1:Kn/EQpifQFae+F7HRIoTIipUsSHZNcfQ3HJOhD/b+8M=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=

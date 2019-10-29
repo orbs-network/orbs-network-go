@@ -120,7 +120,6 @@ func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *pr
 				return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
 			}
 		case reflect.Slice:
-			// Note we don't support []bool
 			switch methodTypeIn.Elem().Kind() {
 			case reflect.Uint8:
 				if !arg.IsTypeBytesValue() {
