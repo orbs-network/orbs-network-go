@@ -9,7 +9,6 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -48,7 +47,7 @@ func newFake() *fakeAdderRemover {
 }
 
 func TestCommitTransactionReceipts_EnqueuesOnlyNodesTransactionsForNotification(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			rnd := rand.NewControlledRand(t)
@@ -81,7 +80,7 @@ func TestCommitTransactionReceipts_EnqueuesOnlyNodesTransactionsForNotification(
 }
 
 func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			fake := newFake()
@@ -106,7 +105,7 @@ func TestCommitTransactionReceipts_AddsToCommittedPoolWithCorrectExpirationTime(
 }
 
 func TestCommitTransactionReceipts_NotifiesResultHandlers(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			rnd := rand.NewControlledRand(t)

@@ -20,7 +20,7 @@ import (
 )
 
 func TestGetTransactionStatus_GetCommittedStatusFromTxPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Second, time.Minute)
@@ -44,7 +44,7 @@ func TestGetTransactionStatus_GetCommittedStatusFromTxPool(t *testing.T) {
 }
 
 func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Second, time.Minute)
@@ -68,7 +68,7 @@ func TestGetTransactionStatus_GetPendingStatusFromTxPool(t *testing.T) {
 }
 
 func TestGetTransactionStatus_GetTxFromBlockStorage(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Second, time.Minute)

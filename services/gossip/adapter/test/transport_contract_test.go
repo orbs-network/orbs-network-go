@@ -17,6 +17,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -39,9 +40,9 @@ func TestContract_SendToAllButList(t *testing.T) {
 	t.Skipf("implement") // TODO(v1)
 }
 
-func broadcastTest(makeContext func(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
+func broadcastTest(makeContext func(ctx context.Context, harness *with.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 			c := makeContext(ctx, harness)
 			defer c.shutdownAll(ctx)
 
@@ -61,9 +62,9 @@ func broadcastTest(makeContext func(ctx context.Context, harness *test.Concurren
 	}
 }
 
-func sendToListTest(makeContext func(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
+func sendToListTest(makeContext func(ctx context.Context, harness *with.ConcurrencyHarness) *transportContractContext) func(*testing.T) {
 	return func(t *testing.T) {
-		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 			c := makeContext(ctx, harness)
 			defer c.shutdownAll(ctx)
 
@@ -90,7 +91,7 @@ type transportContractContext struct {
 	listeners     []*testkit.MockTransportListener
 }
 
-func aMemoryTransport(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext {
+func aMemoryTransport(ctx context.Context, harness *with.ConcurrencyHarness) *transportContractContext {
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
@@ -114,7 +115,7 @@ func aMemoryTransport(ctx context.Context, harness *test.ConcurrencyHarness) *tr
 	return res
 }
 
-func aDirectTransport(ctx context.Context, harness *test.ConcurrencyHarness) *transportContractContext {
+func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *transportContractContext {
 	res := &transportContractContext{}
 
 	for i := 0; i < 4; i++ {

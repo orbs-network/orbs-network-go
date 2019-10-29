@@ -48,7 +48,7 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 }
 
 func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -69,7 +69,7 @@ func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 }
 
 func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -89,7 +89,7 @@ func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -114,7 +114,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -139,7 +139,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t
 }
 
 func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -167,7 +167,7 @@ func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
 }
 
 func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)

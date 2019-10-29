@@ -9,7 +9,6 @@ package leanhelixconsensus
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -49,7 +48,7 @@ func aMockValidateBlockHashThatReturnsError(blockHash primitives.Sha256, tx *pro
 // We only test the glue that holds them together. These are tests for these 2 functions in the same package where they are defined.
 
 func TestValidateBlockProposal_HappyPath(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			block := builders.BlockPairBuilder().Build()
 			prevBlock := builders.BlockPairBuilder().Build()
@@ -64,7 +63,7 @@ func TestValidateBlockProposal_HappyPath(t *testing.T) {
 }
 
 func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			block := builders.BlockPairBuilder().Build()
 			prevBlock := builders.BlockPairBuilder().Build()
@@ -79,7 +78,7 @@ func TestValidateBlockProposal_FailsOnErrorInTransactionsBlock(t *testing.T) {
 }
 
 func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			block := builders.BlockPairBuilder().Build()
 			prevBlock := builders.BlockPairBuilder().Build()
@@ -94,7 +93,7 @@ func TestValidateBlockProposal_FailsOnErrorInResultsBlock(t *testing.T) {
 }
 
 func TestValidateBlockProposal_FailsOnErrorInValidateBlockHash(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			block := builders.BlockPairBuilder().Build()
 			prevBlock := builders.BlockPairBuilder().Build()

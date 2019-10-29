@@ -14,8 +14,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
-	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -57,7 +57,7 @@ func (h *harness) resetAndApplyMockDefaults() {
 	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 }
 
-func (h *harness) start(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
+func (h *harness) start(parent *with.ConcurrencyHarness, ctx context.Context) *harness {
 	registry := metric.NewRegistry()
 
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan)

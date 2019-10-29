@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -23,7 +22,7 @@ import (
 )
 
 func TestSendTransaction_AlreadyCommitted(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Millisecond, time.Minute)
@@ -44,7 +43,7 @@ func TestSendTransaction_AlreadyCommitted(t *testing.T) {
 }
 
 func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Second, time.Minute)
@@ -71,7 +70,7 @@ func TestSendTransaction_BlocksUntilTransactionCompletes(t *testing.T) {
 }
 
 func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, time.Second, time.Minute)
@@ -102,7 +101,7 @@ func TestSendTransaction_BlocksUntilTransactionErrors(t *testing.T) {
 }
 
 func TestSendTransaction_TimesOut(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			txTimeout := 10 * time.Millisecond
@@ -131,7 +130,7 @@ func TestSendTransaction_TimesOut(t *testing.T) {
 }
 
 func TestSendTransactionAsync_ReturnsImmediately(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			txTimeout := 100 * time.Hour // infinity - won't actually wait please don't change

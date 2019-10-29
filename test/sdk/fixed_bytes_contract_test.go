@@ -3,7 +3,6 @@ package sdk
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/sdk/contracts/fixed_bytes"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -22,7 +21,7 @@ func TestVm_CanCompileContractWithFixedBytes(t *testing.T) {
 		0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04}
 	almostEmptyBytes20 := [20]byte{0x01}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newVmHarness(parent.Logger)

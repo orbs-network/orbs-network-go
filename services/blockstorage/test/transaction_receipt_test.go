@@ -9,8 +9,8 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -20,7 +20,7 @@ import (
 )
 
 func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).
@@ -43,7 +43,7 @@ func TestReturnTransactionReceiptIfTransactionNotFound(t *testing.T) {
 }
 
 func TestReturnTransactionReceipt(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			withCommitStateDiff(1).

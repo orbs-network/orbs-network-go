@@ -8,7 +8,7 @@ package publicapi
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -17,7 +17,7 @@ import (
 
 func TestPublicApiWaiter_Add(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		wc := waiter.add("key")
 
@@ -27,7 +27,7 @@ func TestPublicApiWaiter_Add(t *testing.T) {
 
 func TestPublicApiWaiter_AddTwice(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		wc1 := waiter.add("key")
 		wc2 := waiter.add("key")
@@ -41,7 +41,7 @@ func TestPublicApiWaiter_AddTwice(t *testing.T) {
 
 func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		waiter.add("key1")
 		waiter.add("key2")
@@ -52,7 +52,7 @@ func TestPublicApiWaiter_AddTwoKeys(t *testing.T) {
 
 func TestPublicApiWaiter_DeleteKey(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		wc1 := waiter.add("key1")
 		waiter.add("key2")
@@ -67,7 +67,7 @@ func TestPublicApiWaiter_DeleteKey(t *testing.T) {
 
 func TestPublicApiWaiter_DeleteChan(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter()
 		wc1 := waiter.add(key)
@@ -83,7 +83,7 @@ func TestPublicApiWaiter_DeleteChan(t *testing.T) {
 }
 
 func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		wc1 := waiter.add("key")
 		wc2 := waiter.add("key")
@@ -96,7 +96,7 @@ func TestPublicApiWaiter_DeleteAllChan(t *testing.T) {
 
 func TestPublicApiWaiter_WaitFor(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		waiter := newWaiter()
 		wc := waiter.add("key")
 
@@ -111,7 +111,7 @@ func TestPublicApiWaiter_WaitFor(t *testing.T) {
 
 func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter()
 		wc1 := waiter.add(key)
@@ -134,7 +134,7 @@ func TestPublicApiWaiter_CompleteAllChannels(t *testing.T) {
 
 func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter()
 		wc1 := waiter.add(key)
@@ -159,7 +159,7 @@ func TestPublicApiWaiter_CompleteChanWhenOtherIsDeletedDuringWait(t *testing.T) 
 
 func TestPublicApiWaiter_CompleteOnBothWhenOneIsCanceled(t *testing.T) {
 	t.Parallel()
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "key"
 		waiter := newWaiter()
 		wc1 := waiter.add(key)
@@ -189,7 +189,7 @@ func TestPublicApiWaiter_WaitGracefulShutdown(t *testing.T) {
 	var waiter *waiter
 	done := make(chan struct{})
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "key"
 		waiter = newWaiter()
 		wc1 := waiter.add(key)

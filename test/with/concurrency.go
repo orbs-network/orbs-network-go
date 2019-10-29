@@ -1,9 +1,8 @@
-package test
+package with
 
 import (
 	"context"
 	"github.com/orbs-network/govnr"
-	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"testing"
 	"time"
@@ -23,7 +22,7 @@ func (h *ConcurrencyHarness) AllowErrorsMatching(pattern string) {
 // creates a harness that should be used for running concurrent tests; these are tests that start long-running goroutines that need supervision
 // the test function will run inside this function, and following the test running a synchronized shutdown of the supervised SUT will take place,
 // followed by an assertion that no unexpected errors have been logged
-func WithConcurrencyHarness(tb testing.TB, f func(ctx context.Context, harness *ConcurrencyHarness)) {
+func Concurrency(tb testing.TB, f func(ctx context.Context, harness *ConcurrencyHarness)) {
 	testOutput := log.NewTestOutput(tb, log.NewHumanReadableFormatter())
 	h := &ConcurrencyHarness{
 		Logger:     log.GetLogger().WithOutput(testOutput),
@@ -35,7 +34,7 @@ func WithConcurrencyHarness(tb testing.TB, f func(ctx context.Context, harness *
 	defer cancel()
 	defer testOutput.TestTerminated()
 	f(ctx, h)
-	with.RequireNoUnexpectedErrors(tb, testOutput)
+	RequireNoUnexpectedErrors(tb, testOutput)
 }
 
 func shutdown(waiter govnr.ShutdownWaiter) {

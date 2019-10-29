@@ -8,7 +8,6 @@ package synchronization
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/wait"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tracker := NewBlockTracker(parent.Logger, 1, 1)
 
@@ -28,7 +27,7 @@ func TestWaitForBlockOutsideOfGraceFailsImmediately(t *testing.T) {
 }
 
 func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
-	test.WithContext(func(parentCtx context.Context) {
+	with.Context(func(parentCtx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			ctx, cancel := context.WithCancel(parentCtx)
 			tracker := NewBlockTracker(parent.Logger, 1, 1)
@@ -40,7 +39,7 @@ func TestWaitForBlockWithinGraceFailsWhenContextEnds(t *testing.T) {
 }
 
 func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
-	test.WithContext(func(parentCtx context.Context) {
+	with.Context(func(parentCtx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			ctx, cancel := context.WithCancel(parentCtx)
 			tracker := NewBlockTracker(parent.Logger, 0, 5)
@@ -52,7 +51,7 @@ func TestWaitForBlockWithinGraceDealsWithIntegerUnderflow(t *testing.T) {
 }
 
 func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tracker := NewBlockTracker(parent.Logger, 1, 2)
 
@@ -82,7 +81,7 @@ func TestWaitForBlockWithinGraceReturnsWhenBlockHeightReachedBeforeContextEnds(t
 }
 
 func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tracker := NewBlockTracker(parent.Logger, 1, 1)
 
@@ -112,7 +111,7 @@ func TestWaitForBlockWithinGraceSupportsTwoConcurrentWaiters(t *testing.T) {
 }
 
 func TestBlockTracker_ReachedHeight_RejectsWrongHeight(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tracker := NewBlockTracker(parent.Logger, 1, 1)
 

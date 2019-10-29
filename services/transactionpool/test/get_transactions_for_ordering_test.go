@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ import (
 )
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		_, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
@@ -32,7 +32,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		// init a cancelled child context for the exercise
@@ -50,7 +50,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCan
 }
 
 func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		h.assumeBlockStorageAtHeight(1)
@@ -72,7 +72,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 }
 
 func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
 
 		ch := make(chan *services.GetTransactionsForOrderingOutput)
@@ -93,7 +93,7 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 }
 
 func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
 
 		// init a cancelled child context for the exercise
@@ -108,7 +108,7 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 }
 
 func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
@@ -125,7 +125,7 @@ func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *test
 }
 
 func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
