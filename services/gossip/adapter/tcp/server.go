@@ -61,13 +61,6 @@ func (t *transportServer) getPort() int {
 	return t.port
 }
 
-func (t *transportServer) setPort(v int) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.port = v
-}
-
 func (t *transportServer) listenForIncomingConnections(ctx context.Context) (net.Listener, error) {
 	// TODO(v1): migrate to ListenConfig which has better support of contexts (go 1.11 required)
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", t.config.GossipListenPort()))
@@ -90,6 +83,8 @@ func (t *transportServer) listenForIncomingConnections(ctx context.Context) (net
 	t.Lock()
 	defer t.Unlock()
 	t.listening = true
+	t.port = listener.Addr().(*net.TCPAddr).Port
+	t.logger.Info("gossip transport server listening", log.Int("port", t.port))
 
 	return listener, err
 }
@@ -101,15 +96,7 @@ func (t *transportServer) IsListening() bool {
 	return t.listening
 }
 
-func (t *transportServer) mainLoop(parentCtx context.Context) {
-	listener, err := t.listenForIncomingConnections(parentCtx)
-	if err != nil {
-		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", t.config.GossipListenPort(), err.Error()))
-	}
-
-	t.setPort(listener.Addr().(*net.TCPAddr).Port)
-	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.getPort())))
-
+func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
 	for {
 		if parentCtx.Err() != nil {
 			t.logger.Info("ending server main loop (system shutting down)")
@@ -221,6 +208,16 @@ func (t *transportServer) getListener() adapter.TransportListener {
 	defer t.RUnlock()
 
 	return t.listener
+}
+
+func (t *transportServer) startSupervisedMainLoop(ctx context.Context) *govnr.ForeverHandle {
+	listener, err := t.listenForIncomingConnections(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", t.config.GossipListenPort(), err.Error()))
+	}
+	return govnr.Forever(ctx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
+		t.mainLoop(ctx, listener)
+	})
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {

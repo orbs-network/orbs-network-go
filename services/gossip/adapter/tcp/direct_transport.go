@@ -8,9 +8,7 @@ package tcp
 
 import (
 	"context"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -92,9 +90,7 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 	t.atomicConfig.Store(config)
 
 	// server goroutine
-	handle := govnr.Forever(serverCtx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
-		t.server.mainLoop(serverCtx)
-	})
+	handle := t.server.startSupervisedMainLoop(serverCtx)
 	t.serverClosed = handle.Done()
 	handle.MarkSupervised() // TODO use real supervision
 
@@ -202,6 +198,10 @@ func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData)
 
 func (t *DirectTransport) GetServerPort() int {
 	return t.server.getPort()
+}
+
+func (t *DirectTransport) IsServerListening() bool {
+	return t.server.IsListening()
 }
 
 func (t *DirectTransport) allOutgoingQueuesEnabled() bool {

@@ -9,11 +9,13 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
+	"time"
 )
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
@@ -186,14 +188,34 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 	})
 }
 
-//func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
-//	test.WithContext(func(ctx context.Context) {
-//
-//		l1, err := net.Listen("tcp", "127.0.0.1:")
-//		require.NoError(t, err, "failed listening to port")
-//		port := l1.Addr().(*net.TCPAddr).Port
-//
-//		NewDirectTransport()
-//	})
-//}
-//
+type serverCfg struct {
+	port uint16
+}
+
+func (s *serverCfg) GossipListenPort() uint16 {
+	return s.port
+}
+
+func (s *serverCfg) GossipNetworkTimeout() time.Duration {
+	return 100 * time.Millisecond
+}
+
+func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
+	test.WithContext(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+
+			l1, err := net.Listen("tcp", ":0")
+			require.NoError(t, err, "failed listening to port")
+			port := l1.Addr().(*net.TCPAddr).Port
+
+			cfg := &serverCfg{
+				port: uint16(port),
+			}
+
+			server := newDirectTransportServer(cfg, parent.Logger, metric.NewRegistry())
+			require.Panics(t, func() {
+				server.startSupervisedMainLoop(ctx)
+			}, "should have panicked on port already in use")
+		})
+	})
+}
