@@ -33,7 +33,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 		defer transport.GracefulShutdown(ctx)
 
 		require.True(t, test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-			return transport.server.IsListening()
+			return transport.IsServerListening()
 		}), "server did not start")
 	})
 }
@@ -47,7 +47,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 		superviseAll(harness, node1, node2, node3, node4)
 		defer shutdownAll(ctx, node1, node2, node3, node4)
 
-		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.server.IsListening() }, node1, node2, node3, node4)
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
 
 		firstTopology := aTopologyContaining(node1, node2, node3)
 		node1.transport.UpdateTopology(ctx, firstTopology)
@@ -102,7 +102,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 		superviseAll(harness, node1, node2, node3)
 		defer shutdownAll(ctx, node1, node2, node3)
 
-		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.server.IsListening() }, node1, node2, node3)
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3)
 
 		firstTopology := aTopologyContaining(node1, node2, node3)
 		node1.transport.UpdateTopology(ctx, firstTopology)

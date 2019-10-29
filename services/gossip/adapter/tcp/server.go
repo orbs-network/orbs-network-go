@@ -29,34 +29,45 @@ type serverConfig interface {
 
 type transportServer struct {
 	sync.RWMutex
-	listener                          adapter.TransportListener
-	listening                         bool
-	port                              int
-	logger                            log.Logger
-	incomingConnectionAcceptSuccesses *metric.Gauge
-	incomingConnectionAcceptErrors    *metric.Gauge
-	incomingConnectionTransportErrors *metric.Gauge
-	activeIncomingConnections         *metric.Gauge
-	config                            serverConfig
+	listener  adapter.TransportListener
+	listening bool
+	port      int
+	logger    log.Logger
+	metrics   incomingConnectionMetrics
+
+	config serverConfig
+}
+
+type incomingConnectionMetrics struct {
+	acceptSuccesses   *metric.Gauge
+	acceptErrors      *metric.Gauge
+	transportErrors   *metric.Gauge
+	activeConnections *metric.Gauge
 }
 
 func newDirectTransportServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
 	return &transportServer{
-		config:                            config,
-		listener:                          nil,
-		listening:                         false,
-		port:                              0,
-		logger:                            logger,
-		incomingConnectionAcceptSuccesses: registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
-		incomingConnectionAcceptErrors:    registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
-		incomingConnectionTransportErrors: registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
-		activeIncomingConnections:         registry.NewGauge("Gossip.IncomingConnection.Active.Count"),
+		config:    config,
+		listener:  nil,
+		listening: false,
+		port:      0,
+		logger:    logger,
+		metrics:   createServerMetrics(registry),
+	}
+}
+
+func createServerMetrics(registry metric.Registry) incomingConnectionMetrics {
+	return incomingConnectionMetrics{
+		acceptSuccesses:   registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
+		acceptErrors:      registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
+		transportErrors:   registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
+		activeConnections: registry.NewGauge("Gossip.IncomingConnection.Active.Count"),
 	}
 }
 
 func (t *transportServer) getPort() int {
-	t.Lock()
-	defer t.Unlock()
+	t.RLock()
+	defer t.RUnlock()
 
 	return t.port
 }
@@ -110,11 +121,11 @@ func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Liste
 				t.logger.Info("incoming connection accept stopped since server is shutting down", trace.LogFieldFrom(ctx))
 				return
 			}
-			t.incomingConnectionAcceptErrors.Inc()
+			t.metrics.acceptErrors.Inc()
 			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
 			continue
 		}
-		t.incomingConnectionAcceptSuccesses.Inc()
+		t.metrics.acceptSuccesses.Inc()
 		govnr.Once(logfields.GovnrErrorer(t.logger), func() {
 			t.handleIncomingConnection(ctx, conn)
 		})
@@ -125,13 +136,13 @@ func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
-	t.activeIncomingConnections.Inc()
-	defer t.activeIncomingConnections.Dec()
+	t.metrics.activeConnections.Inc()
+	defer t.metrics.activeConnections.Dec()
 
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
 		if err != nil {
-			t.incomingConnectionTransportErrors.Inc()
+			t.metrics.transportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 			conn.Close()
 
