@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"math/big"
 )
 
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
@@ -66,6 +67,10 @@ func argsToArgumentArray(args ...interface{}) *protocol.ArgumentArray {
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.([20]byte)})
 		case [32]byte:
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.([32]byte)})
+		case bool:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BOOL_VALUE, BoolValue: arg.(bool)})
+		case *big.Int:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_256_VALUE, Uint256Value: arg.(*big.Int)})
 		}
 	}
 	return (&protocol.ArgumentArrayBuilder{Arguments: res}).Build()
@@ -88,6 +93,10 @@ func ArgumentArrayToArgs(ArgumentArray *protocol.ArgumentArray) []interface{} {
 			res = append(res, Argument.Bytes20Value())
 		case protocol.ARGUMENT_TYPE_BYTES_32_VALUE:
 			res = append(res, Argument.Bytes32Value())
+		case protocol.ARGUMENT_TYPE_BOOL_VALUE:
+			res = append(res, Argument.BoolValue())
+		case protocol.ARGUMENT_TYPE_UINT_256_VALUE:
+			res = append(res, Argument.Uint256Value())
 		}
 	}
 	return res

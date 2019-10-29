@@ -9,6 +9,7 @@ package builders
 import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"math/big"
 )
 
 /// Test builders for: protocol.ArgumentArray, primitives.PackedArgumentArray
@@ -29,6 +30,10 @@ func ArgumentsBuilders(args ...interface{}) (res []*protocol.ArgumentBuilder) {
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.([20]byte)})
 		case [32]byte:
 			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.([32]byte)})
+		case bool:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BOOL_VALUE, BoolValue: arg.(bool)})
+		case *big.Int:
+			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_256_VALUE, Uint256Value: arg.(*big.Int)})
 		}
 	}
 	return
