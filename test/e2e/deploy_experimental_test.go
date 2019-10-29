@@ -32,7 +32,8 @@ func TestContractExperimentalLibraries(t *testing.T) {
 
 		counterStart := uint64(time.Now().UnixNano())
 		contractName := fmt.Sprintf("Experimental%d", counterStart)
-		contractSource, _ := ioutil.ReadFile("../contracts/experimental/experimental.go")
+		contractSource, err := ioutil.ReadFile("../contracts/_experimental/experimental.go")
+		require.NoError(t, err, "failed loading contract source")
 
 		printTestTime(t, "send deploy - start", &lt)
 
@@ -42,7 +43,7 @@ func TestContractExperimentalLibraries(t *testing.T) {
 		printTestTime(t, "send deploy - end", &lt)
 
 		// warmup call
-		_, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
+		_, err = h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
 		require.NoError(t, err)
 
 		printTestTime(t, "send transaction - start", &lt)
