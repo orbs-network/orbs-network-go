@@ -10,27 +10,27 @@ import (
 
 func TestPrepareMethodArgumentsAndCall_SimpleOneInputArg(t *testing.T) {
 	tests := []struct {
-		name      string
-		shouldErr bool
-		value     interface{}
+		name           string
+		shouldErr      bool
+		value          interface{}
 		methodInstance interface{}
 	}{
 		// allowed
-		{"bool",false,true,func(a bool) bool {return a}},
-		{"uint32",false,uint32(50),func(a uint32) uint32 {return a}},
-		{"uint64",false,uint64(50), func(a uint64) uint64 {return a}},
-		{"string",false,"foo",func(a string) string {return a}},
-		{"bytes20",false,[20]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01,
-			0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01},func(a [20]byte) [20]byte {return a}},
-		{"bytes32",false,[32]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04,
-			0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04},func(a [32]byte) [32]byte {return a}},
-		{"*big.Int",false,big.NewInt(55),func(a *big.Int) *big.Int {return a}},
-		{"[]byte",false,[]byte("hello"),func(a []byte) []byte {return a}},
+		{"bool", false, true, func(a bool) bool { return a }},
+		{"uint32", false, uint32(50), func(a uint32) uint32 { return a }},
+		{"uint64", false, uint64(50), func(a uint64) uint64 { return a }},
+		{"string", false, "foo", func(a string) string { return a }},
+		{"bytes20", false, [20]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01,
+			0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01}, func(a [20]byte) [20]byte { return a }},
+		{"bytes32", false, [32]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04,
+			0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04}, func(a [32]byte) [32]byte { return a }},
+		{"*big.Int", false, big.NewInt(55), func(a *big.Int) *big.Int { return a }},
+		{"[]byte", false, []byte("hello"), func(a []byte) []byte { return a }},
 		// not allowed
-		{"other-byte-array",true,[30]byte{0x10},func(a [30]byte) [30]byte {return a}},
-		{"other-type-array",true,[32]int{7},func(a [32]int) [32]int {return a}},
-		{"other pointer",true,big.NewFloat(5.5),func(a *big.Float) *big.Float {return a}},
-		{"[]uint32",true,[]uint32{uint32(50)},func(a []uint32) []uint32 {return a}},
+		{"other-byte-array", true, [30]byte{0x10}, func(a [30]byte) [30]byte { return a }},
+		{"other-type-array", true, [32]int{7}, func(a [32]int) [32]int { return a }},
+		{"other pointer", true, big.NewFloat(5.5), func(a *big.Float) *big.Float { return a }},
+		{"[]uint32", true, []uint32{uint32(50)}, func(a []uint32) []uint32 { return a }},
 	}
 
 	for i := range tests {
@@ -50,27 +50,27 @@ func TestPrepareMethodArgumentsAndCall_SimpleOneInputArg(t *testing.T) {
 
 func TestCreatMethodOutputArgs(t *testing.T) {
 	tests := []struct {
-		name      string
-		shouldErr bool
-		value     interface{}
-		argType   protocol.ArgumentType
+		name           string
+		shouldErr      bool
+		value          interface{}
+		argType        protocol.ArgumentType
 		methodInstance interface{}
 	}{
 		// allowed
-		{"bool",false,true,protocol.ARGUMENT_TYPE_BOOL_VALUE,func() bool {return false}},
-		{"uint32",false,uint32(50),protocol.ARGUMENT_TYPE_UINT_32_VALUE,func() uint32 {return 0}},
-		{"uint64",false,uint64(50), protocol.ARGUMENT_TYPE_UINT_64_VALUE,func() uint64 {return 0}},
-		{"string",false,"foo",protocol.ARGUMENT_TYPE_STRING_VALUE,func() string {return "bar"}},
-		{"bytes20",false,[20]byte{0x10},protocol.ARGUMENT_TYPE_BYTES_20_VALUE,func() [20]byte {return [20]byte{}}},
-		{"bytes32",false,[32]byte{0x10},protocol.ARGUMENT_TYPE_BYTES_32_VALUE,func() [32]byte {return [32]byte{}}},
-		{"*big.Int",false,big.NewInt(55),protocol.ARGUMENT_TYPE_UINT_256_VALUE,func() *big.Int {return big.NewInt(0)}},
-		{"[]byte",false,[]byte{0x10, 0x11},protocol.ARGUMENT_TYPE_BYTES_VALUE,func() []byte {return []byte{}}},
+		{"bool", false, true, protocol.ARGUMENT_TYPE_BOOL_VALUE, func() bool { return false }},
+		{"uint32", false, uint32(50), protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() uint32 { return 0 }},
+		{"uint64", false, uint64(50), protocol.ARGUMENT_TYPE_UINT_64_VALUE, func() uint64 { return 0 }},
+		{"string", false, "foo", protocol.ARGUMENT_TYPE_STRING_VALUE, func() string { return "bar" }},
+		{"bytes20", false, [20]byte{0x10}, protocol.ARGUMENT_TYPE_BYTES_20_VALUE, func() [20]byte { return [20]byte{} }},
+		{"bytes32", false, [32]byte{0x10}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [32]byte { return [32]byte{} }},
+		{"*big.Int", false, big.NewInt(55), protocol.ARGUMENT_TYPE_UINT_256_VALUE, func() *big.Int { return big.NewInt(0) }},
+		{"[]byte", false, []byte{0x10, 0x11}, protocol.ARGUMENT_TYPE_BYTES_VALUE, func() []byte { return []byte{} }},
 		// not allowed
-		{"other-byte-array",true,[30]byte{0x10},protocol.ARGUMENT_TYPE_BYTES_32_VALUE,func() [30]byte {return [30]byte{}}},
-		{"other-type-array",true,[32]int{7},protocol.ARGUMENT_TYPE_BYTES_32_VALUE,func() [32]int {return [32]int{}}},
-		{"other-pointer",true,big.NewFloat(5.5),protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() *big.Float {return nil}},
-		{"[]uint32",true,[]uint32{uint32(50)},protocol.ARGUMENT_TYPE_UINT_32_VALUE,func() []uint32 {return []uint32{}}},
-		{"[][]byte",true,[][]byte{{0x11, 0x10}, {0x20, 0x21}},protocol.ARGUMENT_TYPE_UINT_32_VALUE,func() [][]byte {return [][]byte{}}},
+		{"other-byte-array", true, [30]byte{0x10}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [30]byte { return [30]byte{} }},
+		{"other-type-array", true, [32]int{7}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [32]int { return [32]int{} }},
+		{"other-pointer", true, big.NewFloat(5.5), protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() *big.Float { return nil }},
+		{"[]uint32", true, []uint32{uint32(50)}, protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() []uint32 { return []uint32{} }},
+		{"[][]byte", true, [][]byte{{0x11, 0x10}, {0x20, 0x21}}, protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() [][]byte { return [][]byte{} }},
 	}
 
 	for i := range tests {
@@ -93,8 +93,8 @@ func TestPrepareMethodArgumentsForCallWithTwoByteArrays(t *testing.T) {
 	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
-	require.EqualValues(t, []byte("one"), inValues[0].Interface().([]byte))
-	require.EqualValues(t, []byte("two"), inValues[1].Interface().([]byte))
+	require.EqualValues(t, []byte("one"), inValues[0].Interface())
+	require.EqualValues(t, []byte("two"), inValues[1].Interface())
 }
 
 func TestPrepareMethodArgumentsForCall_OneInputExpected_IncorrectNumberOfArgs(t *testing.T) {
@@ -137,8 +137,8 @@ func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLength(t *testing.T) {
 	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
-	require.EqualValues(t, "one", inValues[0].Interface().(string))
-	require.EqualValues(t, "two", inValues[1].Interface().(string))
+	require.EqualValues(t, "one", inValues[0].Interface())
+	require.EqualValues(t, "two", inValues[1].Interface())
 }
 
 func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLengthPassingNoArguments(t *testing.T) {
@@ -179,8 +179,8 @@ func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
-	require.EqualValues(t, []byte("one"), inValues[0].Interface().([]byte))
-	require.EqualValues(t, []byte("two"), inValues[1].Interface().([]byte))
+	require.EqualValues(t, []byte("one"), inValues[0].Interface())
+	require.EqualValues(t, []byte("two"), inValues[1].Interface())
 }
 
 func TestPrepareMethodArgumentsForCallWithArrayOfArraysOfStringsPassingTwoByteArrays(t *testing.T) {
