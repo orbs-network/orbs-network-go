@@ -4,6 +4,7 @@
 ### tmp build artifacts ###
 _tmp
 *.prof
+.version
 
 ### Go ###
 # Binaries for programs and plugins

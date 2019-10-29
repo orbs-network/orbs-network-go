@@ -31,23 +31,6 @@ func NewSDK(handler handlers.ContractSdkCallHandler) sdkContext.SdkHandler {
 	}
 }
 
-func ArgsToArgumentArray(args ...interface{}) *protocol.ArgumentArray {
-	res := []*protocol.ArgumentBuilder{}
-	for _, arg := range args {
-		switch arg.(type) {
-		case uint32:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.(uint32)})
-		case uint64:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.(uint64)})
-		case string:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)})
-		case []byte:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)})
-		}
-	}
-	return (&protocol.ArgumentArrayBuilder{Arguments: res}).Build()
-}
-
 func (s *service) prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()

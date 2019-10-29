@@ -9,11 +9,12 @@ package metric
 import (
 	"fmt"
 	"github.com/orbs-network/scribe/log"
+	"sync/atomic"
 )
 
 type Text struct {
 	namedMetric
-	value string
+	value atomic.Value
 }
 
 type textExport struct {
@@ -28,20 +29,22 @@ func newText(name string, defaultValue ...string) *Text {
 		value = defaultValue[0]
 	}
 
-	return &Text{
+	res := &Text{
 		namedMetric: namedMetric{name: name},
-		value:       value,
+		value:       atomic.Value{},
 	}
+	res.value.Store(value)
+	return res
 }
 func (t *Text) Export() exportedMetric {
 	return textExport{
 		t.name,
-		t.value,
+		t.value.Load().(string),
 	}
 }
 
 func (t *Text) Update(value string) {
-	t.value = value
+	t.value.Store(value)
 }
 
 func (t *Text) String() string {
@@ -49,7 +52,7 @@ func (t *Text) String() string {
 }
 
 func (t *Text) Value() string {
-	return t.value
+	return t.value.Load().(string)
 }
 
 func (t textExport) LogRow() []*log.Field {

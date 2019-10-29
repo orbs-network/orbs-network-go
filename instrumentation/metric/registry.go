@@ -175,31 +175,41 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 	}, nil)
 }
 
+// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
 func (r *inMemoryRegistry) ExportPrometheus() string {
 	metrics := r.ExportAll()
 
-	var params []prometheusKeyValuePair
+	labels := r.labels()
+
+	rows := MetricsToPrometheusStrings(metrics, labels)
+
+	return strings.Join(rows, "\n")
+}
+
+func (r *inMemoryRegistry) labels() []prometheusKeyValuePair {
+	var labels []prometheusKeyValuePair
 	if r.vcid > 0 {
 		vcid := strconv.FormatUint(uint64(r.vcid), 10)
-		params = append(params, prometheusKeyValuePair{"vcid", vcid})
+		labels = append(labels, prometheusKeyValuePair{"vcid", vcid})
 	}
-
 	if r.nodeAddress != nil {
-		params = append(params, prometheusKeyValuePair{"node", r.nodeAddress.String()})
+		labels = append(labels, prometheusKeyValuePair{"node", r.nodeAddress.String()})
 	}
+	return labels
+}
 
+func MetricsToPrometheusStrings(metrics map[string]exportedMetric, labels []prometheusKeyValuePair) []string {
 	var rows []string
 	for _, v := range metrics {
 		if v.PrometheusType() != "" {
 			rows = append(rows, fmt.Sprintf("# TYPE %s %s", v.PrometheusName(), v.PrometheusType()))
 
 			for _, row := range v.PrometheusRow() {
-				rows = append(rows, row.String(params...))
+				rows = append(rows, row.String(labels...))
 			}
 		}
 	}
-
-	return strings.Join(rows, "\n")
+	return rows
 }
 
 func (r *inMemoryRegistry) WithVirtualChainId(id primitives.VirtualChainId) Registry {

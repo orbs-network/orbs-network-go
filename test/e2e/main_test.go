@@ -23,8 +23,10 @@ func TestMain(m *testing.M) {
 
 	config := getConfig()
 	if config.bootstrap {
-		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid)
-		appNetwork := NewInProcessE2EAppNetwork(config.appVcid)
+		tl := NewLoggerRandomer()
+
+		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid, tl)
+		appNetwork := NewInProcessE2EAppNetwork(config.appVcid, tl)
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()
