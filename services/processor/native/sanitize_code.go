@@ -54,6 +54,10 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			`"golang.org/x/crypto"`:         "Crypto",
 			`"golang.org/x/crypto/ed25519"`: "ED25519",
 			`"golang.org/x/crypto/sha3"`:    "SHA-3",
+
+			// Math
+			`"math/big"`:                    "Math for big.Int",
+
 		},
 		FunctionBlacklist: map[string][]string{
 			"time": {
