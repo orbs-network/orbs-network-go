@@ -57,7 +57,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.clients.peers) > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,
@@ -76,7 +76,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.clients.peers) > 0 },
 			node1, node2, node4)
 
 		waitForAllNodesToSatisfy(t,
@@ -112,7 +112,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.clients.peers) > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,

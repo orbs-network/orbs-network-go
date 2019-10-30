@@ -38,7 +38,7 @@ type directHarness struct {
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, logger log.Logger) *directHarness {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
+	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this gossipPeers is just a stub, it's mostly a client gossipPeers and this is a server harness
 	transport := makeTransport(ctx, logger, cfg)
 
 	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort()) // establish connection from test to server port ( test harness ==> SUT )

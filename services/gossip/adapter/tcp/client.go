@@ -32,7 +32,7 @@ type clientConnection struct {
 	logger         log.Logger
 	metricRegistry metric.Registry
 	config         clientConnectionConfig
-	sharedMetrics  *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
+	sharedMetrics  *clientMetrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
 	queue          *transportQueue
 	peerHexAddress string
 	cancel         context.CancelFunc
@@ -43,7 +43,7 @@ type clientConnection struct {
 	closed chan struct{}
 }
 
-func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig clientConnectionConfig) *clientConnection {
+func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *clientMetrics, transportConfig clientConnectionConfig) *clientConnection {
 	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
 

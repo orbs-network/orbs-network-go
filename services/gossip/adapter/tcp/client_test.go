@@ -111,7 +111,7 @@ func (s *serverStub) readSomeBytes() int {
 func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, logger log.Logger, keepAliveInterval time.Duration) *clientConnection {
 	registry := metric.NewRegistry()
 	peer := config.NewHardCodedGossipPeer(s.port, "127.0.0.1", "012345")
-	client := newClientConnection(peer, logger, registry, getMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
+	client := newClientConnection(peer, logger, registry, createClientMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
 	client.connect(ctx)
 	s.acceptClientConnection(t)
 	return client
