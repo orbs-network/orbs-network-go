@@ -50,14 +50,12 @@ type connectionTracker struct {
 }
 
 func (t *connectionTracker) inc() {
-	if atomic.AddInt32(&t.connectionCount, 1) == 1 {
-		t.closed = make(chan struct{})
-	}
+	atomic.AddInt32(&t.connectionCount, 1)
 }
 
 func (t *connectionTracker) dec() {
 	if atomic.AddInt32(&t.connectionCount, -1) == 0 {
-		close(t.closed)
+		t.closed <- struct{}{}
 	}
 }
 
@@ -85,7 +83,7 @@ func newServer(config serverConfig, logger log.Logger, registry metric.Registry)
 		config:      config,
 		logger:      logger,
 		metrics:     createServerMetrics(registry),
-		connTracker: &connectionTracker{},
+		connTracker: &connectionTracker{closed: make(chan struct{})},
 	}
 
 	server.Supervise(server.connTracker)
