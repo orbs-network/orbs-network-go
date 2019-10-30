@@ -19,172 +19,152 @@ import (
 )
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
-	with.Logging(t, func(parent *with.LoggingHarness) {
-		with.Context(func(ctx context.Context) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
+		connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
+		require.NoError(t, err, "test peer should be able connect to local transport")
+		defer connection.Close()
 
-			connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
-			require.NoError(t, err, "test peer should be able connect to local transport")
-			defer connection.Close()
+		h.transport.GracefulShutdown(ctx)
 
-			h.transport.GracefulShutdown(ctx)
+		buffer := []byte{0}
+		read, err := connection.Read(buffer)
+		require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
+		require.Error(t, err, "test peer should disconnect from local transport")
 
-			buffer := []byte{0}
-			read, err := connection.Read(buffer)
-			require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
-			require.Error(t, err, "test peer should disconnect from local transport")
-
-			eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-				connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
-				if err != nil {
-					return true
-				} else {
-					connection.Close()
-					return false
-				}
-			})
-			require.True(t, eventuallyFailsConnecting, "test peer should not be able to connect to local transport")
+		eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+			connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
+			if err != nil {
+				return true
+			} else {
+				connection.Close()
+				return false
+			}
 		})
+		require.True(t, eventuallyFailsConnecting, "test peer should not be able to connect to local transport")
 	})
 }
 
 func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
 
-			h.transport.RegisterListener(h.listenerMock, nil)
-			h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
 
-			buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
-			written, err := h.peerTalkerConnection.Write(buffer)
-			require.NoError(t, err, "test peer could not write to local transport")
-			require.Equal(t, len(buffer), written)
-
-			h.verifyTransportListenerCalled(t)
-		})
+		h.verifyTransportListenerCalled(t)
 	})
 }
 
 func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h.expectTransportListenerNotCalled()
 
-			h.expectTransportListenerNotCalled()
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
 
-			buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
-			written, err := h.peerTalkerConnection.Write(buffer)
-			require.NoError(t, err, "test peer could not write to local transport")
-			require.Equal(t, len(buffer), written)
-
-			h.verifyTransportListenerNotCalled(t)
-		})
+		h.verifyTransportListenerNotCalled(t)
 	})
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerNotCalled()
 
-			h.transport.RegisterListener(h.listenerMock, nil)
-			h.expectTransportListenerNotCalled()
+		buffer := exampleWireProtocolEncoding_CorruptNumPayloads()
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
 
-			buffer := exampleWireProtocolEncoding_CorruptNumPayloads()
-			written, err := h.peerTalkerConnection.Write(buffer)
-			require.NoError(t, err, "test peer could not write to local transport")
-			require.Equal(t, len(buffer), written)
+		buffer = []byte{0} // dummy buffer just to see when the connection closes
+		_, err = h.peerTalkerConnection.Read(buffer)
+		require.Error(t, err, "test peer should be disconnected from local transport")
 
-			buffer = []byte{0} // dummy buffer just to see when the connection closes
-			_, err = h.peerTalkerConnection.Read(buffer)
-			require.Error(t, err, "test peer should be disconnected from local transport")
-
-			h.verifyTransportListenerNotCalled(t)
-		})
+		h.verifyTransportListenerNotCalled(t)
 	})
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerNotCalled()
 
-			h.transport.RegisterListener(h.listenerMock, nil)
-			h.expectTransportListenerNotCalled()
+		buffer := exampleWireProtocolEncoding_CorruptPayloadSize()
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
 
-			buffer := exampleWireProtocolEncoding_CorruptPayloadSize()
-			written, err := h.peerTalkerConnection.Write(buffer)
-			require.NoError(t, err, "test peer could not write to local transport")
-			require.Equal(t, len(buffer), written)
+		buffer = []byte{0} // dummy buffer just to see when the connection closes
+		_, err = h.peerTalkerConnection.Read(buffer)
+		require.Error(t, err, "test peer should be disconnected from local transport")
 
-			buffer = []byte{0} // dummy buffer just to see when the connection closes
-			_, err = h.peerTalkerConnection.Read(buffer)
-			require.Error(t, err, "test peer should be disconnected from local transport")
-
-			h.verifyTransportListenerNotCalled(t)
-		})
+		h.verifyTransportListenerNotCalled(t)
 	})
 }
 
 func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h.transport.RegisterListener(h.listenerMock, nil)
+		h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
 
-			h.transport.RegisterListener(h.listenerMock, nil)
-			h.expectTransportListenerCalled([][]byte{{0x11}, {0x22, 0x33}})
-
-			for numKeepAliveReceived := 0; numKeepAliveReceived < 2; numKeepAliveReceived++ {
-				buffer := exampleWireProtocolEncoding_KeepAlive()
-				written, err := h.peerTalkerConnection.Write(buffer)
-				require.NoError(t, err, "test peer could not write to local transport")
-				require.Equal(t, len(buffer), written)
-			}
-
-			buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
+		for numKeepAliveReceived := 0; numKeepAliveReceived < 2; numKeepAliveReceived++ {
+			buffer := exampleWireProtocolEncoding_KeepAlive()
 			written, err := h.peerTalkerConnection.Write(buffer)
 			require.NoError(t, err, "test peer could not write to local transport")
 			require.Equal(t, len(buffer), written)
+		}
 
-			h.verifyTransportListenerCalled(t)
-		})
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
+
+		h.verifyTransportListenerCalled(t)
 	})
 }
 
 func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 
-			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-			defer h.cleanupConnectedPeers()
-			defer h.transport.GracefulShutdown(ctx)
+		h := newDirectHarnessWithConnectedPeers(t, ctx, parent)
+		defer h.cleanupConnectedPeers()
+		defer h.transport.GracefulShutdown(ctx)
 
-			buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()[:6] // only 6 out of 20 bytes transferred
-			written, err := h.peerTalkerConnection.Write(buffer)
-			require.NoError(t, err, "test peer could not write to local transport")
-			require.Equal(t, len(buffer), written)
+		buffer := exampleWireProtocolEncoding_Payloads_0x11_0x2233()[:6] // only 6 out of 20 bytes transferred
+		written, err := h.peerTalkerConnection.Write(buffer)
+		require.NoError(t, err, "test peer could not write to local transport")
+		require.Equal(t, len(buffer), written)
 
-			buffer = []byte{0} // dummy buffer just to see when the connection closes
-			_, err = h.peerTalkerConnection.Read(buffer)
-			require.Error(t, err, "test peer should be disconnected from local transport")
-		})
+		buffer = []byte{0} // dummy buffer just to see when the connection closes
+		_, err = h.peerTalkerConnection.Read(buffer)
+		require.Error(t, err, "test peer should be disconnected from local transport")
 	})
 }
 
