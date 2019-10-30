@@ -201,21 +201,86 @@ func (s *serverCfg) GossipNetworkTimeout() time.Duration {
 }
 
 func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
-	with.Context(func(ctx context.Context) {
-		with.Logging(t, func(parent *with.LoggingHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 
-			l1, err := net.Listen("tcp", ":0")
-			require.NoError(t, err, "failed listening to port")
-			port := l1.Addr().(*net.TCPAddr).Port
+		l1, err := net.Listen("tcp", ":0")
+		require.NoError(t, err, "failed listening to port")
+		port := l1.Addr().(*net.TCPAddr).Port
 
-			cfg := &serverCfg{
-				port: uint16(port),
-			}
+		cfg := &serverCfg{
+			port: uint16(port),
+		}
 
-			server := newServer(cfg, parent.Logger, metric.NewRegistry())
-			require.Panics(t, func() {
-				server.startSupervisedMainLoop(ctx)
-			}, "should have panicked on port already in use")
-		})
+		server := newServer(cfg, harness.Logger, metric.NewRegistry())
+		harness.Supervise(server)
+
+		require.Panics(t, func() {
+			server.startSupervisedMainLoop(ctx)
+		}, "should have panicked on port already in use")
+	})
+}
+
+func TestServer_ShutsDownWithinTimeout_WhenHasZeroConnections(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) { // not using ConcurrencyHarness on purpose so that this test can block until shutdown
+		cfg := &serverCfg{}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		server := newServer(cfg, harness.Logger, metric.NewRegistry())
+		server.startSupervisedMainLoop(ctx)
+
+		require.True(t, test.Eventually(100*time.Millisecond, func() bool {
+			return server.IsListening()
+		}))
+
+		server.GracefulShutdown(context.Background())
+
+		server.WaitUntilShutdown(context.Background())
+	})
+}
+
+func TestServer_KeepsAcceptingNewConnections_AfterAllClientConnectionsAreClosed(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		cfg := &serverCfg{}
+
+		server := newServer(cfg, harness.Logger, metric.NewRegistry())
+		harness.Supervise(server)
+		server.startSupervisedMainLoop(ctx)
+		defer server.GracefulShutdown(context.Background())
+
+		require.True(t, test.Eventually(100*time.Millisecond, func() bool {
+			return server.IsListening()
+		}))
+
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", server.getPort()))
+		require.NoError(t, err, "failed connecting to server")
+		_ = conn.Close()
+
+		time.Sleep(100 * time.Millisecond) //TODO sleep is wrong
+
+		conn, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", server.getPort()))
+		require.NoError(t, err, "failed connecting to server")
+		_ = conn.Close()
+	})
+}
+
+func TestServer_DoesNotHang_WhenWaitingForConnectionsToClose_OnShutDown(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		cfg := &serverCfg{}
+
+		server := newServer(cfg, harness.Logger, metric.NewRegistry())
+		harness.Supervise(server)
+		server.startSupervisedMainLoop(ctx)
+
+		require.True(t, test.Eventually(100*time.Millisecond, func() bool {
+			return server.IsListening()
+		}))
+
+		conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", server.getPort()))
+		require.NoError(t, err, "failed connecting to server")
+
+		server.GracefulShutdown(ctx)
+
+		_ = conn.Close()
 	})
 }

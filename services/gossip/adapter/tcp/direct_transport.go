@@ -30,8 +30,6 @@ type DirectTransport struct {
 
 	clients *clientManager
 	server  *transportServer
-
-	serverHandle *govnr.ForeverHandle
 }
 
 func NewDirectTransport(parent context.Context, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {

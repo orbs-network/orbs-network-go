@@ -52,9 +52,7 @@ var ecdsaSecp256K1KeyPairs = []ecdsaSecp256K1KeyPairHex{
 }
 
 func EcdsaSecp256K1KeyPairForTests(setIndex int) *TestEcdsaSecp256K1KeyPair {
-	if setIndex > len(ecdsaSecp256K1KeyPairs) {
-		return nil
-	}
+	setIndex = setIndex % len(ecdsaSecp256K1KeyPairs) // in case a test keeps an global running index of keys, like in TCP transport tests
 
 	pub, err := hex.DecodeString(ecdsaSecp256K1KeyPairs[setIndex].publicKey)
 	if err != nil {

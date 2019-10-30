@@ -15,7 +15,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
@@ -46,24 +45,31 @@ type transportServer struct {
 }
 
 type connectionTracker struct {
-	supervised.ChanShutdownWaiter
-	connectionCount int32
+	connectionCount int32 // atomic ops only
+	closed          chan struct{}
 }
 
 func (t *connectionTracker) inc() {
-	atomic.AddInt32(&t.connectionCount, 1)
+	if atomic.AddInt32(&t.connectionCount, 1) == 1 {
+		t.closed = make(chan struct{})
+	}
 }
 
 func (t *connectionTracker) dec() {
-	atomic.AddInt32(&t.connectionCount, -1)
-	if atomic.LoadInt32(&t.connectionCount) <= 0 {
-		t.Shutdown()
+	if atomic.AddInt32(&t.connectionCount, -1) == 0 {
+		close(t.closed)
 	}
 }
 
 func (t *connectionTracker) WaitUntilShutdown(shutdownCtx context.Context) {
 	if atomic.LoadInt32(&t.connectionCount) > 0 { // handling the edge case where no connection was opened before the system was shutdown
-		t.ChanShutdownWaiter.WaitUntilShutdown(shutdownCtx)
+		select {
+		case <-t.closed:
+		case <-shutdownCtx.Done():
+			if shutdownCtx.Err() == context.DeadlineExceeded {
+				panic(fmt.Sprintf("failed to shutdown server connection manager before timeout"))
+			}
+		}
 	}
 }
 
@@ -76,12 +82,10 @@ type incomingConnectionMetrics struct {
 
 func newServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
 	server := &transportServer{
-		config:  config,
-		logger:  logger,
-		metrics: createServerMetrics(registry),
-		connTracker: &connectionTracker{
-			ChanShutdownWaiter: supervised.NewChanWaiter("incoming tcp connections"),
-		},
+		config:      config,
+		logger:      logger,
+		metrics:     createServerMetrics(registry),
+		connTracker: &connectionTracker{},
 	}
 
 	server.Supervise(server.connTracker)
@@ -149,6 +153,12 @@ func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Liste
 			continue
 		}
 
+		if ctx.Err() != nil {
+			logger.Info("incoming connection while system is shutting down, rejecting", log.Stringable("remote-addr", conn.RemoteAddr()))
+			_ = conn.Close()
+			return
+		}
+
 		logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
 		t.metrics.acceptSuccesses.Inc()
 		govnr.Once(logfields.GovnrErrorer(logger), func() {
@@ -171,7 +181,7 @@ func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net
 		if err != nil {
 			t.metrics.transportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-			conn.Close()
+			_ = conn.Close()
 
 			return
 		}

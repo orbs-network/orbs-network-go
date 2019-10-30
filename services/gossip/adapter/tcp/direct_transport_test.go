@@ -182,17 +182,22 @@ func aMessage() [][]byte {
 	return payloads
 }
 
-var currentNodeIndex = 1
-
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
-	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
+	address := aKey()
 	peers := aTopologyContaining()
 	cfg := config.ForDirectTransportTests(address, peers, 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
-	currentNodeIndex++
 	return &nodeHarness{transport, address, listener}
+}
+
+var currentNodeIndex = 1
+
+func aKey() primitives.NodeAddress {
+	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
+	currentNodeIndex++
+	return address
 }
 
 func aTopologyContaining(nodes ...*nodeHarness) GossipPeers {
