@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"sync"
@@ -18,7 +17,7 @@ import (
 )
 
 func TestContextId_Simple(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
@@ -35,7 +34,7 @@ func TestContextId_Simple(t *testing.T) {
 }
 
 func TestContextId_MultipleGoroutines(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			var wg sync.WaitGroup
 			h := newHarness(parent.Logger)

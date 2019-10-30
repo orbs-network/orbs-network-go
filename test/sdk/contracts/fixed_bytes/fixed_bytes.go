@@ -45,4 +45,3 @@ func getToken() *big.Int {
 func setToken(token *big.Int) {
 	state.WriteBigInt([]byte("token"), token)
 }
-

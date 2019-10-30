@@ -10,15 +10,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		require.NoError(t,
@@ -28,7 +28,7 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 }
 
 func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		h.ignoringForwardMessages()
@@ -48,7 +48,7 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		invalidTx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
@@ -63,7 +63,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingValidation(t *
 }
 
 func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		invalidTx := builders.TransferTransaction().Build()
@@ -79,7 +79,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 }
 
 func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		require.EqualErrorf(t,

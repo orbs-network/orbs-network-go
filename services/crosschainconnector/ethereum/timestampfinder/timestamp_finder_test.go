@@ -9,7 +9,6 @@ package timestampfinder
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -51,7 +50,7 @@ func (h *harness) WithBtg(btg BlockTimeGetter) *harness {
 }
 
 func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			// something before 2015/07/31
@@ -62,7 +61,7 @@ func TestGetEthBlockBeforeEthGenesis(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			// something in the future (sometime in 2031), it works on a fake database - which will never advance in time
@@ -73,7 +72,7 @@ func TestGetEthBlockByTimestampFromFutureFails(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampOfExactlyLatestBlockFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			_, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano(FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS*time.Second))
@@ -83,7 +82,7 @@ func TestGetEthBlockByTimestampOfExactlyLatestBlockFails(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			b, err := h.finder.FindBlockByTimestamp(ctx, primitives.TimestampNano((FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS-1)*time.Second))
@@ -95,7 +94,7 @@ func TestGetEthBlockByTimestampOfAlmostLatestBlockSucceeds(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampFromEth(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			// something recent
@@ -120,7 +119,7 @@ func TestGetEthBlockByTimestampFromEth(t *testing.T) {
 }
 
 func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			// complex request
@@ -138,7 +137,7 @@ func TestGetEthBlockByTimestampWorksWithIdenticalRequestsFromCache(t *testing.T)
 }
 
 func TestGetEthBlockByTimestampWorksWithDifferentRequestsFromCache(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			desiredIterations := 20
@@ -247,7 +246,7 @@ func TestGetEthBlockByTimestampWhenSmallNumOfBlocks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			test.WithContext(func(ctx context.Context) {
+			with.Context(func(ctx context.Context) {
 				with.Logging(t, func(parent *with.LoggingHarness) {
 					h := NewTestHarness(parent.Logger).WithBtg(tt.btg)
 					blockAndTime, err := h.finder.FindBlockByTimestamp(ctx, tt.referenceTs)
@@ -274,7 +273,7 @@ func TestTimestampFinderTerminatesOnContextCancel(t *testing.T) {
 }
 
 func TestRunMultipleSearchesOnFakeGetter(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := NewTestHarness(parent.Logger)
 			searchRange := FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS - FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS

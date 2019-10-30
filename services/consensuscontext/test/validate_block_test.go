@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -33,7 +32,7 @@ func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsB
 }
 
 func TestValidateTransactionsBlockOnValidBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, true)
 			s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
@@ -46,7 +45,7 @@ func TestValidateTransactionsBlockOnValidBlock(t *testing.T) {
 }
 
 func TestValidateTransactionsBlockOnValidBlockWithoutTrigger(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, false)
 			s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
@@ -74,7 +73,7 @@ func rxInputs(cfg config.ConsensusContextConfig) *services.ValidateResultsBlockI
 }
 
 func TestValidateResultsBlockOnValidBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, false)
 

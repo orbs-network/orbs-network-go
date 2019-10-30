@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/sdk/contracts/fixed_bytes"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -24,7 +23,7 @@ func TestVm_WorkingContractWithBytes20(t *testing.T) {
 	bytes20 := [20]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01,
 		0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newVmHarness(parent.Logger)
@@ -34,7 +33,7 @@ func TestVm_WorkingContractWithBytes20(t *testing.T) {
 				generateDeployTx(),
 				builders.Transaction().WithMethod(ContractName, "setAddress").WithArgs(bytes20).Build(),
 				builders.Transaction().WithMethod(ContractName, "getAddress").WithArgs().Build(),
-				)
+			)
 
 			require.NoError(t, err)
 			argsArray := builders.PackedArgumentArrayDecode(receipts[2].RawOutputArgumentArrayWithHeader())
@@ -47,7 +46,7 @@ func TestVm_WorkingContractWithBytes32(t *testing.T) {
 	bytes32 := [32]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04,
 		0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newVmHarness(parent.Logger)
@@ -69,7 +68,7 @@ func TestVm_WorkingContractWithBytes32(t *testing.T) {
 func TestVm_WorkingContractWithBigInt(t *testing.T) {
 	tokenValue := big.NewInt(5000001000)
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newVmHarness(parent.Logger)
@@ -91,7 +90,7 @@ func TestVm_WorkingContractWithBigInt(t *testing.T) {
 func TestVm_WorkingContractWithBool(t *testing.T) {
 	configEnabled := true
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newVmHarness(parent.Logger)

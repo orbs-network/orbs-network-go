@@ -9,7 +9,6 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
 
@@ -37,7 +36,7 @@ func TestStateWaitingForChunks_MovesToIdleOnTransportError(t *testing.T) {
 }
 
 func TestStateWaitingForChunks_MovesToIdleOnTimeout(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
 			h.expectLastCommittedBlockHeightQueryFromStorage(0)
@@ -53,7 +52,7 @@ func TestStateWaitingForChunks_MovesToIdleOnTimeout(t *testing.T) {
 }
 
 func TestStateWaitingForChunks_AcceptsNewBlockAndMovesToProcessingBlocks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			manualWaitForChunksTimer := synchronization.NewTimerWithManualTick()
 			blocksMessage := builders.BlockSyncResponseInput().Build().Message
@@ -102,7 +101,7 @@ func TestStateWaitingForChunks_TerminatesOnContextTermination(t *testing.T) {
 }
 
 func TestStateWaitingForChunks_RecoversFromByzantineMessageSource(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 
 			differentThanStateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
@@ -133,7 +132,7 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 		t.Skip("Skipping chunks byzantine stress test in short mode")
 	}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			differentThanStateSourceAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
 			byzantineBlocksMessage := builders.BlockSyncResponseInput().WithSenderNodeAddress(differentThanStateSourceAddress).Build().Message

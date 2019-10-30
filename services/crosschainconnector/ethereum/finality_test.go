@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/timestampfinder"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -51,7 +50,7 @@ func newHarness(logger log.Logger, fct time.Duration, fbc uint32) *harness {
 }
 
 func TestFinality_GetSafeBlockWithoutLimits(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 0, 0)
 
@@ -65,7 +64,7 @@ func TestFinality_GetSafeBlockWithoutLimits(t *testing.T) {
 }
 
 func TestFinality_GetSafeBlockWithBlockLimit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 0, FINALITY_BLOCKS)
 
@@ -79,7 +78,7 @@ func TestFinality_GetSafeBlockWithBlockLimit(t *testing.T) {
 }
 
 func TestFinality_GetSafeBlockWithTimeLimit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 200*time.Second, 0)
 
@@ -92,7 +91,7 @@ func TestFinality_GetSafeBlockWithTimeLimit(t *testing.T) {
 }
 
 func TestFinality_GetSafeBlockWithBlockLimit_WhenNotEnoughBlocks(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 0, 2*timestampfinder.FAKE_CLIENT_NUMBER_OF_BLOCKS)
 
@@ -104,7 +103,7 @@ func TestFinality_GetSafeBlockWithBlockLimit_WhenNotEnoughBlocks(t *testing.T) {
 }
 
 func TestFinality_VerifySafeBlock(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 0, 100)
 
@@ -121,7 +120,7 @@ func TestFinality_VerifySafeBlock(t *testing.T) {
 }
 
 func TestFinality_GetSafeBlockNeverReturnsNegative(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger, 2*time.Minute, 90)
 

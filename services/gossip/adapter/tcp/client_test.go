@@ -20,7 +20,7 @@ import (
 )
 
 func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		server := newServerStub(t)
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -41,7 +41,7 @@ func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDi
 }
 
 func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			server := newServerStub(t)
 			defer server.Close()

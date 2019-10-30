@@ -9,15 +9,15 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func newLeaderHarnessWaitingForCommittedMessages(parent *test.ConcurrencyHarness, ctx context.Context) *harness {
+func newLeaderHarnessWaitingForCommittedMessages(parent *with.ConcurrencyHarness, ctx context.Context) *harness {
 	h := newHarness(parent, true)
 	h.expectNewBlockProposalNotRequested()
 	h.expectCommitBroadcastViaGossip(0, h.config.NodeAddress())
@@ -27,7 +27,7 @@ func newLeaderHarnessWaitingForCommittedMessages(parent *test.ConcurrencyHarness
 }
 
 func TestLeaderInit(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		h.verifyHandlerRegistrations(t)
@@ -38,7 +38,7 @@ func TestLeaderInit(t *testing.T) {
 // this test protects against a rare race where we loaded blocks from storage and node sync didn't update followers before leader started
 // see https://circleci.com/gh/orbs-network/orbs-network-go/17275#tests/containers/2
 func TestLeaderInitWithExistingBlocks_DoesNotCreateGenesisBlock(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		block17 := builders.BlockPair().WithHeight(17).Build()
 
 		h := newHarness(parent, true)
@@ -65,7 +65,7 @@ func TestLeaderInitWithExistingBlocks_DoesNotCreateGenesisBlock(t *testing.T) {
 }
 
 func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
@@ -91,7 +91,7 @@ func TestLeaderCommitsConsecutiveBlocksAfterEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), fail to generate height 1")
@@ -115,7 +115,7 @@ func TestLeaderRetriesCommitOnErrorGeneratingBlock(t *testing.T) {
 }
 
 func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
@@ -141,7 +141,7 @@ func TestLeaderRetriesCommitAfterNotEnoughConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Bad signatures nodes confirmed height 0 (genesis), commit height 0 again")
@@ -157,7 +157,7 @@ func TestLeaderIgnoresBadCommittedMessageSignatures(t *testing.T) {
 }
 
 func TestLeaderIgnoresNonValidatorSigners(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Non validator nodes confirmed height 0 (genesis), commit height 0 again")
@@ -173,7 +173,7 @@ func TestLeaderIgnoresNonValidatorSigners(t *testing.T) {
 }
 
 func TestLeaderIgnoresOldConfirmations(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 0 (genesis), commit height 1")
@@ -198,7 +198,7 @@ func TestLeaderIgnoresOldConfirmations(t *testing.T) {
 }
 
 func TestLeaderIgnoresFutureConfirmations(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 
 		t.Log("Nodes confirmed height 1000, commit height 0 (genesis) again")

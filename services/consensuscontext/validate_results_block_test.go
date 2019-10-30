@@ -11,8 +11,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/validators"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 )
+
 func toRxValidatorContext(cfg config.ConsensusContextConfig) *rxValidatorContext {
 	return toRxValidatorContextWithBc(cfg, false)
 }
@@ -267,7 +268,7 @@ func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, i
 }
 
 func TestConsensusContextValidateResultsBlock_TestInputBlockProposerNotSameAsResultsBlockProposer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vcrx := toRxValidatorContext(cfg)
 		if err := vcrx.input.ResultsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
@@ -279,7 +280,7 @@ func TestConsensusContextValidateResultsBlock_TestInputBlockProposerNotSameAsRes
 }
 
 func TestConsensusContextValidateResultsBlock_TestTxAndRxBlockProposerNotSame(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vcrx := toRxValidatorContext(cfg)
 		if err := vcrx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
@@ -291,7 +292,7 @@ func TestConsensusContextValidateResultsBlock_TestTxAndRxBlockProposerNotSame(t 
 }
 
 func TestConsensusContextValidateResultssBlock_TestBlockProposerIgnoredIfBlockProposerIsZeroLength(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vcrx := toRxValidatorContextWithBc(cfg, true)
 		err := validateRxBlockProposer(ctx, vcrx)

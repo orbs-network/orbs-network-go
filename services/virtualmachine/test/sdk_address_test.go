@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -24,7 +23,7 @@ import (
 var EXAMPLE_CONTEXT_ID = []byte{0x22, 0x23}
 
 func TestSdkAddress_GetSignerAddressWithoutContextFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -36,7 +35,7 @@ func TestSdkAddress_GetSignerAddressWithoutContextFails(t *testing.T) {
 }
 
 func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -61,7 +60,7 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 }
 
 func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -102,7 +101,7 @@ func TestSdkAddress_GetSignerAddressDoesNotChangeWithContractCalls(t *testing.T)
 }
 
 func TestSdkAddress_GetCallerAddressWithoutContextFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -114,7 +113,7 @@ func TestSdkAddress_GetCallerAddressWithoutContextFails(t *testing.T) {
 }
 
 func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -139,7 +138,7 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 }
 
 func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -209,7 +208,7 @@ func TestSdkAddress_GetCallerAddressChangesWithContractCalls(t *testing.T) {
 }
 
 func TestSdkAddress_GetOwnAddressWithoutContextFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -221,7 +220,7 @@ func TestSdkAddress_GetOwnAddressWithoutContextFails(t *testing.T) {
 }
 
 func TestSdkAddress_GetOwnAddress(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)

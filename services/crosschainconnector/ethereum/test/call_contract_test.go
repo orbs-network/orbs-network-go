@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestContractCallBadNodeConfig(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			config := &ethereumConnectorConfigForTests{
 				endpoint:      "invalid_endpoint",

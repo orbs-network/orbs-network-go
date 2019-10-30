@@ -8,15 +8,15 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		h.assumeBlockStorageAtHeight(0) // so that we report transactions for block 1
@@ -36,7 +36,7 @@ func TestCommitTransactionReceiptsRequestsNextBlockOnMismatch(t *testing.T) {
 }
 
 func TestCommitTransactionReceiptForTxThatWasNeverInPendingPool_ShouldCommitItAnyway(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().Build()

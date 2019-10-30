@@ -8,14 +8,13 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
 			txCount := uint32(2)
@@ -34,7 +33,7 @@ func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
 // TODO v1 Decouple this test from TestReturnAllAvailableTransactionsFromTransactionPool()
 // Presently if the latter fails, this test will fail too
 func TestCreateBlock_HappyFlow(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
 			txCount := 2
@@ -55,7 +54,7 @@ func TestCreateBlock_HappyFlow(t *testing.T) {
 }
 
 func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, true)
 			txCount := uint32(2)

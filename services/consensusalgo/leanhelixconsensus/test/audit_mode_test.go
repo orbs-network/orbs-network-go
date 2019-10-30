@@ -9,8 +9,8 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -20,7 +20,7 @@ import (
 )
 
 func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 
 		h := newLeanHelixServiceHarness(5*time.Minute).start(parent, ctx)
 
@@ -30,9 +30,9 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 		vrb := &services.RequestNewResultsBlockInput{
 			CurrentBlockHeight: block.TransactionsBlock.Header.BlockHeight(),
 
-			PrevBlockHash:      block.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock:  block.TransactionsBlock,
-			PrevBlockTimestamp: prevBlock.TransactionsBlock.Header.Timestamp(),
+			PrevBlockHash:        block.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:    block.TransactionsBlock,
+			PrevBlockTimestamp:   prevBlock.TransactionsBlock.Header.Timestamp(),
 			BlockProposerAddress: block.TransactionsBlock.Header.BlockProposerAddress(),
 		}
 
@@ -52,7 +52,7 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 }
 
 func TestHandleBlockConsensus_DoesNotExecuteBlocksOlderThanThreshold_AndModeIsVerify(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeanHelixServiceHarness(0).start(parent, ctx)
 
 		block := builders.BlockPair().WithTimestampAheadBy(-1 * time.Nanosecond).WithHeight(1).WithEmptyLeanHelixBlockProof().Build()
