@@ -201,7 +201,7 @@ func (s *serverCfg) GossipNetworkTimeout() time.Duration {
 }
 
 func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			l1, err := net.Listen("tcp", ":0")
