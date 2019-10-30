@@ -102,14 +102,20 @@ func (c *clientManager) updateTopology(bgCtx context.Context, newPeers GossipPee
 	oldPeers := c.readOldPeerConfig()
 	peersToRemove, peersToAdd := peerDiff(oldPeers, newPeers)
 
-	c.disconnectAllClients(bgCtx, peersToRemove)
+	c.disconnectAll(bgCtx, peersToRemove)
 
 	for peerNodeAddress, peer := range peersToAdd {
 		c.connectForever(bgCtx, peerNodeAddress, peer)
 	}
 }
 
-func (c *clientManager) disconnectAllClients(ctx context.Context, peersToDisconnect GossipPeers) {
+func (c *clientManager) connectAll(parent context.Context) {
+	for peerNodeAddress, peer := range c.gossipPeers {
+		c.connectForever(parent, peerNodeAddress, peer)
+	}
+}
+
+func (c *clientManager) disconnectAll(ctx context.Context, peersToDisconnect GossipPeers) {
 	c.Lock()
 	defer c.Unlock()
 	for key, peer := range peersToDisconnect {

@@ -20,32 +20,32 @@ import (
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
+		with.Context(func(ctx context.Context) {
 
-		ctx, cancel := context.WithCancel(context.Background())
-		h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
-		defer h.transport.GracefulShutdown(ctx)
+			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
 
-		connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
-		require.NoError(t, err, "test peer should be able connect to local transport")
-		defer connection.Close()
+			connection, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
+			require.NoError(t, err, "test peer should be able connect to local transport")
+			defer connection.Close()
 
-		cancel()
+			h.transport.GracefulShutdown(ctx)
 
-		buffer := []byte{0}
-		read, err := connection.Read(buffer)
-		require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
-		require.Error(t, err, "test peer should disconnect from local transport")
+			buffer := []byte{0}
+			read, err := connection.Read(buffer)
+			require.Equal(t, 0, read, "test peer should disconnect from local transport without reading anything")
+			require.Error(t, err, "test peer should disconnect from local transport")
 
-		eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
-			connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
-			if err != nil {
-				return true
-			} else {
-				connection.Close()
-				return false
-			}
+			eventuallyFailsConnecting := test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
+				connection, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", h.transport.GetServerPort()))
+				if err != nil {
+					return true
+				} else {
+					connection.Close()
+					return false
+				}
+			})
+			require.True(t, eventuallyFailsConnecting, "test peer should not be able to connect to local transport")
 		})
-		require.True(t, eventuallyFailsConnecting, "test peer should not be able to connect to local transport")
 	})
 }
 
@@ -212,7 +212,7 @@ func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
 				port: uint16(port),
 			}
 
-			server := newDirectTransportServer(cfg, parent.Logger, metric.NewRegistry())
+			server := newServer(cfg, parent.Logger, metric.NewRegistry())
 			require.Panics(t, func() {
 				server.startSupervisedMainLoop(ctx)
 			}, "should have panicked on port already in use")

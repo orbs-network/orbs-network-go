@@ -28,14 +28,17 @@ type serverConfig interface {
 }
 
 type transportServer struct {
-	sync.RWMutex
-	listener  adapter.TransportListener
-	listening bool
-	port      int
-	logger    log.Logger
-	metrics   incomingConnectionMetrics
+	govnr.TreeSupervisor
 
-	config serverConfig
+	sync.RWMutex
+	port        int
+	listener    adapter.TransportListener
+	netListener net.Listener
+
+	logger  log.Logger
+	metrics incomingConnectionMetrics
+	config  serverConfig
+	cancel  context.CancelFunc
 }
 
 type incomingConnectionMetrics struct {
@@ -45,14 +48,11 @@ type incomingConnectionMetrics struct {
 	activeConnections *metric.Gauge
 }
 
-func newDirectTransportServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
+func newServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
 	return &transportServer{
-		config:    config,
-		listener:  nil,
-		listening: false,
-		port:      0,
-		logger:    logger,
-		metrics:   createServerMetrics(registry),
+		config:  config,
+		logger:  logger,
+		metrics: createServerMetrics(registry),
 	}
 }
 
@@ -79,22 +79,10 @@ func (t *transportServer) listenForIncomingConnections(ctx context.Context) (net
 		return nil, err
 	}
 
-	// this goroutine will shut down the server gracefully when context is done
-	go func() {
-		<-ctx.Done()
-		t.Lock()
-		defer t.Unlock()
-		t.listening = false
-		err := listener.Close()
-		if err != nil {
-			t.logger.Error("Failed to close direct transport lister", log.Error(err))
-		}
-	}()
-
 	t.Lock()
 	defer t.Unlock()
-	t.listening = true
 	t.port = listener.Addr().(*net.TCPAddr).Port
+	t.netListener = listener
 	t.logger.Info("gossip transport server listening", log.Int("port", t.port))
 
 	return listener, err
@@ -104,7 +92,7 @@ func (t *transportServer) IsListening() bool {
 	t.RLock()
 	defer t.RUnlock()
 
-	return t.listening
+	return t.netListener != nil
 }
 
 func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
@@ -126,7 +114,7 @@ func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Liste
 			continue
 		}
 		t.metrics.acceptSuccesses.Inc()
-		govnr.Once(logfields.GovnrErrorer(t.logger), func() {
+		govnr.Once(logfields.GovnrErrorer(t.logger), func() { //TODO supervise this
 			t.handleIncomingConnection(ctx, conn)
 		})
 	}
@@ -221,14 +209,26 @@ func (t *transportServer) getListener() adapter.TransportListener {
 	return t.listener
 }
 
-func (t *transportServer) startSupervisedMainLoop(ctx context.Context) *govnr.ForeverHandle {
+func (t *transportServer) startSupervisedMainLoop(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	t.cancel = cancel
+
 	listener, err := t.listenForIncomingConnections(ctx)
 	if err != nil {
 		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", t.config.GossipListenPort(), err.Error()))
 	}
-	return govnr.Forever(ctx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
+	t.Supervise(govnr.Forever(ctx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
 		t.mainLoop(ctx, listener)
-	})
+	}))
+}
+
+func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
+	t.cancel()
+	err := t.netListener.Close()
+	if err != nil {
+		t.logger.Error("Failed to close direct transport lister", log.Error(err))
+	}
+	t.netListener = nil
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {

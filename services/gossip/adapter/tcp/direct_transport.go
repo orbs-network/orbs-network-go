@@ -8,6 +8,7 @@ package tcp
 
 import (
 	"context"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -23,40 +24,32 @@ const SEND_QUEUE_MAX_BYTES = 20 * 1024 * 1024
 var LogTag = log.String("adapter", "gossip")
 
 type DirectTransport struct {
+	govnr.TreeSupervisor
+
 	logger log.Logger
 
 	clients *clientManager
+	server  *transportServer
 
-	server *transportServer
-
-	metricRegistry metric.Registry
-	serverClosed   chan struct{}
-	cancelServer   context.CancelFunc
+	serverHandle *govnr.ForeverHandle
 }
 
 func NewDirectTransport(parent context.Context, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {
-	serverCtx, cancelServer := context.WithCancel(parent)
-
 	logger := parentLogger.WithTags(LogTag)
 	t := &DirectTransport{
-		logger:         logger,
-		metricRegistry: registry,
+		logger: logger,
 
 		clients: newClientManager(logger, registry, config),
-		server:  newDirectTransportServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
-
-		cancelServer: cancelServer,
+		server:  newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
 	}
+
+	t.server.startSupervisedMainLoop(parent)
 
 	// server goroutine
-	handle := t.server.startSupervisedMainLoop(serverCtx)
-	t.serverClosed = handle.Done()
-	handle.MarkSupervised() // TODO use real supervision
+	t.Supervise(t.server)
+	t.Supervise(t.clients)
 
-	// client goroutines
-	for peerNodeAddress, peer := range config.GossipPeers() {
-		t.clients.connectForever(parent, peerNodeAddress, peer)
-	}
+	t.clients.connectAll(parent) // client goroutines
 
 	return t
 }
@@ -99,12 +92,7 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
 	t.logger.Info("Shutting down")
 	t.clients.GracefulShutdown(shutdownContext)
-	t.cancelServer()
-}
-
-func (t *DirectTransport) WaitUntilShutdown(shutdownContext context.Context) {
-	t.clients.WaitUntilShutdown(shutdownContext)
-	t.waitFor(shutdownContext, t.serverClosed)
+	t.server.GracefulShutdown(shutdownContext)
 }
 
 func (t *DirectTransport) waitFor(shutdownContext context.Context, closed chan struct{}) {
