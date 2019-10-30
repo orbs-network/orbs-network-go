@@ -54,5 +54,5 @@ func (t *loggerRandomer) Name() string {
 }
 
 func (t *loggerRandomer) aRandomPort() int {
-	return firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE-firstEphemeralPort)
+	return firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE*2-firstEphemeralPort)
 }
