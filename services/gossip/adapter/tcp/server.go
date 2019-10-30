@@ -262,6 +262,8 @@ func (t *transportServer) startSupervisedMainLoop(parent context.Context) {
 }
 
 func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
+	t.Lock()
+	defer t.Unlock()
 	t.cancel()
 	err := t.netListener.Close()
 	if err != nil {
