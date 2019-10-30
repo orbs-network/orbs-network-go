@@ -8,14 +8,14 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestInitToZero(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 		height, timestamp, err := d.GetBlockHeightAndTimestamp(ctx)
 
@@ -26,7 +26,7 @@ func TestInitToZero(t *testing.T) {
 }
 
 func TestReflectsSuccessfulCommit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 		heightBefore, _, _ := d.GetBlockHeightAndTimestamp(ctx)
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithBlockTimestamp(6579).WithDiff(builders.ContractStateDiff().Build()).Build())
@@ -39,7 +39,7 @@ func TestReflectsSuccessfulCommit(t *testing.T) {
 }
 
 func TestIgnoreFailedCommit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 		stateDiff := builders.ContractStateDiff().Build()
 		d.service.CommitStateDiff(ctx, CommitStateDiff().WithBlockHeight(1).WithDiff(stateDiff).Build())

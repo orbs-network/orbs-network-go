@@ -12,8 +12,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	crypto "github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
@@ -34,7 +34,7 @@ func (s *signerServerConfig) HttpAddress() string {
 }
 
 func TestSignerServer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		address := "localhost:9999"
 		pk := keys.EcdsaSecp256K1KeyPairForTests(0).PrivateKey()
 

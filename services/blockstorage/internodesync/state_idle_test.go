@@ -9,14 +9,13 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			manualNoCommitTimer := synchronization.NewTimerWithManualTick()
 			h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(harness.Logger, func() *synchronization.Timer {
@@ -36,7 +35,7 @@ func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
 }
 
 func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
 

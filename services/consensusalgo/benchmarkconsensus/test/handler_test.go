@@ -8,14 +8,14 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"testing"
 )
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -36,7 +36,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -56,7 +56,7 @@ func TestHandlerOfLeaderSynchronizesToFutureValidBlockWithModeUpdateOnly(t *test
 }
 
 func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newLeaderHarnessWaitingForCommittedMessages(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -77,7 +77,7 @@ func TestHandlerOfLeaderIgnoresFutureValidBlockWithModeVerifyOnly(t *testing.T) 
 }
 
 func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -102,7 +102,7 @@ func TestHandlerOfNonLeaderSynchronizesToFutureValidBlock(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -119,7 +119,7 @@ func TestHandlerForBlockConsensusWithBadPrevBlockHashPointer(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(leaderKeyPair())
 
@@ -140,7 +140,7 @@ func TestHandlerForBlockConsensusWithBadSignature(t *testing.T) {
 }
 
 func TestHandlerForBlockConsensusFromNonLeader(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newNonLeaderHarness(parent, ctx)
 		aBlockFromNonLeader := builders.BlockPair().WithBenchmarkConsensusBlockProof(otherNonLeaderKeyPair())
 

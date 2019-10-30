@@ -43,7 +43,7 @@ func processMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	return contractOutputArgs, contractOutputErr, err
 }
 
-var	bigIntType = reflect.TypeOf(big.NewInt(0))
+var bigIntType = reflect.TypeOf(big.NewInt(0))
 
 func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
 	res := []reflect.Value{}

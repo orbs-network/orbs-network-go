@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestGetBlock_GetBlockStorageOk(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			harness := newPublicApiHarness(parent.Logger, 1*time.Second, 1*time.Minute)
 
@@ -50,7 +49,7 @@ func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 }
 
 func TestGetBlock_GetBlockStorageFail(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			harness := newPublicApiHarness(parent.Logger, 1*time.Second, 1*time.Minute)
@@ -78,7 +77,7 @@ func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 }
 
 func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			harness := newPublicApiHarness(parent.Logger, 1*time.Second, 1*time.Minute)
@@ -108,7 +107,7 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 }
 
 func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			harness := newPublicApiHarness(parent.Logger, 1*time.Second, 1*time.Minute)
 
@@ -135,7 +134,7 @@ func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 }
 
 func TestGetBlock_RequestBlockZero(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			harness := newPublicApiHarness(parent.Logger, 1*time.Second, 1*time.Minute)
 

@@ -11,8 +11,8 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -103,7 +103,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 }
 
 func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vctx := toTxValidatorContext(cfg)
 		if err := vctx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
@@ -115,7 +115,7 @@ func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *t
 }
 
 func TestConsensusContextValidateTransactionsBlock_TestBlockProposerIgnoredIfBlockProposerIsEmpty(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		vctx := toTxValidatorContextWithBc(cfg, true)
 		err := validateTxBlockProposer(ctx, vctx)
@@ -124,7 +124,7 @@ func TestConsensusContextValidateTransactionsBlock_TestBlockProposerIgnoredIfBlo
 }
 
 func TestConsensusContextValidateTransactionsBlockTriggerTransactionNotForwardedToPreOrder(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
 		cfg := config.ForConsensusContextTests(nil, true)
 		txPool := &services.MockTransactionPool{}
@@ -141,7 +141,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerTransactionNotForwarded
 }
 
 func TestConsensusContextValidateTransactionsBlockTriggerDisabledTransactionNotRemovedForForwardedToPreOrder(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 		txPool := &services.MockTransactionPool{}
@@ -158,7 +158,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerDisabledTransactionNotR
 }
 
 func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 		txPool := &services.MockTransactionPool{}
@@ -173,7 +173,7 @@ func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(
 }
 
 func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		tx := builders.TransferTransaction().Build()
 		triggerTx := builders.TriggerTransaction().Build()
 		tests := []struct {
@@ -282,7 +282,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 	})
 }
 func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		cfg := config.ForConsensusContextTests(nil, false)
 		tests := []struct {
 			name           string
@@ -330,7 +330,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 }
 
 func TestConsensusContextValidateTransactionsBlockTriggerIsValidTime(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		timestamp := time.Now()
 		triggerTx := builders.TriggerTransaction().WithTimestamp(timestamp).Build()
 		isOk := validateTransactionsBlockTxTriggerIsValidTime(triggerTx, primitives.TimestampNano(timestamp.UnixNano()))

@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestSyncLoop(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 
 			// Set up block source mock
@@ -55,7 +54,7 @@ func TestSyncLoop(t *testing.T) {
 
 func TestSyncInitialState(t *testing.T) {
 
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		// Set up block source mock
 		sourceTracker := synchronization.NewBlockTracker(harness.Logger, 3, 10)
 		sourceMock := newBlockSourceMock(3)

@@ -12,7 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"sync"
@@ -20,13 +20,13 @@ import (
 )
 
 type tamperingHarness struct {
-	*test.ConcurrencyHarness
+	*with.ConcurrencyHarness
 	senderKey string
 	transport *TamperingTransport
 	listener  *MockTransportListener
 }
 
-func newTamperingHarness(ctx context.Context, parent *test.ConcurrencyHarness) *tamperingHarness {
+func newTamperingHarness(ctx context.Context, parent *with.ConcurrencyHarness) *tamperingHarness {
 	senderAddress := "sender"
 	listenerAddress := "listener"
 	listener := &MockTransportListener{}
@@ -65,7 +65,7 @@ func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payload
 }
 
 func TestFailingTamperer(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		c := newTamperingHarness(ctx, parent)
 
 		c.transport.Fail(anyMessage())
@@ -82,7 +82,7 @@ func TestFailingTamperer(t *testing.T) {
 }
 
 func TestPausingTamperer(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		c := newTamperingHarness(ctx, parent)
 
 		digits := make(chan byte, 10)
@@ -115,7 +115,7 @@ func TestPausingTamperer(t *testing.T) {
 // this test is suspect as having a deadlock, may need to skip it
 func TestLatchingTamperer(t *testing.T) {
 	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it; handled in https://github.com/orbs-network/orbs-network-go/pull/769")
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 
 		c := newTamperingHarness(ctx, parent)
 
