@@ -15,10 +15,12 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -39,6 +41,30 @@ type transportServer struct {
 	metrics incomingConnectionMetrics
 	config  serverConfig
 	cancel  context.CancelFunc
+
+	connTracker *connectionTracker
+}
+
+type connectionTracker struct {
+	supervised.ChanShutdownWaiter
+	connectionCount int32
+}
+
+func (t *connectionTracker) inc() {
+	atomic.AddInt32(&t.connectionCount, 1)
+}
+
+func (t *connectionTracker) dec() {
+	atomic.AddInt32(&t.connectionCount, -1)
+	if atomic.LoadInt32(&t.connectionCount) <= 0 {
+		t.Shutdown()
+	}
+}
+
+func (t *connectionTracker) WaitUntilShutdown(shutdownCtx context.Context) {
+	if atomic.LoadInt32(&t.connectionCount) > 0 { // handling the edge case where no connection was opened before the system was shutdown
+		t.ChanShutdownWaiter.WaitUntilShutdown(shutdownCtx)
+	}
 }
 
 type incomingConnectionMetrics struct {
@@ -49,11 +75,18 @@ type incomingConnectionMetrics struct {
 }
 
 func newServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
-	return &transportServer{
+	server := &transportServer{
 		config:  config,
 		logger:  logger,
 		metrics: createServerMetrics(registry),
+		connTracker: &connectionTracker{
+			ChanShutdownWaiter: supervised.NewChanWaiter("incoming tcp connections"),
+		},
 	}
+
+	server.Supervise(server.connTracker)
+
+	return server
 }
 
 func createServerMetrics(registry metric.Registry) incomingConnectionMetrics {
@@ -97,25 +130,31 @@ func (t *transportServer) IsListening() bool {
 
 func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
 	for {
-		if parentCtx.Err() != nil {
-			t.logger.Info("ending server main loop (system shutting down)")
-		}
 
 		ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
+		logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
+
+		if parentCtx.Err() != nil {
+			logger.Info("ending server main loop (system shutting down)")
+		}
 
 		conn, err := listener.Accept()
 		if err != nil {
 			if !t.IsListening() {
-				t.logger.Info("incoming connection accept stopped since server is shutting down", trace.LogFieldFrom(ctx))
+				logger.Info("incoming connection accept stopped since server is shutting down")
 				return
 			}
 			t.metrics.acceptErrors.Inc()
-			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
+			logger.Info("incoming connection accept error", log.Error(err))
 			continue
 		}
+
+		logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
 		t.metrics.acceptSuccesses.Inc()
-		govnr.Once(logfields.GovnrErrorer(t.logger), func() { //TODO supervise this
+		govnr.Once(logfields.GovnrErrorer(logger), func() {
+			t.connTracker.inc()
 			t.handleIncomingConnection(ctx, conn)
+			t.connTracker.dec()
 		})
 	}
 }
