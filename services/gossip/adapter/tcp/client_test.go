@@ -56,6 +56,8 @@ func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *te
 
 			require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
 			require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
+
+			<-client.disconnect()
 		})
 	})
 }

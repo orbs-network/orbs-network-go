@@ -14,7 +14,7 @@ import (
 )
 
 const EVENTUALLY_ACCEPTANCE_TIMEOUT = 40 * time.Millisecond
-const EVENTUALLY_ADAPTER_TIMEOUT = 100 * time.Millisecond
+const EVENTUALLY_ADAPTER_TIMEOUT = 200 * time.Millisecond
 const EVENTUALLY_LOCAL_E2E_TIMEOUT = 400 * time.Millisecond
 const EVENTUALLY_DOCKER_E2E_TIMEOUT = 1000 * time.Millisecond
 
