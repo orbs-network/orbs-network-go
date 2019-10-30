@@ -5,11 +5,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sync"
-	"sync/atomic"
 )
 
 type GossipPeers map[string]config.GossipPeer
@@ -29,8 +29,9 @@ type clientManager struct {
 	gossipPeers    GossipPeers // this is important - use own copy of peers, otherwise nodes in e2e tests that run in process can mutate each other's gossipPeers
 	logger         log.Logger
 	metrics        *clientMetrics
-	atomicConfig   atomic.Value
+	config         clientConnectionConfig
 	metricRegistry metric.Registry
+	nodeAddress    primitives.NodeAddress
 }
 
 func newClientManager(logger log.Logger, registry metric.Registry, config config.GossipTransportConfig) *clientManager {
@@ -40,8 +41,9 @@ func newClientManager(logger log.Logger, registry metric.Registry, config config
 		gossipPeers:    make(GossipPeers),
 		metrics:        createClientMetrics(registry),
 		metricRegistry: registry,
+		nodeAddress:    config.NodeAddress(),
+		config:         config,
 	}
-	c.atomicConfig.Store(config)
 
 	return c
 }
@@ -76,23 +78,15 @@ func (c *clientManager) WaitUntilShutdown(shutdownContext context.Context) {
 	}
 }
 
-func (c *clientManager) config() config.GossipTransportConfig {
-	if c, ok := c.atomicConfig.Load().(config.GossipTransportConfig); ok {
-		return c
-	}
-
-	return nil
-}
-
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
 func (c *clientManager) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
 	c.Lock()
 	defer c.Unlock()
 
-	if c.config().NodeAddress().KeyForMap() != peerNodeAddress {
+	if c.nodeAddress.KeyForMap() != peerNodeAddress {
 		c.gossipPeers[peerNodeAddress] = peer
-		client := newClientConnection(peer, c.logger, c.metricRegistry, c.metrics, c.config())
+		client := newClientConnection(peer, c.logger, c.metricRegistry, c.metrics, c.config)
 		c.peers[peerNodeAddress] = client
 		client.connect(bgCtx)
 	}
@@ -109,8 +103,8 @@ func (c *clientManager) updateTopology(bgCtx context.Context, newPeers GossipPee
 	}
 }
 
-func (c *clientManager) connectAll(parent context.Context) {
-	for peerNodeAddress, peer := range c.gossipPeers {
+func (c *clientManager) connectAll(parent context.Context, peers GossipPeers) {
+	for peerNodeAddress, peer := range peers {
 		c.connectForever(parent, peerNodeAddress, peer)
 	}
 }

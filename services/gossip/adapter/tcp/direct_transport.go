@@ -41,13 +41,11 @@ func NewDirectTransport(parent context.Context, config config.GossipTransportCon
 		server:  newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
 	}
 
-	t.server.startSupervisedMainLoop(parent)
-
-	// server goroutine
 	t.Supervise(t.server)
 	t.Supervise(t.clients)
 
-	t.clients.connectAll(parent) // client goroutines
+	t.clients.connectAll(parent, config.GossipPeers()) // client goroutines
+	t.server.startSupervisedMainLoop(parent)           // server goroutine
 
 	return t
 }
