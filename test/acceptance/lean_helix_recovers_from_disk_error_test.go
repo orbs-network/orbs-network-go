@@ -25,6 +25,9 @@ func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 		AllowingErrors(
 			"failed to commit block received via sync",
 			"cannot get elected validators from system contract", // LH tries to read state from a block height that has not been properly persisted and therefore, fails
+			".*contract returned error.*",
+			".*cannot get ordered committee.*",
+			".*",
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			r := rand.NewControlledRand(t)
@@ -49,7 +52,7 @@ func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 			inspectFailedWriteAttempts := 2
 			for i := 0; i < inspectFailedWriteAttempts; i++ {
 				unwrittenBlock := waitForUnwrittenBlock(ctx, t, blocksWhichFailedToPersist)
-
+				t.Log("Detected an unwritten block height ", unwrittenBlock.ResultsBlock.Header.BlockHeight())
 				// typically all block attempts will be of the next expected height. but we are tolerant to previously written block heights as well since they may be retried due to sync race conditions
 				require.True(t, heightOf(unwrittenBlock) <= lastWrittenHeight+1, "any block write attempt is expected to be of (at most) the next unwritten height")
 			}

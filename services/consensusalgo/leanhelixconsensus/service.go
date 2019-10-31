@@ -208,7 +208,7 @@ func (s *Service) HandleLeanHelixMessage(ctx context.Context, input *gossiptopic
 	return nil, nil
 }
 
-func (s *Service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) {
+func (s *Service) onCommit(ctx context.Context, block lh.Block, blockProof []byte) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("YEYYYY CONSENSUS!!!! will save to block storage", logfields.BlockHeight(primitives.BlockHeight(block.Height())))
 	blockPairWrapper := block.(*BlockPairWrapper)
@@ -221,11 +221,13 @@ func (s *Service) onCommit(ctx context.Context, block lh.Block, blockProof []byt
 	err := s.saveToBlockStorage(ctx, blockPair)
 	if err != nil {
 		logger.Info("onCommit - error saving block to storage", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Error(err))
+		return err // TODO add metrics for storage failure
 	}
 	now := time.Now()
 	s.metrics.lastCommittedTime.Update(now.UnixNano())
 	s.metrics.timeSinceLastCommitMillis.RecordSince(s.lastCommitTime)
 	s.lastCommitTime = now
+	return nil
 }
 
 func CreateResultsBlockProof(blockPair *protocol.BlockPairContainer, blockProof []byte) *protocol.ResultsBlockProof {
