@@ -1,7 +1,7 @@
-package native
+package call
 
 import (
-	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
+	"github.com/orbs-network/orbs-network-go/services/processor/arguments"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"math/big"
@@ -36,8 +36,8 @@ func TestPrepareMethodArgumentsAndCall_SimpleOneInputArg(t *testing.T) {
 
 	for i := range tests {
 		cTest := tests[i]
-		args := sdk.ArgsToArgumentArray(cTest.value)
-		inValues, err := prepareMethodInputArgsForCall(cTest.methodInstance, args, "funcName")
+		args := arguments.ArgsToArgumentArray(cTest.value)
+		inValues, err := PrepareMethodInputArgsForCall(cTest.methodInstance, args, "funcName")
 		if cTest.shouldErr {
 			require.Error(t, err, "should fail to parse %s", cTest.name)
 		} else {
@@ -76,7 +76,7 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 
 	for i := range tests {
 		cTest := tests[i]
-		outputArgs, err := createMethodOutputArgs(cTest.methodInstance, []reflect.Value{reflect.ValueOf(cTest.value)}, "funcName")
+		outputArgs, err := CreateMethodOutputArgs(cTest.methodInstance, []reflect.Value{reflect.ValueOf(cTest.value)}, "funcName")
 		if cTest.shouldErr {
 			require.Error(t, err, "should fail to parse %s", cTest.name)
 		} else {
@@ -89,9 +89,9 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 // more complex cases
 func TestPrepareMethodArgumentsForCallWithTwoByteArrays(t *testing.T) {
 	methodInstance := func(a []byte, b []byte) {}
-	args := sdk.ArgsToArgumentArray([]byte("one"), []byte("two"))
+	args := arguments.ArgsToArgumentArray([]byte("one"), []byte("two"))
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, []byte("one"), inValues[0].Interface())
@@ -101,15 +101,15 @@ func TestPrepareMethodArgumentsForCallWithTwoByteArrays(t *testing.T) {
 func TestPrepareMethodArgumentsForCall_OneInputExpected_IncorrectNumberOfArgs(t *testing.T) {
 	methodInstance := func(a uint32) {}
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(uint32(1997), uint32(1994)), "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(uint32(1997), uint32(1994)), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received more")
 	require.Nil(t, inValues)
 
-	inValues, err = prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(uint32(1997), "hello"), "funcName")
+	inValues, err = PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(uint32(1997), "hello"), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received more")
 	require.Nil(t, inValues)
 
-	inValues, err = prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(), "funcName")
+	inValues, err = PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received less")
 	require.Nil(t, inValues)
 }
@@ -117,15 +117,15 @@ func TestPrepareMethodArgumentsForCall_OneInputExpected_IncorrectNumberOfArgs(t 
 func TestPrepareMethodArgumentsForCall_TwoInputExpected_IncorrectNumberOfArgs(t *testing.T) {
 	methodInstance := func(a uint32, b []byte) {}
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(uint32(1)), "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(uint32(1)), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received less")
 	require.Nil(t, inValues)
 
-	inValues, err = prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(), "funcName")
+	inValues, err = PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received less")
 	require.Nil(t, inValues)
 
-	inValues, err = prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(uint32(32), []byte{0x1}, uint32(5)), "funcName")
+	inValues, err = PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(uint32(32), []byte{0x1}, uint32(5)), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received more")
 	require.Nil(t, inValues)
 }
@@ -133,9 +133,9 @@ func TestPrepareMethodArgumentsForCall_TwoInputExpected_IncorrectNumberOfArgs(t 
 // variadic cases
 func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLength(t *testing.T) {
 	methodInstance := func(a ...string) {}
-	args := sdk.ArgsToArgumentArray("one", "two")
+	args := arguments.ArgsToArgumentArray("one", "two")
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, "one", inValues[0].Interface())
@@ -144,40 +144,40 @@ func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLength(t *testing.T) {
 
 func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLengthPassingNoArguments(t *testing.T) {
 	methodInstance := func(a ...string) {}
-	args := sdk.ArgsToArgumentArray()
+	args := arguments.ArgsToArgumentArray()
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 0)
 }
 
 func TestPrepareMethodArgumentsForCall_WithArrayOfVariableLengthPassingArgumentsOfDifferentType(t *testing.T) {
 	methodInstance := func(a uint32, b ...string) {}
-	args := sdk.ArgsToArgumentArray(uint32(1), "hello", uint32(2))
+	args := arguments.ArgsToArgumentArray(uint32(1), "hello", uint32(2))
 
-	_, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	_, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.EqualError(t, err, "method 'funcName' expects arg 2 to be string but it has (Uint32Value)2")
 }
 
 func TestPrepareMethodArgumentsForCall_WithNormalArgsAndArrayOfVariableLength_EmptyInput(t *testing.T) {
 	methodInstance := func(a string, b ...string) {}
-	_, err := prepareMethodInputArgsForCall(methodInstance, sdk.ArgsToArgumentArray(), "funcName")
+	_, err := PrepareMethodInputArgsForCall(methodInstance, arguments.ArgsToArgumentArray(), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes at least 1 args but received less")
 
 	methodInstance2 := func(a uint32, b ...string) {}
-	_, err = prepareMethodInputArgsForCall(methodInstance2, sdk.ArgsToArgumentArray(), "funcName")
+	_, err = PrepareMethodInputArgsForCall(methodInstance2, arguments.ArgsToArgumentArray(), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes at least 1 args but received less")
 
 	methodInstance3 := func(a string, b string, c ...string) {}
-	_, err = prepareMethodInputArgsForCall(methodInstance3, sdk.ArgsToArgumentArray("hello"), "funcName")
+	_, err = PrepareMethodInputArgsForCall(methodInstance3, arguments.ArgsToArgumentArray("hello"), "funcName")
 	require.EqualError(t, err, "method 'funcName' takes at least 2 args but received less")
 }
 
 func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 	methodInstance := func(a ...[]byte) {}
-	args := sdk.ArgsToArgumentArray([]byte("one"), []byte("two"))
+	args := arguments.ArgsToArgumentArray([]byte("one"), []byte("two"))
 
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	inValues, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, []byte("one"), inValues[0].Interface())
@@ -186,8 +186,8 @@ func TestPrepareMethodArgumentsForCallWithArrayOfByteArrays(t *testing.T) {
 
 func TestPrepareMethodArgumentsForCallWithArrayOfArraysOfStringsPassingTwoByteArrays(t *testing.T) {
 	methodInstance := func(a ...[]string) {}
-	args := sdk.ArgsToArgumentArray([]byte("one"), []byte("two"))
+	args := arguments.ArgsToArgumentArray([]byte("one"), []byte("two"))
 
-	_, err := prepareMethodInputArgsForCall(methodInstance, args, "funcName")
+	_, err := PrepareMethodInputArgsForCall(methodInstance, args, "funcName")
 	require.EqualError(t, err, "method 'funcName' expects arg 0 to be [][]byte but it has (BytesValue)6f6e65")
 }

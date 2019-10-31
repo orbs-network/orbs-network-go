@@ -4,48 +4,19 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package native
+package call
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
 	"math/big"
 	"reflect"
 )
 
-func processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
+var bigIntType = reflect.TypeOf(big.NewInt(0))
 
-	defer func() {
-		if r := recover(); r != nil {
-			contractOutputErr = errors.Errorf("%s", r)
-			contractOutputArgs = createMethodOutputArgsWithString(contractOutputErr.Error())
-		}
-	}()
-
-	// verify input args
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, functionNameForErrors)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// execute the call
-	outValues := reflect.ValueOf(methodInstance).Call(inValues)
-
-	// create output args
-	contractOutputArgs, err = createMethodOutputArgs(methodInstance, outValues, functionNameForErrors)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// done
-	return contractOutputArgs, contractOutputErr, err
-}
-
-var	bigIntType = reflect.TypeOf(big.NewInt(0))
-
-func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
+func PrepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
 	res := []reflect.Value{}
 	methodType := reflect.ValueOf(methodInstance).Type()
 
@@ -199,7 +170,7 @@ func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *pr
 	return res, nil
 }
 
-func createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
+func CreateMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
 	res := []*protocol.ArgumentBuilder{}
 	for i, arg := range args {
 		k := arg.Kind()
@@ -242,12 +213,4 @@ func createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.
 	return (&protocol.ArgumentArrayBuilder{
 		Arguments: res,
 	}).Build(), nil
-}
-
-func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
-	return (&protocol.ArgumentArrayBuilder{
-		Arguments: []*protocol.ArgumentBuilder{
-			{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
-		},
-	}).Build()
 }

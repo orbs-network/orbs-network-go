@@ -10,6 +10,8 @@ import (
 	"context"
 	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/services/processor/arguments"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/call"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -26,7 +28,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 
 	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
-	argsArgumentArray := ArgsToArgumentArray(args...)
+	argsArgumentArray := arguments.ArgsToArgumentArray(args...)
 	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
 	if err != nil {
 		panic(errors.Wrap(err, "incorrect types given to event emit").Error())
@@ -55,10 +57,8 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	}
 }
 
-// FIXME should be implemented
+// FIXME remove go processor-specific code
 func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
-	return nil
-	//	panic("not implemented")
-	//	_, err := prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
-	//	return err
+	_, err := call.PrepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
+	return err
 }
