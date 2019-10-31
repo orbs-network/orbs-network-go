@@ -14,7 +14,6 @@ import (
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -32,7 +31,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 		t.Skip("Not running with Docker, Ganache is unavailable")
 	}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newRpcEthereumConnectorHarness(parent.Logger, ConfigForExternalRPCConnection())
 			h.moveBlocksInGanache(t, ctx, 100, 1) // pad Ganache nicely so that any previous test doesn't affect this one
@@ -95,7 +94,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 		t.Skip("Not running with Docker, Ganache is unavailable")
 	}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			cfg := ConfigForExternalRPCConnection()
 			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)
@@ -159,7 +158,7 @@ func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T)
 		t.Skip("Not running with Docker, Ganache is unavailable")
 	}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			cfg := ConfigForExternalRPCConnection()
 			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)

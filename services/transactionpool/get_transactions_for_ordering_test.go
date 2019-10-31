@@ -9,7 +9,6 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -19,7 +18,7 @@ import (
 )
 
 func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -42,7 +41,7 @@ func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 }
 
 func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -66,7 +65,7 @@ func TestTransactionBatchFetchesUpToSizeLimit(t *testing.T) {
 }
 
 func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -86,7 +85,7 @@ func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T
 }
 
 func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -106,7 +105,7 @@ func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
 }
 
 func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -131,7 +130,7 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 }
 
 func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			tx1 := builders.TransferTransaction().Build()
 			tx2 := builders.TransferTransaction().Build()
@@ -145,7 +144,7 @@ func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *te
 }
 
 func TestTransactionBatchNotifiesOnRejectedTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		h1 := digest.CalcTxHash(builders.TransferTransaction().Build().Transaction())
 		h2 := digest.CalcTxHash(builders.TransferTransaction().Build().Transaction())
 

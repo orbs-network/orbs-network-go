@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,7 +20,7 @@ import (
 )
 
 func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
@@ -44,7 +43,7 @@ func TestProcessQuery_WhenContractNotDeployed(t *testing.T) {
 }
 
 func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
@@ -71,7 +70,7 @@ func TestProcessTransactionSet_WhenContractNotDeployedAndNotPreBuiltNativeContra
 }
 
 func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContract(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
@@ -99,7 +98,7 @@ func TestSdkService_CallMethodWhenContractNotDeployedAndNotPreBuiltNativeContrac
 }
 
 func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
@@ -129,7 +128,7 @@ func TestAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.
 }
 
 func TestFailingAutoDeployPreBuiltNativeContractDuringProcessTransactionSet(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			parent.AllowErrorsMatching("failed to lazily deploy system contract")
 			h := newHarness(parent.Logger)

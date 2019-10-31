@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -19,7 +18,7 @@ import (
 )
 
 func TestProcessCall_WithUnknownContractFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			input := ProcessCallInput().WithUnknownContract().Build()
@@ -34,7 +33,7 @@ func TestProcessCall_WithUnknownContractFails(t *testing.T) {
 }
 
 func TestGetContractInfo_WithUnknownContractFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			input := getContractInfoInput().WithUnknownContract().Build()
@@ -49,7 +48,7 @@ func TestGetContractInfo_WithUnknownContractFails(t *testing.T) {
 }
 
 func TestProcessCall_WithDeployableContractThatCompiles(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			h.compiler.ProvideFakeContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM)))
