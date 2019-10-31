@@ -132,12 +132,12 @@ func (t *transportServer) IsListening() bool {
 
 func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
 	for {
-
 		ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
 		logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 
-		if parentCtx.Err() != nil {
+		if ctx.Err() != nil {
 			logger.Info("ending server main loop (system shutting down)")
+			return
 		}
 
 		conn, err := listener.Accept()
@@ -168,6 +168,9 @@ func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Liste
 }
 
 func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net.Conn) {
+	if ctx.Err() != nil {
+		return // in case the server is shutting down but still managed to accept a final connection
+	}
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
@@ -272,12 +275,13 @@ func (t *transportServer) startSupervisedMainLoop(parent context.Context) {
 func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
 	t.Lock()
 	defer t.Unlock()
-	t.cancel()
-	err := t.netListener.Close()
+	l := t.netListener
+	t.netListener = nil
+	err := l.Close()
 	if err != nil {
 		t.logger.Error("Failed to close direct transport lister", log.Error(err))
 	}
-	t.netListener = nil
+	t.cancel()
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {

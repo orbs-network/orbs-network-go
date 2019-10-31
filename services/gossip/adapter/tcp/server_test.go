@@ -180,7 +180,7 @@ func (s *serverCfg) GossipNetworkTimeout() time.Duration {
 	return 100 * time.Millisecond
 }
 
-func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
+func TestDirectServer_PanicsOnPortAlreadyInUse(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 
 		l1, err := net.Listen("tcp", ":0")
@@ -200,7 +200,7 @@ func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
 	})
 }
 
-func TestServer_ShutsDownWithinTimeout_WhenHasZeroConnections(t *testing.T) {
+func TestDirectServer_ShutsDownWithinTimeout_WhenHasZeroConnections(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) { // not using ConcurrencyHarness on purpose so that this test can block until shutdown
 		cfg := &serverCfg{}
 		ctx, cancel := context.WithCancel(context.Background())
@@ -219,7 +219,7 @@ func TestServer_ShutsDownWithinTimeout_WhenHasZeroConnections(t *testing.T) {
 	})
 }
 
-func TestServer_KeepsAcceptingNewConnections_AfterAllClientConnectionsAreClosed(t *testing.T) {
+func TestDirectServer_KeepsAcceptingNewConnections_AfterAllClientConnectionsAreClosed(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		cfg := &serverCfg{}
 
@@ -244,7 +244,7 @@ func TestServer_KeepsAcceptingNewConnections_AfterAllClientConnectionsAreClosed(
 	})
 }
 
-func TestServer_DoesNotHang_WhenWaitingForConnectionsToClose_OnShutDown(t *testing.T) {
+func TestDirectServer_DoesNotHang_WhenWaitingForConnectionsToClose_OnShutDown(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		cfg := &serverCfg{}
 
