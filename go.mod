@@ -14,13 +14,13 @@ require (
 	github.com/elastic/gosigar v0.10.4 // indirect
 	github.com/ethereum/go-ethereum v1.8.18-0.20181109105107-1ff152f3a43e
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/google/go-cmp v0.3.1
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
 	github.com/karalabe/usb v0.0.0-20190819132248-550797b1cad8 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
+	github.com/orbs-network/contract-external-libraries-go v0.0.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/lean-helix-go v0.2.3

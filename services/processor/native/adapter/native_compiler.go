@@ -68,7 +68,10 @@ func NewNativeCompiler(config Config, parent log.Logger, factory metric.Factory)
 	}
 
 	if config.ProcessorPerformWarmUpCompilation() {
-		c.warmUpCompilationCache() // so next compilations take 200 ms instead of 2 sec
+		warmupErr := c.warmUpCompilationCache(config.MaxWarmupCompilationTime()) // so next compilations take 200 ms instead of 2 sec
+		if warmupErr != nil {
+			panic(warmupErr)
+		}
 	} else {
 		logger.Info("skipping warm-up compilation")
 	}
@@ -76,17 +79,43 @@ func NewNativeCompiler(config Config, parent log.Logger, factory metric.Factory)
 	return c
 }
 
-func (c *nativeCompiler) warmUpCompilationCache() {
-	ctx, cancel := context.WithTimeout(context.Background(), MAX_WARM_UP_COMPILATION_TIME)
+func (c *nativeCompiler) warmUpCompilationCache(maxWarmupTime time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), maxWarmupTime)
 	defer cancel()
+	var err error
+	// Since we retry endlessly we want to collect the latest error otherwise it be overriden by
+	// the context line exceeded error message.
+	var lastError error
+	var warmupAttempts = 0
 
-	start := time.Now()
-	_, err := c.Compile(ctx, string(contracts.SourceCodeForNop()))
-	c.metrics.lastWarmUpTimeMs.Update(time.Since(start).Nanoseconds() / int64(time.Millisecond))
+	for {
+		warmupAttempts++
+		c.logger.Info("performing warmup loop iteration..")
+		start := time.Now()
+		_, err = c.Compile(ctx, string(contracts.SourceCodeForNop()))
+		c.metrics.lastWarmUpTimeMs.Update(time.Since(start).Nanoseconds() / int64(time.Millisecond))
+
+		lastError = err
+
+		if err == nil {
+			break
+		}
+
+		if ctx.Err() != nil {
+			err = ctx.Err()
+			break
+		}
+	}
 
 	if err != nil {
 		c.logger.Error("warm up compilation on init failed", log.Error(err))
+		c.logger.Error("last error received from warm up compilation", log.Error(lastError))
+		return err
 	}
+
+	c.logger.Info(fmt.Sprintf("warm up completed after %d attempts", warmupAttempts))
+
+	return nil
 }
 
 func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
@@ -178,7 +207,7 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	// compile
-	args := append([]string{"build", "-buildmode=plugin", "-mod=readonly", "-o", soFilePath}, sourceFilePaths...)
+	args := append([]string{"build", "-buildmode=plugin", /*"-mod=readonly",*/ "-o", soFilePath}, sourceFilePaths...)
 	out, err := runGoCommand(ctx, artifactsPath, args...)
 	if err != nil {
 		buildOutput := string(out)

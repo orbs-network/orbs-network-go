@@ -23,6 +23,7 @@ type NodeConfig interface {
 	GenesisValidatorNodes() map[string]ValidatorNode
 	GossipPeers() map[string]GossipPeer
 	TransactionExpirationWindow() time.Duration
+	MaxWarmupCompilationTime() time.Duration
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType

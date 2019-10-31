@@ -92,6 +92,8 @@ const (
 	PROCESSOR_ARTIFACT_PATH               = "PROCESSOR_ARTIFACT_PATH"
 	PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS = "PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS"
 	PROCESSOR_PERFORM_WARM_UP_COMPILATION = "PROCESSOR_PERFORM_WARM_UP_COMPILATION"
+	MAX_WARMUP_COMPILATION_TIME			  = 15 * time.Second
+
 
 	METRICS_REPORT_INTERVAL = "METRICS_REPORT_INTERVAL"
 
@@ -351,6 +353,10 @@ func (c *config) ProcessorSanitizeDeployedContracts() bool {
 
 func (c *config) ProcessorPerformWarmUpCompilation() bool {
 	return c.kv[PROCESSOR_PERFORM_WARM_UP_COMPILATION].BoolValue
+}
+
+func (c *config) MaxWarmupCompilationTime() time.Duration {
+	return MAX_WARMUP_COMPILATION_TIME
 }
 
 func (c *config) GossipListenPort() uint16 {

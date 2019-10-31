@@ -138,7 +138,7 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 	mainGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "go.mod")
 	sdkVersion := getMainProjectSDKVersion(mainGoModPath)
 
-	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", "go.mod.template")
+	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", "go.mod.template.experimental")
 	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")
 	err = CopyFile(sourceGoModPath, targetGoModPath)
 	if err != nil {

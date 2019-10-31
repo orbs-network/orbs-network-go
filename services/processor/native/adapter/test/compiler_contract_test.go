@@ -87,7 +87,7 @@ type compilerContractHarness struct {
 
 func aNativeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 	tmpDir := test.CreateTempDirForTest(t)
-	cfg := &hardcodedConfig{artifactPath: tmpDir}
+	cfg := &hardcodedConfig{artifactPath: tmpDir, maxWarmupTime: 15 * time.Second}
 	compiler := adapter.NewNativeCompiler(cfg, logger, metric.NewRegistry())
 	return &compilerContractHarness{
 		compiler: compiler,
@@ -95,6 +95,21 @@ func aNativeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 			os.RemoveAll(tmpDir)
 		},
 	}
+}
+
+func TestNativeCompilerPanicOnWarmupCompilationFailure(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Warmup compilation did not panic due to short allowed compilation time")
+		}
+	}()
+
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		parent.AllowErrorsMatching("deadline exceeded")
+		tmpDir := test.CreateTempDirForTest(t)
+		cfg := &hardcodedConfig{artifactPath: tmpDir, maxWarmupTime: 20 * time.Nanosecond}
+		adapter.NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+	})
 }
 
 func aFakeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
@@ -112,7 +127,12 @@ func aFakeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 }
 
 type hardcodedConfig struct {
-	artifactPath string
+	artifactPath  string
+	maxWarmupTime time.Duration
+}
+
+func (c *hardcodedConfig) MaxWarmupCompilationTime() time.Duration {
+	return c.maxWarmupTime
 }
 
 func (c *hardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
