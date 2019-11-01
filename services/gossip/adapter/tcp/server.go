@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"net"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -40,35 +39,6 @@ type transportServer struct {
 	metrics incomingConnectionMetrics
 	config  serverConfig
 	cancel  context.CancelFunc
-
-	connTracker *connectionTracker
-}
-
-type connectionTracker struct {
-	connectionCount int32 // atomic ops only
-	closed          chan struct{}
-}
-
-func (t *connectionTracker) inc() {
-	atomic.AddInt32(&t.connectionCount, 1)
-}
-
-func (t *connectionTracker) dec() {
-	if atomic.AddInt32(&t.connectionCount, -1) == 0 {
-		t.closed <- struct{}{}
-	}
-}
-
-func (t *connectionTracker) WaitUntilShutdown(shutdownCtx context.Context) {
-	if atomic.LoadInt32(&t.connectionCount) > 0 { // handling the edge case where no connection was opened before the system was shutdown
-		select {
-		case <-t.closed:
-		case <-shutdownCtx.Done():
-			if shutdownCtx.Err() == context.DeadlineExceeded {
-				panic(fmt.Sprintf("failed to shutdown server connection manager before timeout"))
-			}
-		}
-	}
 }
 
 type incomingConnectionMetrics struct {
@@ -80,13 +50,10 @@ type incomingConnectionMetrics struct {
 
 func newServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
 	server := &transportServer{
-		config:      config,
-		logger:      logger,
-		metrics:     createServerMetrics(registry),
-		connTracker: &connectionTracker{closed: make(chan struct{})},
+		config:  config,
+		logger:  logger,
+		metrics: createServerMetrics(registry),
 	}
-
-	server.Supervise(server.connTracker)
 
 	return server
 }
@@ -131,39 +98,52 @@ func (t *transportServer) IsListening() bool {
 }
 
 func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
-	for {
-		ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
-		logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
+	ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
+	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 
-		if ctx.Err() != nil {
-			logger.Info("ending server main loop (system shutting down)")
-			return
-		}
+	numOfConnections := 0
+	connClosed := make(chan struct{})
+	connCtx, closeAllDanglingConnections := context.WithCancel(parentCtx)
 
-		conn, err := listener.Accept()
-		if err != nil {
-			if !t.IsListening() {
-				logger.Info("incoming connection accept stopped since server is shutting down")
-				return
+	defer func() {
+		closeAllDanglingConnections()
+		for ; numOfConnections > 0; numOfConnections-- {
+			select {
+			case <-connClosed:
 			}
-			t.metrics.acceptErrors.Inc()
-			logger.Info("incoming connection accept error", log.Error(err))
-			continue
 		}
+		logger.Info("all connections have been closed, returning")
+	}()
 
-		if ctx.Err() != nil {
-			logger.Info("incoming connection while system is shutting down, rejecting", log.Stringable("remote-addr", conn.RemoteAddr()))
-			_ = conn.Close()
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("server main loop quitting, all connections have been closed - system shutting down")
 			return
-		}
+		default:
+			conn, err := listener.Accept()
+			if err != nil {
+				if !t.IsListening() {
+					logger.Info("incoming connection accept stopped since server is shutting down")
+					return
+				}
+				t.metrics.acceptErrors.Inc()
+				logger.Info("incoming connection accept error", log.Error(err))
+				continue
+			}
 
-		logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
-		t.metrics.acceptSuccesses.Inc()
-		govnr.Once(logfields.GovnrErrorer(logger), func() {
-			t.connTracker.inc()
-			t.handleIncomingConnection(ctx, conn)
-			t.connTracker.dec()
-		})
+			logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
+			t.metrics.acceptSuccesses.Inc()
+			numOfConnections++
+			govnr.Once(logfields.GovnrErrorer(logger), func() {
+				defer func() {
+					_ = conn.Close()
+					connClosed <- struct{}{}
+				}()
+
+				t.handleIncomingConnection(connCtx, conn)
+			})
+		}
 	}
 }
 
@@ -182,7 +162,6 @@ func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net
 		if err != nil {
 			t.metrics.transportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-			_ = conn.Close()
 
 			return
 		}
