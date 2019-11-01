@@ -60,7 +60,7 @@ func createClientMetrics(registry metric.Registry) *clientMetrics {
 
 func (c *clientManager) GracefulShutdown(shutdownContext context.Context) {
 	c.Lock()
-	c.Unlock()
+	defer c.Unlock()
 	for _, client := range c.peers {
 		client.disconnect()
 	}
