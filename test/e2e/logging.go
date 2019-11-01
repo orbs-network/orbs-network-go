@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"net"
 	"os"
 )
 
@@ -54,5 +55,15 @@ func (t *loggerRandomer) Name() string {
 }
 
 func (t *loggerRandomer) aRandomPort() int {
-	return firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE*2-firstEphemeralPort)
+	for {
+		port := firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE*2-firstEphemeralPort)
+		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err == nil {
+			_ = l.Close()
+			t.logger.Info("port is free, returning", log.Int("port", port))
+			return port
+		} else {
+			t.logger.Info("port is already in use, retrying a different port", log.Int("port", port))
+		}
+	}
 }
