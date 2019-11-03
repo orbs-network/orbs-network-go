@@ -109,5 +109,9 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 		net.nodes = append(net.nodes, node)
 	}
 
+	for _, node := range net.nodes {
+		node.Start()
+	}
+
 	return net
 }
