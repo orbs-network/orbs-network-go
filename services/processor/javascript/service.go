@@ -24,6 +24,7 @@ var LogTag = log.Service("processor-javascript")
 
 type service struct {
 	logger log.Logger
+	config config.JavascriptProcessorConfig
 
 	mutex               *sync.RWMutex
 	sdkHandler          handlers.ContractSdkCallHandler
@@ -48,6 +49,7 @@ func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessor
 		mutex:               &sync.RWMutex{},
 		contractsUnderMutex: make(map[primitives.ContractName]string),
 		worker:              worker,
+		config:              config,
 	}
 }
 

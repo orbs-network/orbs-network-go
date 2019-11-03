@@ -120,8 +120,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	}
 
 	// setup context for the contract sdk
-	// FIXME move SDK to service property
-	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), sdk.NewSDK(s.sdkHandler), contractInfo.Permission)
+	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), sdk.NewSDK(s.sdkHandler, s.config), contractInfo.Permission)
 	defer sdkContext.PopContext(sdkContext.ContextId(input.ContextId))
 
 	start := time.Now()

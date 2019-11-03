@@ -51,7 +51,7 @@ func (s *service) SdkEnvGetBlockTimestamp(executionContextId sdkContext.ContextI
 }
 
 func (s *service) SdkEnvGetVirtualChainId(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) uint32 {
-	return uint32(42) //s.config.VirtualChainId())
+	return uint32(s.config.VirtualChainId())
 }
 
 func (s *service) SdkEnvGetBlockProposerAddress(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) []byte {

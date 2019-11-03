@@ -30,7 +30,7 @@ func loadPlugin(path string) (func(handler context.SdkHandler) processor.Statele
 }
 
 func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.ArgumentArray) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
-	w := s.worker(sdk.NewSDK(s.sdkHandler))
+	w := s.worker(sdk.NewSDK(s.sdkHandler, s.config))
 	contractOutArgs, contractOutErr, err := w.ProcessMethodCall(executionContextId, code, methodName, args)
 	return contractOutArgs, contractOutErr, err
 }

@@ -25,9 +25,10 @@ type service struct {
 	config     SDKConfig
 }
 
-func NewSDK(handler handlers.ContractSdkCallHandler) sdkContext.SdkHandler {
+func NewSDK(handler handlers.ContractSdkCallHandler, config SDKConfig) sdkContext.SdkHandler {
 	return &service{
 		sdkHandler: handler,
+		config:     config,
 	}
 }
 
