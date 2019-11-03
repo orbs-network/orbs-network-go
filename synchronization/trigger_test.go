@@ -80,10 +80,10 @@ func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		ctx, cancel := context.WithCancel(parent)
-		cancel() // send a cancelled context to reduce chances of trigger being called even once
 		x := 0
 		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
 		harness.Supervise(p)
+		cancel()
 		time.Sleep(3 * time.Millisecond)
 		require.Equal(t, 0, x, "expected no ticks")
 		p.Stop()
