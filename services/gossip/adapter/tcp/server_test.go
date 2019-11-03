@@ -264,3 +264,22 @@ func TestDirectServer_DoesNotHang_WhenWaitingForConnectionsToClose_OnShutDown(t 
 		_ = conn.Close()
 	})
 }
+
+func TestDirectServer_DoesNotAcceptNewConnections_AfterShutdown(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		cfg := &serverCfg{}
+
+		server := newServer(cfg, harness.Logger, metric.NewRegistry())
+		harness.Supervise(server)
+		server.startSupervisedMainLoop(ctx)
+
+		require.True(t, test.Eventually(100*time.Millisecond, func() bool {
+			return server.IsListening()
+		}))
+
+		server.GracefulShutdown(ctx)
+
+		_, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", server.getPort()))
+		require.Error(t, err, "should not have succeeded connecting to server")
+	})
+}

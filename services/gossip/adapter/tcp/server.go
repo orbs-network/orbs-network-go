@@ -36,10 +36,10 @@ type transportServer struct {
 	listener    adapter.TransportListener
 	netListener net.Listener
 
-	logger  log.Logger
-	metrics incomingConnectionMetrics
-	config  serverConfig
-	cancel  context.CancelFunc
+	logger         log.Logger
+	metrics        incomingConnectionMetrics
+	config         serverConfig
+	shutdownServer context.CancelFunc
 }
 
 type incomingConnectionMetrics struct {
@@ -116,40 +116,38 @@ func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Liste
 	}()
 
 	for {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			logger.Info("server main loop quitting because system is shutting down")
 			return
-		default:
-			conn, err := listener.Accept()
-			if err != nil {
-				if !t.IsListening() {
-					logger.Info("incoming connection accept stopped since server is shutting down")
-					return
-				}
-				t.metrics.acceptErrors.Inc()
-				logger.Info("incoming connection accept error", log.Error(err))
-				continue
-			}
-
-			logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
-			t.metrics.acceptSuccesses.Inc()
-
-			atomic.AddInt32(&numOfConnections, 1)
-
-			govnr.Once(logfields.GovnrErrorer(logger), func() {
-				willReconnect := t.handleIncomingConnection(connCtx, conn)
-				if willReconnect {
-					atomic.AddInt32(&numOfConnections, -1) // don't have to wait for this connection to close
-				} else {
-					connClosed <- struct{}{}
-				}
-			})
 		}
+		conn, err := listener.Accept()
+		if err != nil {
+			if !t.IsListening() {
+				logger.Info("incoming connection accept stopped since server is shutting down")
+				return
+			}
+			t.metrics.acceptErrors.Inc()
+			logger.Info("incoming connection accept error", log.Error(err))
+			continue
+		}
+
+		logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
+		t.metrics.acceptSuccesses.Inc()
+
+		atomic.AddInt32(&numOfConnections, 1)
+
+		govnr.Once(logfields.GovnrErrorer(logger), func() {
+			t.handleIncomingConnection(connCtx, conn)
+			if connCtx.Err() == nil { // server is not shutting down
+				atomic.AddInt32(&numOfConnections, -1) // don't have to wait for this connection to close
+			} else {
+				connClosed <- struct{}{}
+			}
+		})
 	}
 }
 
-func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net.Conn) bool {
+func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net.Conn) {
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
@@ -163,7 +161,7 @@ func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net
 			t.metrics.transportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 
-			return ctx.Err() == nil
+			return
 		}
 
 		// notify if not keepalive
@@ -240,7 +238,7 @@ func (t *transportServer) getListener() adapter.TransportListener {
 
 func (t *transportServer) startSupervisedMainLoop(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
-	t.cancel = cancel
+	t.shutdownServer = cancel
 
 	listener, err := t.listenForIncomingConnections(ctx)
 	if err != nil {
@@ -260,7 +258,7 @@ func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
 	if err != nil {
 		t.logger.Error("Failed to close direct transport lister", log.Error(err))
 	}
-	t.cancel()
+	t.shutdownServer()
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {

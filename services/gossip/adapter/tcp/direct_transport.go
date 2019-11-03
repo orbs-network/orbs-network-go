@@ -28,30 +28,29 @@ type DirectTransport struct {
 
 	logger log.Logger
 
-	clients *clientManager
-	server  *transportServer
+	outgoingConnections *outgoingConnections
+	server              *transportServer
 }
 
-func NewDirectTransport(parent context.Context, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {
+func NewDirectTransport(parentCtx context.Context, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {
 	logger := parentLogger.WithTags(LogTag)
 	t := &DirectTransport{
-		logger: logger,
-
-		clients: newClientManager(logger, registry, config),
-		server:  newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
+		logger:              logger,
+		outgoingConnections: newOutgoingConnections(logger, registry, config),
+		server:              newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
 	}
 
 	t.Supervise(t.server)
-	t.Supervise(t.clients)
+	t.Supervise(t.outgoingConnections)
 
-	t.clients.connectAll(parent, config.GossipPeers()) // client goroutines
-	t.server.startSupervisedMainLoop(parent)           // server goroutine
+	t.outgoingConnections.connectAll(parentCtx, config.GossipPeers()) // client goroutines
+	t.server.startSupervisedMainLoop(parentCtx)                       // server goroutine
 
 	return t
 }
 
 func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
-	t.clients.updateTopology(bgCtx, newPeers)
+	t.outgoingConnections.updateTopology(bgCtx, newPeers)
 }
 
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
@@ -62,7 +61,7 @@ func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, l
 }
 
 func (t *DirectTransport) Send(ctx context.Context, data *adapter.TransportData) error {
-	return t.clients.send(ctx, data)
+	return t.outgoingConnections.send(ctx, data)
 }
 
 func (t *DirectTransport) GetServerPort() int {
@@ -74,10 +73,10 @@ func (t *DirectTransport) IsServerListening() bool {
 }
 
 func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
-	t.clients.RLock()
-	defer t.clients.RUnlock()
+	t.outgoingConnections.RLock()
+	defer t.outgoingConnections.RUnlock()
 
-	for _, client := range t.clients.peers {
+	for _, client := range t.outgoingConnections.activeConnections {
 		if client.queue.disabled() {
 			return false
 		}
@@ -87,7 +86,7 @@ func (t *DirectTransport) allOutgoingQueuesEnabled() bool {
 
 func (t *DirectTransport) GracefulShutdown(shutdownContext context.Context) {
 	t.logger.Info("Shutting down")
-	t.clients.GracefulShutdown(shutdownContext)
+	t.outgoingConnections.GracefulShutdown(shutdownContext)
 	t.server.GracefulShutdown(shutdownContext)
 }
 
