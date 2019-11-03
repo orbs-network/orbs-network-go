@@ -22,17 +22,17 @@ import (
 	"time"
 )
 
-type clientConnectionConfig interface {
+type timingsConfig interface {
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
 	GossipConnectionKeepAliveInterval() time.Duration
 }
 
-type clientConnection struct {
+type outgoingConnection struct {
 	logger         log.Logger
 	metricRegistry metric.Registry
-	config         clientConnectionConfig
-	sharedMetrics  *metrics // TODO this is smelly, see how we can restructure metrics so that a client connection doesn't have to share the Transport's metrics
+	config         timingsConfig
+	sharedMetrics  *outgoingConnectionMetrics // TODO this is smelly, see how we can restructure metrics so that an outgoing connection doesn't have to share the parent metrics
 	queue          *transportQueue
 	peerHexAddress string
 	cancel         context.CancelFunc
@@ -43,7 +43,7 @@ type clientConnection struct {
 	closed chan struct{}
 }
 
-func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *metrics, transportConfig clientConnectionConfig) *clientConnection {
+func newOutgoingConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *outgoingConnectionMetrics, transportConfig timingsConfig) *outgoingConnection {
 	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
 	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
 
@@ -53,7 +53,7 @@ func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metric
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
-	client := &clientConnection{
+	client := &outgoingConnection{
 		logger:          logger,
 		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
@@ -67,23 +67,23 @@ func newClientConnection(peer config.GossipPeer, parentLogger log.Logger, metric
 	return client
 }
 
-func (c *clientConnection) connect(parent context.Context) {
+func (c *outgoingConnection) connect(parent context.Context) {
 	ctx, cancel := context.WithCancel(parent)
 	c.cancel = cancel
 
 	handle := govnr.Forever(ctx, fmt.Sprintf("TCP client for %s", c.peerHexAddress), logfields.GovnrErrorer(c.logger), func() {
-		c.clientMainLoop(ctx)
+		c.connectionMainLoop(ctx)
 	})
 	c.closed = handle.Done()
 	handle.MarkSupervised() //TODO use real supervision?
 }
 
-func (c *clientConnection) disconnect() chan struct{} {
+func (c *outgoingConnection) disconnect() chan struct{} {
 	c.cancel()
 	return c.closed
 }
 
-func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
+func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 	for {
 		if parentCtx.Err() != nil {
 			return // because otherwise the continue statement below could prevent us from ever shutting down
@@ -100,19 +100,19 @@ func (c *clientConnection) clientMainLoop(parentCtx context.Context) {
 			continue
 		}
 
-		if !c.clientHandleOutgoingConnection(ctx, conn) {
+		if !c.handleOutgoingConnection(ctx, conn) {
 			return
 		}
 	}
 }
 
 // returns true if should attempt reconnect on error
-func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, conn net.Conn) bool {
-	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
+func (c *outgoingConnection) handleOutgoingConnection(ctx context.Context, conn net.Conn) bool {
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx), log.Stringable("local-address", conn.LocalAddr()))
 	logger.Info("successful outgoing gossip transport connection")
 
-	c.sharedMetrics.activeOutgoingConnections.Inc()
-	defer c.sharedMetrics.activeOutgoingConnections.Dec()
+	c.sharedMetrics.activeCount.Inc()
+	defer c.sharedMetrics.activeCount.Dec()
 
 	c.queue.OnNewConnection(ctx)
 	defer c.queue.Disable()
@@ -143,7 +143,7 @@ func (c *clientConnection) clientHandleOutgoingConnection(ctx context.Context, c
 	}
 }
 
-func (c *clientConnection) popMessageFromQueue(ctx context.Context) *adapter.TransportData {
+func (c *outgoingConnection) popMessageFromQueue(ctx context.Context) *adapter.TransportData {
 	ctxWithKeepAliveTimeout, cancelCtxWithKeepAliveTimeout := context.WithTimeout(ctx, c.config.GossipConnectionKeepAliveInterval())
 	defer cancelCtxWithKeepAliveTimeout()
 
@@ -155,7 +155,7 @@ func shouldKeepAlive(ctx context.Context) bool {
 	return ctx.Err() == nil
 }
 
-func (c *clientConnection) onDisconnect(logger log.Logger) bool {
+func (c *outgoingConnection) onDisconnect(logger log.Logger) bool {
 	logger.Info("client loop stopped since a disconnect was requested (topology change or system shutdown)")
 	c.metricRegistry.Remove(c.sendErrors)
 	c.metricRegistry.Remove(c.sendQueueErrors)
@@ -163,29 +163,29 @@ func (c *clientConnection) onDisconnect(logger log.Logger) bool {
 	return false
 }
 
-func (c *clientConnection) reconnectAfterKeepAliveFailure(logger log.Logger, err error) bool {
-	c.sharedMetrics.outgoingConnectionKeepaliveErrors.Inc()
+func (c *outgoingConnection) reconnectAfterKeepAliveFailure(logger log.Logger, err error) bool {
+	c.sharedMetrics.KeepaliveErrors.Inc()
 	logger.Info("failed sending keepalive, reconnecting", log.Error(err))
 	return true
 }
 
-func (c *clientConnection) reconnectAfterSocketError(logger log.Logger, err error) bool {
-	c.sharedMetrics.outgoingConnectionSendErrors.Inc() //TODO remove, replaced by following metric
+func (c *outgoingConnection) reconnectAfterSocketError(logger log.Logger, err error) bool {
+	c.sharedMetrics.sendErrors.Inc() //TODO remove, replaced by following metric
 	c.sendErrors.Inc()
 	logger.Info("failed sending transport data, reconnecting", log.Error(err))
 	return true
 }
 
-func (c *clientConnection) addDataToOutgoingPeerQueue(ctx context.Context, data *adapter.TransportData) {
+func (c *outgoingConnection) addDataToOutgoingPeerQueue(ctx context.Context, data *adapter.TransportData) {
 	err := c.queue.Push(data)
 	if err != nil {
-		c.sharedMetrics.outgoingConnectionSendQueueErrors.Inc() //TODO remove, replaced by following metric
+		c.sharedMetrics.sendQueueErrors.Inc() //TODO remove, replaced by following metric
 		c.sendQueueErrors.Inc()
 		c.logger.Info("direct transport send queue error", log.Error(err), trace.LogFieldFrom(ctx))
 	}
 }
 
-func (c *clientConnection) sendToSocket(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
+func (c *outgoingConnection) sendToSocket(ctx context.Context, conn net.Conn, data *adapter.TransportData) error {
 	timeout := c.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 	sizeBuffer := make([]byte, 4)
@@ -224,7 +224,7 @@ func (c *clientConnection) sendToSocket(ctx context.Context, conn net.Conn, data
 	return nil
 }
 
-func (c *clientConnection) sendKeepAlive(ctx context.Context, conn net.Conn) error {
+func (c *outgoingConnection) sendKeepAlive(ctx context.Context, conn net.Conn) error {
 	timeout := c.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 
