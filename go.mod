@@ -22,10 +22,11 @@ require (
 	github.com/karalabe/hid v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
+	github.com/orbs-network/contract-external-libraries-go v0.0.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.3
-	github.com/orbs-network/membuffers v0.3.2
+	github.com/orbs-network/lean-helix-go v0.2.4-0.20191103173223-764555825f30
+	github.com/orbs-network/membuffers v0.3.4
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.4.0
 	github.com/orbs-network/orbs-spec v0.0.0-20191029121602-b5af15c91a90
