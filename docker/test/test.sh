@@ -56,10 +56,13 @@ export API_ENDPOINT=http://localhost:8082/api/v1/ \
 
 # the ethereum keypair is generated from the mnemonic passed to ganache on startup
 
-echo "The network has started with pre-existing (ancient) 500-some blocks"
-echo "Sleeping to allow the network to start closing new blocks.."
-echo "(So that the txpool won't throw our calls to the bin)"
-sleep 15
+echo "The network has started with pre-existing (ancient) 500-some blocks.."
+
+echo "Checking network 42 (app) for readiness/liveness.."
+./.circleci/check-testnet-deployment.js 42 localhost:8080 5
+
+echo "Checking network 40 (management) for readiness/liveness.."
+./.circleci/check-testnet-deployment.js 40 localhost:8084 5
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 time go_test_junit_report e2e -timeout 10m -count=1 ./test/e2e/...

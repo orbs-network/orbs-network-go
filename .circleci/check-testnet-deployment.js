@@ -3,14 +3,23 @@ const path = require('path');
 
 const { waitUntilSync, waitUntilCommit, getBlockHeight } = require('@orbs-network/orbs-nebula/lib/metrics');
 
-const configFilePath = path.join(process.cwd(), 'config.json');
-const topology = require(configFilePath);
-
 const targetChainId = process.argv[2];
+const optionalAlternativePublicAPI = process.argv[3] || '';
+const optionalAlternativePollInterval = process.argv[4] || 60;
 
 if (!targetChainId) {
     console.log('No chainId given!');
     process.exit(1);
+}
+
+let configFilePath, topology, customPublicAPI = false;
+
+if (optionalAlternativePublicAPI.length > 0) {
+    console.log('Overriding config.json, will query the public API at the address:', optionalAlternativePublicAPI);
+    customPublicAPI = true;
+} else {
+    configFilePath = path.join(process.cwd(), 'config.json');
+    topology = require(configFilePath);
 }
 
 async function eventuallyDeployed({ chainId, nodes }) {
@@ -41,7 +50,13 @@ async function eventuallyDeployed({ chainId, nodes }) {
 }
 
 async function eventuallyClosingBlocks({ chainId, nodes }) {
-    const firstEndpoint = `${nodes[0].ip}/vchains/${chainId}`;
+    let firstEndpoint;
+
+    if (customPublicAPI) {
+        firstEndpoint = optionalAlternativePublicAPI;
+    } else {
+        firstEndpoint = `${nodes[0].ip}/vchains/${chainId}`;
+    }
 
     // First let's get the current blockheight and wait for it to close 5 more blocks
     const currentBlockheight = await getBlockHeight(firstEndpoint);
@@ -50,12 +65,14 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
     try {
         let minuteCounter = 0;
 
+        // This is here to avoid 10 minutes without output to the terminal on CircleCI.
         setInterval(async () => {
             minuteCounter++;
             const sampleBlockheight = await getBlockHeight(firstEndpoint);
             console.log(`${minuteCounter}m Network blockheight:  ${sampleBlockheight}`);
         }, 60 * 1000);
-        await waitUntilSync(firstEndpoint, currentBlockheight + 5, 60 * 1000, 60 * 1000 * 60);
+
+        await waitUntilSync(firstEndpoint, currentBlockheight + 5, optionalAlternativePollInterval * 1000, 60 * 1000 * 60);
 
         return {
             ok: true,
@@ -84,20 +101,27 @@ async function eventuallyClosingBlocks({ chainId, nodes }) {
         return returnValue;
     };
 
-    const nodes = topology.network.filter(ignoreIpsFilterFunction);
-    const chains = topology.chains.map(chain => chain.Id).filter(chainId => chainId === parseInt(targetChainId));
+    let nodes, chains;
 
-    if (chains.length === 0) {
-        console.log('No chains to check!');
-        process.exit(2);
-    }
+    if (!customPublicAPI) {
+        nodes = topology.network.filter(ignoreIpsFilterFunction);
+        chains = topology.chains.map(chain => chain.Id).filter(chainId => chainId === parseInt(targetChainId));
 
-    const results = await Promise.all(chains.map((chainId) => eventuallyDeployed({ chainId, nodes })));
-    if (results.filter(r => r.ok === true).length === chains.length) {
-        console.log('New version deployed successfully on all chains in the testnet');
+        if (chains.length === 0) {
+            console.log('No chains to check!');
+            process.exit(2);
+        }
+
+        const results = await Promise.all(chains.map((chainId) => eventuallyDeployed({ chainId, nodes })));
+        if (results.filter(r => r.ok === true).length === chains.length) {
+            console.log('New version deployed successfully on all chains in the testnet');
+        } else {
+            console.error('New version was not deployed on all nodes within the defined 15 minutes window, quiting..');
+            process.exit(2);
+        }
     } else {
-        console.error('New version was not deployed on all nodes within the defined 15 minutes window, quiting..');
-        process.exit(2);
+        chains = [targetChainId];
+        nodes = [optionalAlternativePublicAPI];
     }
 
     const cbResults = await Promise.all(chains.map((chainId) => eventuallyClosingBlocks({ chainId, nodes })));
