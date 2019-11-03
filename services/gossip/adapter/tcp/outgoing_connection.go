@@ -108,7 +108,7 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 
 // returns true if should attempt reconnect on error
 func (c *outgoingConnection) handleOutgoingConnection(ctx context.Context, conn net.Conn) bool {
-	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
+	logger := c.logger.WithTags(trace.LogFieldFrom(ctx), log.Stringable("local-address", conn.LocalAddr()))
 	logger.Info("successful outgoing gossip transport connection")
 
 	c.sharedMetrics.activeCount.Inc()
