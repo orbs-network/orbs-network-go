@@ -8,14 +8,14 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestPersistStateToStorage(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		contract1 := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "v1").WithStringRecord("key2", "v2").Build()
@@ -36,7 +36,7 @@ func TestPersistStateToStorage(t *testing.T) {
 }
 
 func TestNonConsecutiveBlockHeights(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		registerContractDiff := builders.ContractStateDiff().WithContractName("contract1").WithStringRecord("key1", "whatever").Build()
@@ -54,7 +54,7 @@ func TestNonConsecutiveBlockHeights(t *testing.T) {
 }
 
 func TestCommitPastBlockHeights(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 		v1 := "v1"
 		v2 := "v2"

@@ -1,0 +1,24 @@
+version: '2.1'
+
+services:
+  ganache:
+    image: trufflesuite/ganache-cli
+    command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
+    ports:
+      - 8545:8545
+
+  signer-node:
+    image: orbs:signer
+    volumes:
+      - ../../_logs/:/opt/orbs/logs
+      - ./$CONSENSUSALGO-config/:/opt/orbs/config
+
+  orbs-chain-node:
+    image: orbs:export
+    environment:
+      ETHEREUM_ENDPOINT: http://ganache:8545/
+    volumes:
+      - ../../_logs/:/opt/orbs/logs
+      - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    sysctls:
+      net.core.somaxconn: 25000

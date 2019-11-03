@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestProcessQuery_Success(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -46,7 +45,7 @@ func TestProcessQuery_Success(t *testing.T) {
 }
 
 func TestProcessQuery_ContractError(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -71,7 +70,7 @@ func TestProcessQuery_ContractError(t *testing.T) {
 }
 
 func TestProcessQuery_UnexpectedError(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)

@@ -16,8 +16,8 @@ import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/bootstrap/gamma"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/e2e/contracts/calc/eth"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
@@ -90,7 +90,7 @@ func TestReadFromEthereumLogsTakingFinalityIntoAccount(t *testing.T) {
 		t.Skip("Skipping Ganache-dependent E2E - missing endpoint or private key")
 	}
 
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 
 		gammaEndpoint := gamma.RunOnRandomPort(t, fmt.Sprintf(`{"ethereum_endpoint":"%s"}`, ethereumEndpoint))
 

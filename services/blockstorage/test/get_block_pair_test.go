@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ import (
 )
 
 func TestReturnBlockPair(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness, block := generateAndCommitOneBlock(ctx, parent)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1})
@@ -29,7 +29,7 @@ func TestReturnBlockPair(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeight0(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness, _ := generateAndCommitOneBlock(ctx, parent)
 
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 0})
@@ -40,7 +40,7 @@ func TestReturnNilWhenBlockHeight0(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness, _ := generateAndCommitOneBlock(ctx, parent)
 		output, err := harness.blockStorage.GetBlockPair(ctx, &services.GetBlockPairInput{BlockHeight: 1000})
 
@@ -50,7 +50,7 @@ func TestReturnNilWhenBlockHeightInTheFuture(t *testing.T) {
 }
 
 func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness, _ := generateAndCommitOneBlock(ctx, parent)
 
 		childCtx, cancel := context.WithTimeout(ctx, time.Millisecond)
@@ -62,7 +62,7 @@ func TestReturnNilWhenBlockHeightInTrackerGraceButTimesOut(t *testing.T) {
 	})
 }
 
-func generateAndCommitOneBlock(ctx context.Context, parent *test.ConcurrencyHarness) (*harness, *protocol.BlockPairContainer) {
+func generateAndCommitOneBlock(ctx context.Context, parent *with.ConcurrencyHarness) (*harness, *protocol.BlockPairContainer) {
 	harness := newBlockStorageHarness(parent).
 		withSyncBroadcast(1).
 		withCommitStateDiff(1).

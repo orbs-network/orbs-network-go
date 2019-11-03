@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,7 +20,7 @@ import (
 )
 
 func TestSdkState_ReadWithoutContext(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -33,7 +32,7 @@ func TestSdkState_ReadWithoutContext(t *testing.T) {
 }
 
 func TestSdkState_ReadWithLocalMethodReadOnlyAccess(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -66,7 +65,7 @@ func TestSdkState_ReadWithLocalMethodReadOnlyAccess(t *testing.T) {
 }
 
 func TestSdkState_WriteWithLocalMethodReadOnlyAccess(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -90,7 +89,7 @@ func TestSdkState_WriteWithLocalMethodReadOnlyAccess(t *testing.T) {
 }
 
 func TestSdkState_ReadWithTransactionSetReadWriteAccess(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -124,7 +123,7 @@ func TestSdkState_ReadWithTransactionSetReadWriteAccess(t *testing.T) {
 }
 
 func TestSdkState_WriteWithTransactionSetReadWriteAccess(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -171,7 +170,7 @@ func TestSdkState_WriteWithTransactionSetReadWriteAccess(t *testing.T) {
 }
 
 func TestSdkState_WriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -226,7 +225,7 @@ func TestSdkState_WriteOfDifferentContractsDoNotOverrideEachOther(t *testing.T) 
 }
 
 func TestSdkState_WriteIgnoredWithTransactionSetHavingFailedTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)

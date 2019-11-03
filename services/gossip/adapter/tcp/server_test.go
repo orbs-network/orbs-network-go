@@ -9,11 +9,13 @@ package tcp
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
+	"time"
 )
 
 func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T) {
@@ -48,7 +50,7 @@ func TestDirectIncoming_ConnectionsAreListenedToWhileContextIsLive(t *testing.T)
 }
 
 func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -69,7 +71,7 @@ func TestDirectIncoming_TransportListenerReceivesData(t *testing.T) {
 }
 
 func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -89,7 +91,7 @@ func TestDirectIncoming_ReceivesDataWithoutListener(t *testing.T) {
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -114,7 +116,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_NumPayloads(t
 }
 
 func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -139,7 +141,7 @@ func TestDirectIncoming_TransportListenerDoesNotReceiveCorruptData_PayloadSize(t
 }
 
 func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -167,7 +169,7 @@ func TestDirectIncoming_TransportListenerIgnoresKeepAlives(t *testing.T) {
 }
 
 func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newDirectHarnessWithConnectedPeers(t, ctx, parent.Logger)
@@ -182,6 +184,38 @@ func TestDirectIncoming_TimeoutDuringReceiveCausesDisconnect(t *testing.T) {
 			buffer = []byte{0} // dummy buffer just to see when the connection closes
 			_, err = h.peerTalkerConnection.Read(buffer)
 			require.Error(t, err, "test peer should be disconnected from local transport")
+		})
+	})
+}
+
+type serverCfg struct {
+	port uint16
+}
+
+func (s *serverCfg) GossipListenPort() uint16 {
+	return s.port
+}
+
+func (s *serverCfg) GossipNetworkTimeout() time.Duration {
+	return 100 * time.Millisecond
+}
+
+func TestServer_PanicsOnPortAlreadyInUse(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+
+			l1, err := net.Listen("tcp", ":0")
+			require.NoError(t, err, "failed listening to port")
+			port := l1.Addr().(*net.TCPAddr).Port
+
+			cfg := &serverCfg{
+				port: uint16(port),
+			}
+
+			server := newDirectTransportServer(cfg, parent.Logger, metric.NewRegistry())
+			require.Panics(t, func() {
+				server.startSupervisedMainLoop(ctx)
+			}, "should have panicked on port already in use")
 		})
 	})
 }

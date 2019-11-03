@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -21,7 +20,7 @@ import (
 )
 
 func TestSdkService_CallMethodFailingCall(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -48,7 +47,7 @@ func TestSdkService_CallMethodFailingCall(t *testing.T) {
 }
 
 func TestSdkService_CallMethodMaintainsAddressSpaceUnderSameContract(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -86,7 +85,7 @@ func TestSdkService_CallMethodMaintainsAddressSpaceUnderSameContract(t *testing.
 }
 
 func TestSdkService_CallMethodChangesAddressSpaceBetweenContracts(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -129,7 +128,7 @@ func TestSdkService_CallMethodChangesAddressSpaceBetweenContracts(t *testing.T) 
 }
 
 func TestSdkService_CallMethodWithSystemPermissions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -157,7 +156,7 @@ func TestSdkService_CallMethodWithSystemPermissions(t *testing.T) {
 }
 
 func TestSdkService_CallMethodWithMultipleArguments(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)

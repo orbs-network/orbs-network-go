@@ -8,14 +8,14 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos().
@@ -32,7 +32,7 @@ func TestInitSetsLastCommittedBlockHeightToZero(t *testing.T) {
 }
 
 func TestInitSetsLastCommittedBlockHeightFromPersistence(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).withSyncBroadcast(1).expectValidateConsensusAlgos()
 		now := harness.setupCustomBlocksForInit()
 		harness.start(ctx)

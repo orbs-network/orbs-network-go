@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestSdkEthereum_CallMethod(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -47,7 +46,7 @@ func TestSdkEthereum_CallMethod(t *testing.T) {
 }
 
 func TestSdkEthereum_GetTransactionLog(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -76,7 +75,7 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockNumber(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -103,7 +102,7 @@ func TestSdkEthereum_GetBlockNumber(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -130,7 +129,7 @@ func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockTime(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)
@@ -157,7 +156,7 @@ func TestSdkEthereum_GetBlockTime(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockTimeByNumber(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
 			h := newHarness(parent.Logger)

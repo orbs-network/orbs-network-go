@@ -12,7 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -150,7 +150,7 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 	defer b.sequentialTests.Unlock()
 
 	testId := b.testId + "-" + toShortConsensusAlgoStr(consensusAlgo)
-	test.WithConcurrencyHarness(tb, func(parentCtx context.Context, parentHarness *test.ConcurrencyHarness) {
+	with.Concurrency(tb, func(parentCtx context.Context, parentHarness *with.ConcurrencyHarness) {
 		logger := b.makeLogger(parentHarness, testId)
 
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
@@ -184,7 +184,7 @@ func toShortConsensusAlgoStr(algoType consensus.ConsensusAlgoType) string {
 	return str[20:] // remove the "CONSENSUS_ALGO_TYPE_" prefix
 }
 
-func (b *networkHarness) makeLogger(parentHarness *test.ConcurrencyHarness, testId string) log.Logger {
+func (b *networkHarness) makeLogger(parentHarness *with.ConcurrencyHarness, testId string) log.Logger {
 
 	for _, pattern := range b.allowedErrors {
 		parentHarness.AllowErrorsMatching(pattern)

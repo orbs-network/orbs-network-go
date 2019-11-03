@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -27,7 +28,7 @@ import (
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
 	cfg := config.ForDirectTransportTests(address, make(GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
@@ -39,7 +40,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 }
 
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
 		node3 := aNode(ctx, harness.Logger)
@@ -95,7 +96,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 }
 
 func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
 		node3 := aNode(ctx, harness.Logger)

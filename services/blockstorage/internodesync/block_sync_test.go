@@ -9,12 +9,12 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"testing"
 )
 
 func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(parent.Logger, func() *synchronization.Timer {
 			return synchronization.NewTimerWithManualTick()
 		})
@@ -25,7 +25,7 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 }
 
 func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		manualIdleStateTimeoutTimers := make(chan *synchronization.Timer)
 		h := newBlockSyncHarnessWithManualNoCommitTimeoutTimer(parent.Logger, func() *synchronization.Timer {
 			currentTimer := synchronization.NewTimerWithManualTick()

@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -43,7 +42,7 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			test.WithContext(func(ctx context.Context) {
+			with.Context(func(ctx context.Context) {
 				with.Logging(t, func(parent *with.LoggingHarness) {
 					h := newHarness(parent.Logger)
 
@@ -61,7 +60,7 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 }
 
 func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
