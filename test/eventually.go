@@ -13,18 +13,18 @@ import (
 	"time"
 )
 
-const EVENTUALLY_ACCEPTANCE_TIMEOUT = 40 * time.Millisecond
+const EVENTUALLY_ACCEPTANCE_TIMEOUT = 100 * time.Millisecond
 const EVENTUALLY_ADAPTER_TIMEOUT = 100 * time.Millisecond
 const EVENTUALLY_LOCAL_E2E_TIMEOUT = 400 * time.Millisecond
 const EVENTUALLY_DOCKER_E2E_TIMEOUT = 1000 * time.Millisecond
 
-const CONSISTENTLY_ACCEPTANCE_TIMEOUT = 20 * time.Millisecond
-const CONSISTENTLY_ADAPTER_TIMEOUT = 50 * time.Millisecond
+const CONSISTENTLY_ACCEPTANCE_TIMEOUT = 100 * time.Millisecond
+const CONSISTENTLY_ADAPTER_TIMEOUT = 100 * time.Millisecond
 const CONSISTENTLY_LOCAL_E2E_TIMEOUT = 200 * time.Millisecond
 const CONSISTENTLY_DOCKER_E2E_TIMEOUT = 500 * time.Millisecond
 
-const eventuallyIterations = 50
-const consistentlyIterations = 25
+const eventuallyIterations = 20
+const consistentlyIterations = 10
 
 func Eventually(timeout time.Duration, f func() bool) bool {
 	for i := 0; i < eventuallyIterations; i++ {
@@ -42,9 +42,13 @@ func RetryAndLog(timeout time.Duration, logger log.Logger, f func() error) error
 		if err = tryButDontPanic(f); err == nil {
 			return nil
 		}
-		logger.Info(fmt.Sprintf("attempt %d out of %d failed with error", i, eventuallyIterations), log.Error(err))
+		logger.Info(fmt.Sprintf("attempt %d out of %d failed with error", i, eventuallyIterations+1), log.Error(err))
 		time.Sleep(timeout / eventuallyIterations)
 	}
+	if err = tryButDontPanic(f); err == nil {
+		return nil
+	}
+	logger.Info(fmt.Sprintf("attempt %d out of %d failed with error", eventuallyIterations, eventuallyIterations+1), log.Error(err))
 	return err
 }
 
@@ -54,6 +58,9 @@ func Consistently(timeout time.Duration, f func() bool) bool {
 			return false
 		}
 		time.Sleep(timeout / consistentlyIterations)
+	}
+	if !testButDontPanic(f) {
+		return false
 	}
 	return true
 }
