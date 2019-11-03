@@ -21,25 +21,32 @@ func TestMain(m *testing.M) {
 
 	config := getConfig()
 	if config.bootstrap {
-		tl := NewLoggerRandomer()
+		if isRunningInCI() {
+			fmt.Println("Skipping in-process E2E in CI (Docker-based E2Es are running in a separate step)")
+		} else {
+			tl := NewLoggerRandomer()
 
-		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid, tl)
-		appNetwork := NewInProcessE2EAppNetwork(config.appVcid, tl)
+			mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid, tl)
+			appNetwork := NewInProcessE2EAppNetwork(config.appVcid, tl)
 
-		exitCode = m.Run()
-		appNetwork.GracefulShutdownAndWipeDisk()
-		mgmtNetwork.GracefulShutdownAndWipeDisk()
+			exitCode = m.Run()
+			appNetwork.GracefulShutdownAndWipeDisk()
+			mgmtNetwork.GracefulShutdownAndWipeDisk()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		appNetwork.WaitUntilShutdown(shutdownCtx)
-		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
-
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			appNetwork.WaitUntilShutdown(shutdownCtx)
+			mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+		}
 	} else {
 		exitCode = m.Run()
 	}
 
 	os.Exit(exitCode)
+}
+
+func isRunningInCI() bool {
+	return os.Getenv("CI") != ""
 }
 
 func runMultipleTimes(t *testing.T, f func(t *testing.T)) {
