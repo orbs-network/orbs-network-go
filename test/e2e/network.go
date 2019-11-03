@@ -27,6 +27,7 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 const LOCAL_NETWORK_SIZE = 4
 
 func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+	randomer.logger.Info("starting management network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 
@@ -34,6 +35,7 @@ func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, random
 }
 
 func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+	randomer.logger.Info("starting application network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 

@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -71,7 +72,7 @@ func (c *configForBlockStorageTests) BlockTrackerGraceTimeout() time.Duration {
 }
 
 type harness struct {
-	*test.ConcurrencyHarness
+	*with.ConcurrencyHarness
 
 	sync.Mutex
 	stateStorage   *services.MockStateStorage
@@ -235,7 +236,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	return cfg
 }
 
-func newBlockStorageHarness(parentHarness *test.ConcurrencyHarness) *harness {
+func newBlockStorageHarness(parentHarness *with.ConcurrencyHarness) *harness {
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	cfg := createConfig(keyPair.NodeAddress())
 

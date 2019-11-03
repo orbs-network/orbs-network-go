@@ -11,7 +11,6 @@ import (
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
-	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
@@ -19,7 +18,7 @@ import (
 )
 
 func TestSignAndVerifyConsensusMessage(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))
@@ -38,7 +37,7 @@ func TestSignAndVerifyConsensusMessage(t *testing.T) {
 
 func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyConsensusMessage()")
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))
@@ -56,7 +55,7 @@ func TestSignAndVerifyConsensusMessageOfMismatchedHeight(t *testing.T) {
 }
 
 func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))
@@ -75,7 +74,7 @@ func TestSignAndVerifyTaintedConsensusMessage(t *testing.T) {
 }
 
 func TestSignAndVerifyRandomSeed(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))
@@ -93,7 +92,7 @@ func TestSignAndVerifyRandomSeed(t *testing.T) {
 }
 
 func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))
@@ -113,7 +112,7 @@ func TestSignAndVerifyTaintedRandomSeed(t *testing.T) {
 
 func TestSignAndVerifyRandomSeedOfMismatchedHeight(t *testing.T) {
 	t.Skip("Remove the skip when block height is actually verified by VerifyRandomSeed()")
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 			mgr := NewKeyManager(harness.Logger, signer.NewLocalSigner(keyPair.PrivateKey()))

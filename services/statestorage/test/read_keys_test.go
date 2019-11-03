@@ -8,13 +8,13 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestReadKeysMissingKey(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 		d.CommitValuePairs(ctx, "fooContract", "fooKey", "fooValue")
 
@@ -25,7 +25,7 @@ func TestReadKeysMissingKey(t *testing.T) {
 }
 
 func TestReadKeysReturnsCommittedValue(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		value := "bar"
 		key := "foo"
 		contract := "some-contract"
@@ -40,7 +40,7 @@ func TestReadKeysReturnsCommittedValue(t *testing.T) {
 }
 
 func TestReadKeysBatch(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		d.CommitValuePairs(ctx, "contract", "key1", "bar1", "key2", "bar2", "key3", "bar3", "key4", "bar4", "key5", "bar5")
@@ -58,7 +58,7 @@ func TestReadKeysBatch(t *testing.T) {
 }
 
 func TestReadSameKeyFromDifferentContracts(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "foo"
 		v1, v2 := "bar", "bar2"
 
@@ -78,7 +78,7 @@ func TestReadSameKeyFromDifferentContracts(t *testing.T) {
 }
 
 func TestReadKeysInPastBlockHeights(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "foo"
 		v1, v2 := "bar", "bar2"
 
@@ -97,7 +97,7 @@ func TestReadKeysInPastBlockHeights(t *testing.T) {
 }
 
 func TestReadKeysOutsideSupportedBlockRetention(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "foo"
 
 		d := NewStateStorageDriver(1)
@@ -111,7 +111,7 @@ func TestReadKeysOutsideSupportedBlockRetention(t *testing.T) {
 }
 
 func TestReadKeysObservesWriteOrder(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		key := "foo"
 
 		d := NewStateStorageDriver(1)

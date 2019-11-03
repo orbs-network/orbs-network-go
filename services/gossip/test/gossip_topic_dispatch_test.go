@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -33,7 +34,7 @@ func (c *conf) VirtualChainId() primitives.VirtualChainId {
 }
 
 func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
 
@@ -83,7 +84,7 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 }
 
 func TestGossipDispatcherPropagatesTracingContext(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
 

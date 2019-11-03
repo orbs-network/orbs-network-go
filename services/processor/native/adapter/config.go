@@ -12,7 +12,13 @@ const SOURCE_CODE_PATH = "native-src"
 const SHARED_OBJECT_PATH = "native-bin"
 const GC_CACHE_PATH = "native-cache"
 const MAX_COMPILATION_TIME = 10 * time.Second
-const MAX_WARM_UP_COMPILATION_TIME = 15 * time.Second
+// in a poor CPU environment when we have many containers starting up
+// in the same time (usually on our CI) or when running Docker e2e locally
+// We almost always end up with CPU starvation when the warm up compilation occurs
+//  (Due to all containers executing a "go build ..." shell at the same time.
+// Setting a higher time simply solves this issue and prevent a lot of side effects
+// from happening.
+const MAX_WARM_UP_COMPILATION_TIME = 45 * time.Second
 
 type Config interface {
 	ProcessorArtifactPath() string

@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -42,7 +42,7 @@ func (f *fakeFed) NodeAddress() primitives.NodeAddress {
 }
 
 func TestLeaderBadKey(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		nodes := make(map[string]config.ValidatorNode)
 
 		for i := 1; i < 6; i++ {

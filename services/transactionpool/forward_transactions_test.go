@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -66,7 +67,7 @@ func expectTransactionsToBeForwarded(gossip *gossiptopics.MockTransactionRelay, 
 
 func TestForwardsTransactionAfterTimeout(t *testing.T) {
 
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -92,7 +93,7 @@ func TestForwardsTransactionAfterTimeout(t *testing.T) {
 }
 
 func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 		cfg := &forwarderConfig{2, keyPair}
@@ -118,7 +119,7 @@ func TestForwardsTransactionAfterLimitWasReached(t *testing.T) {
 }
 
 func TestForwardsTransactionWithFaultySigner(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		harness.AllowErrorsMatching("error signing transactions")
 		gossip := &gossiptopics.MockTransactionRelay{}
 		keyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)

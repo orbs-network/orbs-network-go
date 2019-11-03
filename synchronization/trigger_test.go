@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"sync/atomic"
@@ -40,7 +41,7 @@ func TestPeriodicalTriggerStartsOk(t *testing.T) {
 }
 
 func TestPeriodicalTrigger_Stop(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		x := 0
 		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
 		harness.Supervise(p)
@@ -51,7 +52,7 @@ func TestPeriodicalTrigger_Stop(t *testing.T) {
 }
 
 func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		x := 0
 		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Millisecond, harness.Logger, func() { x++ }, nil)
 		harness.Supervise(p)
@@ -65,7 +66,7 @@ func TestPeriodicalTrigger_StopAfterTrigger(t *testing.T) {
 }
 
 func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		ctx, cancel := context.WithCancel(parent)
 		x := 0
 		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
@@ -77,7 +78,7 @@ func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 }
 
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		ctx, cancel := context.WithCancel(parent)
 		cancel() // send a cancelled context to reduce chances of trigger being called even once
 		x := 0
@@ -92,7 +93,7 @@ func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 }
 
 func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		ctx, cancel := context.WithCancel(parent)
 		ch := make(chan struct{})
 		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() {}, func() { close(ch) })
@@ -105,7 +106,7 @@ func TestPeriodicalTriggerStopOnContextCancelWithStopAction(t *testing.T) {
 }
 
 func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		latch := make(chan struct{})
 		x := 0
 		p := synchronization.NewPeriodicalTrigger(context.Background(), "a periodical trigger", time.Second, harness.Logger, func() { x++ }, func() {
@@ -121,7 +122,7 @@ func TestPeriodicalTriggerRunsOnStopAction(t *testing.T) {
 }
 
 func TestPeriodicalTriggerKeepsGoingOnPanic(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parent context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 
 		logger := newNopLogger()
 		var handlerInvocationCount uint32

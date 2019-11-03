@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/contract"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -27,7 +26,7 @@ import (
 //TODO (v1) move this file back to ethereum/adapter package
 
 func TestEthereumNodeAdapter_CallContract(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			if runningWithDocker() {
 				adapter, auth, commit := createRpcClient(harness.Logger)
@@ -41,7 +40,7 @@ func TestEthereumNodeAdapter_CallContract(t *testing.T) {
 }
 
 func TestEthereumNodeAdapter_GetLogs(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			if runningWithDocker() {
 				adapter, auth, commit := createRpcClient(harness.Logger)
@@ -131,4 +130,3 @@ func createRpcClient(logger log.Logger) (adapter.DeployingEthereumConnection, *b
 
 	return a, auth, func() {}
 }
-

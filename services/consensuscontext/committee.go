@@ -8,8 +8,10 @@ package consensuscontext
 
 import (
 	"context"
+	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"strings"
 )
 
 func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
@@ -31,6 +33,12 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 		}
 	}
 
+	s.metrics.committeeSize.Update(int64(len(committee)))
+	committeeStr := make([]string, len(committee))
+	for i, nodeAddress := range committee {
+		committeeStr[i] = lhprimitives.MemberId(nodeAddress).String()
+	}
+	s.metrics.committeeMembers.Update(strings.Join(committeeStr, ","))
 	res := &services.RequestCommitteeOutput{
 		NodeAddresses:            committee,
 		NodeRandomSeedPublicKeys: nil,

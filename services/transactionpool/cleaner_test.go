@@ -8,7 +8,7 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -19,7 +19,7 @@ var tickInterval = func() time.Duration { return 1 * time.Millisecond }
 var expiration = func() time.Duration { return 30 * time.Minute }
 
 func TestTicksOnSchedule(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		ts := primitives.TimestampNano(time.Now().UnixNano())
 
 		m := aCleaner()

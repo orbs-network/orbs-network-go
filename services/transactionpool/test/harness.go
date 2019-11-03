@@ -17,8 +17,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -30,7 +30,7 @@ import (
 )
 
 type harness struct {
-	*test.ConcurrencyHarness
+	*with.ConcurrencyHarness
 	txpool                  *transactionpool.Service
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
@@ -242,19 +242,19 @@ func (h *harness) start(ctx context.Context) *harness {
 const DEFAULT_CONFIG_SIZE_LIMIT = 20 * 1024 * 1024
 const DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS = 100
 
-func newHarness(parent *test.ConcurrencyHarness) *harness {
+func newHarness(parent *with.ConcurrencyHarness) *harness {
 	return newHarnessWithConfig(parent, DEFAULT_CONFIG_SIZE_LIMIT, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithSizeLimit(parent *test.ConcurrencyHarness, sizeLimit uint32) *harness {
+func newHarnessWithSizeLimit(parent *with.ConcurrencyHarness, sizeLimit uint32) *harness {
 	return newHarnessWithConfig(parent, sizeLimit, DEFAULT_CONFIG_TIME_BETWEEN_EMPTY_BLOCKS_MILLIS*time.Millisecond)
 }
 
-func newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent *test.ConcurrencyHarness) *harness {
+func newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent *with.ConcurrencyHarness) *harness {
 	return newHarnessWithConfig(parent, DEFAULT_CONFIG_SIZE_LIMIT, 1*time.Hour)
 }
 
-func newHarnessWithConfig(parent *test.ConcurrencyHarness, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
+func newHarnessWithConfig(parent *with.ConcurrencyHarness, sizeLimit uint32, timeBetweenEmptyBlocks time.Duration) *harness {
 	gossip := &gossiptopics.MockTransactionRelay{}
 	gossip.When("RegisterTransactionRelayHandler", mock.Any).Return()
 

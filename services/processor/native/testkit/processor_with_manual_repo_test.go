@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	benchmarkcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkContract"
 	processorTests "github.com/orbs-network/orbs-network-go/services/processor/native/test"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -15,7 +14,7 @@ import (
 )
 
 func TestProcessorCanCallContractWithManualRepository(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			cfg := &processorTests.NativeProcessorConfigForTests{}
 			r := NewRepository()

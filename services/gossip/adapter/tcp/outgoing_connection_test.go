@@ -19,8 +19,8 @@ import (
 	"time"
 )
 
-func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+func TestOutgoingConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDisconnect(t *testing.T) {
+	with.Context(func(ctx context.Context) {
 		server := newServerStub(t)
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -40,8 +40,8 @@ func TestClientConnection_EnablesQueueWhenConnectedToServer_AndDisablesQueueOnDi
 
 }
 
-func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+func TestOutgoingConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *testing.T) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			server := newServerStub(t)
 			defer server.Close()
@@ -56,6 +56,8 @@ func TestClientConnection_ReconnectsWhenServerDisconnects_AndSendKeepAlive(t *te
 
 			require.NotZero(t, server.readSomeBytes(), "client didn't send keep alive")
 			require.NotZero(t, server.readSomeBytes(), "client didn't send second keep alive")
+
+			<-client.disconnect()
 		})
 	})
 }
@@ -108,10 +110,10 @@ func (s *serverStub) readSomeBytes() int {
 	return bytesRead
 }
 
-func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, logger log.Logger, keepAliveInterval time.Duration) *clientConnection {
+func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, logger log.Logger, keepAliveInterval time.Duration) *outgoingConnection {
 	registry := metric.NewRegistry()
 	peer := config.NewHardCodedGossipPeer(s.port, "127.0.0.1", "012345")
-	client := newClientConnection(peer, logger, registry, getMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
+	client := newOutgoingConnection(peer, logger, registry, createOutgoingConnectionMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
 	client.connect(ctx)
 	s.acceptClientConnection(t)
 	return client
@@ -121,13 +123,13 @@ func (s *serverStub) forceDisconnect(t testing.TB) {
 	require.NoError(t, s.conn.Close())
 }
 
-func waitForQueueEnabled(t *testing.T, client *clientConnection) {
+func waitForQueueEnabled(t *testing.T, client *outgoingConnection) {
 	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
 		return !client.queue.disabled()
 	}), "client did not connect to server within timeout")
 }
 
-func waitForQueueDisabled(t *testing.T, client *clientConnection) {
+func waitForQueueDisabled(t *testing.T, client *outgoingConnection) {
 	require.True(t, test.Eventually(HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT, func() bool {
 		return client.queue.disabled()
 	}), "client did not disable queue on disconnect")

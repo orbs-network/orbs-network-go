@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ import (
 )
 
 func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(parentContext context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(parentContext context.Context, harness *with.ConcurrencyHarness) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(parentContext, harness.Logger, makeNetwork(address))
 		harness.Supervise(transport)
@@ -47,7 +48,7 @@ func TestMemoryTransport_PropagatesTracingContext(t *testing.T) {
 }
 
 func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, harness.Logger, makeNetwork(address))
 		harness.Supervise(transport)
@@ -63,7 +64,7 @@ func TestMemoryTransport_SendIsAsynchronous_NoListener(t *testing.T) {
 }
 
 func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, harness.Logger, makeNetwork(address))
 		harness.Supervise(transport)
@@ -83,7 +84,7 @@ func TestMemoryTransport_SendIsAsynchronous_BlockedListener(t *testing.T) {
 }
 
 func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		address := primitives.NodeAddress{0x01}
 		transport := NewTransport(ctx, harness.Logger, makeNetwork(address))
 		harness.Supervise(transport)
