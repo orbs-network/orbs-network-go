@@ -24,7 +24,7 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.4-0.20191104085805-673b2cc34d7b
+	github.com/orbs-network/lean-helix-go v0.2.4-0.20191104150210-918bd2979daf
 	github.com/orbs-network/membuffers v0.3.2
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.4.0
