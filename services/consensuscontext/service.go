@@ -26,6 +26,8 @@ type metrics struct {
 	createResultsBlockTime                    *metric.Histogram
 	processTransactionsSeInCreateResultsBlock *metric.Histogram
 	transactionsRate                          *metric.Rate
+	committeeSize                             *metric.Gauge
+	committeeMembers                          *metric.Text
 }
 
 func newMetrics(factory metric.Factory) *metrics {
@@ -34,6 +36,8 @@ func newMetrics(factory metric.Factory) *metrics {
 		createResultsBlockTime:                    factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
 		processTransactionsSeInCreateResultsBlock: factory.NewLatency("ConsensusContext.ProcessTransactionsSetInCreateResultsBlock.Millis", 10*time.Second),
 		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
+		committeeSize:                             factory.NewGauge("ConsensusContext.committeeSize.Number"),
+		committeeMembers:                          factory.NewText("ConsensusContext.committeeMemberIds.Numbers", ""),
 	}
 }
 

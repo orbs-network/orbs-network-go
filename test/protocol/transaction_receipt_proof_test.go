@@ -17,9 +17,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -79,7 +79,7 @@ type TransactionReceiptProofJSON struct {
 // this test currently just creates a json that we provide to Solidity unit tests that verify Solidity conforms to this contract
 // TODO(v1): figure out what's the best way to automatically bring this json to the Solidity project for automated testing (now it's manual)
 func TestTransactionReceiptProof(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		// event
 		tuid := uint64(77393)
 		ethAddress := common.FromHex("e128846cd5b4979d68a8c58a9bdfeee657b34de7")

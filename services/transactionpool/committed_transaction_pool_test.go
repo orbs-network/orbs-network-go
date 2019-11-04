@@ -9,9 +9,9 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -19,7 +19,7 @@ import (
 )
 
 func TestCommittedTransactionPoolClearsOldTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		p := NewCommittedPool(func() time.Duration { return time.Second }, metric.NewRegistry())
 		ctrlRand := rand.NewControlledRand(t)
 

@@ -14,6 +14,7 @@ import (
 	. "github.com/orbs-network/orbs-network-go/services/statestorage/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
@@ -74,7 +75,7 @@ func TestSimulateMerkleInitForAllUsers(t *testing.T) {
 }
 
 func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		ctrlRand := rand.NewControlledRand(t)
 
 		d := NewStateStorageDriver(1)

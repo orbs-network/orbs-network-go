@@ -1,1 +1,4 @@
 FROM orbs:gamma-server
+
+RUN mkdir -p /src/_tmp/processor-artifacts/
+COPY ./_dockerbuild/go.mod.template /src/_tmp/processor-artifacts/go.mod

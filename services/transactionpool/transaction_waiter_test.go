@@ -8,14 +8,14 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestTransactionWaiterReturnsWhenContextIsDone(t *testing.T) {
-	test.WithContext(func(parent context.Context) {
+	with.Context(func(parent context.Context) {
 		cancelledContext, cancelInner := context.WithCancel(parent)
 		cancelInner()
 
@@ -26,7 +26,7 @@ func TestTransactionWaiterReturnsWhenContextIsDone(t *testing.T) {
 }
 
 func TestTransactionWaiterReturnsTrueWhenIncomingTransaction(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		timeout, cancel := context.WithTimeout(ctx, 100*time.Second)
 		defer cancel()
 
@@ -49,7 +49,7 @@ func TestTransactionWaiterReturnsTrueWhenIncomingTransaction(t *testing.T) {
 }
 
 func TestTransactionWaiterDoesNotBlockIncWhenNoOneIsWaiting(t *testing.T) {
-	test.WithContext(func(parent context.Context) {
+	with.Context(func(parent context.Context) {
 		timeout, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

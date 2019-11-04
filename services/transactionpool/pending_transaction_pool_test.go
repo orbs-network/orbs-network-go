@@ -10,9 +10,9 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -23,7 +23,7 @@ import (
 var nodeAddress = keys.EcdsaSecp256K1KeyPairForTests(8).NodeAddress()
 
 func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		p := makePendingPool()
 		require.Zero(t, p.currentSizeInBytes, "New pending pool created with non-zero size")
 
@@ -44,7 +44,7 @@ func TestPendingTransactionPoolTracksSizesOfTransactionsAddedAndRemoved(t *testi
 }
 
 func TestPendingTransactionPoolAddRemoveKeepsBothDataStructuresInSync(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		p := makePendingPool()
 		tx1 := builders.TransferTransaction().Build()
 
@@ -114,7 +114,7 @@ func TestPendingTransactionPoolGetBatchRetainsInsertionOrder(t *testing.T) {
 }
 
 func TestPendingTransactionPoolClearsExpiredTransactions(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		p := makePendingPool()
 
 		tx1 := builders.TransferTransaction().WithTimestamp(time.Now().Add(-5 * time.Minute)).Build()
@@ -148,7 +148,7 @@ func TestPendingTransactionPoolDoesNotAddTheSameTransactionTwiceRegardlessOfPubl
 }
 
 func TestPendingTransactionPoolCallsRemovalListenerWhenRemovingTransaction(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		var removedTxHash primitives.Sha256
 		var removalReason protocol.TransactionStatus
 
@@ -181,7 +181,7 @@ func TestPendingPoolNotifiesOnNewTransactions(t *testing.T) {
 
 // this test reproduces an issue when a cleanup goroutine wakes up while a commit is taking place. both will attempt to remove elements from the pool
 func TestPendingTransactionPool_CleanupWhileRemove_NoRaces(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		p := makePendingPool()
 
 		old := time.Now().Add(-1 * time.Hour)

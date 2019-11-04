@@ -13,8 +13,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
-	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -26,7 +26,7 @@ import (
 const NETWORK_SIZE = 5
 
 type harness struct {
-	*test.ConcurrencyHarness
+	*with.ConcurrencyHarness
 	gossip           *gossiptopics.MockBenchmarkConsensus
 	blockStorage     *services.MockBlockStorage
 	consensusContext *services.MockConsensusContext
@@ -48,7 +48,7 @@ func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
 	return testKeys.EcdsaSecp256K1KeyPairForTests(2)
 }
 
-func newHarness(parent *test.ConcurrencyHarness, isLeader bool) *harness {
+func newHarness(parent *with.ConcurrencyHarness, isLeader bool) *harness {
 
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	for i := 0; i < NETWORK_SIZE; i++ {

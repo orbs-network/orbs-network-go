@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			targetAddress := builders.ClientAddressForEd25519SignerForTests(1)
@@ -38,7 +37,7 @@ func TestBenchmarkToken_GetBalancePostInit(t *testing.T) {
 }
 
 func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			callerAddress := builders.ClientAddressForEd25519SignerForTests(0)
@@ -75,7 +74,7 @@ func TestBenchmarkToken_TransferThenGetBalance(t *testing.T) {
 }
 
 func TestBenchmarkToken_TransferLargerThanAvailableFails(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			callerAddress := builders.ClientAddressForEd25519SignerForTests(0)

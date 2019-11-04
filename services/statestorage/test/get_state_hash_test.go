@@ -8,7 +8,7 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetStateHashReturnsNonZeroValue(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		root, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{})
@@ -27,7 +27,7 @@ func TestGetStateHashReturnsNonZeroValue(t *testing.T) {
 }
 
 func TestGetStateHashFutureHeightWithinGrace(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := newStateStorageDriverWithGrace(1, 1, 1)
 
 		output, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{BlockHeight: 1})
@@ -37,7 +37,7 @@ func TestGetStateHashFutureHeightWithinGrace(t *testing.T) {
 }
 
 func TestGetStateHashFutureHeightOutsideGrace(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := newStateStorageDriverWithGrace(1, 1, 1)
 
 		output, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{BlockHeight: 2})
@@ -47,7 +47,7 @@ func TestGetStateHashFutureHeightOutsideGrace(t *testing.T) {
 }
 
 func TestGetStateHashMerkleRootChangesOnStateChange(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		d := NewStateStorageDriver(1)
 
 		root1, err := d.service.GetStateHash(ctx, &services.GetStateHashInput{})

@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,7 @@ import (
 )
 
 func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().Build()
@@ -38,7 +39,7 @@ func TestForwardsANewValidTransactionUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().WithTimestampInFarFuture().Build()
@@ -52,7 +53,7 @@ func TestDoesNotForwardInvalidTransactionsUsingGossip(t *testing.T) {
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.AllowErrorsMatching("error validating transaction for preorder")
 		tx := builders.TransferTransaction().Build()
@@ -83,7 +84,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_GlobalPreOrder(t *testin
 }
 
 func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.AllowErrorsMatching("error validating transaction for preorder")
 		tx := builders.TransferTransaction().Build()
@@ -114,7 +115,7 @@ func TestDoesNotAddTransactionsThatFailedPreOrderChecks_SignatureMismatch(t *tes
 }
 
 func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.AllowErrorsMatching("error adding transaction to pending pool")
 
@@ -134,7 +135,7 @@ func TestDoesNotAddTheSameTransactionTwice(t *testing.T) {
 }
 
 func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		tx := builders.TransferTransaction().Build()
@@ -157,7 +158,7 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithSizeLimit(parent, 1).start(ctx)
 		h.AllowErrorsMatching("error adding transaction to pending pool")
 		h.expectNoTransactionsToBeForwarded()

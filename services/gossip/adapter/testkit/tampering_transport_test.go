@@ -87,7 +87,7 @@ func withTamperingHarness(ctx context.Context, t *testing.T, logger log.Logger, 
 }
 
 func TestFailingTamperer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				c.transport.Fail(anyMessage())
@@ -202,7 +202,7 @@ func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
 }
 
 func TestPausingTamperer(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				digits := make(chan byte, 10)
@@ -242,7 +242,7 @@ func TestPausingTamperer(t *testing.T) {
 // this test is suspect as having a deadlock, may need to skip it
 func TestLatchingTamperer(t *testing.T) {
 	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it; handled in https://github.com/orbs-network/orbs-network-go/pull/769")
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				called := make(chan bool)

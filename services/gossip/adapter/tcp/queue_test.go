@@ -10,7 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -19,7 +19,7 @@ import (
 const someAddress = ""
 
 func TestQueue_PushAndPopMultiple(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 1000, 1000)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
@@ -43,7 +43,7 @@ func TestQueue_PushAndPopMultiple(t *testing.T) {
 }
 
 func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 1000, 2)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}})
@@ -67,7 +67,7 @@ func TestQueue_CannotPushMoreThanMaxMessages(t *testing.T) {
 }
 
 func TestQueue_PopWhenEmptyWaitsUntilPush(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 1000, 1000)
 
 		go func() {
@@ -95,7 +95,7 @@ func TestQueue_PopWhenEmptyCancelsWithContext(t *testing.T) {
 }
 
 func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 10, 1000)
 
 		err := q.Push(&adapter.TransportData{SenderNodeAddress: []byte{0x01}, Payloads: [][]byte{buf(3), buf(4)}})
@@ -119,7 +119,7 @@ func TestQueue_CannotPushMoreThanMaxBytes(t *testing.T) {
 }
 
 func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 1000, 3)
 
 		q.Clear(ctx)
@@ -147,7 +147,7 @@ func TestQueue_ClearEmptiesTheQueue(t *testing.T) {
 }
 
 func TestQueue_DisableThenEnable(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		q := aQueue(t, 1000, 2)
 
 		q.Disable()

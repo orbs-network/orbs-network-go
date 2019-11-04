@@ -10,9 +10,9 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
@@ -20,7 +20,7 @@ import (
 )
 
 func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		ctrlRand := rand.NewControlledRand(t)
 		h := newHarness(parent).start(ctx)
 
@@ -45,7 +45,7 @@ func TestHandleForwardedTransactionsDiscardsMessagesWithInvalidSignature(t *test
 }
 
 func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
 		tx1 := builders.TransferTransaction().Build()
@@ -59,7 +59,7 @@ func TestHandleForwardedTransactionsAddsMessagesToPool(t *testing.T) {
 
 func TestHandleForwardedTransactionsDoesNotAddToFullPool(t *testing.T) {
 
-	test.WithConcurrencyHarness(t, func(ctx context.Context, parent *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithSizeLimit(parent, 1)
 		h.AllowErrorsMatching("error adding forwarded transaction to pending pool")
 		h.start(ctx)

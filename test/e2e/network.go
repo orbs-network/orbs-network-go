@@ -10,14 +10,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
-	"math/rand"
 	"os"
 	"time"
 )
@@ -28,24 +26,20 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 // Also Lean Helix consensus algo requires it to be >= 4 or it will panic
 const LOCAL_NETWORK_SIZE = 4
 
-type inProcessE2ENetwork struct {
-	govnr.TreeSupervisor
-	nodes          []*bootstrap.Node
-	virtualChainId primitives.VirtualChainId
-}
-
-func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
+func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+	randomer.logger.Info("starting management network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 
-	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false)
+	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false, randomer)
 }
 
-func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId) *inProcessE2ENetwork {
+func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+	randomer.logger.Info("starting application network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 
-	return bootstrapE2ENetwork(0, "app", virtualChainId, true)
+	return bootstrapE2ENetwork(0, "app", virtualChainId, true, randomer)
 }
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
@@ -57,22 +51,15 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	cleanBlockStorage(h.virtualChainId)
 }
 
-var randSeq = rand.New(rand.NewSource(int64(os.Getpid()) ^ time.Now().UTC().UnixNano()))
-
-const firstEphemeralPort = 49152 // https://en.wikipedia.org/wiki/Ephemeral_port
-const maxPort = 65535
-
-func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool) *inProcessE2ENetwork {
+func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool, tl *loggerRandomer) *inProcessE2ENetwork {
 	net := &inProcessE2ENetwork{
 		virtualChainId: virtualChainId,
 	}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	gossipPeers := make(map[string]config.GossipPeer)
-	firstRandomPort := firstEphemeralPort + randSeq.Intn(maxPort-LOCAL_NETWORK_SIZE-firstEphemeralPort)
-
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
-		gossipPortByNodeIndex = append(gossipPortByNodeIndex, firstRandomPort+i)
+		gossipPortByNodeIndex = append(gossipPortByNodeIndex, tl.aRandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
 		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
@@ -81,13 +68,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
 
 	_ = os.MkdirAll(config.GetProjectSourceRootPath()+"/_logs", 0755)
-	console := log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())
 
-	logger := log.GetLogger().WithTags(
-		log.String("_test", "e2e"),
-		log.String("_branch", os.Getenv("GIT_BRANCH")),
-		log.String("_commit", os.Getenv("GIT_COMMIT"))).
-		WithOutput(console)
 	leaderKeyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		nodeKeyPair := keys.EcdsaSecp256K1KeyPairForTests(i)
@@ -100,7 +81,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 			panic(err)
 		}
 
-		nodeLogger := logger.WithOutput(console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
+		nodeLogger := tl.logger.WithOutput(tl.console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
 		processorArtifactPath := setUpProcessorArtifactPath(virtualChainId)
 
 		cfg := config.
@@ -120,7 +101,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 			)
 
 		if deployBlocksFile {
-			deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), logger)
+			deployBlockStorageFiles(cfg.BlockStorageFileSystemDataDir(), tl.logger)
 		}
 
 		node := bootstrap.NewNode(cfg, nodeLogger)

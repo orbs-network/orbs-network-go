@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ import (
 
 func testDeployNativeContractWithConfig(jsonConfig string) func(t *testing.T) {
 	return func(t *testing.T) {
-		test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+		with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 			network := NewDevelopmentNetwork(ctx, harness.Logger, nil, jsonConfig)
 			harness.Supervise(network)
 			contract := callcontract.NewContractClient(network)
@@ -63,7 +64,7 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 }
 
 func TestDeployNativeContractFailsWhenUsingSystemContractName(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		network := NewDevelopmentNetwork(ctx, harness.Logger, nil, "")
 		harness.Supervise(network)
 		tx := builders.Transaction().

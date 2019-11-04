@@ -12,93 +12,154 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
-func (t *DirectTransport) serverListenForIncomingConnections(ctx context.Context, listenPort uint16) (net.Listener, error) {
+type serverConfig interface {
+	GossipListenPort() uint16
+	GossipNetworkTimeout() time.Duration
+}
+
+type transportServer struct {
+	govnr.TreeSupervisor
+
+	sync.RWMutex
+	port        int
+	listener    adapter.TransportListener
+	netListener net.Listener
+
+	logger         log.Logger
+	metrics        incomingConnectionMetrics
+	config         serverConfig
+	shutdownServer context.CancelFunc
+}
+
+type incomingConnectionMetrics struct {
+	acceptSuccesses   *metric.Gauge
+	acceptErrors      *metric.Gauge
+	transportErrors   *metric.Gauge
+	activeConnections *metric.Gauge
+}
+
+func newServer(config serverConfig, logger log.Logger, registry metric.Registry) *transportServer {
+	server := &transportServer{
+		config:  config,
+		logger:  logger,
+		metrics: createServerMetrics(registry),
+	}
+
+	return server
+}
+
+func createServerMetrics(registry metric.Registry) incomingConnectionMetrics {
+	return incomingConnectionMetrics{
+		acceptSuccesses:   registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortSuccess.Count"),
+		acceptErrors:      registry.NewGauge("Gossip.IncomingConnection.ListeningOnTCPPortErrors.Count"),
+		transportErrors:   registry.NewGauge("Gossip.IncomingConnection.TransportErrors.Count"),
+		activeConnections: registry.NewGauge("Gossip.IncomingConnection.Active.Count"),
+	}
+}
+
+func (t *transportServer) getPort() int {
+	t.RLock()
+	defer t.RUnlock()
+
+	return t.port
+}
+
+func (t *transportServer) listenForIncomingConnections(ctx context.Context) (net.Listener, error) {
 	// TODO(v1): migrate to ListenConfig which has better support of contexts (go 1.11 required)
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", listenPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", t.config.GossipListenPort()))
 	if err != nil {
 		return nil, err
 	}
 
-	// this goroutine will shut down the server gracefully when context is done
-	go func() {
-		<-ctx.Done()
-		t.server.Lock()
-		defer t.server.Unlock()
-		t.server.listening = false
-		err := listener.Close()
-		if err != nil {
-			t.logger.Error("Failed to close direct transport lister", log.Error(err))
-		}
-	}()
-
-	t.server.Lock()
-	defer t.server.Unlock()
-	t.server.listening = true
+	t.Lock()
+	defer t.Unlock()
+	t.port = listener.Addr().(*net.TCPAddr).Port
+	t.netListener = listener
+	t.logger.Info("gossip transport server listening", log.Int("port", t.port))
 
 	return listener, err
 }
 
-func (t *DirectTransport) IsServerListening() bool {
-	t.server.RLock()
-	defer t.server.RUnlock()
+func (t *transportServer) IsListening() bool {
+	t.RLock()
+	defer t.RUnlock()
 
-	return t.server.listening
+	return t.netListener != nil
 }
 
-func (t *DirectTransport) serverMainLoop(parentCtx context.Context, listenPort uint16) {
-	listener, err := t.serverListenForIncomingConnections(parentCtx, listenPort)
-	if err != nil {
-		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", listenPort, err.Error()))
-	}
+func (t *transportServer) mainLoop(parentCtx context.Context, listener net.Listener) {
+	ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
+	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	t.setServerPort(listener.Addr().(*net.TCPAddr).Port)
-	t.logger.Info("gossip transport server listening", log.Uint32("port", uint32(t.GetServerPort())))
+	var numOfConnections int32
+
+	connClosed := make(chan struct{})
+	connCtx, closeAllDanglingConnections := context.WithCancel(parentCtx)
+
+	defer func() {
+		closeAllDanglingConnections()
+		for ; atomic.LoadInt32(&numOfConnections) > 0; atomic.AddInt32(&numOfConnections, -1) {
+			<-connClosed
+		}
+		logger.Info("all connections have been closed, returning")
+	}()
 
 	for {
-		if parentCtx.Err() != nil {
-			t.logger.Info("ending server main loop (system shutting down)")
+		if ctx.Err() != nil {
+			logger.Info("server main loop quitting because system is shutting down")
+			return
 		}
-
-		ctx := trace.NewContext(parentCtx, "Gossip.Transport.TCP.Server")
-
 		conn, err := listener.Accept()
 		if err != nil {
-			if !t.IsServerListening() {
-				t.logger.Info("incoming connection accept stopped since server is shutting down", trace.LogFieldFrom(ctx))
+			if !t.IsListening() {
+				logger.Info("incoming connection accept stopped since server is shutting down")
 				return
 			}
-			t.metrics.incomingConnectionAcceptErrors.Inc()
-			t.logger.Info("incoming connection accept error", log.Error(err), trace.LogFieldFrom(ctx))
+			t.metrics.acceptErrors.Inc()
+			logger.Info("incoming connection accept error", log.Error(err))
 			continue
 		}
-		t.metrics.incomingConnectionAcceptSuccesses.Inc()
-		govnr.Once(logfields.GovnrErrorer(t.logger), func() {
-			t.serverHandleIncomingConnection(ctx, conn)
+
+		logger.Info("got incoming connection", log.Stringable("remote-address", conn.RemoteAddr()))
+		t.metrics.acceptSuccesses.Inc()
+
+		atomic.AddInt32(&numOfConnections, 1)
+
+		govnr.Once(logfields.GovnrErrorer(logger), func() {
+			t.handleIncomingConnection(connCtx, conn)
+			if connCtx.Err() == nil { // server is not shutting down
+				atomic.AddInt32(&numOfConnections, -1) // don't have to wait for this connection to close
+			} else {
+				connClosed <- struct{}{}
+			}
 		})
 	}
 }
 
-func (t *DirectTransport) serverHandleIncomingConnection(ctx context.Context, conn net.Conn) {
+func (t *transportServer) handleIncomingConnection(ctx context.Context, conn net.Conn) {
 	t.logger.Info("successful incoming gossip transport connection", log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): add a white list for IPs we're willing to accept connections from
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): make sure each IP from the white list connects only once
-	t.metrics.activeIncomingConnections.Inc()
-	defer t.metrics.activeIncomingConnections.Dec()
+	t.metrics.activeConnections.Inc()
+	defer t.metrics.activeConnections.Dec()
 
+	defer func() { _ = conn.Close() }()
 	for {
 		payloads, err := t.receiveTransportData(ctx, conn)
 		if err != nil {
-			t.metrics.incomingConnectionTransportErrors.Inc()
+			t.metrics.transportErrors.Inc()
 			t.logger.Info("failed receiving transport data, disconnecting", log.Error(err), log.String("peer", conn.RemoteAddr().String()), trace.LogFieldFrom(ctx))
-			conn.Close()
 
 			return
 		}
@@ -111,9 +172,9 @@ func (t *DirectTransport) serverHandleIncomingConnection(ctx context.Context, co
 	}
 }
 
-func (t *DirectTransport) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
+func (t *transportServer) receiveTransportData(ctx context.Context, conn net.Conn) ([][]byte, error) {
 	// TODO(https://github.com/orbs-network/orbs-network-go/issues/182): think about timeout policy on receive, we might not want it
-	timeout := t.config().GossipNetworkTimeout()
+	timeout := t.config.GossipNetworkTimeout()
 	var res [][]byte
 
 	// receive num payloads
@@ -158,7 +219,7 @@ func (t *DirectTransport) receiveTransportData(ctx context.Context, conn net.Con
 	return res, nil
 }
 
-func (t *DirectTransport) notifyListener(ctx context.Context, payloads [][]byte) {
+func (t *transportServer) notifyListener(ctx context.Context, payloads [][]byte) {
 	listener := t.getListener()
 
 	if listener == nil {
@@ -168,11 +229,36 @@ func (t *DirectTransport) notifyListener(ctx context.Context, payloads [][]byte)
 	listener.OnTransportMessageReceived(ctx, payloads)
 }
 
-func (t *DirectTransport) getListener() adapter.TransportListener {
-	t.server.RLock()
-	defer t.server.RUnlock()
+func (t *transportServer) getListener() adapter.TransportListener {
+	t.RLock()
+	defer t.RUnlock()
 
-	return t.server.listener
+	return t.listener
+}
+
+func (t *transportServer) startSupervisedMainLoop(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	t.shutdownServer = cancel
+
+	listener, err := t.listenForIncomingConnections(ctx)
+	if err != nil {
+		panic(fmt.Sprintf("gossip transport failed to listen on port %d: %s", t.config.GossipListenPort(), err.Error()))
+	}
+	t.Supervise(govnr.Forever(ctx, "TCP server", logfields.GovnrErrorer(t.logger), func() {
+		t.mainLoop(ctx, listener)
+	}))
+}
+
+func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
+	t.Lock()
+	defer t.Unlock()
+	l := t.netListener
+	t.netListener = nil
+	err := l.Close()
+	if err != nil {
+		t.logger.Error("Failed to close direct transport lister", log.Error(err))
+	}
+	t.shutdownServer()
 }
 
 func readTotal(ctx context.Context, conn net.Conn, totalSize uint32, timeout time.Duration) ([]byte, error) {

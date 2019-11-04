@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/scribe/log"
@@ -27,7 +28,7 @@ import (
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
 	cfg := config.ForDirectTransportTests(address, make(GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
@@ -39,7 +40,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 }
 
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
 		node3 := aNode(ctx, harness.Logger)
@@ -56,7 +57,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,
@@ -75,7 +76,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
 			node1, node2, node4)
 
 		waitForAllNodesToSatisfy(t,
@@ -95,7 +96,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 }
 
 func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
-	test.WithConcurrencyHarness(t, func(ctx context.Context, harness *test.ConcurrencyHarness) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
 		node3 := aNode(ctx, harness.Logger)
@@ -111,7 +112,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.clientConnections.peers) > 0 },
+			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,
@@ -181,17 +182,22 @@ func aMessage() [][]byte {
 	return payloads
 }
 
-var currentNodeIndex = 1
-
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
-	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
+	address := aKey()
 	peers := aTopologyContaining()
 	cfg := config.ForDirectTransportTests(address, peers, 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
-	currentNodeIndex++
 	return &nodeHarness{transport, address, listener}
+}
+
+var currentNodeIndex = 1
+
+func aKey() primitives.NodeAddress {
+	address := keys.EcdsaSecp256K1KeyPairForTests(currentNodeIndex).NodeAddress()
+	currentNodeIndex++
+	return address
 }
 
 func aTopologyContaining(nodes ...*nodeHarness) GossipPeers {

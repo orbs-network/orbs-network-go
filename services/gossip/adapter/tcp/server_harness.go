@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"net"
@@ -29,6 +30,7 @@ const HARNESS_PEER_READ_TIMEOUT = 1 * time.Second
 const HARNESS_OUTGOING_CONNECTIONS_INIT_TIMEOUT = 3 * time.Second
 
 type directHarness struct {
+	*with.ConcurrencyHarness
 	config    config.GossipTransportConfig
 	transport *DirectTransport
 
@@ -36,19 +38,22 @@ type directHarness struct {
 	listenerMock         *testkit.MockTransportListener
 }
 
-func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, logger log.Logger) *directHarness {
+func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, parent *with.ConcurrencyHarness) *directHarness {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this config is just a stub, it's mostly a client config and this is a server harness
-	transport := makeTransport(ctx, logger, cfg)
+	cfg := config.ForDirectTransportTests(address, make(map[string]config.GossipPeer), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this gossipPeers is just a stub, it's mostly a client gossipPeers and this is a server harness
+	transport := makeTransport(ctx, parent.Logger, cfg)
 
 	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort()) // establish connection from test to server port ( test harness ==> SUT )
 
 	h := &directHarness{
+		ConcurrencyHarness:   parent,
 		config:               cfg,
 		transport:            transport,
 		listenerMock:         &testkit.MockTransportListener{},
 		peerTalkerConnection: peerTalkerConnection,
 	}
+
+	h.Supervise(transport)
 
 	return h
 }
