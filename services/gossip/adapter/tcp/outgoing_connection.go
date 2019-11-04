@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -86,6 +87,18 @@ func (c *outgoingConnection) disconnect() chan struct{} {
 }
 
 func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
+	var localAddr *net.TCPAddr
+
+	if c.sourcePort == 0 {
+		localAddr = nil // Let the OS choose a port
+	} else {
+		var err error
+		localAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", c.sourcePort))
+		if err != nil {
+			panic(fmt.Sprintf("Unable to resolve local address for source port: %d", c.sourcePort))
+		}
+	}
+
 	for {
 		if parentCtx.Err() != nil {
 			return // because otherwise the continue statement below could prevent us from ever shutting down
@@ -93,18 +106,7 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
-		logger.Info("attempting outgoing transport connection")
-		var localAddr *net.TCPAddr
-
-		if c.sourcePort == 0 {
-			localAddr = nil // Let the OS choose a port
-		} else {
-			var err error
-			localAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", c.sourcePort))
-			if err != nil {
-				panic(fmt.Sprintf("Unable to resolve local address for source port: %d", c.sourcePort))
-			}
-		}
+		logger.Info(fmt.Sprintf("attempting outgoing transport connection, source addr: %s", localAddr))
 
 		dialer := net.Dialer{
 			Timeout:   c.config.GossipNetworkTimeout(),
@@ -113,8 +115,13 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		conn, err := dialer.Dial("tcp", c.queue.networkAddress)
 
 		if err != nil {
-			logger.Info("cannot connect to gossip peer endpoint")
-			time.Sleep(c.config.GossipReconnectInterval())
+			if localAddr != nil && strings.Contains(err.Error(), "already in use") { // TODO find a better, cross platform way to check this
+				logger.Info("port collision on source port - falling back to OS allocation")
+				localAddr = nil
+			} else {
+				logger.Info("cannot connect to gossip peer endpoint")
+				time.Sleep(c.config.GossipReconnectInterval())
+			}
 			continue
 		}
 
