@@ -56,13 +56,23 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 		virtualChainId: virtualChainId,
 	}
 	gossipPortByNodeIndex := []int{}
+	nodeAddressByIndex := []primitives.NodeAddress{}
+	gossipPeersByNodeIndex := []map[string]config.GossipPeer{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	gossipPeers := make(map[string]config.GossipPeer)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		gossipPortByNodeIndex = append(gossipPortByNodeIndex, tl.aRandomPort())
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
+		nodeAddressByIndex = append(nodeAddressByIndex, nodeAddress)
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
+	}
+
+	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
+		peers := make(map[string]config.GossipPeer)
+		for j := 0; j < LOCAL_NETWORK_SIZE; j++ {
+			nodeAddr := nodeAddressByIndex[j]
+			peers[nodeAddr.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddr), tl.aRandomPort())
+		}
+		gossipPeersByNodeIndex = append(gossipPeersByNodeIndex, peers)
 	}
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched
@@ -91,7 +101,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 				gossipPortByNodeIndex[i],
 				nodeKeyPair.NodeAddress(),
 				nodeKeyPair.PrivateKey(),
-				gossipPeers,
+				gossipPeersByNodeIndex[i],
 				genesisValidatorNodes,
 				getVirtualChainDataDir(virtualChainId),
 				processorArtifactPath,
@@ -107,10 +117,6 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 		node := bootstrap.NewNode(cfg, nodeLogger)
 		net.Supervise(node)
 		net.nodes = append(net.nodes, node)
-	}
-
-	for _, node := range net.nodes {
-		node.Start()
 	}
 
 	return net

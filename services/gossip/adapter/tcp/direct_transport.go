@@ -30,15 +30,11 @@ type DirectTransport struct {
 
 	outgoingConnections *outgoingConnections
 	server              *transportServer
-	gossipPeers         map[string]config.GossipPeer
-	parentCtx           context.Context
 }
 
 func NewDirectTransport(parentCtx context.Context, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {
 	logger := parentLogger.WithTags(LogTag)
 	t := &DirectTransport{
-		parentCtx:           parentCtx,
-		gossipPeers:         config.GossipPeers(),
 		logger:              logger,
 		outgoingConnections: newOutgoingConnections(logger, registry, config),
 		server:              newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
@@ -47,13 +43,10 @@ func NewDirectTransport(parentCtx context.Context, config config.GossipTransport
 	t.Supervise(t.server)
 	t.Supervise(t.outgoingConnections)
 
-	t.server.startSupervisedMainLoop(parentCtx) // server goroutine
+	t.outgoingConnections.connectAll(parentCtx, config.GossipPeers()) // client goroutines
+	t.server.startSupervisedMainLoop(parentCtx)                       // server goroutine
 
 	return t
-}
-
-func (t *DirectTransport) ConnectToPeers() {
-	t.outgoingConnections.connectAll(t.parentCtx, t.gossipPeers) // client goroutines
 }
 
 func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {

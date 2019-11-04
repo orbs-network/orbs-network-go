@@ -45,7 +45,6 @@ func main() {
 		cfg,
 		logger,
 	)
-	node.Start()
 
 	supervised.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
 

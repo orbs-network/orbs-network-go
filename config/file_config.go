@@ -85,7 +85,7 @@ func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
 				if i, err := parseUint32(kv["port"].(float64)); err != nil {
 					return peers, err
 				} else {
-					peers[nodeAddress.KeyForMap()] = NewHardCodedGossipPeer(int(i), kv["ip"].(string), hexAddress)
+					peers[nodeAddress.KeyForMap()] = NewHardCodedGossipPeer(int(i), kv["ip"].(string), hexAddress, 0)
 				}
 			}
 		}

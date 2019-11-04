@@ -40,7 +40,8 @@ type outgoingConnection struct {
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
 
-	closed chan struct{}
+	closed     chan struct{}
+	sourcePort int
 }
 
 func newOutgoingConnection(peer config.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *outgoingConnectionMetrics, transportConfig timingsConfig) *outgoingConnection {
@@ -60,6 +61,7 @@ func newOutgoingConnection(peer config.GossipPeer, parentLogger log.Logger, metr
 		config:          transportConfig,
 		queue:           queue,
 		peerHexAddress:  hexAddressSliceForLogging,
+		sourcePort:      peer.GossipSourcePort(),
 		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
 		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
 	}
@@ -92,7 +94,16 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")
-		conn, err := net.DialTimeout("tcp", c.queue.networkAddress, c.config.GossipNetworkTimeout())
+		localAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", c.sourcePort))
+		if err != nil {
+			panic(fmt.Sprintf("Unable to resolve local address for source port: %d", c.sourcePort))
+		}
+
+		dialer := net.Dialer{
+			Timeout:   c.config.GossipNetworkTimeout(),
+			LocalAddr: localAddr,
+		}
+		conn, err := dialer.Dial("tcp", c.queue.networkAddress)
 
 		if err != nil {
 			logger.Info("cannot connect to gossip peer endpoint")

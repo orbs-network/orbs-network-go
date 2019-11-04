@@ -79,10 +79,6 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	return n
 }
 
-func (n *Node) Start() {
-	n.transport.ConnectToPeers()
-}
-
 func (n *Node) GracefulShutdown(shutdownContext context.Context) {
 	n.logger.Info("Shutting down")
 	n.cancelFunc()
