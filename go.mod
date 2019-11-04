@@ -22,7 +22,6 @@ require (
 	github.com/karalabe/hid v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
-	github.com/orbs-network/contract-external-libraries-go v0.0.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/lean-helix-go v0.2.4-0.20191103173223-764555825f30
