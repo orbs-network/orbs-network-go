@@ -117,6 +117,14 @@ jobs:
       - store_artifacts:
           path: _out
 
+  call_marvin:
+    docker:
+      - image: circleci/golang:1.12.9
+    resource_class: medium
+    steps:
+      - checkout
+      - run: curl -X POST 34.222.245.15:4567/jobs/start
+
   success:
     machine:
       image: ubuntu-1604:201903-01
@@ -234,6 +242,10 @@ workflows:
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
+      - call_marvin:
+          requires:
+            - e2e_testnet_benchmark
+            - e2e_testnet_leanhelix
       - release:
           requires:
             - tests
