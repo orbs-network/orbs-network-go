@@ -133,7 +133,7 @@ func TestSetGossipPeers(t *testing.T) {
 
 	keyPair := keys.EcdsaSecp256K1KeyPairForTests(0)
 
-	node1 := NewHardCodedGossipPeer(4400, "192.168.199.2", "a328846cd5b4979d68a8c58a9bdfeee657b34de7")
+	node1 := NewHardCodedGossipPeer(4400, "192.168.199.2", "a328846cd5b4979d68a8c58a9bdfeee657b34de7", 0)
 
 	require.EqualValues(t, node1, cfg.GossipPeers()[keyPair.NodeAddress().KeyForMap()])
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"net"
 	"os"
+	"sync"
 )
 
 type inProcessE2ENetwork struct {
@@ -30,7 +31,7 @@ func NewLoggerRandomer() *loggerRandomer {
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
 		WithOutput(console)
-	tl := &loggerRandomer{logger: logger, console: console}
+	tl := &loggerRandomer{logger: logger, console: console, pastPorts: make(map[int]bool)}
 	rnd := rand.NewControlledRand(tl)
 	tl.rnd = rnd
 	// this is yuckie - it's a circular dependency, but it's ok since we're in a test situation and it's better than passing two arguments
@@ -44,6 +45,9 @@ type loggerRandomer struct {
 	logger  log.Logger
 	console log.Output
 	rnd     *rand.ControlledRand
+
+	pastPorts      map[int]bool
+	portAllocMutex sync.Mutex
 }
 
 func (t *loggerRandomer) Log(args ...interface{}) {
@@ -55,15 +59,28 @@ func (t *loggerRandomer) Name() string {
 }
 
 func (t *loggerRandomer) aRandomPort() int {
-	for {
+	t.portAllocMutex.Lock()
+	defer t.portAllocMutex.Unlock()
+
+	const MAX_ATTEMPTS = 1000
+	for attempt := 0; attempt < MAX_ATTEMPTS; attempt++ {
 		port := firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE*2-firstEphemeralPort)
-		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-		if err == nil {
-			_ = l.Close()
-			t.logger.Info("port is free, returning", log.Int("port", port))
-			return port
-		} else {
-			t.logger.Info("port is already in use, retrying a different port", log.Int("port", port))
+		if exists, ok := t.pastPorts[port]; ok && exists {
+			t.logger.Info("port was allocated previously, retrying a different port", log.Int("port", port))
+			continue
 		}
+
+		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			t.logger.Info("port is already in use, retrying a different port", log.Int("port", port))
+			continue
+		}
+
+		_ = l.Close()
+		t.logger.Info("port is free, returning", log.Int("port", port))
+		t.pastPorts[port] = true
+		return port
 	}
+
+	panic(fmt.Sprintf("Unable to allocate a port after %d attempts", MAX_ATTEMPTS))
 }

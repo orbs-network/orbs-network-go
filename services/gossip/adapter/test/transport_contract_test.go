@@ -156,7 +156,7 @@ func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 
 	peers := make(tcp.GossipPeers)
 	for i, transport := range transports {
-		peers[res.nodeAddresses[i].KeyForMap()] = config.NewHardCodedGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
+		peers[res.nodeAddresses[i].KeyForMap()] = config.NewHardCodedGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]), 0)
 	}
 
 	for _, t1 := range transports {

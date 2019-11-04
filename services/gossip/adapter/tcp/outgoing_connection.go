@@ -94,9 +94,16 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")
-		localAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", c.sourcePort))
-		if err != nil {
-			panic(fmt.Sprintf("Unable to resolve local address for source port: %d", c.sourcePort))
+		var localAddr *net.TCPAddr
+
+		if c.sourcePort == 0 {
+			localAddr = nil // Let the OS choose a port
+		} else {
+			var err error
+			localAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", c.sourcePort))
+			if err != nil {
+				panic(fmt.Sprintf("Unable to resolve local address for source port: %d", c.sourcePort))
+			}
 		}
 
 		dialer := net.Dialer{
