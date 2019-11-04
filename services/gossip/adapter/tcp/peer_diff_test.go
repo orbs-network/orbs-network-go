@@ -31,7 +31,7 @@ func TestPeerDiff_OldHasAPeer_ReturnsPeerToRemove(t *testing.T) {
 	oldPeers := make(GossipPeers)
 	newPeers := make(GossipPeers)
 
-	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "")
+	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "", 0)
 
 	toRemove, toAdd := peerDiff(oldPeers, newPeers)
 
@@ -44,7 +44,7 @@ func TestPeerDiff_OldHasAPeer_ReturnsPeerToRemove(t *testing.T) {
 
 func TestPeerDiff_ReturnsEmptyToAddAndToRemoveLists_WhenConfigIsNotChanged(t *testing.T) {
 	peers := make(GossipPeers)
-	peers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "")
+	peers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "", 0)
 
 	toRemove, toAdd := peerDiff(peers, peers)
 
@@ -56,11 +56,11 @@ func TestPeerDiff_Returns_CorrectLists_WhenAPeerWasAddedAndAnotherWasRemoved(t *
 	oldPeers := make(GossipPeers)
 	newPeers := make(GossipPeers)
 
-	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "")
-	oldPeers["2"] = config.NewHardCodedGossipPeer(2, "10.0.0.2", "")
+	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "", 0)
+	oldPeers["2"] = config.NewHardCodedGossipPeer(2, "10.0.0.2", "", 0)
 
-	newPeers["2"] = config.NewHardCodedGossipPeer(2, "10.0.0.2", "")
-	newPeers["3"] = config.NewHardCodedGossipPeer(3, "10.0.0.3", "")
+	newPeers["2"] = config.NewHardCodedGossipPeer(2, "10.0.0.2", "", 0)
+	newPeers["3"] = config.NewHardCodedGossipPeer(3, "10.0.0.3", "", 0)
 
 	toRemove, toAdd := peerDiff(oldPeers, newPeers)
 
@@ -79,10 +79,10 @@ func TestPeerDiff_Returns_PeersThatChangedAddress_InBothLists(t *testing.T) {
 	oldPeers := make(GossipPeers)
 	newPeers := make(GossipPeers)
 
-	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "")
-	newPeers["1"] = config.NewHardCodedGossipPeer(3, "10.0.0.1", "")
-	oldPeers["2"] = config.NewHardCodedGossipPeer(1, "10.0.0.2", "")
-	newPeers["2"] = config.NewHardCodedGossipPeer(1, "10.0.0.3", "")
+	oldPeers["1"] = config.NewHardCodedGossipPeer(1, "10.0.0.1", "", 0)
+	newPeers["1"] = config.NewHardCodedGossipPeer(3, "10.0.0.1", "", 0)
+	oldPeers["2"] = config.NewHardCodedGossipPeer(1, "10.0.0.2", "", 0)
+	newPeers["2"] = config.NewHardCodedGossipPeer(1, "10.0.0.3", "", 0)
 
 	toRemove, toAdd := peerDiff(oldPeers, newPeers)
 
