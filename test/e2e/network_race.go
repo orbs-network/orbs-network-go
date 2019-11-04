@@ -9,3 +9,7 @@ func buildDummyPlugin() {
 func dummyPluginPath() string {
 	return ""
 }
+
+func removeDummyPlugin() {
+
+}

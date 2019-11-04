@@ -44,12 +44,12 @@ type harness struct {
 	service        services.Processor
 }
 
-func newHarness(logger log.Logger) *harness {
+func newHarness(logger log.Logger, pluginPath string) *harness {
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 
 	service := javascript.NewJavaScriptProcessor(logger, &config{
-		"./dummy_plugin.bin",
+		pluginPath,
 	})
 	service.RegisterContractSdkCallHandler(sdkCallHandler)
 
@@ -134,7 +134,7 @@ func (h *harness) verifySdkCallMade(t *testing.T) {
 
 func BuildDummyPlugin(src string, target string) {
 	root := config2.GetProjectSourceRootPath()
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(root, target), path.Join(root, src))
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", DummyPluginPath(target), path.Join(root, src))
 	cmd.Dir = root
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),
@@ -147,6 +147,14 @@ func BuildDummyPlugin(src string, target string) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to compile dummy plugin: %s\n%s", err, string(out)))
 	}
+}
+
+func RemoveDummyPlugin(target string) {
+	os.RemoveAll(DummyPluginPath(target))
+}
+
+func DummyPluginPath(target string) string {
+	return path.Join(config2.GetProjectSourceRootPath(), target)
 }
 
 func getGOPATH() string {

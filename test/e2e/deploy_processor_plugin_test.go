@@ -33,7 +33,7 @@ func TestDeploymentOfProcessorPlugin(t *testing.T) {
 		printTestTime(t, "first block committed", &lt)
 
 		counterStart := counter_mock.COUNTER_CONTRACT_START_FROM
-		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
+		contractName := fmt.Sprintf("CounterFrom%d", time.Now().UnixNano())
 
 		printTestTime(t, "send deploy - start", &lt)
 

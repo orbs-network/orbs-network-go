@@ -21,7 +21,7 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 	processorType, err := s.callGetInfoOfDeploymentSystemContract(ctx, executionContext, serviceName)
 
 	// on failure (contract not deployed), attempt to auto deploy pre-built (in repository) native contract
-	if err != nil && processorType == protocol.PROCESSOR_TYPE_RESERVED {
+	if err != nil {
 		if executionContext.accessScope != protocol.ACCESS_SCOPE_READ_WRITE {
 			return nil, err
 		}

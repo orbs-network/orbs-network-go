@@ -42,6 +42,8 @@ func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessor
 		if err != nil {
 			panic(fmt.Sprintf("Could not load plugin: %s", err))
 		}
+	} else {
+		worker = DefaultWorker
 	}
 
 	return &service{

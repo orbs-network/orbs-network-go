@@ -14,12 +14,13 @@ import (
 	"time"
 )
 
-const TIMES_TO_RUN_EACH_TEST = 1
+const TIMES_TO_RUN_EACH_TEST = 2
 
 func TestMain(m *testing.M) {
 	exitCode := 0
 
 	buildDummyPlugin()
+	defer removeDummyPlugin()
 
 	config := getConfig()
 	if config.bootstrap {

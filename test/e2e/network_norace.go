@@ -3,15 +3,22 @@
 package e2e
 
 import (
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/processor/javascript/test"
-	"path"
+)
+
+const (
+	DUMMY_PLUGIN_SOURCE = "services/processor/plugins/dummy/"
+	DUMMY_PLUGIN_BINARY = "test/e2e/dummy_plugin.bin"
 )
 
 func buildDummyPlugin() {
-	test.BuildDummyPlugin("services/processor/plugins/dummy/", "test/e2e/dummy_plugin.bin")
+	test.BuildDummyPlugin(DUMMY_PLUGIN_SOURCE, DUMMY_PLUGIN_BINARY)
+}
+
+func removeDummyPlugin() {
+	test.RemoveDummyPlugin(DUMMY_PLUGIN_BINARY)
 }
 
 func dummyPluginPath() string {
-	return path.Join(config.GetProjectSourceRootPath(), "test/e2e/dummy_plugin.bin")
+	return test.DummyPluginPath(DUMMY_PLUGIN_BINARY)
 }
