@@ -93,6 +93,7 @@ jobs:
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
+      - run: ./.circleci/install-node.sh
       - run: go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       - run: ./.circleci/install-docker-compose.sh
