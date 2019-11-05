@@ -109,8 +109,8 @@ type NodeConfig interface {
 	// Remote signer
 	SignerEndpoint() string
 
-	// JS processor
-	ExperimentalExternalProcessorPluginPath() string
+	// Build-dependent configuration
+	ExtraConfig
 }
 
 type OverridableConfig interface {
@@ -252,9 +252,4 @@ type HttpServerConfig interface {
 type SignerConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	SignerEndpoint() string
-}
-
-type JavascriptProcessorConfig interface {
-	ExperimentalExternalProcessorPluginPath() string
-	VirtualChainId() primitives.VirtualChainId
 }

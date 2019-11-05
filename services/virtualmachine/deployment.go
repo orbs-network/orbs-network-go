@@ -40,8 +40,11 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 		}
 	}
 
-	// return according to processor
-	return s.getProcessor(processorType)
+	if processor, found := s.processors[processorType]; !found {
+		return nil, errors.Errorf("_Deployments.getInfo contract returned unknown processor type: %s", processorType)
+	} else {
+		return processor, nil
+	}
 }
 
 func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {
