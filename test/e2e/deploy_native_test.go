@@ -81,7 +81,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		printTestTime(t, "attempting to deploy again to assert we can't deploy the same contract twice", &lt)
 
-		dcExResult, _, _ := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
+		dcExResult, _, _, _ := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
 
 		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, dcExResult, "expected deploy contract to fail")
 
