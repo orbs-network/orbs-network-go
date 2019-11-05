@@ -20,7 +20,7 @@ import (
 )
 
 type BlockNumberAndTime struct {
-	TimeInSeconds int64
+	TimeInSeconds uint64
 	BlockNumber   int64
 }
 

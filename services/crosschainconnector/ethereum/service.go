@@ -121,7 +121,7 @@ func (s *service) EthereumGetTransactionLogs(ctx context.Context, input *service
 		return nil, errors.Errorf("event with name '%s' not found in given ABI", input.EthereumEventName)
 	}
 
-	logs, err := s.connection.GetTransactionLogs(ctx, ethereumTxHash, eventABI.Id().Bytes())
+	logs, err := s.connection.GetTransactionLogs(ctx, ethereumTxHash, eventABI.ID().Bytes())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting logs for Ethereum txhash %s of contract %s", input.EthereumTxhash, input.EthereumContractAddress)
 	}

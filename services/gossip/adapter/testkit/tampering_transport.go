@@ -50,7 +50,7 @@ type MessagePredicate func(data *adapter.TransportData) bool
 
 type OngoingTamper interface {
 	StopTampering(ctx context.Context)
-	maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool)
+	maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (error, bool)
 }
 
 type LatchingTamper interface {
@@ -59,7 +59,7 @@ type LatchingTamper interface {
 }
 
 type TamperingTransport struct {
-	nested adapter.Transport
+	nested adapter.InterceptableTransport
 
 	tamperers struct {
 		sync.RWMutex
@@ -70,7 +70,7 @@ type TamperingTransport struct {
 	logger log.Logger
 }
 
-func NewTamperingTransport(logger log.Logger, nested adapter.Transport) *TamperingTransport {
+func NewTamperingTransport(logger log.Logger, nested adapter.InterceptableTransport) *TamperingTransport {
 	t := &TamperingTransport{
 		logger: logger.WithTags(log.String("adapter", "transport")),
 		nested: nested,
@@ -94,20 +94,21 @@ func (t *TamperingTransport) RegisterListener(listener adapter.TransportListener
 func (t *TamperingTransport) Send(ctx context.Context, data *adapter.TransportData) error {
 	t.releaseLatches(data)
 
-	if err, returnWithoutSending := t.maybeTamper(ctx, data); returnWithoutSending {
-		return err
-	}
-
-	t.sendToPeers(ctx, data)
-
-	return nil
+	return t.nested.SendWithInterceptor(ctx, data, func(ctx context.Context, peerAddress primitives.NodeAddress, data *adapter.TransportData, transmit adapter.TransmitFunc) error {
+		data = data.Clone() // Tamperers may change the transport data
+		if err, returnWithoutSending := t.maybeTamper(ctx, data, peerAddress, transmit); returnWithoutSending {
+			return err
+		}
+		transmit(ctx, peerAddress, data)
+		return nil
+	})
 }
 
-func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
+func (t *TamperingTransport) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (err error, returnWithoutSending bool) {
 	t.tamperers.RLock()
 	defer t.tamperers.RUnlock()
 	for _, o := range t.tamperers.ongoingTamperers {
-		if err, returnWithoutSending := o.maybeTamper(ctx, data); returnWithoutSending {
+		if err, returnWithoutSending := o.maybeTamper(ctx, data, peerAddress, transmit); returnWithoutSending {
 			return err, returnWithoutSending
 		}
 	}
@@ -182,10 +183,6 @@ func (t *TamperingTransport) removeLatchingTamperer(tamperer *latchingTamperer) 
 		}
 	}
 	panic("Tamperer not found in ongoing tamperer list")
-}
-
-func (t *TamperingTransport) sendToPeers(ctx context.Context, data *adapter.TransportData) {
-	t.nested.Send(ctx, data)
 }
 
 func (t *TamperingTransport) releaseLatches(data *adapter.TransportData) {
