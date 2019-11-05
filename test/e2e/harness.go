@@ -45,6 +45,7 @@ type StressTestConfig struct {
 }
 
 const START_HTTP_PORT = 8090
+const START_GOSSIP_PORT = 8190
 
 type harness struct {
 	client *orbsClient.OrbsClient
