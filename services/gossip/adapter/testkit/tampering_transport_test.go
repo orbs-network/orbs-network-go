@@ -25,36 +25,40 @@ import (
 )
 
 type tamperingHarness struct {
-	senderKey      string
-	transport      *TamperingTransport
-	firstListener  *MockTransportListener
-	secondListener *MockTransportListener
-	t              *testing.T
+	senderKey string
+	transport *TamperingTransport
+	listeners []*MockTransportListener
+	t         *testing.T
+
+	mutex sync.Mutex
 }
 
-func newTamperingHarness(t *testing.T, logger log.Logger, ctx context.Context) *tamperingHarness {
+func newTamperingHarness(t *testing.T, logger log.Logger, ctx context.Context, numListeners int) *tamperingHarness {
 	senderAddress := "sender"
-	firstListenerAddress := "listener1"
-	secondListenerAddress := "listener2"
-	firstListener := &MockTransportListener{}
-	secondListener := &MockTransportListener{}
-
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	genesisValidatorNodes[senderAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(senderAddress))
-	genesisValidatorNodes[firstListenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(firstListenerAddress))
-	genesisValidatorNodes[secondListenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(secondListenerAddress))
+	listeners := []*MockTransportListener{}
+	addresses := []string{}
+
+	for i := 0; i < numListeners; i++ {
+		listenerAddress := fmt.Sprintf("listener%d", i)
+		addresses = append(addresses, listenerAddress)
+		listener := &MockTransportListener{}
+		listeners = append(listeners, listener)
+		genesisValidatorNodes[listenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(listenerAddress))
+	}
 
 	transport := NewTamperingTransport(logger, memory.NewTransport(ctx, logger, genesisValidatorNodes))
-
-	transport.RegisterListener(firstListener, primitives.NodeAddress(firstListenerAddress))
-	transport.RegisterListener(secondListener, primitives.NodeAddress(secondListenerAddress))
+	for ind, listener := range listeners {
+		transport.RegisterListener(listener, primitives.NodeAddress(addresses[ind]))
+	}
 
 	return &tamperingHarness{
-		senderKey:      senderAddress,
-		transport:      transport,
-		firstListener:  firstListener,
-		secondListener: secondListener,
-		t:              t,
+		senderKey: senderAddress,
+		transport: transport,
+		listeners: listeners,
+		t:         t,
+		mutex:     sync.Mutex{},
 	}
 }
 
@@ -71,7 +75,7 @@ func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payload
 }
 
 func (c *tamperingHarness) verify() {
-	for _, listener := range []*MockTransportListener{c.firstListener, c.secondListener} {
+	for _, listener := range c.listeners {
 		ok, err := listener.Verify()
 		if !ok {
 			c.t.Errorf(err.Error())
@@ -79,8 +83,8 @@ func (c *tamperingHarness) verify() {
 	}
 }
 
-func withTamperingHarness(ctx context.Context, t *testing.T, logger log.Logger, f func(*tamperingHarness)) {
-	c := newTamperingHarness(t, logger, ctx)
+func withTamperingHarness(ctx context.Context, t *testing.T, logger log.Logger, numNodes int, f func(*tamperingHarness)) {
+	c := newTamperingHarness(t, logger, ctx, numNodes)
 	f(c)
 	c.verify()
 }
@@ -88,36 +92,32 @@ func withTamperingHarness(ctx context.Context, t *testing.T, logger log.Logger, 
 func TestFailingTamperer(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
+			withTamperingHarness(ctx, t, parent.Logger, 1, func(c *tamperingHarness) {
 				c.transport.Fail(anyMessage())
 
+				c.listeners[0].ExpectNotReceive()
 				c.send(ctx, nil)
 
-				c.firstListener.ExpectNotReceive()
-
-				ok, err := c.firstListener.Verify()
-				if !ok {
-					t.Fatal(err)
-				}
+				time.Sleep(50 * time.Millisecond) // TODO we want to make sure something never happens - how long do we wait? instead, wait until the transport is done emitting transmissions
 			})
 		})
 	})
 }
 
 func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
+	const numNodes = 2
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
+			withTamperingHarness(ctx, t, parent.Logger, numNodes, func(c *tamperingHarness) {
 				const iterations = 5
 
-				const numNodes = 2
 				signals := make(chan byte, iterations*numNodes)
 
 				c.transport.Fail(everySecondTime())
-				c.firstListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
 				}).AtMost(iterations)
-				c.secondListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[1].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
 				}).AtMost(iterations)
 
@@ -139,20 +139,21 @@ func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
 	})
 }
 
+// Make sure the payload is cloned and corrupted per transmission
 func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
+			withTamperingHarness(ctx, t, parent.Logger, 2, func(c *tamperingHarness) {
 				const iterations = 5
 				signals := make(chan byte, 2)
 
 				ctrlRand := rand.NewControlledRand(t)
 				c.transport.Corrupt(everySecondTimeFlipped(), ctrlRand)
 
-				c.firstListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
 				}).Times(iterations)
-				c.secondListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[1].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
 				}).Times(iterations)
 
@@ -171,28 +172,23 @@ func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
 func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
+			withTamperingHarness(ctx, t, parent.Logger, 1, func(c *tamperingHarness) {
 				const iterations = 3
 
-				signals := make(chan byte, 2)
+				signals := make(chan byte, 1)
 
 				ctrlRand := rand.NewControlledRand(t)
 				c.transport.Corrupt(anyMessage(), ctrlRand)
 
-				c.firstListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
-					signals <- payloads[0][0]
-				}).Times(iterations)
-				c.secondListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					signals <- payloads[0][0]
 				}).Times(iterations)
 
 				for i := 0; i < iterations; i++ {
 					payloads := [][]byte{{0}}
 					c.send(ctx, payloads)
-					for l := 0; l < 2; l++ {
-						n := <-signals
-						require.NotEqual(t, byte(0), n, "expected received payload to be corrupted")
-					}
+					n := <-signals
+					require.NotEqual(t, byte(0), n, "expected received payload to be corrupted")
 					require.Equal(t, byte(0), payloads[0][0], "expected input payload to preserve its original value")
 				}
 			})
@@ -203,24 +199,21 @@ func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
 func TestPausingTamperer(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
-				digits := make(chan byte, 10)
+			withTamperingHarness(ctx, t, parent.Logger, 1, func(c *tamperingHarness) {
+				const sendCount = 10 // Must be even
+				digits := make(chan byte, sendCount)
 
 				odds := c.transport.Pause(oddNumbers())
 
-				c.firstListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
 					digits <- payloads[0][0]
-				}).Times(10)
+				}).Times(sendCount)
 
-				c.secondListener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
-					digits <- payloads[0][0]
-				}).Times(10)
-
-				for b := 0; b < 10; b++ {
+				for b := 0; b < sendCount; b++ {
 					c.send(ctx, [][]byte{{byte(b)}})
 				}
 
-				for b := 0; b < 10; b++ {
+				for b := 0; b < sendCount/2; b++ {
 					if <-digits%2 != 0 {
 						t.Errorf("got odd number while odds should be paused")
 					}
@@ -228,7 +221,7 @@ func TestPausingTamperer(t *testing.T) {
 
 				odds.StopTampering(ctx)
 
-				for b := 0; b < 10; b++ {
+				for b := 0; b < sendCount/2; b++ {
 					if <-digits%2 != 1 {
 						t.Errorf("got even number while odds should be released")
 					}
@@ -243,12 +236,12 @@ func TestLatchingTamperer(t *testing.T) {
 	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it; handled in https://github.com/orbs-network/orbs-network-go/pull/769")
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
+			withTamperingHarness(ctx, t, parent.Logger, 1, func(c *tamperingHarness) {
 				called := make(chan bool)
 
 				latch := c.transport.LatchOn(anyMessage())
 
-				c.firstListener.WhenOnTransportMessageReceived(mock.Any)
+				c.listeners[0].WhenOnTransportMessageReceived(mock.Any)
 
 				afterMessageArrived := sync.WaitGroup{}
 				afterMessageArrived.Add(1)

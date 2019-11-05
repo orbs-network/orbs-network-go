@@ -86,25 +86,25 @@ func (p *memoryTransport) SendWithInterceptor(ctx context.Context, data *adapter
 		intercept = defaultInterceptor
 	}
 
-	var err error
+	var lastError error
 
 	switch data.RecipientMode {
 
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:
 		for key, peer := range p.peers {
 			if key != data.SenderNodeAddress.KeyForMap() {
-				_err := intercept(ctx, peer.nodeAddress, data, p.transmit)
-				if _err != nil {
-					err = _err
+				err := intercept(ctx, peer.nodeAddress, data, p.transmit)
+				if err != nil {
+					lastError = err
 				}
 			}
 		}
 
 	case gossipmessages.RECIPIENT_LIST_MODE_LIST:
 		for _, k := range data.RecipientNodeAddresses {
-			_err := intercept(ctx, k, data, p.transmit)
-			if _err != nil {
-				err = _err
+			err := intercept(ctx, k, data, p.transmit)
+			if err != nil {
+				lastError = err
 			}
 		}
 
@@ -112,7 +112,7 @@ func (p *memoryTransport) SendWithInterceptor(ctx context.Context, data *adapter
 		panic("Not implemented")
 	}
 
-	return err
+	return lastError
 }
 
 func (p *memoryTransport) Send(ctx context.Context, data *adapter.TransportData) error {
