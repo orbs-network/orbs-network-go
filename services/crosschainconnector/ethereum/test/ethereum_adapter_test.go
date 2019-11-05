@@ -71,7 +71,7 @@ func testGetLogs(ctx context.Context, adapter adapter.DeployingEthereumConnectio
 		require.NoError(t, err, "failed emitting event")
 
 		eventABI := parsedABI.Events["TransferredOut"]
-		eventSignature := eventABI.Id().Bytes()
+		eventSignature := eventABI.ID().Bytes()
 
 		logs, err := adapter.GetTransactionLogs(ctx, primitives.Uint256(tx.Hash().Bytes()), eventSignature)
 		require.NoError(t, err, "failed getting logs")

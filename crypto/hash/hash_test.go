@@ -20,24 +20,36 @@ const (
 
 func TestCalcSha256(t *testing.T) {
 	h := CalcSha256(someData)
-	require.Equal(t, SHA256_HASH_SIZE_BYTES, len(h))
+	require.Len(t, h, SHA256_HASH_SIZE_BYTES, "Sha256 is in incorrect length")
 	require.Equal(t, ExpectedSha256, h.String(), "result should match")
 }
 
 func TestCalcSha256_MultipleChunks(t *testing.T) {
 	h := CalcSha256(someData[:3], someData[3:])
-	require.Equal(t, SHA256_HASH_SIZE_BYTES, len(h))
+	require.Len(t, h, SHA256_HASH_SIZE_BYTES, "Sha256 invalid length in multiple chunks")
 	require.Equal(t, ExpectedSha256, h.String(), "result should match")
 }
 
 func TestCalcKeccak256(t *testing.T) {
 	h := CalcKeccak256(someData)
-	require.Equal(t, KECCAK256_HASH_SIZE_BYTES, len(h))
+	require.Len(t, h, KECCAK256_HASH_SIZE_BYTES, "Keccak is in invalid length")
+	require.Equal(t, ExpectedKeccak256, h.String(), "result should match")
+}
+
+func TestCalcKeccak256_MultipleChunks(t *testing.T) {
+	h := CalcKeccak256(someData[:3], someData[3:])
+	require.Len(t, h, KECCAK256_HASH_SIZE_BYTES, "Keccak invalid length in multiple chunks")
 	require.Equal(t, ExpectedKeccak256, h.String(), "result should match")
 }
 
 func BenchmarkCalcSha256(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		CalcSha256(someData)
+	}
+}
+
+func BenchmarkCalcKeccak256(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CalcKeccak256(someData)
 	}
 }

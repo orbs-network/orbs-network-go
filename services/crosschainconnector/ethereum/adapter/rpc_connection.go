@@ -59,7 +59,7 @@ func (rpc *EthereumRpcConnection) HeaderByNumber(ctx context.Context, number *bi
 	}
 
 	return &BlockNumberAndTime{
-		TimeInSeconds: header.Time.Int64(),
+		TimeInSeconds: header.Time,
 		BlockNumber:   header.Number.Int64(),
 	}, nil
 }
