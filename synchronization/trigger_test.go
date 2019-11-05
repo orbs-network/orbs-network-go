@@ -80,15 +80,17 @@ func TestPeriodicalTriggerStopOnContextCancel(t *testing.T) {
 func TestPeriodicalTriggerStopWorksWhenContextIsCancelled(t *testing.T) {
 	with.Concurrency(t, func(parent context.Context, harness *with.ConcurrencyHarness) {
 		ctx, cancel := context.WithCancel(parent)
-		x := 0
-		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond*2, harness.Logger, func() { x++ }, nil)
+		var stage int32 = 0
+		p := synchronization.NewPeriodicalTrigger(ctx, "a periodical trigger", time.Millisecond, harness.Logger, func() {
+			require.Equal(t, atomic.LoadInt32(&stage), 0, "should not run trigger after onStop()")
+		}, func() {
+			require.True(t, atomic.CompareAndSwapInt32(&stage, 0, 1), "should only run onStop() once")
+		})
 		harness.Supervise(p)
 		cancel()
-		time.Sleep(3 * time.Millisecond)
-		require.Equal(t, 0, x, "expected no ticks")
+		require.Eventually(t, func() bool { return atomic.LoadInt32(&stage) == 1 }, time.Millisecond*100, time.Millisecond)
+		time.Sleep(50 * time.Millisecond) // safety margin for trigger to fail test if triggered after onStop()
 		p.Stop()
-		require.Equal(t, 0, x, "expected stop to not block")
-
 	})
 }
 
