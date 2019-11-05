@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -106,7 +105,7 @@ func TestFailingTamperer(t *testing.T) {
 }
 
 func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				const iterations = 5
@@ -141,7 +140,7 @@ func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
 }
 
 func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				const iterations = 5
@@ -170,7 +169,7 @@ func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
 }
 
 func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
-	test.WithContext(func(ctx context.Context) {
+	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			withTamperingHarness(ctx, t, parent.Logger, func(c *tamperingHarness) {
 				const iterations = 3
