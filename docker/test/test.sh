@@ -18,7 +18,7 @@ export NVM_DIR="/opt/circleci/.nvm"
 nvm install v11.2 && nvm use v11.2
 echo "Using node: "
 node -v
-cd .circleci && npm install
+cd .circleci && npm install && cd ..
 
 rm -rf _logs _out
 
