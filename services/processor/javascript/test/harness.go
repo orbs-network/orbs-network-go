@@ -33,7 +33,7 @@ type config struct {
 	path string
 }
 
-func (c *config) ProcessorPluginPath() string {
+func (c *config) ExperimentalExternalProcessorPluginPath() string {
 	return c.path
 }
 

@@ -110,7 +110,7 @@ type NodeConfig interface {
 	SignerEndpoint() string
 
 	// JS processor
-	ProcessorPluginPath() string
+	ExperimentalExternalProcessorPluginPath() string
 }
 
 type OverridableConfig interface {
@@ -255,6 +255,6 @@ type SignerConfig interface {
 }
 
 type JavascriptProcessorConfig interface {
-	ProcessorPluginPath() string
+	ExperimentalExternalProcessorPluginPath() string
 	VirtualChainId() primitives.VirtualChainId
 }

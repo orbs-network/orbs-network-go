@@ -131,7 +131,7 @@ func ForE2E(
 	ethereumEndpoint string,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
-	processorPluginPath string,
+	experimentalExternalProcessorPluginPath string,
 ) NodeConfig {
 	cfg := defaultProductionConfig()
 
@@ -192,7 +192,7 @@ func ForE2E(
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetNodePrivateKey(nodePrivateKey)
 
-	cfg.SetString(PROCESSOR_PLUGIN_PATH, processorPluginPath)
+	cfg.SetString(EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH, experimentalExternalProcessorPluginPath)
 
 	return cfg
 }

@@ -113,7 +113,7 @@ const (
 
 	SIGNER_ENDPOINT = "SIGNER_ENDPOINT"
 
-	PROCESSOR_PLUGIN_PATH = "PROCESSOR_PLUGIN_PATH"
+	EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH = "EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH"
 )
 
 func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
@@ -437,6 +437,6 @@ func (c *config) SignerEndpoint() string {
 	return c.kv[SIGNER_ENDPOINT].StringValue
 }
 
-func (c *config) ProcessorPluginPath() string {
-	return c.kv[PROCESSOR_PLUGIN_PATH].StringValue
+func (c *config) ExperimentalExternalProcessorPluginPath() string {
+	return c.kv[EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH].StringValue
 }

@@ -18,5 +18,5 @@
   "ethereum-endpoint": "http://192.168.199.6:8545",
   "logger-full-log": true,
   "processor-sanitize-deployed-contracts": false,
-  "processor-plugin-path": "/opt/orbs/plugins/orbs-dummy-plugin"
+  "experimental-external-processor-plugin-path": "/opt/orbs/plugins/orbs-dummy-plugin"
 }

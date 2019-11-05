@@ -39,8 +39,8 @@ func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessor
 	var worker func(handler sdkContext.SdkHandler) processor.StatelessProcessor
 	var err error
 
-	if config.ProcessorPluginPath() != "" {
-		worker, err = loadPlugin(config.ProcessorPluginPath())
+	if config.ExperimentalExternalProcessorPluginPath() != "" {
+		worker, err = loadPlugin(config.ExperimentalExternalProcessorPluginPath())
 		if err != nil {
 			panic(fmt.Sprintf("Could not load plugin: %s", err))
 		}
