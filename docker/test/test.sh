@@ -19,8 +19,6 @@ nvm install v11.2 && nvm use v11.2
 echo "using node: "
 node -v
 
-exit 0
-
 rm -rf _logs _out
 
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
