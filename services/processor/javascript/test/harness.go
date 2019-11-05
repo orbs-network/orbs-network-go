@@ -136,7 +136,7 @@ func (h *harness) verifySdkCallMade(t *testing.T) {
 
 func BuildDummyPlugin(src string, target string) {
 	root := config2.GetProjectSourceRootPath()
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", DummyPluginPath(target), path.Join(root, src))
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-tags", "javascript", "-o", DummyPluginPath(target), path.Join(root, src))
 	cmd.Dir = root
 	cmd.Env = []string{
 		"GOPATH=" + getGOPATH(),

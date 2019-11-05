@@ -8,7 +8,8 @@ COPY ./_dockerbuild/go.mod.template /src/_tmp/processor-artifacts/go.mod
 RUN cd /src/_tmp/processor-artifacts/ && go mod download
 
 ADD ./_bin/orbs-node /opt/orbs/
-ADD ./_bin/orbs-dummy-plugin /opt/orbs/plugins/
+# Experimental feature
+# ADD ./_bin/orbs-dummy-plugin /opt/orbs/plugins/
 
 VOLUME /usr/local/var/orbs/
 
