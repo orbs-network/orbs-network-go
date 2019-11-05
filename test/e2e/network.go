@@ -26,20 +26,20 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 // Also Lean Helix consensus algo requires it to be >= 4 or it will panic
 const LOCAL_NETWORK_SIZE = 4
 
-func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
 	randomer.logger.Info("starting management network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 
-	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false, randomer)
+	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false, randomer, experimentalExternalProcessorPluginPath)
 }
 
-func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer) *inProcessE2ENetwork {
+func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
 	randomer.logger.Info("starting application network")
 	cleanNativeProcessorCache(virtualChainId)
 	cleanBlockStorage(virtualChainId)
 
-	return bootstrapE2ENetwork(0, "app", virtualChainId, true, randomer)
+	return bootstrapE2ENetwork(0, "app", virtualChainId, true, randomer, experimentalExternalProcessorPluginPath)
 }
 
 func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
@@ -51,7 +51,9 @@ func (h *inProcessE2ENetwork) GracefulShutdownAndWipeDisk() {
 	cleanBlockStorage(h.virtualChainId)
 }
 
-func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId, deployBlocksFile bool, tl *loggerRandomer) *inProcessE2ENetwork {
+func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId primitives.VirtualChainId,
+	deployBlocksFile bool, tl *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
+
 	net := &inProcessE2ENetwork{
 		virtualChainId: virtualChainId,
 	}
@@ -98,7 +100,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 				ethereumEndpoint,
 				leaderKeyPair.NodeAddress(),
 				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
-				dummyPluginPath(),
+				experimentalExternalProcessorPluginPath,
 			)
 
 		if deployBlocksFile {

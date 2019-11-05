@@ -3,11 +3,14 @@
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
+// +build javascript
 
 package e2e
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/processor/javascript/test"
+	"github.com/orbs-network/orbs-network-go/test/e2e"
 	"golang.org/x/net/context"
 	"os"
 	"testing"
@@ -15,16 +18,21 @@ import (
 )
 
 const TIMES_TO_RUN_EACH_TEST = 2
+const DUMMY_PLUGIN_SOURCE = "services/processor/plugins/dummy/"
+const DUMMY_PLUGIN_BINARY = "services/processor/javascript/test/e2e/dummy_plugin.bin"
 
 func TestMain(m *testing.M) {
 	exitCode := 0
 
-	config := GetConfig()
-	if config.Bootstrap {
-		tl := NewLoggerRandomer()
+	test.BuildDummyPlugin(DUMMY_PLUGIN_SOURCE, DUMMY_PLUGIN_BINARY)
+	defer test.RemoveDummyPlugin(DUMMY_PLUGIN_BINARY)
 
-		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, "")
-		appNetwork := NewInProcessE2EAppNetwork(config.AppVcid, tl, "")
+	config := e2e.GetConfig()
+	if config.Bootstrap {
+		tl := e2e.NewLoggerRandomer()
+
+		mgmtNetwork := e2e.NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, test.DummyPluginPath(DUMMY_PLUGIN_BINARY))
+		appNetwork := e2e.NewInProcessE2EAppNetwork(config.AppVcid, tl, test.DummyPluginPath(DUMMY_PLUGIN_BINARY))
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()

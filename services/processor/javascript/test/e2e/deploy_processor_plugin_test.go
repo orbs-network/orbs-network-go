@@ -12,6 +12,7 @@ package e2e
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
+	"github.com/orbs-network/orbs-network-go/test/e2e"
 	"testing"
 	"time"
 
@@ -27,28 +28,28 @@ func TestDeploymentOfProcessorPlugin(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newAppHarness()
+		h := e2e.NewAppHarness()
 		lt := time.Now()
-		printTestTime(t, "started", &lt)
+		e2e.PrintTestTime(t, "started", &lt)
 
-		h.waitUntilTransactionPoolIsReady(t)
-		printTestTime(t, "first block committed", &lt)
+		h.WaitUntilTransactionPoolIsReady(t)
+		e2e.PrintTestTime(t, "first block committed", &lt)
 
 		counterStart := counter_mock.COUNTER_CONTRACT_START_FROM
 		contractName := fmt.Sprintf("CounterFrom%d", time.Now().UnixNano())
 
-		printTestTime(t, "send deploy - start", &lt)
+		e2e.PrintTestTime(t, "send deploy - start", &lt)
 
-		h.deployJSContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
+		DeployJSContractAndRequireSuccess(h, t, e2e.OwnerOfAllSupply, contractName,
 			[]byte("this contract is fake"))
 
-		printTestTime(t, "send deploy - end", &lt)
+		e2e.PrintTestTime(t, "send deploy - end", &lt)
 
 		// check counter
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "run query - start", &lt)
-			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
-			printTestTime(t, "run query - end", &lt)
+			e2e.PrintTestTime(t, "run query - start", &lt)
+			response, err2 := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), contractName, "get")
+			e2e.PrintTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0].(uint64) == counterStart
@@ -56,6 +57,6 @@ func TestDeploymentOfProcessorPlugin(t *testing.T) {
 			return false
 		})
 		require.True(t, ok, "get counter should return counter start")
-		printTestTime(t, "done", &lt)
+		e2e.PrintTestTime(t, "done", &lt)
 	})
 }

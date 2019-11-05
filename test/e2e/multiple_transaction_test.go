@@ -22,12 +22,12 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newAppHarness()
+		h := NewAppHarness()
 		lt := time.Now()
-		printTestTime(t, "started", &lt)
+		PrintTestTime(t, "started", &lt)
 
-		h.waitUntilTransactionPoolIsReady(t)
-		printTestTime(t, "first block committed", &lt)
+		h.WaitUntilTransactionPoolIsReady(t)
+		PrintTestTime(t, "first block committed", &lt)
 
 		transferTo, _ := orbsClient.CreateAccount()
 
@@ -35,9 +35,9 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		amounts := []uint64{15, 22, 33}
 		txIds := []string{}
 		for _, amount := range amounts {
-			printTestTime(t, "send transaction - start", &lt)
-			response, txId, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.AddressAsBytes())
-			printTestTime(t, "send transaction - end", &lt)
+			PrintTestTime(t, "send transaction - start", &lt)
+			response, txId, err := h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), transferTo.AddressAsBytes())
+			PrintTestTime(t, "send transaction - end", &lt)
 
 			txIds = append(txIds, txId)
 			require.NoError(t, err, "transaction for amount %d should not return error\nresponse: %+v", amount, response)
@@ -47,17 +47,17 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 		// get statuses and receipt proofs
 		for _, txId := range txIds {
-			printTestTime(t, "get status - start", &lt)
-			response, err := h.getTransactionStatus(txId)
-			printTestTime(t, "get status - end", &lt)
+			PrintTestTime(t, "get status - start", &lt)
+			response, err := h.GetTransactionStatus(txId)
+			PrintTestTime(t, "get status - end", &lt)
 
 			require.NoError(t, err, "get status for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 
-			printTestTime(t, "get receipt proof - start", &lt)
-			proofResponse, err := h.getTransactionReceiptProof(txId)
-			printTestTime(t, "get receipt proof - end", &lt)
+			PrintTestTime(t, "get receipt proof - start", &lt)
+			proofResponse, err := h.GetTransactionReceiptProof(txId)
+			PrintTestTime(t, "get receipt proof - end", &lt)
 
 			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
 			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
@@ -67,9 +67,9 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 		// check balance
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "run query - start", &lt)
-			response, err := h.runQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.AddressAsBytes())
-			printTestTime(t, "run query - end", &lt)
+			PrintTestTime(t, "run query - start", &lt)
+			response, err := h.RunQuery(transferTo.PublicKey, "BenchmarkToken", "getBalance", transferTo.AddressAsBytes())
+			PrintTestTime(t, "run query - end", &lt)
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == uint64(70)
@@ -78,7 +78,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 		})
 
 		require.True(t, ok, "getBalance should return total amount")
-		printTestTime(t, "done", &lt)
+		PrintTestTime(t, "done", &lt)
 
 	})
 }

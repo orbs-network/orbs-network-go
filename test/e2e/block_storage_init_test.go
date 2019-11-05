@@ -21,11 +21,11 @@ func TestInitialBlockHeight(t *testing.T) {
 	}
 
 	runMultipleTimes(t, func(t *testing.T) {
-		h := newAppHarness()
+		h := NewAppHarness()
 
 		// This test is useless against remote networks since we cannot tamper with their storage
 		// So for the time being we skip this test
-		if h.config.remoteEnvironment {
+		if h.config.RemoteEnvironment {
 			t.Skip("Running against remote network - skipping")
 		}
 

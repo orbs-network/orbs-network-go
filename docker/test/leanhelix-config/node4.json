@@ -19,6 +19,5 @@
   "logger-full-log": true,
   "processor-sanitize-deployed-contracts": false,
   "signer-endpoint": "http://192.168.199.12:7777",
-  "experimental-external-processor-plugin-path": "/opt/orbs/plugins/orbs-dummy-plugin",
   "profiling": true
 }

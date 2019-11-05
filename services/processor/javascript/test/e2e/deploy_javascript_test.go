@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-network-go/test/e2e"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -28,19 +29,19 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newAppHarness()
+		h := e2e.NewAppHarness()
 		lt := time.Now()
-		printTestTime(t, "started", &lt)
+		e2e.PrintTestTime(t, "started", &lt)
 
-		h.waitUntilTransactionPoolIsReady(t)
-		printTestTime(t, "first block committed", &lt)
+		h.WaitUntilTransactionPoolIsReady(t)
+		e2e.PrintTestTime(t, "first block committed", &lt)
 
 		counterStart := uint64(time.Now().UnixNano())
 		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
 
-		printTestTime(t, "send deploy - start", &lt)
+		e2e.PrintTestTime(t, "send deploy - start", &lt)
 
-		h.deployJSContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
+		DeployJSContractAndRequireSuccess(h, t, e2e.OwnerOfAllSupply, contractName,
 			[]byte(`
 import { State, Address } from "orbs-contract-sdk/v1";
 const key = new Uint8Array([1, 2, 3]);
@@ -66,12 +67,12 @@ export function getName() {
 }
 `))
 
-		printTestTime(t, "send deploy - end", &lt)
+		e2e.PrintTestTime(t, "send deploy - end", &lt)
 
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "run query - start", &lt)
-			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
-			printTestTime(t, "run query - end", &lt)
+			e2e.PrintTestTime(t, "run query - start", &lt)
+			response, err2 := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), contractName, "get")
+			e2e.PrintTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0].(uint32) == 100
@@ -80,11 +81,11 @@ export function getName() {
 		})
 		require.True(t, ok, "get counter should return counter start")
 
-		signerAddress, _ := digest.CalcClientAddressOfEd25519PublicKey(OwnerOfAllSupply.PublicKey())
+		signerAddress, _ := digest.CalcClientAddressOfEd25519PublicKey(e2e.OwnerOfAllSupply.PublicKey())
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "run query - start", &lt)
-			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getSignerAddress")
-			printTestTime(t, "run query - end", &lt)
+			e2e.PrintTestTime(t, "run query - start", &lt)
+			response, err2 := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), contractName, "getSignerAddress")
+			e2e.PrintTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return bytes.Equal(response.OutputArguments[0].([]byte), signerAddress)
@@ -94,7 +95,7 @@ export function getName() {
 		require.True(t, ok, "getSignerAddress should return signer address")
 
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getName")
+			response, err := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), contractName, "getName")
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0].(string) == "Station to Station"
@@ -103,16 +104,16 @@ export function getName() {
 		})
 		require.True(t, ok, "getName should return initial state")
 
-		printTestTime(t, "send transaction - start", &lt)
-		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "saveName", "Diamond Dogs")
-		printTestTime(t, "send transaction - end", &lt)
+		e2e.PrintTestTime(t, "send transaction - start", &lt)
+		response, _, err := h.SendTransaction(e2e.OwnerOfAllSupply.PublicKey(), e2e.OwnerOfAllSupply.PrivateKey(), contractName, "saveName", "Diamond Dogs")
+		e2e.PrintTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "add transaction should not return error")
 		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
 		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "getName")
+			response, err := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), contractName, "getName")
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0].(string) == "Diamond Dogs"
@@ -121,7 +122,7 @@ export function getName() {
 		})
 
 		require.True(t, ok, "getName should return name")
-		printTestTime(t, "done", &lt)
+		e2e.PrintTestTime(t, "done", &lt)
 
 	})
 }
