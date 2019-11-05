@@ -35,7 +35,6 @@ func TestSdkEvents_EmitEvent_NotAFunctionSignature(t *testing.T) {
 }
 
 func TestSdkEvents_EmitEvent_FunctionSignatureWrongNumOfArgs(t *testing.T) {
-	t.Skip("need to add language-specific callbacks")
 	s := createEventsSdk()
 
 	require.Panics(t, func() {
@@ -44,7 +43,6 @@ func TestSdkEvents_EmitEvent_FunctionSignatureWrongNumOfArgs(t *testing.T) {
 }
 
 func TestSdkEvents_EmitEvent_FunctionSignatureWrongTypes(t *testing.T) {
-	t.Skip("need to add language-specific callbacks")
 	s := createEventsSdk()
 
 	require.Panics(t, func() {

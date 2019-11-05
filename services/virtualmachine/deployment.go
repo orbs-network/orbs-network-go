@@ -41,14 +41,7 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 	}
 
 	// return according to processor
-	switch processorType {
-	case protocol.PROCESSOR_TYPE_NATIVE:
-		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], nil
-	case protocol.PROCESSOR_TYPE_JAVASCRIPT:
-		return s.processors[protocol.PROCESSOR_TYPE_JAVASCRIPT], nil
-	default:
-		return nil, errors.Errorf("_Deployments.getInfo contract returned unknown processor type: %s", processorType)
-	}
+	return s.getProcessor(processorType)
 }
 
 func (s *service) attemptToAutoDeployPreBuiltNativeContract(ctx context.Context, executionContext *executionContext, serviceName primitives.ContractName) (protocol.ProcessorType, error) {

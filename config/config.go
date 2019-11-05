@@ -109,7 +109,7 @@ type NodeConfig interface {
 	// Remote signer
 	SignerEndpoint() string
 
-	// Pluggable processors
+	// JS processor
 	ProcessorPluginPath() string
 }
 
