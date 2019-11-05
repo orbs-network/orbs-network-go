@@ -23,11 +23,8 @@ func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		AllowingErrors(
-			"failed to commit block received via sync",
+			"failed to commit block received via sync",           // this test intentionally fails block writes
 			"cannot get elected validators from system contract", // LH tries to read state from a block height that has not been properly persisted and therefore, fails
-			".*contract returned error.*",
-			".*cannot get ordered committee.*",
-			".*",
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			r := rand.NewControlledRand(t)
