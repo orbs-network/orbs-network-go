@@ -1,9 +1,10 @@
-//+build !race
 // Copyright 2019 the orbs-network-go authors
 // This file is part of the orbs-network-go library in the Orbs project.
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
+// +build !race
+// +build javascript
 
 package e2e
 
@@ -41,28 +42,27 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 
 		h.deployJSContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
 			[]byte(`
+import { State, Address } from "orbs-contract-sdk/v1";
 const key = new Uint8Array([1, 2, 3]);
 
-function _init() {
-	State.WriteString(key, "Station to Station")
-	return 0
+export function _init() {
+	State.writeString(key, "Station to Station")
 }
 
-function get() {
+export function get() {
 	return 100
 }
 
-function getSignerAddress() {
-	return Address.GetSignerAddress()
+export function getSignerAddress() {
+	return Address.getSignerAddress()
 }
 
-function saveName(value) {
-	State.WriteString(key, value)
-	return 0
+export function saveName(value) {
+	State.writeString(key, value)
 }
 
-function getName() {
-	return State.ReadString(key)
+export function getName() {
+	return State.readString(key)
 }
 `))
 
