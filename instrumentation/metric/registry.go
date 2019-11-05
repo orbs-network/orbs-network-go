@@ -40,6 +40,7 @@ type Registry interface {
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
 	Remove(metric metric)
+	Get(metricName string) metric
 }
 
 type exportedMetric interface {
@@ -74,6 +75,17 @@ type inMemoryRegistry struct {
 		sync.Mutex
 		metrics []metric
 	}
+}
+
+func (r *inMemoryRegistry) Get(metricName string) metric {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, metric := range r.mu.metrics {
+		if metric.Name() == metricName {
+			return metric
+		}
+	}
+	panic(errors.Errorf("a metric with the name of %s is not registered", metricName))
 }
 
 func (r *inMemoryRegistry) Remove(m metric) {

@@ -27,20 +27,32 @@ import (
 const NETWORK_SIZE = 4
 
 type harness struct {
-	consensus              *leanhelixconsensus.Service
-	gossip                 *gossiptopics.MockLeanHelix
-	blockStorage           *services.MockBlockStorage
-	consensusContext       *services.MockConsensusContext
-	instanceId             lhprimitives.InstanceId
-	auditBlocksYoungerThan time.Duration
+	consensus                     *leanhelixconsensus.Service
+	gossip                        *gossiptopics.MockLeanHelix
+	blockStorage                  *services.MockBlockStorage
+	consensusContext              *services.MockConsensusContext
+	instanceId                    lhprimitives.InstanceId
+	auditBlocksYoungerThan        time.Duration
+	consensusRoundTimeoutInterval time.Duration
+	metricRegistry                metric.Registry
 }
 
-func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration) *harness {
+type metrics struct {
+	timeSinceLastCommitMillis   *metric.Histogram
+	timeSinceLastElectionMillis *metric.Histogram
+	currentLeaderMemberId       *metric.Text
+	currentElectionCount        *metric.Gauge
+	lastCommittedTime           *metric.Gauge
+}
+
+func newLeanHelixServiceHarness(auditBlocksYoungerThan time.Duration, consensusRoundTimeoutInterval time.Duration) *harness {
 	h := &harness{
-		gossip:                 &gossiptopics.MockLeanHelix{},
-		blockStorage:           &services.MockBlockStorage{},
-		consensusContext:       &services.MockConsensusContext{},
-		auditBlocksYoungerThan: auditBlocksYoungerThan,
+		gossip:                        &gossiptopics.MockLeanHelix{},
+		blockStorage:                  &services.MockBlockStorage{},
+		consensusContext:              &services.MockConsensusContext{},
+		auditBlocksYoungerThan:        auditBlocksYoungerThan,
+		consensusRoundTimeoutInterval: consensusRoundTimeoutInterval,
+		metricRegistry:                metric.NewRegistry(),
 	}
 
 	h.resetAndApplyMockDefaults()
@@ -58,17 +70,25 @@ func (h *harness) resetAndApplyMockDefaults() {
 }
 
 func (h *harness) start(parent *with.ConcurrencyHarness, ctx context.Context) *harness {
-	registry := metric.NewRegistry()
-
-	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan)
+	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan, h.consensusRoundTimeoutInterval)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 
 	signer, err := signer.New(cfg)
 	require.NoError(parent.T, err)
 
-	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, parent.Logger, cfg, registry)
+	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, signer, parent.Logger, cfg, h.metricRegistry)
 	parent.Supervise(h.consensus)
 	return h
+}
+
+func (h *harness) getMetrics() *metrics {
+	return &metrics{
+		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.Histogram),
+		timeSinceLastElectionMillis: h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis").(*metric.Histogram),
+		currentElectionCount:        h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentElection.Number").(*metric.Gauge),
+		currentLeaderMemberId:       h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Number").(*metric.Text),
+		lastCommittedTime:           h.metricRegistry.Get("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").(*metric.Gauge),
+	}
 }
 
 func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.NodeAddress {

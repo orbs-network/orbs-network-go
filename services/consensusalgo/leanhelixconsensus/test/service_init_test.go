@@ -16,11 +16,12 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0)
+		h := newLeanHelixServiceHarness(0, time.Hour)
 
 		t.Log("Service should do nothing on start")
 
@@ -48,7 +49,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 func TestService_LeaderProposesBlock(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0).start(parent, ctx)
+		h := newLeanHelixServiceHarness(0, time.Hour).start(parent, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
 		h.beFirstInCommittee()

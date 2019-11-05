@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 // This test shows the shy leader problem, that when we sync in lean helix, the petitioner
@@ -26,7 +27,7 @@ import (
 
 func TestService_DoesNotProposeNewBlocksWhileSyncingBlocksSequentially(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0).start(parent, ctx)
+		h := newLeanHelixServiceHarness(0, time.Hour).start(parent, ctx)
 
 		syncFromBlock := primitives.BlockHeight(5)
 		syncUpToBlock := primitives.BlockHeight(7) // exercise 3 block syncs in succession
