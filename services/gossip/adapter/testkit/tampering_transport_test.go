@@ -127,7 +127,7 @@ func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
 					require.Equal(t, i, n, "expected the current iteration number")
 				}
 
-				timeout, cancel := context.WithTimeout(ctx, 1*time.Millisecond)
+				timeout, cancel := context.WithTimeout(ctx, 50*time.Millisecond) // TODO we want to make sure something never happens - how long do we wait? instead, wait until the transport is done emitting transmissions
 				defer cancel()
 				select {
 				case <-timeout.Done(): // OK
