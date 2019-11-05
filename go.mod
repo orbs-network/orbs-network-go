@@ -29,7 +29,7 @@ require (
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.4.0
 	github.com/orbs-network/orbs-spec v0.0.0-20191029121602-b5af15c91a90
-	github.com/orbs-network/scribe v0.2.1
+	github.com/orbs-network/scribe v0.2.2
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rjeczalik/notify v0.9.2 // indirect
