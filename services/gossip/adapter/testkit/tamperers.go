@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test/rand"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"sync"
 	"time"
 )
@@ -30,7 +31,7 @@ func (e *messageDroppedByTamperer) Error() string {
 	return fmt.Sprintf("tampering transport intentionally failed to send: %v", e.Data)
 }
 
-func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
+func (o *failingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
 		return &messageDroppedByTamperer{Data: data}, true
 	}
@@ -47,11 +48,11 @@ type duplicatingTamperer struct {
 	transport *TamperingTransport
 }
 
-func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (err error, returnWithoutSending bool) {
+func (o *duplicatingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (err error, returnWithoutSending bool) {
 	if o.predicate(data) {
 		govnr.Once(logfields.GovnrErrorer(o.transport.logger), func() {
 			time.Sleep(10 * time.Millisecond)
-			o.transport.sendToPeers(ctx, data)
+			transmit(ctx, peerAddress, data)
 		})
 	}
 	return nil, false
@@ -67,11 +68,11 @@ type delayingTamperer struct {
 	duration  func() time.Duration
 }
 
-func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (o *delayingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (error, bool) {
 	if o.predicate(data) {
 		govnr.Once(logfields.GovnrErrorer(o.transport.logger), func() {
 			time.Sleep(o.duration())
-			o.transport.sendToPeers(ctx, data)
+			transmit(ctx, peerAddress, data)
 		})
 		return nil, true
 	}
@@ -89,9 +90,9 @@ type corruptingTamperer struct {
 	ctrlRand  *rand.ControlledRand
 }
 
-func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+func (o *corruptingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (error, bool) {
 	if o.predicate(data) {
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 11; i++ { // An odd iteration count will ensure at least one corruption
 			if len(data.Payloads) == 0 {
 				continue
 			}
@@ -110,18 +111,28 @@ func (o *corruptingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
 }
 
-type pausingTamperer struct {
-	predicate MessagePredicate
-	transport *TamperingTransport
-	messages  []*adapter.TransportData
-	lock      *sync.Mutex
+type pausedTransmission struct {
+	data        *adapter.TransportData
+	peerAddress primitives.NodeAddress
+	transmit    adapter.TransmitFunc
 }
 
-func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData) (error, bool) {
+type pausingTamperer struct {
+	predicate           MessagePredicate
+	transport           *TamperingTransport
+	pausedTransmissions []*pausedTransmission
+	lock                *sync.Mutex
+}
+
+func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.TransportData, peerAddress primitives.NodeAddress, transmit adapter.TransmitFunc) (error, bool) {
 	if o.predicate(data) {
 		o.lock.Lock()
 		defer o.lock.Unlock()
-		o.messages = append(o.messages, data)
+		o.pausedTransmissions = append(o.pausedTransmissions, &pausedTransmission{
+			data:        data,
+			peerAddress: peerAddress,
+			transmit:    transmit,
+		})
 		return nil, true
 	}
 
@@ -130,9 +141,10 @@ func (o *pausingTamperer) maybeTamper(ctx context.Context, data *adapter.Transpo
 
 func (o *pausingTamperer) StopTampering(ctx context.Context) {
 	o.transport.removeOngoingTamperer(o)
-	for _, message := range o.messages {
-		o.transport.Send(ctx, message)
+	for _, t := range o.pausedTransmissions {
+		t.transmit(ctx, t.peerAddress, t.data)
 	}
+	o.pausedTransmissions = o.pausedTransmissions[:0]
 }
 
 type latchingTamperer struct {

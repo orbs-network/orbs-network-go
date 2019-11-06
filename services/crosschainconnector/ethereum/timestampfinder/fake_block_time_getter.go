@@ -19,7 +19,7 @@ const FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS = 1500000000
 const FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS = 1506108784
 
 type FakeBlockTimeGetter struct {
-	data        map[int64]int64 // block number -> timestamp in seconds
+	data        map[int64]uint64 // block number -> timestamp in seconds
 	logger      log.Logger
 	TimesCalled int
 	Latency     time.Duration
@@ -27,15 +27,15 @@ type FakeBlockTimeGetter struct {
 
 func NewFakeBlockTimeGetter(logger log.Logger) *FakeBlockTimeGetter {
 	f := &FakeBlockTimeGetter{
-		data:    make(map[int64]int64),
+		data:    make(map[int64]uint64),
 		Latency: 0,
 	}
 
 	f.logger = logger.WithTags(log.String("adapter", "ethereum-fake"))
 
-	secondsJitter := int64(1)
-	secondsSpacer := int64(10)
-	timestampStart := int64(FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS) // 2017/07/14 @ 14:40 - it will always end at 1506108783, or 2017/09/22 @ 19:3303
+	secondsJitter := uint64(1)
+	secondsSpacer := uint64(10)
+	timestampStart := uint64(FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS) // 2017/07/14 @ 14:40 - it will always end at 1506108783, or 2017/09/22 @ 19:3303
 	f.data[0] = timestampStart
 	for blockNumber := int64(1); blockNumber <= FAKE_CLIENT_NUMBER_OF_BLOCKS; blockNumber++ {
 		// important that the numbers will be always increasing but always less than spacer
@@ -53,7 +53,7 @@ func NewFakeBlockTimeGetter(logger log.Logger) *FakeBlockTimeGetter {
 		}
 	}
 
-	f.logger.Info("finished initializing 'ethdb'", log.Int64("last-ts", f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS]))
+	f.logger.Info("finished initializing 'ethdb'", log.Uint64("last-ts", f.data[FAKE_CLIENT_NUMBER_OF_BLOCKS]))
 
 	return f
 }

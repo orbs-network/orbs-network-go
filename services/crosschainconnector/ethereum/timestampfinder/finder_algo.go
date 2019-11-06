@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func secondsToNano(seconds int64) primitives.TimestampNano {
+func secondsToNano(seconds uint64) primitives.TimestampNano {
 	return primitives.TimestampNano(seconds) * primitives.TimestampNano(time.Second)
 }
 

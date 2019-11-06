@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
-	"net"
 	"os"
 )
 
@@ -31,19 +29,14 @@ func NewLoggerRandomer() *loggerRandomer {
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
 		WithOutput(console)
 	tl := &loggerRandomer{logger: logger, console: console}
-	rnd := rand.NewControlledRand(tl)
-	tl.rnd = rnd
+
 	// this is yuckie - it's a circular dependency, but it's ok since we're in a test situation and it's better than passing two arguments
 	return tl
 }
 
-const firstEphemeralPort = 49152 // https://en.wikipedia.org/wiki/Ephemeral_port
-const maxPort = 65535
-
 type loggerRandomer struct {
 	logger  log.Logger
 	console log.Output
-	rnd     *rand.ControlledRand
 }
 
 func (t *loggerRandomer) Log(args ...interface{}) {
@@ -52,18 +45,4 @@ func (t *loggerRandomer) Log(args ...interface{}) {
 
 func (t *loggerRandomer) Name() string {
 	return "e2e"
-}
-
-func (t *loggerRandomer) aRandomPort() int {
-	for {
-		port := firstEphemeralPort + t.rnd.Intn(maxPort-LOCAL_NETWORK_SIZE*2-firstEphemeralPort)
-		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-		if err == nil {
-			_ = l.Close()
-			t.logger.Info("port is free, returning", log.Int("port", port))
-			return port
-		} else {
-			t.logger.Info("port is already in use, retrying a different port", log.Int("port", port))
-		}
-	}
 }
