@@ -13,8 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"runtime"
@@ -35,7 +33,7 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 
 		t.Log("Block sync service to block 5")
 
-		h.beLastInCommittee()
+		h.dontBeFirstInCommitee()
 		// TODO REMOVE LINE h.expectGossipSendLeanHelixMessage()
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
@@ -61,14 +59,8 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 }
 
 func (h *harness) incomingLargeConsensusMessageViaGossip(ctx context.Context, blockHeight primitives.BlockHeight) {
-	c := generatePreprepareMessage(h.instanceId, uint64(blockHeight), 0, "abc")
 	b := builders.BlockPair().WithHeight(blockHeight).WithTransactions(1000).WithEmptyLeanHelixBlockProof().Build()
-	h.consensus.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{
-		Message: &gossipmessages.LeanHelixMessage{
-			Content:   c.Content,
-			BlockPair: b,
-		},
-	})
+	h.handlePreprepareMessage(ctx, b, blockHeight, 0, (h.myNodeIndex()+1)%h.networkSize())
 }
 
 func getMemUsageBytes() uint64 {

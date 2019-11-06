@@ -34,7 +34,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 		t.Log("Service should request committee after HandleBlockConsensus is called")
 
-		h.beLastInCommittee()
+		h.dontBeFirstInCommitee()
 
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
 			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
