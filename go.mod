@@ -16,7 +16,6 @@ require (
 	github.com/ethereum/go-ethereum v1.9.6
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-cmp v0.3.1
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
@@ -25,7 +24,7 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.4-0.20191104150210-918bd2979daf
+	github.com/orbs-network/lean-helix-go v0.2.4
 	github.com/orbs-network/membuffers v0.3.2
 	github.com/orbs-network/orbs-client-sdk-go v0.8.0
 	github.com/orbs-network/orbs-contract-sdk v1.4.0
