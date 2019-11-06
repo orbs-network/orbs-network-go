@@ -62,6 +62,10 @@ func (c *contractClient) CounterGet(ctx context.Context, nodeIndex int) uint64 {
 		Builder()
 
 	out := c.API.RunQuery(ctx, query, nodeIndex)
-	argsArray := builders.PackedArgumentArrayDecode(out.QueryResult().RawOutputArgumentArrayWithHeader())
-	return argsArray.ArgumentsIterator().NextArguments().Uint64Value()
+	argsArray := protocol.ArgumentArrayReader(out.QueryResult().RawOutputArgumentArrayWithHeader())
+	arguments:= argsArray.ArgumentsIterator().NextArguments()
+	if !arguments.IsTypeUint64Value() {
+		panic(fmt.Sprintf("expected exactly one output argument of type uint64 but found %s, in %s", arguments.String(), out.String()))
+	}
+	return arguments.Uint64Value()
 }
