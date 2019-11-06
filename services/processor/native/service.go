@@ -128,7 +128,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
 	outputArgs, contractErr, err := processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if err != nil {
 		logger.Info("contract execution failed", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.Error(err))

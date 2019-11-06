@@ -33,7 +33,7 @@ func (s *service) callGlobalPreOrderSystemContract(ctx context.Context, currentB
 		ContextId:              executionContextId,
 		ContractName:           systemContractName,
 		MethodName:             systemMethodName,
-		InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
+		InputArgumentArray:     protocol.ArgumentsArrayEmpty(),
 		AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})

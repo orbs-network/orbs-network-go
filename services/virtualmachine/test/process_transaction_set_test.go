@@ -42,10 +42,9 @@ func TestProcessTransactionSet_Success(t *testing.T) {
 				protocol.EXECUTION_RESULT_SUCCESS,
 				protocol.EXECUTION_RESULT_SUCCESS,
 			}, "processTransactionSet returned receipts should match")
-			require.Equal(t, outputArgs, [][]byte{
-				{},
-				builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}),
-			}, "processTransactionSet returned output args should match")
+			expectedOutputArgs, err := protocol.PackedInputArgumentsFromNatives(builders.VarsToSlice(uint32(17), "hello", []byte{0x01, 0x02}))
+			require.NoError(t, err, "output args must pack")
+			require.Equal(t, [][]byte{{}, expectedOutputArgs}, outputArgs,"processTransactionSet returned output args should match")
 
 			h.verifySystemContractCalled(t)
 			h.verifyNativeContractMethodCalled(t)

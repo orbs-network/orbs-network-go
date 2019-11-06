@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
-	"math/big"
 	"reflect"
 )
 
@@ -24,8 +23,14 @@ func processMethodCall(executionContextId primitives.ExecutionContextId, contrac
 		}
 	}()
 
+	// translate input protocol.Arguments to native
+	inArgs, err := args.ToNatives()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// verify input args
-	inValues, err := prepareMethodInputArgsForCall(methodInstance, args, functionNameForErrors)
+	inValues, err := verifyMethodInputArgs(methodInstance, functionNameForErrors, inArgs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -34,7 +39,7 @@ func processMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 
 	// create output args
-	contractOutputArgs, err = createMethodOutputArgs(methodInstance, outValues, functionNameForErrors)
+	contractOutputArgs, err = createMethodOutputArgs(outValues, functionNameForErrors)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,211 +48,54 @@ func processMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	return contractOutputArgs, contractOutputErr, err
 }
 
-var bigIntType = reflect.TypeOf(big.NewInt(0))
-
-func prepareMethodInputArgsForCall(methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) ([]reflect.Value, error) {
-	res := []reflect.Value{}
+func verifyMethodInputArgs(methodInstance types.MethodInstance, functionNameForErrors string, args []interface{}) ([]reflect.Value, error) {
+	var res []reflect.Value
 	methodType := reflect.ValueOf(methodInstance).Type()
 
-	var arg *protocol.Argument
-	i := 0
-	argsIterator := args.ArgumentsIterator()
-	for ; argsIterator.HasNext(); i++ {
-		// get the next arg from the transaction
-		if argsIterator.HasNext() {
-			arg = argsIterator.NextArguments()
-		} else {
-			return nil, errors.Errorf("method '%s' takes %d args but received %d", functionNameForErrors, methodType.NumIn(), i)
+	numOfArgs := len(args)
+	indexOfLastArg := methodType.NumIn() - 1
+	// check size of input vs method requirement
+	if methodType.IsVariadic() { // determine dangling array
+		if numOfArgs < indexOfLastArg {
+			return nil, errors.Errorf("method '%s' takes at least %d args but received less", functionNameForErrors, indexOfLastArg)
 		}
-
-		// in case of variable length we take the last available index
-		methodTypeIndex := i
-		if methodTypeIndex >= methodType.NumIn() {
-			if !methodType.IsVariadic() {
-				return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
-			}
-			methodTypeIndex = methodType.NumIn() - 1
-		}
-		methodTypeIn := methodType.In(methodTypeIndex)
-
-		// translate argument type
-		switch methodTypeIn.Kind() {
-		case reflect.Uint32:
-			if !arg.IsTypeUint32Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-			res = append(res, reflect.ValueOf(arg.Uint32Value()))
-		case reflect.Uint64:
-			if !arg.IsTypeUint64Value() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-			res = append(res, reflect.ValueOf(arg.Uint64Value()))
-		case reflect.String:
-			if !arg.IsTypeStringValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-			res = append(res, reflect.ValueOf(arg.StringValue()))
-		case reflect.Array:
-			if methodTypeIn.Elem().Kind() == reflect.Uint8 {
-				if methodTypeIn.Len() == 20 {
-					if !arg.IsTypeBytes20Value() {
-						return nil, errors.Errorf("method '%s' expects arg %d to be [20]byte but it has %s", functionNameForErrors, i, arg.StringType())
-					}
-					res = append(res, reflect.ValueOf(arg.Bytes20Value()))
-				} else if methodTypeIn.Len() == 32 {
-					if !arg.IsTypeBytes32Value() {
-						return nil, errors.Errorf("method '%s' expects arg %d to be [32]byte but it has %s", functionNameForErrors, i, arg.StringType())
-					}
-					res = append(res, reflect.ValueOf(arg.Bytes32Value()))
-				} else {
-					return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-			} else {
-				return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-		case reflect.Bool:
-			if !arg.IsTypeBoolValue() {
-				return nil, errors.Errorf("method '%s' expects arg %d to be bool but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-			res = append(res, reflect.ValueOf(arg.BoolValue()))
-		case reflect.Ptr:
-			if methodTypeIn == bigIntType {
-				if !arg.IsTypeUint256Value() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be *big.Int but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.Uint256Value()))
-			} else {
-				return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-			}
-		case reflect.Slice:
-			switch methodTypeIn.Elem().Kind() {
-			case reflect.Uint8:
-				if !arg.IsTypeBytesValue() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be []byte but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.BytesValue()))
-			case reflect.String:
-				if methodType.IsVariadic() && !arg.IsTypeStringValue() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be string but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.StringValue()))
-			case reflect.Uint32:
-				if methodType.IsVariadic() && !arg.IsTypeUint32Value() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be uint32 but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.Uint32Value()))
-			case reflect.Uint64:
-				if methodType.IsVariadic() && !arg.IsTypeUint64Value() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be uint64 but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.Uint64Value()))
-			case reflect.Array:
-				if methodTypeIn.Elem().Kind() == reflect.Uint8 {
-					if methodTypeIn.Len() == 20 {
-						if methodType.IsVariadic() && !arg.IsTypeBytes20Value() {
-							return nil, errors.Errorf("method '%s' expects arg %d to be [20]byte but it has %s", functionNameForErrors, i, arg.StringType())
-						}
-						res = append(res, reflect.ValueOf(arg.Bytes20Value()))
-					} else if methodTypeIn.Len() == 32 {
-						if methodType.IsVariadic() && !arg.IsTypeBytes32Value() {
-							return nil, errors.Errorf("method '%s' expects arg %d to be [32]byte but it has %s", functionNameForErrors, i, arg.StringType())
-						}
-						res = append(res, reflect.ValueOf(arg.Bytes32Value()))
-					} else {
-						return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-					}
-				} else {
-					return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-			case reflect.Bool:
-				if methodType.IsVariadic() && !arg.IsTypeBoolValue() {
-					return nil, errors.Errorf("method '%s' expects arg %d to be bool but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.BoolValue()))
-			case reflect.Ptr:
-				if methodTypeIn.Elem() == bigIntType {
-					if methodType.IsVariadic() && !arg.IsTypeUint256Value() {
-						return nil, errors.Errorf("method '%s' expects arg %d to be *big.Int but it has %s", functionNameForErrors, i, arg.StringType())
-					}
-					res = append(res, reflect.ValueOf(arg.Uint256Value()))
-				} else {
-					return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-			case reflect.Slice:
-				if methodType.IsVariadic() && (!arg.IsTypeBytesValue() ||
-					(methodTypeIn.Elem().Elem().Kind() != reflect.Uint8)) { // check that element of slice-of-slice is defined as byte
-					return nil, errors.Errorf("method '%s' expects arg %d to be [][]byte but it has %s", functionNameForErrors, i, arg.StringType())
-				}
-				res = append(res, reflect.ValueOf(arg.BytesValue()))
-			default:
-				return nil, errors.Errorf("method '%s' expect arg %d to be of different type", functionNameForErrors, i)
-			}
-		default:
-			return nil, errors.Errorf("method '%s' expects arg %d to be a known type but it has %s", functionNameForErrors, i, arg.StringType())
-		}
+	} else if numOfArgs < methodType.NumIn() {
+		return nil, errors.Errorf("method '%s' takes %d args but received less", functionNameForErrors, methodType.NumIn())
+	} else if numOfArgs > methodType.NumIn() {
+		return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
 	}
 
-	if methodType.IsVariadic() { // determine dangling array
-		if i < methodType.NumIn()-1 { //
-			return nil, errors.Errorf("method '%s' takes at least %d args but received less", functionNameForErrors, methodType.NumIn()-1)
+	for i := 0 ; i < numOfArgs; i++ {
+		argType := reflect.TypeOf(args[i])
+		if methodType.IsVariadic() && i >= indexOfLastArg {
+			typeOfVariadicArg := methodType.In(indexOfLastArg).Elem()
+			if argType != typeOfVariadicArg {
+				return nil, errors.Errorf("method '%s' expects arg %d to be %s but it has %s", functionNameForErrors, i, typeOfVariadicArg, argType)
+			}
+		} else if argType != methodType.In(i) {
+			return nil, errors.Errorf("method '%s' expects arg %d to be %s but it has %s", functionNameForErrors, i, methodType.In(i), argType)
 		}
-		return res, nil
-	} else if i < methodType.NumIn() {
-		return nil, errors.Errorf("method '%s' takes %d args but received less", functionNameForErrors, methodType.NumIn())
+		res = append(res, reflect.ValueOf(args[i]))
 	}
 
 	return res, nil
 }
 
-func createMethodOutputArgs(methodInstance types.MethodInstance, args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
-	res := []*protocol.ArgumentBuilder{}
-	for i, arg := range args {
-		k := arg.Kind()
-		switch k {
-		case reflect.Uint32:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.Interface().(uint32)})
-		case reflect.Uint64:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.Interface().(uint64)})
-		case reflect.String:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.Interface().(string)})
-		case reflect.Array:
-			if arg.Type().Elem().Kind() == reflect.Uint8 {
-				if arg.Len() == 20 {
-					res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.Interface().([20]byte)})
-				} else if arg.Len() == 32 {
-					res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.Interface().([32]byte)})
-				} else {
-					return nil, errors.Errorf("method '%s' output arg %d is of unsupported type %s", functionNameForErrors, i, arg.Type())
-				}
-			} else {
-				return nil, errors.Errorf("method '%s' output arg %d is of unsupported type %s", functionNameForErrors, i, arg.Type())
-			}
-		case reflect.Bool:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BOOL_VALUE, BoolValue: arg.Interface().(bool)})
-		case reflect.Ptr:
-			if arg.Type() == bigIntType {
-				res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_256_VALUE, Uint256Value: arg.Interface().(*big.Int)})
-			} else {
-				return nil, errors.Errorf("method '%s' output arg %d is of unsupported type %s", functionNameForErrors, i, arg.Type())
-			}
-		case reflect.Slice:
-			if arg.Type().Elem().Kind() != reflect.Uint8 {
-				return nil, errors.Errorf("method '%s' output arg %d slice type is not byte", functionNameForErrors, i)
-			}
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.Interface().([]byte)})
-		default:
-			return nil, errors.Errorf("method '%s' output arg %d is of unsupported type %s", functionNameForErrors, i, arg.Type())
-		}
+func createMethodOutputArgs(args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
+	var argInterfaces []interface{}
+	for _, arg := range args {
+		argInterfaces = append(argInterfaces, arg.Interface())
 	}
-	return (&protocol.ArgumentArrayBuilder{
-		Arguments: res,
-	}).Build(), nil
+
+	res, err := protocol.ArgumentArrayFromNatives(argInterfaces)
+	if err != nil {
+		return nil, errors.Errorf("method '%s' output %s", functionNameForErrors, err.Error())
+	}
+
+	return res, nil
 }
 
 func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
-	return (&protocol.ArgumentArrayBuilder{
-		Arguments: []*protocol.ArgumentBuilder{
-			{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: str},
-		},
-	}).Build()
+	res, _ :=  protocol.ArgumentArrayFromNatives([]interface{}{str})  // err ignored because we support argument with type string
+	return res
 }
