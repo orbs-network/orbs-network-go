@@ -29,8 +29,8 @@ require (
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/lean-helix-go v0.2.3
-	github.com/orbs-network/membuffers v0.3.2
-	github.com/orbs-network/orbs-client-sdk-go v0.8.0
+	github.com/orbs-network/membuffers v0.3.4
+	github.com/orbs-network/orbs-client-sdk-go v0.11.0
 	github.com/orbs-network/orbs-contract-sdk v1.4.0
 	github.com/orbs-network/orbs-spec v0.0.0-20191029121602-b5af15c91a90
 	github.com/orbs-network/scribe v0.2.2

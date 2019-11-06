@@ -28,12 +28,10 @@ func TestSendTransactionToTwoSeparateChains(t *testing.T) {
 	response2, _, err2 := mgmtChain.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount2, recipient.AddressAsBytes())
 
 	require.NoError(t, err1, "expected tx1 to succeed")
-	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response1.TransactionStatus)
-	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response1.ExecutionResult)
+	requireSuccessful(t, response1)
 
 	require.NoError(t, err2, "expected tx2 to succeed")
-	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response2.TransactionStatus)
-	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response2.ExecutionResult)
+	requireSuccessful(t, response2)
 
 	// check balance
 	eventuallyBalance(t, appChain, recipient, amount1)

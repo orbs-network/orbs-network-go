@@ -41,8 +41,7 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 
 			txIds = append(txIds, txId)
 			require.NoError(t, err, "transaction for amount %d should not return error\nresponse: %+v", amount, response)
-			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+			requireSuccessful(t, response)
 		}
 
 		// get statuses and receipt proofs
@@ -52,16 +51,15 @@ func TestNetworkCommitsMultipleTransactions(t *testing.T) {
 			printTestTime(t, "get status - end", &lt)
 
 			require.NoError(t, err, "get status for txid %s should not return error", txId)
-			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+			requireSuccessful(t, response)
 
 			printTestTime(t, "get receipt proof - start", &lt)
 			proofResponse, err := h.getTransactionReceiptProof(txId)
 			printTestTime(t, "get receipt proof - end", &lt)
 
 			require.NoError(t, err, "get receipt proof for txid %s should not return error", txId)
-			require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, proofResponse.TransactionStatus)
-			require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, proofResponse.ExecutionResult)
+			requireSuccessful(t, response)
+
 			require.True(t, len(proofResponse.PackedProof) > 20, "packed receipt proof for txid %s should return at least 20 bytes", txId)
 		}
 
