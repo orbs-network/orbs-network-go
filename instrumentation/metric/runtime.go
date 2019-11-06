@@ -56,7 +56,7 @@ func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.L
 }
 
 func (r *runtimeReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
-	return synchronization.NewPeriodicalTrigger(ctx, "Golang runtime metric reporter", RUNTIME_QUERY_INTERVAL, logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, "Golang runtime metric reporter", synchronization.NewTimeTicker(RUNTIME_QUERY_INTERVAL), logger, func() {
 		r.reportRuntimeMetrics()
 	}, nil)
 }
