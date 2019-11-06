@@ -123,7 +123,7 @@ jobs:
     resource_class: medium
     steps:
       - checkout
-      - run: curl -X POST 34.222.245.15:4567/jobs/start
+      - run: ./.circleci/marvin-stress.sh
 
   success:
     machine:
