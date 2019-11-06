@@ -208,6 +208,7 @@ workflows:
             tags:
               only: /^v.*/
 
+      - call_marvin
       - races
 
       - memory_leaks
