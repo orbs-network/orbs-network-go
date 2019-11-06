@@ -240,10 +240,6 @@ workflows:
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
-      - call_marvin:
-          requires:
-            - e2e_testnet_benchmark
-            - e2e_testnet_leanhelix
       - release:
           requires:
             - tests
