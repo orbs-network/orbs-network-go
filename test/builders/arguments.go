@@ -10,7 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 
-// Don't use this func in new tests, use the protocol.ArgumentArrayFromNatives and deal with err
+// Deprecated - use the protocol.ArgumentArrayFromNatives directly and deal with err
 func ArgumentsArray(args ...interface{}) *protocol.ArgumentArray {
 	res, err := protocol.ArgumentArrayFromNatives(args)
 	if err != nil {

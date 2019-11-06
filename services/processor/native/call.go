@@ -96,6 +96,6 @@ func createMethodOutputArgs(args []reflect.Value, functionNameForErrors string) 
 }
 
 func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
-	res, _ :=  protocol.ArgumentArrayFromNatives([]interface{}{str}) // error ignored on purpose
+	res, _ :=  protocol.ArgumentArrayFromNatives([]interface{}{str})  // err ignored because we support argument with type string
 	return res
 }

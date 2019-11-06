@@ -60,7 +60,7 @@ func (h *harness) expectSdkCallMadeWithStateRead(expectedKey []byte, returnValue
 			(expectedKey == nil || bytes.Equal(input.InputArguments[0].BytesValue(), expectedKey))
 	}
 
-	outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnValue)) // err ignored on purpose
+	outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnValue)) // err ignored because we support argument with type []byte
 	readReturn := &handlers.HandleSdkCallOutput{
 		OutputArguments: outputArgs,
 	}
@@ -96,7 +96,7 @@ func (h *harness) expectSdkCallMadeWithServiceCallMethod(expectedContractName st
 
 	var returnOutput *handlers.HandleSdkCallOutput
 	if returnArgArray != nil {
-		outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnArgArray.Raw())) // err ignored on purpose
+		outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnArgArray.Raw())) // err ignored because we support argument with type []byte
 		returnOutput = &handlers.HandleSdkCallOutput{
 			OutputArguments: outputArgs,
 		}
@@ -112,7 +112,7 @@ func (h *harness) expectSdkCallMadeWithAddressGetCaller(returnAddress []byte) {
 			input.OperationName == native.SDK_OPERATION_NAME_ADDRESS &&
 			input.MethodName == "getCallerAddress"
 	}
-	outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnAddress)) // err ignored on purpose
+	outputArgs, _ := protocol.ArgumentsFromNatives(builders.VarsToSlice(returnAddress)) // err ignored because we support argument with type []byte
 	returnOutput := &handlers.HandleSdkCallOutput{
 		OutputArguments: outputArgs,
 	}
