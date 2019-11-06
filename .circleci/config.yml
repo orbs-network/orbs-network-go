@@ -207,12 +207,9 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-
-      - call_marvin
       - races
-
+      - call_marvin
       - memory_leaks
-
       - deploy_new_chain_pr_only:
           requires:
             - e2e
