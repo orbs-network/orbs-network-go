@@ -140,6 +140,10 @@ func (r *CompilingRepository) getFullCodeOfDeploymentSystemContract(ctx context.
 func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string, index uint32) (string, error) {
 	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PART)
+	inputArguments, err := protocol.ArgumentArrayFromNatives([]interface{}{contractName, index})
+	if err != nil {
+		panic(errors.Wrap(err, "input arguments"))
+	}
 
 	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
@@ -159,7 +163,7 @@ func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToArgumentArray(string(contractName), index).Raw(),
+				BytesValue: inputArguments.Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
@@ -183,8 +187,12 @@ func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.
 }
 
 func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName string) (uint32, error) {
-	systemContractName := primitives.ContractName(deployments_systemcontract.CONTRACT_NAME)
-	systemMethodName := primitives.MethodName(deployments_systemcontract.METHOD_GET_CODE_PARTS)
+	systemContractName := deployments_systemcontract.CONTRACT_NAME
+	systemMethodName := deployments_systemcontract.METHOD_GET_CODE_PARTS
+	inputArguments, err := protocol.ArgumentArrayFromNatives([]interface{}{contractName})
+	if err != nil {
+		panic(errors.Wrap(err, "input arguments"))
+	}
 
 	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
@@ -194,17 +202,17 @@ func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContext
 			(&protocol.ArgumentBuilder{
 				// serviceName
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: string(systemContractName),
+				StringValue: systemContractName,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// methodName
 				Type:        protocol.ARGUMENT_TYPE_STRING_VALUE,
-				StringValue: string(systemMethodName),
+				StringValue: systemMethodName,
 			}).Build(),
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsToArgumentArray(string(contractName)).Raw(),
+				BytesValue: inputArguments.Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,

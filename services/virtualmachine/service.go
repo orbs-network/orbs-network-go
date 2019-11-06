@@ -73,7 +73,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
 	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if outputEvents == nil {
 		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
@@ -138,7 +138,7 @@ func (s *service) CallSystemContract(ctx context.Context, input *services.CallSy
 	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), logfields.BlockHeight(input.BlockHeight))
 	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 
 	return &services.CallSystemContractOutput{

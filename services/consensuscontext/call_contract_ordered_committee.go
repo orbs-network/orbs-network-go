@@ -85,7 +85,7 @@ func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blo
 		BlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()), // use now as the call is a kind of RunQuery and doesn't happen under consensus
 		ContractName:       systemContractName,
 		MethodName:         systemMethodName,
-		InputArgumentArray: (&protocol.ArgumentArrayBuilder{}).Build(),
+		InputArgumentArray: protocol.ArgumentsArrayEmpty(),
 	})
 	if err != nil {
 		return nil, err
