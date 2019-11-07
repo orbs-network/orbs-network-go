@@ -37,7 +37,7 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 		e2e.PrintTestTime(t, "first block committed", &lt)
 
 		counterStart := uint64(time.Now().UnixNano())
-		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
+		contractName := fmt.Sprintf("JsTest%d", counterStart)
 
 		e2e.PrintTestTime(t, "send deploy - start", &lt)
 
@@ -124,5 +124,79 @@ export function getName() {
 		require.True(t, ok, "getName should return name")
 		e2e.PrintTestTime(t, "done", &lt)
 
+	})
+}
+
+func TestDeploymentOfJavascriptContractInteroperableWithGo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
+
+	t.Skip("not implemented")
+
+	runMultipleTimes(t, func(t *testing.T) {
+
+		h := e2e.NewAppHarness()
+		lt := time.Now()
+		e2e.PrintTestTime(t, "started", &lt)
+
+		h.WaitUntilTransactionPoolIsReady(t)
+		e2e.PrintTestTime(t, "first block committed", &lt)
+
+		counterStart := uint64(time.Now().UnixNano())
+		goContractName := fmt.Sprintf("GoTest%d", counterStart)
+		jsContractName := fmt.Sprintf("JsTest%d", counterStart)
+
+		e2e.PrintTestTime(t, "send deploy - start", &lt)
+
+		h.DeployContractAndRequireSuccess(t, e2e.OwnerOfAllSupply, goContractName,
+			[]byte(`
+package main
+
+import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+)
+
+var PUBLIC = sdk.Export(getValue)
+var SYSTEM = sdk.Export(_init)
+
+func _init() {
+
+}
+
+func getValue() uint64 {
+	return uint64(100)
+}
+`))
+
+		DeployJSContractAndRequireSuccess(h, t, e2e.OwnerOfAllSupply, jsContractName,
+			[]byte(`
+import { Service } from "orbs-contract-sdk/v1";
+
+export function _init() {
+
+}
+
+export function getValue(contractName) {
+	return Service.callMethod(contractName, "getValue")
+}
+`))
+
+		e2e.PrintTestTime(t, "send deploy - end", &lt)
+
+		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
+			e2e.PrintTestTime(t, "run query - start", &lt)
+			response, err2 := h.RunQuery(e2e.OwnerOfAllSupply.PublicKey(), jsContractName, "getValue", goContractName)
+			e2e.PrintTestTime(t, "run query - end", &lt)
+
+			t.Log("$$", err2, response.ExecutionResult)
+			t.Log("XX", response.OutputArguments[0])
+
+			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
+				return response.OutputArguments[0].(uint64) == 100
+			}
+			return false
+		})
+		require.True(t, ok, "getValue() should call the go contract and get a result")
 	})
 }

@@ -26,13 +26,14 @@ func TestMain(m *testing.M) {
 
 	test.BuildDummyPlugin(DUMMY_PLUGIN_SOURCE, DUMMY_PLUGIN_BINARY)
 	defer test.RemoveDummyPlugin(DUMMY_PLUGIN_BINARY)
+	pluginPath := test.DummyPluginPath(DUMMY_PLUGIN_BINARY)
 
 	config := e2e.GetConfig()
 	if config.Bootstrap {
 		tl := e2e.NewLoggerRandomer()
 
-		mgmtNetwork := e2e.NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, test.DummyPluginPath(DUMMY_PLUGIN_BINARY))
-		appNetwork := e2e.NewInProcessE2EAppNetwork(config.AppVcid, tl, test.DummyPluginPath(DUMMY_PLUGIN_BINARY))
+		mgmtNetwork := e2e.NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, pluginPath)
+		appNetwork := e2e.NewInProcessE2EAppNetwork(config.AppVcid, tl, pluginPath)
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()

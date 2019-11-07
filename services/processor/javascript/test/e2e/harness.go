@@ -8,7 +8,6 @@
 package e2e
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
@@ -22,8 +21,6 @@ func DeployJSContractAndRequireSuccess(h *e2e.Harness, t *testing.T, keyPair *ke
 	h.WaitUntilTransactionPoolIsReady(t)
 
 	dcExResult, dcTxStatus, dcErr := DeployJSContract(h, keyPair, contractName, contractBytes...)
-
-	fmt.Println("result---", dcExResult)
 
 	require.Nil(t, dcErr, "expected deploy contract to succeed")
 	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus, "expected deploy contract to succeed")
