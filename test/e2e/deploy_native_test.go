@@ -64,8 +64,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		printTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "add transaction should not return error")
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+		requireSuccessful(t, response)
 
 		// check counter
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
@@ -81,9 +80,9 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		printTestTime(t, "attempting to deploy again to assert we can't deploy the same contract twice", &lt)
 
-		dcExResult, _, _ := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
-
-		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, dcExResult, "expected deploy contract to fail")
+		response, err = h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
+		require.NoError(t, err, "deployment transaction should fail but not return an error")
+		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, response.ExecutionResult, "expected deploy contract to fail")
 
 		printTestTime(t, "done", &lt)
 

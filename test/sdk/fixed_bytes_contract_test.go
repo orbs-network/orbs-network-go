@@ -36,8 +36,9 @@ func TestVm_WorkingContractWithBytes20(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			argsArray := builders.PackedArgumentArrayDecode(receipts[2].RawOutputArgumentArrayWithHeader())
-			require.EqualValues(t, bytes20, argsArray.ArgumentsIterator().NextArguments().Bytes20Value())
+			argsArray, err := protocol.PackedOutputArgumentsToNatives(receipts[2].RawOutputArgumentArrayWithHeader())
+			require.NoError(t, err)
+			require.EqualValues(t, bytes20, argsArray[0])
 		})
 	})
 }
@@ -57,10 +58,11 @@ func TestVm_WorkingContractWithBytes32(t *testing.T) {
 				builders.Transaction().WithMethod(ContractName, "setHash").WithArgs(bytes32).Build(),
 				builders.Transaction().WithMethod(ContractName, "getHash").WithArgs().Build(),
 			)
-
 			require.NoError(t, err)
-			argsArray := builders.PackedArgumentArrayDecode(receipts[2].RawOutputArgumentArrayWithHeader())
-			require.EqualValues(t, bytes32, argsArray.ArgumentsIterator().NextArguments().Bytes32Value())
+
+			argsArray, err := protocol.PackedOutputArgumentsToNatives(receipts[2].RawOutputArgumentArrayWithHeader())
+			require.NoError(t, err)
+			require.EqualValues(t, bytes32, argsArray[0])
 		})
 	})
 }
@@ -81,8 +83,9 @@ func TestVm_WorkingContractWithBigInt(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			argsArray := builders.PackedArgumentArrayDecode(receipts[2].RawOutputArgumentArrayWithHeader())
-			require.EqualValues(t, tokenValue, argsArray.ArgumentsIterator().NextArguments().Uint256Value())
+			argsArray, err := protocol.PackedOutputArgumentsToNatives(receipts[2].RawOutputArgumentArrayWithHeader())
+			require.NoError(t, err)
+			require.EqualValues(t, tokenValue, argsArray[0])
 		})
 	})
 }
@@ -103,8 +106,9 @@ func TestVm_WorkingContractWithBool(t *testing.T) {
 			)
 
 			require.NoError(t, err)
-			argsArray := builders.PackedArgumentArrayDecode(receipts[2].RawOutputArgumentArrayWithHeader())
-			require.EqualValues(t, configEnabled, argsArray.ArgumentsIterator().NextArguments().BoolValue())
+			argsArray, err := protocol.PackedOutputArgumentsToNatives(receipts[2].RawOutputArgumentArrayWithHeader())
+			require.NoError(t, err)
+			require.EqualValues(t, configEnabled, argsArray[0])
 		})
 	})
 }

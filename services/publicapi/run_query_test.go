@@ -19,7 +19,8 @@ import (
 
 func TestRunQuery_PrepareResponse(t *testing.T) {
 	blockTime := primitives.TimestampNano(time.Now().UnixNano())
-	outputArgs := builders.PackedArgumentArrayEncode("hello", uint64(17))
+	outputArgs, err := protocol.PackedInputArgumentsFromNatives(builders.VarsToSlice("hello", uint64(17)))
+	require.NoError(t, err, "output args must pack")
 	outputEvents := builders.PackedEventsArrayEncode(nil)
 
 	response := toRunQueryOutput(&queryOutput{
@@ -37,7 +38,7 @@ func TestRunQuery_PrepareResponse(t *testing.T) {
 	require.EqualValues(t, blockTime, response.ClientResponse.RequestResult().BlockTimestamp(), "Block time response is wrong")
 
 	require.EqualValues(t, protocol.EXECUTION_RESULT_SUCCESS, response.ClientResponse.QueryResult().ExecutionResult(), "Execution result is wrong")
-	test.RequireCmpEqual(t, outputArgs, response.ClientResponse.QueryResult().OutputArgumentArray(), "OutputArgs not equal")
+	require.EqualValues(t, outputArgs, response.ClientResponse.QueryResult().OutputArgumentArray(), "OutputArgs not equal")
 	test.RequireCmpEqual(t, outputEvents, response.ClientResponse.QueryResult().OutputEventsArray(), "OutputEvents not equal")
 }
 

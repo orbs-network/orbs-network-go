@@ -25,11 +25,15 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 		panic(err.Error())
 	}
 
+	// verify event arguments are allowed to be packed and match signature
 	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
-	argsArgumentArray := argsToArgumentArray(args...)
-	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
+	eventArguments, err := protocol.ArgumentArrayFromNatives(args)
 	if err != nil {
-		panic(errors.Wrap(err, "incorrect types given to event emit").Error())
+		panic(errors.Wrap(err, "event input arguments"))
+	}
+	_, err = verifyMethodInputArgs(eventFunctionSignature, functionNameForErrors, args)
+	if err != nil {
+		panic(errors.Wrap(err, "incorrect types given to event emit"))
 	}
 
 	_, err = s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
@@ -45,7 +49,7 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsArgumentArray.Raw(),
+				BytesValue: eventArguments.Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
@@ -53,9 +57,4 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 	if err != nil {
 		panic(err.Error())
 	}
-}
-
-func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
-	_, err := prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
-	return err
 }
