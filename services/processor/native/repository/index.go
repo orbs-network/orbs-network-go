@@ -11,12 +11,12 @@ import (
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkContract"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	committee_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
-	triggers_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
 

@@ -140,6 +140,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
 		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
 		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
+		BlockProposerAddress:  vcrx.input.BlockProposerAddress,
 	})
 	if err != nil {
 		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error from ProcessTransactionSet(): %v", err)
