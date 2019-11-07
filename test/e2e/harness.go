@@ -112,11 +112,14 @@ func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey
 }
 
 func (h *harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
-	test.Eventually(timeout, func() bool {
+	if test.Eventually(timeout, func() bool {
 		response, err = h.runQuery(senderPublicKey, contractName, methodName, args...)
-		return err == nil && response.BlockHeight >= expectedBlockHeight
-	})
-	return response, err
+		return err != nil || response.BlockHeight >= expectedBlockHeight
+	}) {
+		return response, err
+	}
+
+	return nil, errors.Errorf("did not reach height %d before timeout (got last response at height %d)", expectedBlockHeight, response.BlockHeight)
 }
 
 func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
