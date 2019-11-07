@@ -18,7 +18,7 @@ func PackedEventsArrayEncode(eventBuilders ...*protocol.EventBuilder) primitives
 	return eventsArray.RawEventsArray()
 }
 
-func EventBuilder(contract primitives.ContractName, eventName primitives.EventName, args ...interface{}) (*protocol.EventBuilder, error){
+func EventBuilder(contract primitives.ContractName, eventName primitives.EventName, args ...interface{}) (*protocol.EventBuilder, error) {
 	outputArgs, err := protocol.PackedInputArgumentsFromNatives(args)
 	if err != nil {
 		return nil, err

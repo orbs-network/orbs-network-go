@@ -38,13 +38,12 @@ func TestContractWhitelist(t *testing.T) {
 
 		PrintTestTime(t, "send deploy - start", &lt)
 
-		h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
-			[]byte(contractSource))
+		blockHeight := h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName, contractSource)
 
 		PrintTestTime(t, "send deploy - end", &lt)
 
 		// first query after contract deployment requires error tolerance (service-sync race)
-		sha2Response, err := h.EventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
+		sha2Response, err := h.runQueryAtBlockHeight(5*time.Second, blockHeight, OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
 		require.NoError(t, err)
 		sha2ExpectedValue := sha256.Sum256([]byte(contractName))
 		require.EqualValues(t, sha2ExpectedValue[:], sha2Response.OutputArguments[0])

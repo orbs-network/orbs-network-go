@@ -20,13 +20,12 @@ func DeployJSContractAndRequireSuccess(h *e2e.Harness, t *testing.T, keyPair *ke
 
 	h.WaitUntilTransactionPoolIsReady(t)
 
-	dcExResult, dcTxStatus, dcErr := DeployJSContract(h, keyPair, contractName, contractBytes...)
+	dcExResult, dcErr := DeployJSContract(h, keyPair, contractName, contractBytes...)
 
 	require.Nil(t, dcErr, "expected deploy contract to succeed")
-	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus, "expected deploy contract to succeed")
-	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult.ExecutionResult, "expected deploy contract to succeed")
 }
 
-func DeployJSContract(h *e2e.Harness, from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+func DeployJSContract(h *e2e.Harness, from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (*codec.TransactionResponse, error) {
 	return h.DeployContract(from, contractName, orbsClient.PROCESSOR_TYPE_JAVASCRIPT, code...)
 }
