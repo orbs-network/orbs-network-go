@@ -68,7 +68,7 @@ func (c *contractSdkEnvCallHandlerStub) HandleSdkCall(ctx context.Context, input
 	}
 	outputArgs, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(envValue))
 	if err != nil {
-		return nil, errors.Wrapf(err,"unknown input arg")
+		return nil, errors.Wrapf(err, "unknown input arg")
 	}
 	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

@@ -74,7 +74,7 @@ func (c *contractSdkAddressCallHandlerStub) HandleSdkCall(ctx context.Context, i
 	}
 	outputArgs, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(address))
 	if err != nil {
-		return nil, errors.Wrapf(err,"unknown input arg")
+		return nil, errors.Wrapf(err, "unknown input arg")
 	}
 	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

@@ -70,58 +70,56 @@ func newAppHarness() *harness {
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (codec.ExecutionResult, codec.TransactionStatus, error) {
+func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (*codec.TransactionResponse, error) {
 	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
-	sendTxOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
-
+	txOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
 	if err != nil {
-		return "", "", errors.Wrap(err, "failed to deploy native contract")
+		return nil, errors.Wrap(err, "failed to deploy native contract")
 	}
 
-	txStatus, executionResult := sendTxOut.TransactionStatus, sendTxOut.ExecutionResult
-
-	for txStatus == codec.TRANSACTION_STATUS_PENDING {
+	for txOut.TransactionStatus == codec.TRANSACTION_STATUS_PENDING {
 		// check timeout
 		if time.Now().Sub(beginTime) > timeoutDuration {
-			return "", "", fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", timeoutDuration)
+			return nil, fmt.Errorf("contract deployment is TRANSACTION_STATUS_PENDING for over %v", timeoutDuration)
 		}
 
 		time.Sleep(10 * time.Millisecond)
 
-		txStatusOut, _ := h.getTransactionStatus(txId)
-
-		txStatus, executionResult = txStatusOut.TransactionStatus, txStatusOut.ExecutionResult
+		txOut, _ = h.getTransactionStatus(txId)
 	}
 
-	return executionResult, txStatus, err
+	return txOut, err
 }
 
-func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.SendTransactionResponse, txId string, err error) {
+func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
 	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
 	}
-	response, err = h.client.SendTransaction(payload)
-	return
+	out, err := h.client.SendTransaction(payload)
+	return out.TransactionResponse, txId, err
 }
 
-func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (response *codec.SendTransactionResponse, txId string, err error) {
+func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (*codec.TransactionResponse, string, error) {
 	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
 	if err != nil {
 		return nil, txId, err
 	}
-	response, err = h.client.SendTransaction(payload)
-	return
+	out, err := h.client.SendTransaction(payload)
+	return out.TransactionResponse, txId, err
 }
 
-func (h *harness) eventuallyRunQueryWithoutError(timeout time.Duration, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
-	test.Eventually(timeout, func() bool {
+func (h *harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+	if test.Eventually(timeout, func() bool {
 		response, err = h.runQuery(senderPublicKey, contractName, methodName, args...)
-		return err == nil
-	})
-	return response, err
+		return err != nil || response.BlockHeight >= expectedBlockHeight
+	}) {
+		return response, err
+	}
+
+	return nil, errors.Errorf("did not reach height %d before timeout (got last response at height %d)", expectedBlockHeight, response.BlockHeight)
 }
 
 func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
@@ -133,9 +131,9 @@ func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodNa
 	return
 }
 
-func (h *harness) getTransactionStatus(txId string) (response *codec.GetTransactionStatusResponse, err error) {
-	response, err = h.client.GetTransactionStatus(txId)
-	return
+func (h *harness) getTransactionStatus(txId string) (*codec.TransactionResponse, error) {
+	response, err := h.client.GetTransactionStatus(txId)
+	return response.TransactionResponse, err
 }
 
 func (h *harness) getTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
@@ -167,15 +165,17 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
-func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) {
+func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) uint64 {
 
 	h.waitUntilTransactionPoolIsReady(t)
 
-	dcExResult, dcTxStatus, dcErr := h.deployNativeContract(keyPair, contractName, contractBytes...)
+	result, dcErr := h.deployNativeContract(keyPair, contractName, contractBytes...)
 
 	require.Nil(t, dcErr, "expected deploy contract to succeed")
-	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, dcTxStatus, "expected deploy contract to succeed")
-	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, dcExResult, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, result.TransactionStatus, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, result.ExecutionResult, "expected deploy contract to succeed")
+
+	return result.BlockHeight
 }
 
 func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
@@ -270,4 +270,9 @@ func getConfig() E2EConfig {
 		},
 		ethereumEndpoint: ethereumEndpoint,
 	}
+}
+
+func requireSuccessful(t testing.TB, response *codec.TransactionResponse) {
+	require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
+	require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
 }

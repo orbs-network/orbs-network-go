@@ -65,7 +65,7 @@ func verifyMethodInputArgs(methodInstance types.MethodInstance, functionNameForE
 		return nil, errors.Errorf("method '%s' takes %d args but received more", functionNameForErrors, methodType.NumIn())
 	}
 
-	for i := 0 ; i < numOfArgs; i++ {
+	for i := 0; i < numOfArgs; i++ {
 		argType := reflect.TypeOf(args[i])
 		if methodType.IsVariadic() && i >= indexOfLastArg {
 			typeOfVariadicArg := methodType.In(indexOfLastArg).Elem()
@@ -96,6 +96,6 @@ func createMethodOutputArgs(args []reflect.Value, functionNameForErrors string) 
 }
 
 func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
-	res, _ :=  protocol.ArgumentArrayFromNatives([]interface{}{str})  // err ignored because we support argument with type string
+	res, _ := protocol.ArgumentArrayFromNatives([]interface{}{str}) // err ignored because we support argument with type string
 	return res
 }

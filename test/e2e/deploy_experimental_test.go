@@ -9,7 +9,6 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
@@ -37,24 +36,18 @@ func TestContractExperimentalLibraries(t *testing.T) {
 
 		printTestTime(t, "send deploy - start", &lt)
 
-		h.deployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
-			[]byte(contractSource))
+		h.deployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName, contractSource)
 
 		printTestTime(t, "send deploy - end", &lt)
 
-		// warmup call
-		_, err = h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
-		require.NoError(t, err)
-
 		printTestTime(t, "send transaction - start", &lt)
-		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", "Diamond Dogs")
+		addResponse, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", "Diamond Dogs")
 		printTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "add transaction should not return error")
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+		requireSuccessful(t, addResponse)
 
-		queryResponse, err := h.eventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
+		queryResponse, err := h.runQueryAtBlockHeight(5*time.Second, addResponse.BlockHeight, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
 		require.NoError(t, err)
 		require.EqualValues(t, "Diamond Dogs", queryResponse.OutputArguments[0])
 

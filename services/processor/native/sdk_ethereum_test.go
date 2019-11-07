@@ -105,7 +105,7 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 	}
 	outputArgs, err := protocol.ArgumentsFromNatives(outputNatives)
 	if err != nil {
-		return nil, errors.Wrapf(err,"unknown input arg")
+		return nil, errors.Wrapf(err, "unknown input arg")
 	}
 	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }
