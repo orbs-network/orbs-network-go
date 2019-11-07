@@ -204,7 +204,7 @@ func runGoCommand(ctx context.Context, workDir string, cmdArgs ...string) ([]byt
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if deadline, ok := ctx.Deadline(); ok {
-			timeout := deadline.Sub(time.Now())
+			timeout := time.Until(deadline)
 			if timeout < 0 {
 				err = errors.Wrap(err, "after context deadline exceeded")
 			}
