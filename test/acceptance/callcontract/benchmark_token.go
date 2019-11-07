@@ -74,7 +74,7 @@ func (c *contractClient) GetBalance(ctx context.Context, nodeIndex int, forAddre
 	if out.RequestResult().RequestStatus() != protocol.REQUEST_STATUS_COMPLETED || out.QueryResult().ExecutionResult() != protocol.EXECUTION_RESULT_SUCCESS {
 		panic(fmt.Sprintf("query failed; nested error is %s", out.String()))
 	}
-	argsArray := builders.PackedArgumentArrayDecode(out.QueryResult().RawOutputArgumentArrayWithHeader())
+	argsArray := protocol.ArgumentArrayReader(out.QueryResult().RawOutputArgumentArrayWithHeader())
 	arguments := argsArray.ArgumentsIterator().NextArguments()
 	if !arguments.IsTypeUint64Value() {
 		panic(fmt.Sprintf("expected exactly one output argument of type uint64 but found %s, in %s", arguments.String(), out.String()))

@@ -69,11 +69,15 @@ func newHarness(logger log.Logger) *harness {
 }
 
 func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.Argument, error) {
+	inputArgs, err := protocol.ArgumentsFromNatives(args)
+	if err != nil {
+		return nil, err
+	}
 	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
-		InputArguments:  builders.Arguments(args...),
+		InputArguments:  inputArgs,
 		PermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})
 	if err != nil {
@@ -83,11 +87,15 @@ func (h *harness) handleSdkCall(ctx context.Context, executionContextId primitiv
 }
 
 func (h *harness) handleSdkCallWithSystemPermissions(ctx context.Context, executionContextId primitives.ExecutionContextId, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) ([]*protocol.Argument, error) {
+	inputArgs, err := protocol.ArgumentsFromNatives(args)
+	if err != nil {
+		return nil, err
+	}
 	output, err := h.service.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:       executionContextId,
 		OperationName:   contractName,
 		MethodName:      methodName,
-		InputArguments:  builders.Arguments(args...),
+		InputArguments:  inputArgs,
 		PermissionScope: protocol.PERMISSION_SCOPE_SYSTEM,
 	})
 	if err != nil {
@@ -112,12 +120,16 @@ func (h *harness) processQuery(ctx context.Context, contractName primitives.Cont
 }
 
 func (h *harness) callSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, contractName primitives.ContractName, methodName primitives.MethodName, args ...interface{}) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
+	inputArgArray, err := protocol.ArgumentArrayFromNatives(args)
+	if err != nil {
+		return protocol.EXECUTION_RESULT_ERROR_INPUT, nil, err
+	}
 	output, err := h.service.CallSystemContract(ctx, &services.CallSystemContractInput{
 		BlockHeight:        blockHeight,
 		BlockTimestamp:     0,
 		ContractName:       contractName,
 		MethodName:         methodName,
-		InputArgumentArray: builders.ArgumentsArray(args...),
+		InputArgumentArray: inputArgArray,
 	})
 	return output.CallResult, output.OutputArgumentArray, err
 }

@@ -99,7 +99,7 @@ func (s *service) processTransactionSet(
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), logfields.BlockHeight(currentBlockHeight))
 		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
-			outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+			outputArgs = protocol.ArgumentsArrayEmpty()
 		}
 		if outputEvents == nil {
 			outputEvents = (&protocol.EventsArrayBuilder{}).Build()

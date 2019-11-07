@@ -26,7 +26,7 @@ func processCallInput() *processCall {
 			ContextId:              []byte{0x0},
 			ContractName:           "BenchmarkContract",
 			MethodName:             "add",
-			InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
+			InputArgumentArray:     protocol.ArgumentsArrayEmpty(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		},

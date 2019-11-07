@@ -47,7 +47,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	code, err := s.retrieveContractCodeFromRepository(ctx, input.ContextId, input.ContractName)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArgumentArray: (&protocol.ArgumentArrayBuilder{}).Build(),
+			OutputArgumentArray: protocol.ArgumentsArrayEmpty(),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
@@ -55,7 +55,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	// execute
 	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, code, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if err != nil {
 		return &services.ProcessCallOutput{
