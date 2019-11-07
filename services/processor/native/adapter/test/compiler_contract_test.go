@@ -87,7 +87,7 @@ type compilerContractHarness struct {
 
 func aNativeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 	tmpDir := test.CreateTempDirForTest(t)
-	cfg := &hardcodedConfig{artifactPath: tmpDir}
+	cfg := &HardcodedConfig{ArtifactPath: tmpDir}
 	compiler := adapter.NewNativeCompiler(cfg, logger, metric.NewRegistry())
 	return &compilerContractHarness{
 		compiler: compiler,
@@ -109,16 +109,4 @@ func aFakeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 		compiler: compiler,
 		cleanup:  func() {},
 	}
-}
-
-type hardcodedConfig struct {
-	artifactPath string
-}
-
-func (c *hardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
-	return true
-}
-
-func (c *hardcodedConfig) ProcessorArtifactPath() string {
-	return c.artifactPath
 }
