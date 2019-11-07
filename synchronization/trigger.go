@@ -35,28 +35,6 @@ func (t *timeTicker) C() <-chan time.Time {
 	return t.Ticker.C
 }
 
-type HookTicker struct {
-	C_    func() <-chan time.Time
-	Stop_ func()
-}
-
-func (t *HookTicker) C() <-chan time.Time {
-	return t.C_()
-}
-
-func (t *HookTicker) Stop() {
-	t.Stop_()
-}
-
-var noopChannel = make(chan time.Time)
-
-func NewHookTicker() *HookTicker {
-	return &HookTicker{
-		C_:    func() <-chan time.Time { return noopChannel },
-		Stop_: func() {},
-	}
-}
-
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
 	govnr.TreeSupervisor
