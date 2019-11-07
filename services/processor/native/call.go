@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package call
+package native
 
 import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
@@ -14,12 +14,12 @@ import (
 	"reflect"
 )
 
-func ProcessMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
+func processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
 			contractOutputErr = errors.Errorf("%s", r)
-			contractOutputArgs = CreateMethodOutputArgsWithString(contractOutputErr.Error())
+			contractOutputArgs = createMethodOutputArgsWithString(contractOutputErr.Error())
 		}
 	}()
 
@@ -30,7 +30,7 @@ func ProcessMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	}
 
 	// verify input args
-	inValues, err := VerifyMethodInputArgs(methodInstance, functionNameForErrors, inArgs)
+	inValues, err := verifyMethodInputArgs(methodInstance, functionNameForErrors, inArgs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,7 +39,7 @@ func ProcessMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	outValues := reflect.ValueOf(methodInstance).Call(inValues)
 
 	// create output args
-	contractOutputArgs, err = CreateMethodOutputArgs(outValues, functionNameForErrors)
+	contractOutputArgs, err = createMethodOutputArgs(outValues, functionNameForErrors)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -48,7 +48,7 @@ func ProcessMethodCall(executionContextId primitives.ExecutionContextId, contrac
 	return contractOutputArgs, contractOutputErr, err
 }
 
-func VerifyMethodInputArgs(methodInstance types.MethodInstance, functionNameForErrors string, args []interface{}) ([]reflect.Value, error) {
+func verifyMethodInputArgs(methodInstance types.MethodInstance, functionNameForErrors string, args []interface{}) ([]reflect.Value, error) {
 	var res []reflect.Value
 	methodType := reflect.ValueOf(methodInstance).Type()
 
@@ -81,7 +81,7 @@ func VerifyMethodInputArgs(methodInstance types.MethodInstance, functionNameForE
 	return res, nil
 }
 
-func CreateMethodOutputArgs(args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
+func createMethodOutputArgs(args []reflect.Value, functionNameForErrors string) (*protocol.ArgumentArray, error) {
 	var argInterfaces []interface{}
 	for _, arg := range args {
 		argInterfaces = append(argInterfaces, arg.Interface())
@@ -95,7 +95,7 @@ func CreateMethodOutputArgs(args []reflect.Value, functionNameForErrors string) 
 	return res, nil
 }
 
-func CreateMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
+func createMethodOutputArgsWithString(str string) *protocol.ArgumentArray {
 	res, _ := protocol.ArgumentArrayFromNatives([]interface{}{str}) // err ignored because we support argument with type string
 	return res
 }

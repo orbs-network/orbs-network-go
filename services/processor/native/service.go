@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/call"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
@@ -102,7 +101,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, err
 	}
@@ -112,7 +111,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
@@ -128,7 +127,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	logger.Info("processor executing contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName))
 
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
-	outputArgs, contractErr, err := call.ProcessMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
+	outputArgs, contractErr, err := processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
 		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
@@ -137,7 +136,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
+			OutputArgumentArray: createMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}

@@ -1,4 +1,4 @@
-package call
+package native
 
 import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -28,7 +28,7 @@ func TestProcessMethodCall_Basic(t *testing.T) {
 		args, err := protocol.ArgumentArrayFromNatives(cTest.value)
 		require.NoError(t, err, "should succeed to parse input arg in %s", cTest.name)
 
-		_, internalErr, err := ProcessMethodCall(nil, nil, cTest.methodInstance, args, "funcName")
+		_, internalErr, err := processMethodCall(nil, nil, cTest.methodInstance, args, "funcName")
 		if cTest.shouldErr {
 			require.Error(t, err, "should fail in the parse parts %s", cTest.name)
 		} else if cTest.shouldFuncErr {
@@ -66,7 +66,7 @@ func TestVerifyMethodInputArgs_SimpleOneInputArg(t *testing.T) {
 
 	for i := range tests {
 		cTest := tests[i]
-		inValues, err := VerifyMethodInputArgs(cTest.methodInstance, "funcName", builders.VarsToSlice(cTest.value))
+		inValues, err := verifyMethodInputArgs(cTest.methodInstance, "funcName", builders.VarsToSlice(cTest.value))
 		require.NoError(t, err, "should succeed to parse %s", cTest.name)
 		outValues := reflect.ValueOf(cTest.methodInstance).Call(inValues)
 		require.EqualValues(t, cTest.value, outValues[0].Interface(), "return values should be equal to input.")
@@ -78,7 +78,7 @@ func TestVerifyMethodInputArgs_WithTwoByteArrays(t *testing.T) {
 	methodInstance := func(a []byte, b []byte) {}
 	args := builders.VarsToSlice([]byte("one"), []byte("two"))
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, []byte("one"), inValues[0].Interface())
@@ -88,15 +88,15 @@ func TestVerifyMethodInputArgs_WithTwoByteArrays(t *testing.T) {
 func TestVerifyMethodInputArgs_OneInputExpected_IncorrectNumberOfArgs(t *testing.T) {
 	methodInstance := func(a uint32) {}
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1997), uint32(1994)))
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1997), uint32(1994)))
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received more")
 	require.Nil(t, inValues)
 
-	inValues, err = VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1997), "hello"))
+	inValues, err = verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1997), "hello"))
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received more")
 	require.Nil(t, inValues)
 
-	inValues, err = VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
+	inValues, err = verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
 	require.EqualError(t, err, "method 'funcName' takes 1 args but received less")
 	require.Nil(t, inValues)
 }
@@ -104,15 +104,15 @@ func TestVerifyMethodInputArgs_OneInputExpected_IncorrectNumberOfArgs(t *testing
 func TestVerifyMethodInputArgs_TwoInputExpected_IncorrectNumberOfArgs(t *testing.T) {
 	methodInstance := func(a uint32, b []byte) {}
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1)))
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(1)))
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received less")
 	require.Nil(t, inValues)
 
-	inValues, err = VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
+	inValues, err = verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received less")
 	require.Nil(t, inValues)
 
-	inValues, err = VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(32), []byte{0x1}, uint32(5)))
+	inValues, err = verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice(uint32(32), []byte{0x1}, uint32(5)))
 	require.EqualError(t, err, "method 'funcName' takes 2 args but received more")
 	require.Nil(t, inValues)
 }
@@ -122,7 +122,7 @@ func TestVerifyMethodInputArgs_WithArrayOfVariableLength(t *testing.T) {
 	methodInstance := func(a ...string) {}
 	args := builders.VarsToSlice("one", "two")
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, "one", inValues[0].Interface())
@@ -133,7 +133,7 @@ func TestVerifyMethodInputArgs_WithArrayOfVariableLengthPassingNoArguments(t *te
 	methodInstance := func(a ...string) {}
 	args := builders.VarsToSlice()
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.NoError(t, err)
 	require.Len(t, inValues, 0)
 }
@@ -142,21 +142,21 @@ func TestVerifyMethodInputArgs_WithArrayOfVariableLengthPassingArgumentsOfDiffer
 	methodInstance := func(a uint32, b ...string) {}
 	args := builders.VarsToSlice(uint32(1), "hello", uint32(2))
 
-	_, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	_, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.EqualError(t, err, "method 'funcName' expects arg 2 to be string but it has uint32")
 }
 
 func TestVerifyMethodInputArgs_WithNormalArgsAndArrayOfVariableLength_EmptyInput(t *testing.T) {
 	methodInstance := func(a string, b ...string) {}
-	_, err := VerifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
+	_, err := verifyMethodInputArgs(methodInstance, "funcName", builders.VarsToSlice())
 	require.EqualError(t, err, "method 'funcName' takes at least 1 args but received less")
 
 	methodInstance2 := func(a uint32, b ...string) {}
-	_, err = VerifyMethodInputArgs(methodInstance2, "funcName", builders.VarsToSlice())
+	_, err = verifyMethodInputArgs(methodInstance2, "funcName", builders.VarsToSlice())
 	require.EqualError(t, err, "method 'funcName' takes at least 1 args but received less")
 
 	methodInstance3 := func(a string, b string, c ...string) {}
-	_, err = VerifyMethodInputArgs(methodInstance3, "funcName", builders.VarsToSlice("hello"))
+	_, err = verifyMethodInputArgs(methodInstance3, "funcName", builders.VarsToSlice("hello"))
 	require.EqualError(t, err, "method 'funcName' takes at least 2 args but received less")
 }
 
@@ -164,7 +164,7 @@ func TestVerifyMethodInputArgs_WithArrayOfByteArrays(t *testing.T) {
 	methodInstance := func(a ...[]byte) {}
 	args := builders.VarsToSlice([]byte("one"), []byte("two"))
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, []byte("one"), inValues[0].Interface())
@@ -176,7 +176,7 @@ func TestVerifyMethodInputArgs_WithArrayOfArraysOfStrings(t *testing.T) {
 	methodInstance := func(a ...[]string) {}
 	args := builders.VarsToSlice([]string{"one"}, []string{"two"})
 
-	inValues, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	inValues, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.NoError(t, err)
 	require.Len(t, inValues, 2)
 	require.EqualValues(t, []string{"one"}, inValues[0].Interface())
@@ -187,7 +187,7 @@ func TestVerifyMethodInputArgs_WithArrayOfArraysOfStringsPassingTwoByteArrays(t 
 	methodInstance := func(a ...[]string) {}
 	args := builders.VarsToSlice([]byte("one"), []byte("two"))
 
-	_, err := VerifyMethodInputArgs(methodInstance, "funcName", args)
+	_, err := verifyMethodInputArgs(methodInstance, "funcName", args)
 	require.EqualError(t, err, "method 'funcName' expects arg 0 to be []string but it has []uint8")
 }
 
@@ -218,7 +218,7 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 
 	for i := range tests {
 		cTest := tests[i]
-		outputArgs, err := CreateMethodOutputArgs([]reflect.Value{reflect.ValueOf(cTest.value)}, "funcName")
+		outputArgs, err := createMethodOutputArgs([]reflect.Value{reflect.ValueOf(cTest.value)}, "funcName")
 		if cTest.shouldErr {
 			require.Error(t, err, "should fail to parse %s", cTest.name)
 		} else {
