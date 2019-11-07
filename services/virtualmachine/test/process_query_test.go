@@ -33,7 +33,9 @@ func TestProcessQuery_Success(t *testing.T) {
 			result, outputArgs, refHeight, outputEvents, err := h.processQuery(ctx, "Contract1", "method1")
 			require.NoError(t, err, "process query should not fail")
 			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "process query should return successful result")
-			require.EqualValues(t, builders.PackedArgumentArrayEncode(uint32(17), "hello", []byte{0x01, 0x02}), outputArgs, "process query should return matching output args")
+			expectedOutputArgs, err := protocol.PackedInputArgumentsFromNatives(builders.VarsToSlice(uint32(17), "hello", []byte{0x01, 0x02}))
+			require.NoError(t, err, "output args must pack")
+			require.EqualValues(t, expectedOutputArgs, outputArgs, "process query should return matching output args")
 			require.EqualValues(t, 12, refHeight)
 			require.Equal(t, (&protocol.EventsArrayBuilder{}).Build().RawEventsArray(), outputEvents)
 

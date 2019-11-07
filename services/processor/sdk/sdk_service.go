@@ -9,15 +9,20 @@ package sdk
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/services/processor/arguments"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
+	"github.com/pkg/errors"
 )
 
 const SDK_OPERATION_NAME_SERVICE = "Sdk.Service"
 
 func (s *service) SdkServiceCallMethod(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, serviceName string, methodName string, args ...interface{}) []interface{} {
+	inputArguments, err := protocol.ArgumentArrayFromNatives(args)
+	if err != nil {
+		panic(errors.Wrap(err, "input arguments"))
+	}
+
 	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
 		OperationName: SDK_OPERATION_NAME_SERVICE,
@@ -36,7 +41,7 @@ func (s *service) SdkServiceCallMethod(executionContextId sdkContext.ContextId, 
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: arguments.ArgsToArgumentArray(args...).Raw(),
+				BytesValue: inputArguments.Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
@@ -47,6 +52,9 @@ func (s *service) SdkServiceCallMethod(executionContextId sdkContext.ContextId, 
 	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesValue() {
 		panic("callMethod Sdk.Service returned corrupt output value")
 	}
-	ArgumentArray := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue())
-	return arguments.ArgumentArrayToArgs(ArgumentArray)
+	nativeArgumentsArray, err := protocol.ArgumentArrayReader(output.OutputArguments[0].BytesValue()).ToNatives()
+	if err != nil {
+		panic(errors.Wrap(err, "output arguments"))
+	}
+	return nativeArgumentsArray
 }

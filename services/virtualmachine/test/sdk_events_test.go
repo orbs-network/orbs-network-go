@@ -45,16 +45,15 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 				{"Contract1", "method2"},
 			})
 
-			expectedEventsArray1 := (&protocol.EventsArrayBuilder{
-				Events: []*protocol.EventBuilder{
-					{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
-					{ContractName: "Contract1", EventName: "Event2", OutputArgumentArray: builders.PackedArgumentArrayEncode(uint64(17))},
-				},
-			}).Build().RawEventsArray()
-			expectedEventsArray2 := (&protocol.EventsArrayBuilder{}).Build().RawEventsArray()
+			event1, err := builders.EventBuilder("Contract1", "Event1", "hello")
+			require.NoError(t, err, "event packing should not fail")
+			event2, err := builders.EventBuilder("Contract1", "Event2", uint64(17))
+			require.NoError(t, err, "event packing should not fail")
+			expectedEventsArray1 := builders.PackedEventsArrayEncode(event1, event2)
+			expectedEventsArray2 := builders.PackedEventsArrayEncode()
 
-			require.Equal(t, expectedEventsArray1, outputEvents[0], "processTransactionSet returned output events should match")
-			require.Equal(t, expectedEventsArray2, outputEvents[1], "processTransactionSet returned output events should match")
+			require.EqualValues(t, expectedEventsArray1, outputEvents[0], "processTransactionSet returned output events should match")
+			require.EqualValues(t, expectedEventsArray2, outputEvents[1], "processTransactionSet returned output events should match")
 
 			h.verifySystemContractCalled(t)
 			h.verifyNativeContractMethodCalled(t)
@@ -81,13 +80,10 @@ func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 			require.NoError(t, err, "process query should not fail")
 			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "process query should return successful result")
 
-			expectedEventsArray := (&protocol.EventsArrayBuilder{
-				Events: []*protocol.EventBuilder{
-					{ContractName: "Contract1", EventName: "Event1", OutputArgumentArray: builders.PackedArgumentArrayEncode("hello")},
-				},
-			}).Build().RawEventsArray()
-
-			require.Equal(t, expectedEventsArray, outputEvents)
+			event, err := builders.EventBuilder("Contract1", "Event1", "hello")
+			require.NoError(t, err, "event packing should not fail")
+			expectedEventsArray := builders.PackedEventsArrayEncode(event)
+			require.EqualValues(t, expectedEventsArray, outputEvents)
 
 			h.verifySystemContractCalled(t)
 			h.verifyStateStorageBlockHeightRequested(t)

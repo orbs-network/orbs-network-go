@@ -90,7 +90,7 @@ func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight p
 		BlockTimestamp:     0, // unfortunately we don't know the timestamp here, this limits which contract SDK API can be used
 		ContractName:       systemContractName,
 		MethodName:         systemMethodName,
-		InputArgumentArray: (&protocol.ArgumentArrayBuilder{}).Build(),
+		InputArgumentArray: protocol.ArgumentsArrayEmpty(),
 	})
 	if err != nil {
 		return nil, err

@@ -85,18 +85,18 @@ func TestTransactionReceiptProof(t *testing.T) {
 		ethAddress := common.FromHex("e128846cd5b4979d68a8c58a9bdfeee657b34de7")
 		orbsAddress := common.FromHex("aa98846cd5b4979d68a8c58a9bdfeee657b34de7")
 		amount := uint64(1202)
-		eventBuilder := &protocol.EventBuilder{
-			ContractName:        "asb_ether",
-			EventName:           "OrbsTransferredOut",
-			OutputArgumentArray: builders.PackedArgumentArrayEncode(tuid, orbsAddress, ethAddress, amount),
-		}
+		eventBuilder, err := builders.EventBuilder("asb_ether", "OrbsTransferredOut", tuid, orbsAddress, ethAddress, amount)
+		require.NoError(t, err, "event must pack")
+
+		outputArgs, err := protocol.PackedInputArgumentsFromNatives(nil)
+		require.NoError(t, err, "output args must pack")
 
 		// transaction receipt
 		transactionReceiptBuilder := &protocol.TransactionReceiptBuilder{
 			Txhash:              hash.CalcSha256([]byte{0x12}),
 			ExecutionResult:     protocol.EXECUTION_RESULT_SUCCESS,
-			OutputArgumentArray: builders.PackedArgumentArrayEncode(),
-			OutputEventsArray:   builders.PackedEventsArrayEncode([]*protocol.EventBuilder{eventBuilder}),
+			OutputArgumentArray: outputArgs,
+			OutputEventsArray:   builders.PackedEventsArrayEncode(eventBuilder),
 		}
 
 		// results block header

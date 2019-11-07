@@ -60,7 +60,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesASBEvent(t *testing.T) {
 
 			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 			require.NoError(t, err, "failed to get latest block in ganache")
-			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
 
 			t.Logf("reference time: %d", referenceTime.UnixNano())
 
@@ -125,7 +125,7 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 
 			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
 			require.NoError(t, err, "failed to get latest block in ganache")
-			referenceTime := time.Unix(blockAfterPad.TimeInSeconds, 0)
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
 
 			t.Logf("reference time: %d", referenceTime.UnixNano())
 
@@ -142,9 +142,9 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 			require.NoError(t, err, "failed parsing ABI")
 
 			event := new(struct {
-				Voter        common.Address
-				Nodeslist    []common.Address
-				Vote_counter *big.Int
+				Voter       common.Address
+				Nodeslist   []common.Address
+				VoteCounter *big.Int
 			})
 			err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "Vote", out.EthereumAbiPackedOutputs[0])
 			require.NoError(t, err, "failed unpacking event")

@@ -12,6 +12,14 @@ echo "Cleaned the following containers:"
 (docker ps -aq | xargs docker rm -fv) || echo "No containers to clean! Good!"
 sleep 3
 
+export NVM_DIR="/opt/circleci/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+nvm install v11.2 && nvm use v11.2
+echo "Using node: "
+node -v
+cd .circleci && npm install && cd ..
+
 rm -rf _logs _out
 
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
@@ -60,9 +68,12 @@ export API_ENDPOINT=http://localhost:8082/api/v1/ \
 # the ethereum keypair is generated from the mnemonic passed to ganache on startup
 
 echo "The network has started with pre-existing (ancient) 500-some blocks"
-echo "Sleeping to allow the network to start closing new blocks.."
-echo "(So that the txpool won't throw our calls to the bin)"
-sleep 15
+
+echo "Polling the app network for liveness.." 
+./.circleci/check-e2e-network-liveness.js 42 10
+
+echo "Polling the management network for liveness.." 
+./.circleci/check-e2e-network-liveness.js 40 10
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 time go_test_junit_report e2e -timeout 10m -count=1 ./test/e2e/...

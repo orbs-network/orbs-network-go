@@ -43,7 +43,6 @@ func TestSdkEnv_GetVirtualChainId(t *testing.T) {
 	s := &service{config: config.ForNativeProcessorTests(42)}
 	vcid := s.SdkEnvGetVirtualChainId(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
 	require.EqualValues(t, vcid, 42, "virtual chain id should be returned")
-
 }
 
 func createEnvSdk() *service {
@@ -56,20 +55,20 @@ func (c *contractSdkEnvCallHandlerStub) HandleSdkCall(ctx context.Context, input
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SERVICE {
 		panic("permissions passed to SDK are incorrect")
 	}
+	var envValue interface{}
 	switch input.MethodName {
 	case "getBlockHeight":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(uint64(11)),
-		}, nil
+		envValue = uint64(11)
 	case "getBlockTimestamp":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(uint64(12)),
-		}, nil
+		envValue = uint64(12)
 	case "getBlockProposerAddress":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments([]byte{0x01, 0x02}),
-		}, nil
+		envValue = []byte{0x01, 0x02}
 	default:
 		return nil, errors.New("unknown method")
 	}
+	outputArgs, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(envValue))
+	if err != nil {
+		return nil, errors.Wrapf(err,"unknown input arg")
+	}
+	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/services/processor/arguments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/call"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
@@ -25,7 +24,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -104,7 +102,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: arguments.ArgsToArgumentArray(err.Error()),
+			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED,
 		}, err
 	}
@@ -114,7 +112,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	if err != nil {
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: arguments.ArgsToArgumentArray(err.Error()),
+			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
@@ -130,16 +128,16 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	logger.Info("processor executing contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName))
 
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
-	outputArgs, contractErr, err := processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
+	outputArgs, contractErr, err := call.ProcessMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if err != nil {
 		logger.Info("contract execution failed", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.Error(err))
 
 		return &services.ProcessCallOutput{
 			// TODO(https://github.com/orbs-network/orbs-spec/issues/97): do we need to remove system errors from OutputArguments?
-			OutputArgumentArray: arguments.ArgsToArgumentArray(err.Error()),
+			OutputArgumentArray: call.CreateMethodOutputArgsWithString(err.Error()),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_INPUT,
 		}, err
 	}
@@ -155,33 +153,6 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 		OutputArgumentArray: outputArgs,
 		CallResult:          callResult,
 	}, contractErr
-}
-
-func processMethodCall(executionContextId primitives.ExecutionContextId, contractInstance *types.ContractInstance, methodInstance types.MethodInstance, args *protocol.ArgumentArray, functionNameForErrors string) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			contractOutputErr = errors.Errorf("%s", r)
-			contractOutputArgs = arguments.ArgsToArgumentArray(contractOutputErr.Error())
-		}
-	}()
-
-	// verify input args
-	inValues, err := call.PrepareMethodInputArgsForCall(methodInstance, args, functionNameForErrors)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// execute the call
-	outValues := reflect.ValueOf(methodInstance).Call(inValues)
-
-	// create output args
-	contractOutputArgs, err = call.CreateMethodOutputArgs(methodInstance, outValues, functionNameForErrors)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// done
-	return contractOutputArgs, contractOutputErr, err
 }
 
 func (s *service) GetContractInfo(ctx context.Context, input *services.GetContractInfoInput) (*services.GetContractInfoOutput, error) {
