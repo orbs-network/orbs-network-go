@@ -70,9 +70,9 @@ func (s *Service) nonLeaderCommitAndReply(ctx context.Context, blockPair *protoc
 
 	// remember the block in our last committed state variable
 	if blockPair.TransactionsBlock.Header.BlockHeight() == lastCommittedBlockHeight+1 {
-		err = s.setLastCommittedBlock(blockPair, lastCommittedBlock)
-		if err != nil {
-			return err
+		updated := s.setLastCommittedBlockIfPreviousBlockMatches(blockPair, lastCommittedBlock)
+		if !updated {
+			return nil // Updated concurrently
 		}
 		// don't forget to update internal vars too since they may be used later on in the function
 		lastCommittedBlock = blockPair
