@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package native
+package sdk
 
 import (
 	"context"
@@ -68,7 +68,7 @@ func (c *contractSdkEnvCallHandlerStub) HandleSdkCall(ctx context.Context, input
 	}
 	outputArgs, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(envValue))
 	if err != nil {
-		return nil, errors.Wrapf(err,"unknown input arg")
+		return nil, errors.Wrapf(err, "unknown input arg")
 	}
 	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

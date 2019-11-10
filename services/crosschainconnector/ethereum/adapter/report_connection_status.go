@@ -43,7 +43,7 @@ func (c *EthereumRpcConnection) ReportConnectionStatus(ctx context.Context) {
 	statusMetrics := createConnectionStatusMetrics(c.registry)
 	statusMetrics.endpoint.Update(c.config.EthereumEndpoint())
 
-	c.Supervise(synchronization.NewPeriodicalTrigger(ctx, "Ethereum connector status reporter", 30*time.Second, c.logger, func() {
+	c.Supervise(synchronization.NewPeriodicalTrigger(ctx, "Ethereum connector status reporter", synchronization.NewTimeTicker(30*time.Second), c.logger, func() {
 		if err := c.updateConnectionStatus(ctx, statusMetrics); err != nil {
 			c.logger.Info("ethereum rpc connection status check failed", log.Error(err))
 		}

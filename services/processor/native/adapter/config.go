@@ -12,6 +12,7 @@ const SOURCE_CODE_PATH = "native-src"
 const SHARED_OBJECT_PATH = "native-bin"
 const GC_CACHE_PATH = "native-cache"
 const MAX_COMPILATION_TIME = 30 * time.Second
+
 // in a poor CPU environment when we have many containers starting up
 // in the same time (usually on our CI) or when running Docker e2e locally
 // We almost always end up with CPU starvation when the warm up compilation occurs

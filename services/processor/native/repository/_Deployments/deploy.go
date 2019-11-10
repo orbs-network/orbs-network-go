@@ -75,6 +75,7 @@ func deployService(serviceName string, processorType uint32, code ...[]byte) {
 	} else {
 		panic("contract doesn't have any code")
 	}
+
 	service.CallMethod(serviceName, "_init")
 }
 

@@ -108,6 +108,9 @@ type NodeConfig interface {
 
 	// Remote signer
 	SignerEndpoint() string
+
+	// Build-dependent configuration
+	ExtraConfig
 }
 
 type OverridableConfig interface {

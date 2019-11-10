@@ -21,10 +21,10 @@ import (
 )
 
 func TestE2EStress(t *testing.T) {
-	h := newAppHarness()
+	h := NewAppHarness()
 	ctrlRand := rand.NewControlledRand(t)
 
-	config := getConfig().stressTest
+	config := GetConfig().StressTest
 
 	if !config.enabled {
 		t.Skip("Skipping stress test")
@@ -50,7 +50,7 @@ func TestE2EStress(t *testing.T) {
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				response, _, err2 := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				response, _, err2 := h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 
 				if err2 != nil {
 					fmt.Println("Encountered an error sending a transaction while stress testing", err2)
@@ -107,7 +107,7 @@ func TestE2EStress(t *testing.T) {
 	//}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
 }
 
-func getTransactionCount(t *testing.T, h *harness) float64 {
+func getTransactionCount(t *testing.T, h *Harness) float64 {
 	var m metrics
 
 	require.True(t, test.Eventually(1*time.Minute, func() bool {

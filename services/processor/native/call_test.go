@@ -31,7 +31,7 @@ func TestProcessMethodCall_Basic(t *testing.T) {
 		_, internalErr, err := processMethodCall(nil, nil, cTest.methodInstance, args, "funcName")
 		if cTest.shouldErr {
 			require.Error(t, err, "should fail in the parse parts %s", cTest.name)
-		} else 	if cTest.shouldFuncErr {
+		} else if cTest.shouldFuncErr {
 			require.NoError(t, err, "should not fail because of parseing in %s", cTest.name)
 			require.Error(t, internalErr, "should fail in the internal func %s", cTest.name)
 		} else {
@@ -227,4 +227,3 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 		}
 	}
 }
-

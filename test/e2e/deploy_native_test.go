@@ -25,29 +25,29 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newAppHarness()
+		h := NewAppHarness()
 		lt := time.Now()
-		printTestTime(t, "started", &lt)
+		PrintTestTime(t, "started", &lt)
 
-		h.waitUntilTransactionPoolIsReady(t)
-		printTestTime(t, "first block committed", &lt)
+		h.WaitUntilTransactionPoolIsReady(t)
+		PrintTestTime(t, "first block committed", &lt)
 
 		counterStart := uint64(time.Now().UnixNano())
 		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
 
-		printTestTime(t, "send deploy - start", &lt)
+		PrintTestTime(t, "send deploy - start", &lt)
 
-		h.deployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
+		h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
 			contracts.NativeSourceCodeForCounterPart1(counterStart),
 			contracts.NativeSourceCodeForCounterPart2(counterStart))
 
-		printTestTime(t, "send deploy - end", &lt)
+		PrintTestTime(t, "send deploy - end", &lt)
 
 		// check counter
 		ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			printTestTime(t, "run query - start", &lt)
-			response, err2 := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
-			printTestTime(t, "run query - end", &lt)
+			PrintTestTime(t, "run query - start", &lt)
+			response, err2 := h.RunQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
+			PrintTestTime(t, "run query - end", &lt)
 
 			if err2 == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == counterStart
@@ -59,17 +59,16 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		// transaction to add to the counter
 		amount := uint64(17)
 
-		printTestTime(t, "send transaction - start", &lt)
-		response, _, err := h.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", uint64(amount))
-		printTestTime(t, "send transaction - end", &lt)
+		PrintTestTime(t, "send transaction - start", &lt)
+		response, _, err := h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), contractName, "add", uint64(amount))
+		PrintTestTime(t, "send transaction - end", &lt)
 
 		require.NoError(t, err, "add transaction should not return error")
-		require.Equal(t, codec.TRANSACTION_STATUS_COMMITTED, response.TransactionStatus)
-		require.Equal(t, codec.EXECUTION_RESULT_SUCCESS, response.ExecutionResult)
+		requireSuccessful(t, response)
 
 		// check counter
 		ok = test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-			response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
+			response, err := h.RunQuery(OwnerOfAllSupply.PublicKey(), contractName, "get")
 
 			if err == nil && response.ExecutionResult == codec.EXECUTION_RESULT_SUCCESS {
 				return response.OutputArguments[0] == counterStart+amount
@@ -79,13 +78,13 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		require.True(t, ok, "get counter should return counter start plus added value")
 
-		printTestTime(t, "attempting to deploy again to assert we can't deploy the same contract twice", &lt)
+		PrintTestTime(t, "attempting to deploy again to assert we can't deploy the same contract twice", &lt)
 
-		dcExResult, _, _ := h.deployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
+		response, err = h.DeployNativeContract(OwnerOfAllSupply, contractName, []byte("some other code"))
+		require.NoError(t, err, "deployment transaction should fail but not return an error")
+		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, response.ExecutionResult, "expected deploy contract to fail")
 
-		require.EqualValues(t, codec.EXECUTION_RESULT_ERROR_SMART_CONTRACT, dcExResult, "expected deploy contract to fail")
-
-		printTestTime(t, "done", &lt)
+		PrintTestTime(t, "done", &lt)
 
 	})
 }

@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -27,11 +27,11 @@ func TestSdkEvents_EmitEvent_InTransactionReceipts(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Emit of Event1")
-				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
+				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				t.Log("Emit of Event2")
-				_, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event2", builders.ArgumentsArray(uint64(17)).Raw())
+				_, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event2", builders.ArgumentsArray(uint64(17)).Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -71,7 +71,7 @@ func TestSdkEvents_EmitEvent_InProcessQuery(t *testing.T) {
 			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Emit of Event1")
-				_, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
+				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_EVENTS, "emitEvent", "Event1", builders.ArgumentsArray("hello").Raw())
 				require.NoError(t, err, "handleSdkCall should succeed")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})

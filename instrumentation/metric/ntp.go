@@ -38,7 +38,7 @@ func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logge
 }
 
 func (r *ntpReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
-	return synchronization.NewPeriodicalTrigger(ctx, "NTP metric reporter", NTP_QUERY_INTERVAL, logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, "NTP metric reporter", synchronization.NewTimeTicker(NTP_QUERY_INTERVAL), logger, func() {
 		response, err := ntp.Query(r.address)
 
 		if err != nil {

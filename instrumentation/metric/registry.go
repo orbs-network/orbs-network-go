@@ -163,7 +163,7 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 }
 
 func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
-	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", ROTATE_INTERVAL, logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", synchronization.NewTimeTicker(ROTATE_INTERVAL), logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {

@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/sanitizer"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -147,7 +148,7 @@ func (r *CompilingRepository) callGetCodeOfDeploymentSystemContract(ctx context.
 
 	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
-		OperationName: SDK_OPERATION_NAME_SERVICE,
+		OperationName: sdk.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
@@ -196,7 +197,7 @@ func (r *CompilingRepository) getCodeParts(ctx context.Context, executionContext
 
 	output, err := r.sdkHandler.HandleSdkCall(ctx, &handlers.HandleSdkCallInput{
 		ContextId:     primitives.ExecutionContextId(executionContextId),
-		OperationName: SDK_OPERATION_NAME_SERVICE,
+		OperationName: sdk.SDK_OPERATION_NAME_SERVICE,
 		MethodName:    "callMethod",
 		InputArguments: []*protocol.Argument{
 			(&protocol.ArgumentBuilder{
