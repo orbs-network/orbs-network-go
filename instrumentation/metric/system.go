@@ -38,7 +38,7 @@ func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Lo
 }
 
 func (r *systemReporter) startReporting(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
-	return synchronization.NewPeriodicalTrigger(ctx, "OS metric reporter", 3*time.Second, logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, "OS metric reporter", synchronization.NewTimeTicker(3*time.Second), logger, func() {
 		r.reportSystemMetrics(logger)
 	}, nil)
 }

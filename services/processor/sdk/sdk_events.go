@@ -4,17 +4,17 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package native
+package sdk
 
 import (
 	"context"
-	"fmt"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
+	"reflect"
 )
 
 const SDK_OPERATION_NAME_EVENTS = "Sdk.Events"
@@ -22,14 +22,17 @@ const SDK_OPERATION_NAME_EVENTS = "Sdk.Events"
 func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, eventFunctionSignature interface{}, args ...interface{}) {
 	eventName, err := types.GetContractMethodNameFromFunction(eventFunctionSignature)
 	if err != nil {
-		panic(err.Error())
+		panic(errors.Wrapf(err, "failed to find event signature function"))
 	}
 
-	functionNameForErrors := fmt.Sprintf("EVENTS.%s", eventName)
-	argsArgumentArray := argsToArgumentArray(args...)
-	err = s.validateEventInputArgs(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
+	// verify event arguments are allowed to be packed and match signature
+	eventArguments, err := protocol.ArgumentArrayFromNatives(args)
 	if err != nil {
-		panic(errors.Wrap(err, "incorrect types given to event emit").Error())
+		panic(errors.Errorf("event '%s' input arguments: %s", eventName, err))
+	}
+	_, err = verifyEventMethodInputArgs(eventFunctionSignature, args)
+	if err != nil {
+		panic(errors.Errorf("event '%s' %s", eventName, err))
 	}
 
 	_, err = s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
@@ -45,17 +48,35 @@ func (s *service) SdkEventsEmitEvent(executionContextId sdkContext.ContextId, pe
 			(&protocol.ArgumentBuilder{
 				// inputArgs
 				Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
-				BytesValue: argsArgumentArray.Raw(),
+				BytesValue: eventArguments.Raw(),
 			}).Build(),
 		},
 		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
 	})
 	if err != nil {
-		panic(err.Error())
+		panic(errors.Wrapf(err, "failed to emit event '%s'", eventName))
 	}
 }
 
-func (s *service) validateEventInputArgs(eventFunctionSignature interface{}, argsArgumentArray *protocol.ArgumentArray, functionNameForErrors string) error {
-	_, err := prepareMethodInputArgsForCall(eventFunctionSignature, argsArgumentArray, functionNameForErrors)
-	return err
+func verifyEventMethodInputArgs(eventSignature types.MethodInstance, args []interface{}) ([]reflect.Value, error) {
+	var res []reflect.Value
+	methodType := reflect.ValueOf(eventSignature).Type()
+	if methodType.IsVariadic() { // determine dangling array
+		return nil, errors.Errorf("is not allowed to be variadic")
+	}
+
+	numOfArgs := len(args)
+	if numOfArgs != methodType.NumIn() {
+		return nil, errors.Errorf("takes %d args but received %d", methodType.NumIn(), numOfArgs)
+	}
+
+	for i := 0; i < numOfArgs; i++ {
+		argType := reflect.TypeOf(args[i])
+		if argType != methodType.In(i) {
+			return nil, errors.Errorf("expects arg %d to be %s but it has %s", i, methodType.In(i), argType)
+		}
+		res = append(res, reflect.ValueOf(args[i]))
+	}
+
+	return res, nil
 }

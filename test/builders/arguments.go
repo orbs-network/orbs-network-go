@@ -7,60 +7,19 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"math/big"
 )
 
-/// Test builders for: protocol.ArgumentArray, primitives.PackedArgumentArray
-
-func ArgumentsBuilders(args ...interface{}) (res []*protocol.ArgumentBuilder) {
-	res = []*protocol.ArgumentBuilder{}
-	for _, arg := range args {
-		switch arg.(type) {
-		case uint32:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_32_VALUE, Uint32Value: arg.(uint32)})
-		case uint64:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_64_VALUE, Uint64Value: arg.(uint64)})
-		case string:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_STRING_VALUE, StringValue: arg.(string)})
-		case []byte:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_VALUE, BytesValue: arg.([]byte)})
-		case [20]byte:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_20_VALUE, Bytes20Value: arg.([20]byte)})
-		case [32]byte:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BYTES_32_VALUE, Bytes32Value: arg.([32]byte)})
-		case bool:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_BOOL_VALUE, BoolValue: arg.(bool)})
-		case *big.Int:
-			res = append(res, &protocol.ArgumentBuilder{Type: protocol.ARGUMENT_TYPE_UINT_256_VALUE, Uint256Value: arg.(*big.Int)})
-		}
-	}
-	return
-}
-
-func Arguments(args ...interface{}) (res []*protocol.Argument) {
-	res = []*protocol.Argument{}
-	builders := ArgumentsBuilders(args...)
-	for _, builder := range builders {
-		res = append(res, builder.Build())
-	}
-	return
-}
-
+// Deprecated - use the protocol.ArgumentArrayFromNatives directly and deal with err
 func ArgumentsArray(args ...interface{}) *protocol.ArgumentArray {
-	res := []*protocol.ArgumentBuilder{}
-	builders := ArgumentsBuilders(args...)
-	res = append(res, builders...)
-
-	return (&protocol.ArgumentArrayBuilder{Arguments: res}).Build()
+	res, err := protocol.ArgumentArrayFromNatives(args)
+	if err != nil {
+		panic(err.Error())
+	}
+	return res
 }
 
-func PackedArgumentArrayEncode(args ...interface{}) primitives.PackedArgumentArray {
-	argArray := ArgumentsArray(args...)
-	return argArray.RawArgumentsArray()
-}
-
-func PackedArgumentArrayDecode(rawArgumentArrayWithHeader []byte) *protocol.ArgumentArray {
-	return protocol.ArgumentArrayReader(rawArgumentArrayWithHeader)
+// this is only for tests ... don't use in production code from here.
+func VarsToSlice(args ...interface{}) []interface{} {
+	return args
 }

@@ -4,12 +4,11 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package native
+package sdk
 
 import (
 	"context"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/pkg/errors"
@@ -87,32 +86,26 @@ func (c *contractSdkEthereumCallHandlerStub) HandleSdkCall(ctx context.Context, 
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SYSTEM {
 		panic("permissions passed to SDK are incorrect")
 	}
+	outputNatives := make([]interface{}, 0)
 	switch input.MethodName {
 	case "callMethod":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(examplePackedOutput),
-		}, nil
+		outputNatives = append(outputNatives, examplePackedOutput)
 	case "getTransactionLog":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(examplePackedOutput, exampleBlockNumber, exampleTxIndex),
-		}, nil
+		outputNatives = append(outputNatives, examplePackedOutput, exampleBlockNumber, exampleTxIndex)
 	case "getBlockNumber":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleBlockNumber),
-		}, nil
+		outputNatives = append(outputNatives, exampleBlockNumber)
 	case "getBlockNumberByTime":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleBlockNumber),
-		}, nil
+		outputNatives = append(outputNatives, exampleBlockNumber)
 	case "getBlockTime":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleBlockTimestamp),
-		}, nil
+		outputNatives = append(outputNatives, exampleBlockTimestamp)
 	case "getBlockTimeByNumber":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleBlockTimestamp),
-		}, nil
+		outputNatives = append(outputNatives, exampleBlockTimestamp)
 	default:
 		return nil, errors.New("unknown method")
 	}
+	outputArgs, err := protocol.ArgumentsFromNatives(outputNatives)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unknown input arg")
+	}
+	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

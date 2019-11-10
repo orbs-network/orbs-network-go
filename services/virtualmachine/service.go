@@ -10,8 +10,8 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -73,7 +73,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
 	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if outputEvents == nil {
 		outputEvents = (&protocol.EventsArrayBuilder{}).Build()
@@ -138,7 +138,7 @@ func (s *service) CallSystemContract(ctx context.Context, input *services.CallSy
 	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), logfields.BlockHeight(input.BlockHeight))
 	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 
 	return &services.CallSystemContractOutput{
@@ -157,17 +157,17 @@ func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCa
 	}
 
 	switch input.OperationName {
-	case native.SDK_OPERATION_NAME_STATE:
+	case sdk.SDK_OPERATION_NAME_STATE:
 		output, err = s.handleSdkStateCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
-	case native.SDK_OPERATION_NAME_SERVICE:
+	case sdk.SDK_OPERATION_NAME_SERVICE:
 		output, err = s.handleSdkServiceCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
-	case native.SDK_OPERATION_NAME_EVENTS:
+	case sdk.SDK_OPERATION_NAME_EVENTS:
 		output, err = s.handleSdkEventsCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
-	case native.SDK_OPERATION_NAME_ETHEREUM:
+	case sdk.SDK_OPERATION_NAME_ETHEREUM:
 		output, err = s.handleSdkEthereumCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
-	case native.SDK_OPERATION_NAME_ADDRESS:
+	case sdk.SDK_OPERATION_NAME_ADDRESS:
 		output, err = s.handleSdkAddressCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
-	case native.SDK_OPERATION_NAME_ENV:
+	case sdk.SDK_OPERATION_NAME_ENV:
 		output, err = s.handleSdkEnvCall(ctx, executionContext, input.MethodName, input.InputArguments, input.PermissionScope)
 	default:
 		return nil, errors.Errorf("unknown SDK call operation: %s", input.OperationName)

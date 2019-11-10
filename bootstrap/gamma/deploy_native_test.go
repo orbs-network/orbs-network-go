@@ -81,7 +81,8 @@ func TestDeployNativeContractFailsWhenUsingSystemContractName(t *testing.T) {
 		require.EqualValues(t, protocol.REQUEST_STATUS_COMPLETED, txResponse.RequestResult().RequestStatus())
 		require.EqualValues(t, protocol.TRANSACTION_STATUS_COMMITTED, txResponse.TransactionStatus())
 		require.EqualValues(t, protocol.EXECUTION_RESULT_ERROR_SMART_CONTRACT, txResponse.TransactionReceipt().ExecutionResult())
-		textValue := builders.PackedArgumentArrayDecode(txResponse.TransactionReceipt().RawOutputArgumentArrayWithHeader()).ArgumentsIterator().NextArguments().StringValue()
-		require.EqualValues(t, "a contract with this name exists", textValue)
+		argsArray, err := protocol.PackedOutputArgumentsToNatives(txResponse.TransactionReceipt().RawOutputArgumentArrayWithHeader())
+		require.NoError(t, err)
+		require.EqualValues(t, "a contract with this name exists", argsArray[0])
 	})
 }

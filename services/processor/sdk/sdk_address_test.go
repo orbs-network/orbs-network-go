@@ -4,7 +4,7 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package native
+package sdk
 
 import (
 	"context"
@@ -61,20 +61,20 @@ func (c *contractSdkAddressCallHandlerStub) HandleSdkCall(ctx context.Context, i
 	if input.PermissionScope != protocol.PERMISSION_SCOPE_SERVICE {
 		panic("permissions passed to SDK are incorrect")
 	}
+	var address []byte
 	switch input.MethodName {
 	case "getSignerAddress":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleAddress1),
-		}, nil
+		address = exampleAddress1
 	case "getCallerAddress":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleAddress2),
-		}, nil
+		address = exampleAddress2
 	case "getOwnAddress":
-		return &handlers.HandleSdkCallOutput{
-			OutputArguments: builders.Arguments(exampleAddress3),
-		}, nil
+		address = exampleAddress3
 	default:
 		return nil, errors.New("unknown method")
 	}
+	outputArgs, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(address))
+	if err != nil {
+		return nil, errors.Wrapf(err, "unknown input arg")
+	}
+	return &handlers.HandleSdkCallOutput{OutputArguments: outputArgs}, nil
 }

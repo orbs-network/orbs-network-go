@@ -144,7 +144,7 @@ func TestGetEthBlockByTimestampWorksWithDifferentRequestsFromCache(t *testing.T)
 			jump := (FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS - FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS) / desiredIterations
 			for seconds := FAKE_CLIENT_FIRST_TIMESTAMP_SECONDS + 10; seconds < FAKE_CLIENT_LAST_TIMESTAMP_EXPECTED_SECONDS; seconds += jump {
 
-				_, err := h.finder.FindBlockByTimestamp(ctx, secondsToNano(int64(seconds)))
+				_, err := h.finder.FindBlockByTimestamp(ctx, secondsToNano(uint64(seconds)))
 				require.NoError(t, err)
 			}
 		})
