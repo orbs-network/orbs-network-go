@@ -17,5 +17,5 @@ func _init() {
 }
 
 func trigger() {
-	service.CallMethod(committee_systemcontract.CONTRACT_NAME, committee_systemcontract.METHOD_UPDATE_MISSES) // must be before elections
+	service.CallMethod(committee_systemcontract.CONTRACT_NAME, committee_systemcontract.METHOD_UPDATE_MISSES) // committee always refers to the current block's validators - so if this block contains election the result will only affect next block update committee
 }
