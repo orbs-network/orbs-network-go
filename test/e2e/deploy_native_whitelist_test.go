@@ -25,22 +25,22 @@ func TestContractWhitelist(t *testing.T) {
 
 	runMultipleTimes(t, func(t *testing.T) {
 
-		h := newAppHarness()
+		h := NewAppHarness()
 		lt := time.Now()
-		printTestTime(t, "started", &lt)
+		PrintTestTime(t, "started", &lt)
 
-		h.waitUntilTransactionPoolIsReady(t)
-		printTestTime(t, "first block committed", &lt)
+		h.WaitUntilTransactionPoolIsReady(t)
+		PrintTestTime(t, "first block committed", &lt)
 
 		counterStart := uint64(time.Now().UnixNano())
 		contractName := fmt.Sprintf("Whitelist%d", counterStart)
 		contractSource, _ := ioutil.ReadFile("../contracts/whitelist/whitelist.go")
 
-		printTestTime(t, "send deploy - start", &lt)
+		PrintTestTime(t, "send deploy - start", &lt)
 
-		blockHeight := h.deployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName, contractSource)
+		blockHeight := h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName, contractSource)
 
-		printTestTime(t, "send deploy - end", &lt)
+		PrintTestTime(t, "send deploy - end", &lt)
 
 		// first query after contract deployment requires error tolerance (service-sync race)
 		sha2Response, err := h.runQueryAtBlockHeight(5*time.Second, blockHeight, OwnerOfAllSupply.PublicKey(), contractName, "sha2_256", []byte(contractName))
@@ -48,7 +48,7 @@ func TestContractWhitelist(t *testing.T) {
 		sha2ExpectedValue := sha256.Sum256([]byte(contractName))
 		require.EqualValues(t, sha2ExpectedValue[:], sha2Response.OutputArguments[0])
 
-		sha3Response, err := h.runQuery(OwnerOfAllSupply.PublicKey(), contractName, "sha3_256", []byte(contractName))
+		sha3Response, err := h.RunQuery(OwnerOfAllSupply.PublicKey(), contractName, "sha3_256", []byte(contractName))
 		require.NoError(t, err)
 		sha3ExpectedValue := sha3.Sum256([]byte(contractName))
 		require.EqualValues(t, sha3ExpectedValue[:], sha3Response.OutputArguments[0])

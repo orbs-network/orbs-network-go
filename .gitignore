@@ -88,3 +88,4 @@ _dockerbuild/
 _bin
 .deploy.json
 devtools/test/json/*.json
+dummy_plugin.bin

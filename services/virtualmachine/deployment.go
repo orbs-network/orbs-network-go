@@ -40,12 +40,10 @@ func (s *service) getServiceDeployment(ctx context.Context, executionContext *ex
 		}
 	}
 
-	// return according to processor
-	switch processorType {
-	case protocol.PROCESSOR_TYPE_NATIVE:
-		return s.processors[protocol.PROCESSOR_TYPE_NATIVE], nil
-	default:
+	if processor, found := s.processors[processorType]; !found {
 		return nil, errors.Errorf("_Deployments.getInfo contract returned unknown processor type: %s", processorType)
+	} else {
+		return processor, nil
 	}
 }
 

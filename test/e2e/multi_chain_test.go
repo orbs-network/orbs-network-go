@@ -13,19 +13,19 @@ func TestSendTransactionToTwoSeparateChains(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	appChain := newAppHarness()
-	mgmtChain := newMgmtHarness()
+	appChain := NewAppHarness()
+	mgmtChain := NewMgmtHarness()
 
 	amount1 := uint64(13)
 	amount2 := uint64(17)
 
-	appChain.waitUntilTransactionPoolIsReady(t)
-	mgmtChain.waitUntilTransactionPoolIsReady(t)
+	appChain.WaitUntilTransactionPoolIsReady(t)
+	mgmtChain.WaitUntilTransactionPoolIsReady(t)
 
 	recipient, _ := orbsClient.CreateAccount()
 
-	response1, _, err1 := appChain.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount1, recipient.AddressAsBytes())
-	response2, _, err2 := mgmtChain.sendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount2, recipient.AddressAsBytes())
+	response1, _, err1 := appChain.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount1, recipient.AddressAsBytes())
+	response2, _, err2 := mgmtChain.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount2, recipient.AddressAsBytes())
 
 	require.NoError(t, err1, "expected tx1 to succeed")
 	requireSuccessful(t, response1)
@@ -38,10 +38,10 @@ func TestSendTransactionToTwoSeparateChains(t *testing.T) {
 	eventuallyBalance(t, mgmtChain, recipient, amount2)
 }
 
-func eventuallyBalance(t *testing.T, chainHarness *harness, address *orbsClient.OrbsAccount, expectedBalance uint64, msgAndArgs ...interface{}) {
+func eventuallyBalance(t *testing.T, chainHarness *Harness, address *orbsClient.OrbsAccount, expectedBalance uint64, msgAndArgs ...interface{}) {
 	var lastObservedBalance uint64
 	ok := test.Eventually(test.EVENTUALLY_DOCKER_E2E_TIMEOUT, func() bool {
-		response, err := chainHarness.runQuery(address.PublicKey, "BenchmarkToken", "getBalance", address.AddressAsBytes())
+		response, err := chainHarness.RunQuery(address.PublicKey, "BenchmarkToken", "getBalance", address.AddressAsBytes())
 
 		if err != nil {
 			return false
