@@ -51,7 +51,7 @@ func TestContractExperimentalLibraries(t *testing.T) {
 		require.NoError(t, err, "add transaction should not return error")
 		requireSuccessful(t, addResponse)
 
-		queryResponse, err := h.EventuallyRunQueryWithoutError(5*time.Second, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
+		queryResponse, err := h.runQueryAtBlockHeight(5*time.Second, addResponse.BlockHeight, OwnerOfAllSupply.PublicKey(), contractName, "get", uint64(0))
 		require.NoError(t, err)
 		require.EqualValues(t, "Diamond Dogs", queryResponse.OutputArguments[0])
 

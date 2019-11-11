@@ -70,12 +70,16 @@ func NewAppHarness() *Harness {
 	}
 }
 
+func isNotHttp202Error(err error) bool {
+	return !strings.Contains(err.Error(), "http status 202 Accepted")
+}
+
 func (h *Harness) DeployContract(from *keys.Ed25519KeyPair, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (*codec.TransactionResponse, error) {
 	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
 	txOut, txId, err := h.SendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, processorType, code...)
-	if err != nil {
+	if err != nil && isNotHttp202Error(err) { // TODO the SDK treats HTTP 202 as an error
 		return nil, errors.Wrap(err, "failed to deploy native contract")
 	}
 
@@ -115,20 +119,26 @@ func (h *Harness) SendDeployTransaction(senderPublicKey []byte, senderPrivateKey
 	return out.TransactionResponse, txId, err
 }
 
-func (h *Harness) EventuallyRunQueryWithoutError(timeout time.Duration, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
-	test.Eventually(timeout, func() bool {
-		response, err = h.RunQuery(senderPublicKey, contractName, methodName, args...)
-		return err == nil
-	})
-	return response, err
-}
+func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (*codec.RunQueryResponse, error) {
+	var lastErr error
+	var response *codec.RunQueryResponse
 
-func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
 	if test.Eventually(timeout, func() bool {
+		var err error
 		response, err = h.RunQuery(senderPublicKey, contractName, methodName, args...)
-		return err != nil || response.BlockHeight >= expectedBlockHeight
+		if err != nil {
+			lastErr = err
+			return false
+		}
+		return response.BlockHeight >= expectedBlockHeight // An error could be a result of the contract not being deployed at the currently synced block height, suppress it unless not eventually successful
 	}) {
-		return response, err
+		return response, nil
+	}
+
+	// Couldn't reach the block height
+
+	if lastErr != nil {
+		return nil, lastErr
 	}
 
 	return nil, errors.Errorf("did not reach height %d before timeout (got last response at height %d)", expectedBlockHeight, response.BlockHeight)
