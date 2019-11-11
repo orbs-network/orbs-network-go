@@ -142,6 +142,14 @@ func (b *networkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.Cons
 	}
 }
 
+func startHeartbeat(ctx context.Context, logger log.Logger) *govnr.ForeverHandle {
+	const heartbeatInterval = 100 * time.Millisecond
+	return govnr.Forever(ctx, "heartbeat", logfields.GovnrErrorer(logger), func() {
+		logger.Info("heartbeat")
+		time.Sleep(heartbeatInterval)
+	})
+}
+
 func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
 	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
 	// as we run subtests, golang will by default run two subtests in parallel
@@ -158,6 +166,7 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 			defer cancel()
 
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)
 			defer dumpStateOnFailure(tb, network)
 			logger.Info("acceptance network created")
