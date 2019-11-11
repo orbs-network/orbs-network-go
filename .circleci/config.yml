@@ -118,6 +118,13 @@ jobs:
       - store_artifacts:
           path: _out
 
+  call_marvin:
+    docker:
+      - image: circleci/golang:1.12.9
+    steps:
+      - checkout
+      - run: ./.circleci/marvin-stress.sh
+
   success:
     machine:
       image: ubuntu-1604:201903-01
@@ -200,11 +207,9 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-
       - races
-
+      - call_marvin
       - memory_leaks
-
       - deploy_new_chain_pr_only:
           requires:
             - e2e
