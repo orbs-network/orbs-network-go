@@ -115,14 +115,6 @@ func (h *Harness) SendDeployTransaction(senderPublicKey []byte, senderPrivateKey
 	return out.TransactionResponse, txId, err
 }
 
-func (h *Harness) EventuallyRunQueryWithoutError(timeout time.Duration, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
-	test.Eventually(timeout, func() bool {
-		response, err = h.RunQuery(senderPublicKey, contractName, methodName, args...)
-		return err == nil
-	})
-	return response, err
-}
-
 func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (*codec.RunQueryResponse, error) {
 	var lastErr error
 	var response *codec.RunQueryResponse
