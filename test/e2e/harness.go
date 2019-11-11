@@ -70,12 +70,16 @@ func NewAppHarness() *Harness {
 	}
 }
 
+func isNotHttp202Error(err error) bool {
+	return !strings.Contains(err.Error(), "http status 202 Accepted")
+}
+
 func (h *Harness) DeployContract(from *keys.Ed25519KeyPair, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (*codec.TransactionResponse, error) {
 	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
 	txOut, txId, err := h.SendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, processorType, code...)
-	if err != nil && !strings.Contains(err.Error(), "http status 202 Accepted") { // TODO the SDK treats HTTP 202 as an error
+	if err != nil && isNotHttp202Error(err) { // TODO the SDK treats HTTP 202 as an error
 		return nil, errors.Wrap(err, "failed to deploy native contract")
 	}
 
