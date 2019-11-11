@@ -11,6 +11,7 @@ package elections_systemcontract
 import (
 	"fmt"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ethereum"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint64"
 	"time"
@@ -47,7 +48,12 @@ func unsafetests_setVariables(voteMirrorPeriod uint64, voteValidPeriod uint64, e
 
 func unsafetests_setElectedValidators(joinedAddresses []byte) {
 	index := getNumberOfElections()
+	if index == 0 {
+		index = 1
+	}
+	_setNumberOfElections(index)
 	_setElectedValidatorsOrbsAddressAtIndex(index, joinedAddresses)
+	_setElectedValidatorsBlockHeightAtIndex(index, env.GetBlockHeight()-1) // so that election is valid from this block
 }
 
 func unsafetests_setCurrentElectedBlockNumber(blockNumber uint64) {
