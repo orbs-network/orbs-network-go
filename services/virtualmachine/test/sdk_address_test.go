@@ -8,10 +8,10 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -43,9 +43,9 @@ func TestSdkAddress_GetSignerAddressWithoutSignerFails(t *testing.T) {
 
 			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
-				fmt.Println(err)
-				require.Error(t, err, "handleSdkCall should fail since not signed")
+				outputArgs, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getSignerAddress")
+				require.NoError(t, err, "handleSdkCall should not fail even not signed")
+				require.EqualValues(t, virtualmachine.EmptySignerAddress, outputArgs[0].BytesValue())
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 
@@ -121,9 +121,9 @@ func TestSdkAddress_GetCallerAddressWithoutSignerFails(t *testing.T) {
 
 			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
-				_, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
-				fmt.Println(err)
-				require.Error(t, err, "handleSdkCall should fail since not signed")
+				outputArgs, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ADDRESS, "getCallerAddress")
+				require.NoError(t, err, "handleSdkCall should not fail even not signed")
+				require.EqualValues(t, virtualmachine.EmptySignerAddress, outputArgs[0].BytesValue())
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
 			})
 
