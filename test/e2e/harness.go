@@ -123,12 +123,26 @@ func (h *Harness) EventuallyRunQueryWithoutError(timeout time.Duration, senderPu
 	return response, err
 }
 
-func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (*codec.RunQueryResponse, error) {
+	var lastErr error
+	var response *codec.RunQueryResponse
+
 	if test.Eventually(timeout, func() bool {
+		var err error
 		response, err = h.RunQuery(senderPublicKey, contractName, methodName, args...)
-		return err != nil || response.BlockHeight >= expectedBlockHeight
+		if err != nil {
+			lastErr = err
+			return false
+		}
+		return response.BlockHeight >= expectedBlockHeight // An error could be a result of the contract not being deployed at the currently synced block height, suppress it unless not eventually successful
 	}) {
-		return response, err
+		return response, nil
+	}
+
+	// Couldn't reach the block height
+
+	if lastErr != nil {
+		return nil, lastErr
 	}
 
 	return nil, errors.Errorf("did not reach height %d before timeout (got last response at height %d)", expectedBlockHeight, response.BlockHeight)
