@@ -121,7 +121,6 @@ jobs:
   call_marvin:
     docker:
       - image: circleci/golang:1.12.9
-    resource_class: medium
     steps:
       - checkout
       - run: ./.circleci/marvin-stress.sh
