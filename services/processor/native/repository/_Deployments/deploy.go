@@ -11,9 +11,9 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Committee"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
+	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"strconv"
 )

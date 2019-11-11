@@ -8,6 +8,7 @@ package committee_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
@@ -27,7 +28,7 @@ func _init() {
 }
 
 func _getElectedValidators() []byte {
-	outputArray := service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)
+	outputArray := service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, env.GetBlockHeight())
 	return outputArray[0].([]byte)
 }
 
