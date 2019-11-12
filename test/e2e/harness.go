@@ -194,7 +194,7 @@ func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 	result, dcErr := h.DeployNativeContract(keyPair, contractName, contractBytes...)
 
 	require.Nil(t, dcErr, "expected deploy contract to succeed")
-	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, result.TransactionStatus, "expected deploy contract to succeed")
+	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, result.TransactionStatus, "expected deploy contract to commit")
 	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS, result.ExecutionResult, "expected deploy contract to succeed")
 
 	return result.BlockHeight
