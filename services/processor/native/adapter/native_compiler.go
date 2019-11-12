@@ -202,13 +202,8 @@ func runGoCommand(ctx context.Context, workDir string, cmdArgs ...string) ([]byt
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		if deadline, ok := ctx.Deadline(); ok {
-			timeout := time.Until(deadline)
-			if timeout < 0 {
-				err = errors.Wrap(err, "after context deadline exceeded")
-			}
-		}
+	if ctxErr := ctx.Err(); err != nil && ctxErr != nil {
+		err = errors.Wrap(err, "context error: "+ctxErr.Error())
 	}
 	return out, err
 }

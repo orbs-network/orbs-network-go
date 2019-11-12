@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -65,6 +66,7 @@ func TestCompileTimeout(t *testing.T) {
 		_, err := compiler.Compile(ctx, code)
 		t.Log("Error : ", err)
 		require.Error(t, err, "compile should fail")
+		require.Regexp(t, regexp.MustCompile("deadline exceeded"), err.Error(), "message must hint timeout")
 	})
 }
 
