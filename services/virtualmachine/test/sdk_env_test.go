@@ -9,8 +9,8 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -32,17 +32,17 @@ func TestSdkEnv_GetBlockDetails_InTransaction(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("getBlockHeight")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockHeight")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockHeight")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(currentBlockHeight), res[0].Uint64Value(), "handleSdkCall result should be equal")
 
 				t.Log("getBlockTimestamp")
-				res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
+				res, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(currentBlockTimestamp), res[0].Uint64Value(), "handleSdkCall result should be equal")
 
 				t.Log("getBlockProposerAddress")
-				res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockProposerAddress")
+				res, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockProposerAddress")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.EqualValues(t, currentBlockProposer, res[0].BytesValue(), "handleSdkCall result should be equal")
 
@@ -73,17 +73,17 @@ func TestSdkEnv_GetBlockDetails_InCallMethod(t *testing.T) {
 			h.expectStateStorageLastCommittedBlockInfoRequested(lastCommittedBlockHeight, lastCommittedBlockTimestamp, currentBlockProposer)
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("getBlockHeight")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockHeight")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockHeight")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(lastCommittedBlockHeight), res[0].Uint64Value(), "handleSdkCall result should be equal")
 
 				t.Log("getBlockTimestamp")
-				res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
+				res, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockTimestamp")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(lastCommittedBlockTimestamp), res[0].Uint64Value(), "handleSdkCall result should be equal")
 
 				t.Log("getBlockProposerAddress")
-				res, err = h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ENV, "getBlockProposerAddress")
+				res, err = h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ENV, "getBlockProposerAddress")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.EqualValues(t, currentBlockProposer, res[0].BytesValue(), "handleSdkCall result should be equal")
 

@@ -27,7 +27,7 @@ import (
 )
 
 const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-const TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
+const DEFAULT_TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
 const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
@@ -50,6 +50,7 @@ type networkHarness struct {
 	blockChain               []*protocol.BlockPairContainer
 	virtualChainId           primitives.VirtualChainId
 	emptyBlockTime           time.Duration
+	testTimeout              time.Duration
 }
 
 func newHarness() *networkHarness {
@@ -69,6 +70,7 @@ func newHarness() *networkHarness {
 
 	harness := n.
 		WithTestId(callerFuncName).
+		WithTestTimeout(DEFAULT_TEST_TIMEOUT_HARD_LIMIT).
 		WithNumNodes(DEFAULT_NODE_COUNT_FOR_ACCEPTANCE).
 		WithConsensusAlgos(algos...).
 		WithVirtualChainId(DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID).
@@ -87,6 +89,11 @@ func (b *networkHarness) WithLogFilters(filters ...log.Filter) *networkHarness {
 func (b *networkHarness) WithTestId(testId string) *networkHarness {
 	randNum := rand.Intn(1000)
 	b.testId = "acc-" + testId + "-" + strconv.FormatInt(time.Now().Unix(), 10) + "-" + strconv.FormatInt(int64(randNum), 10)
+	return b
+}
+
+func (b *networkHarness) WithTestTimeout(timeout time.Duration) *networkHarness {
+	b.testTimeout = timeout
 	return b
 }
 
@@ -142,6 +149,14 @@ func (b *networkHarness) runWithAlgo(tb testing.TB, consensusAlgo consensus.Cons
 	}
 }
 
+func startHeartbeat(ctx context.Context, logger log.Logger) *govnr.ForeverHandle {
+	const heartbeatInterval = 100 * time.Millisecond
+	return govnr.Forever(ctx, "heartbeat", logfields.GovnrErrorer(logger), func() {
+		logger.Info("heartbeat")
+		time.Sleep(heartbeatInterval)
+	})
+}
+
 func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.ConsensusAlgoType, f func(tb testing.TB, ctx context.Context, network *Network)) {
 	// acceptance tests are cpu-intensive, so we don't want to run them in parallel
 	// as we run subtests, golang will by default run two subtests in parallel
@@ -154,10 +169,11 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 		logger := b.makeLogger(parentHarness, testId)
 
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
-			ctx, cancel := context.WithTimeout(context.Background(), TEST_TIMEOUT_HARD_LIMIT)
+			ctx, cancel := context.WithTimeout(context.Background(), b.testTimeout)
 			defer cancel()
 
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.configOverride)
+			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)
 			defer dumpStateOnFailure(tb, network)
 			logger.Info("acceptance network created")

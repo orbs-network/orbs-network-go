@@ -30,18 +30,20 @@ func (s *Service) getLastCommittedBlock() (primitives.BlockHeight, *protocol.Blo
 	return s.lastCommittedBlockUnderMutex.TransactionsBlock.Header.BlockHeight(), s.lastCommittedBlockUnderMutex
 }
 
-func (s *Service) setLastCommittedBlock(blockPair *protocol.BlockPairContainer, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) error {
+func (s *Service) setLastCommittedBlockIfPreviousBlockMatches(blockPair *protocol.BlockPairContainer, expectedLastCommittedBlockBefore *protocol.BlockPairContainer) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.lastCommittedBlockUnderMutex != expectedLastCommittedBlockBefore {
-		return errors.New("aborting shared state update due to inconsistency")
+		s.logger.Info("setLastCommittedBlockIfPreviousBlockMatches ignoring block, expected previous block different than actual - probably updated concurrently from a different flow")
+		return false
 	}
+
 	s.lastCommittedBlockUnderMutex = blockPair
 	s.lastCommittedBlockVotersUnderMutex = make(map[string]bool) // leader only
 	s.lastCommittedBlockVotersReachedQuorumUnderMutex = false    // leader only
 
-	return nil
+	return true
 }
 
 func (s *Service) requiredQuorumSize() int {
@@ -139,10 +141,7 @@ func (s *Service) handleBlockConsensusFromHandler(mode handlers.HandleBlockConse
 		incomingBlockHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 		if incomingBlockHeight > lastCommittedBlockHeight {
 			s.logger.Info("updating last committed block height from HandleBlockConsensus", logfields.BlockHeight(incomingBlockHeight))
-			err := s.setLastCommittedBlock(blockPair, lastCommittedBlock)
-			if err != nil {
-				return err
-			}
+			_ = s.setLastCommittedBlockIfPreviousBlockMatches(blockPair, lastCommittedBlock)
 			// don't forget to update internal vars too since they may be used later on in the function
 			// lines left on purpose to remind that they need to be uncommented if the values used.
 			// lastCommittedBlock = blockPair

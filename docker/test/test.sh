@@ -34,7 +34,10 @@ export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 # prepare persistent blocks for docker tests
-sudo rm -rf _tmp/blocks
+# skip on Mac
+if [[ $(uname) == "Linux" ]]; then
+    sudo rm -rf _tmp/blocks
+fi
 
 # At the moment Lean Helix doesn't deal well with an existing blocks file
 if [[ $CONSENSUSALGO == "benchmark" ]]; then

@@ -72,9 +72,9 @@ func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 			return err
 		}
 		s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
-		err = s.setLastCommittedBlock(proposedBlock, lastCommittedBlock)
-		if err != nil {
-			return err
+		updated := s.setLastCommittedBlockIfPreviousBlockMatches(proposedBlock, lastCommittedBlock)
+		if !updated {
+			return nil // Updated concurrently
 		}
 		// don't forget to update internal vars too since they may be used later on in the function
 		lastCommittedBlock = proposedBlock
@@ -98,18 +98,18 @@ func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 // used for the first commit a leader does which is nop (genesis block) just to see where everybody's at
 func (s *Service) leaderGenerateGenesisBlock(ctx context.Context) *protocol.BlockPairContainer {
 	transactionsBlock := &protocol.TransactionsBlockContainer{
-		Header:             (&protocol.TransactionsBlockHeaderBuilder{
-			BlockHeight: 0,
-			BlockProposerAddress:s.config.BenchmarkConsensusConstantLeader(),
+		Header: (&protocol.TransactionsBlockHeaderBuilder{
+			BlockHeight:          0,
+			BlockProposerAddress: s.config.BenchmarkConsensusConstantLeader(),
 		}).Build(),
 		Metadata:           (&protocol.TransactionsBlockMetadataBuilder{}).Build(),
 		SignedTransactions: []*protocol.SignedTransaction{},
 		BlockProof:         nil, // will be generated in a minute when signed
 	}
 	resultsBlock := &protocol.ResultsBlockContainer{
-		Header:              (&protocol.ResultsBlockHeaderBuilder{
-			BlockHeight: 0,
-			BlockProposerAddress:s.config.BenchmarkConsensusConstantLeader(),
+		Header: (&protocol.ResultsBlockHeaderBuilder{
+			BlockHeight:          0,
+			BlockProposerAddress: s.config.BenchmarkConsensusConstantLeader(),
 		}).Build(),
 		TransactionReceipts: []*protocol.TransactionReceipt{},
 		ContractStateDiffs:  []*protocol.ContractStateDiff{},

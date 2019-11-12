@@ -13,29 +13,49 @@ import (
 	"time"
 )
 
+// proxy interface for time.Ticker
+type Ticker interface {
+	// The channel on which the ticks are delivered.
+	C() <-chan time.Time
+	// Stop turns off a ticker. After Stop, no more ticks will be sent.
+	// Stop does not close the channel, to prevent a concurrent goroutine
+	// reading from the channel from seeing an erroneous "tick".
+	Stop()
+}
+
+type timeTicker struct {
+	time.Ticker
+}
+
+func NewTimeTicker(d time.Duration) Ticker {
+	return &timeTicker{*time.NewTicker(d)}
+}
+
+func (t *timeTicker) C() <-chan time.Time {
+	return t.Ticker.C
+}
+
 // the trigger is coupled with supervized package, this feels okay for now
 type PeriodicalTrigger struct {
 	govnr.TreeSupervisor
-	interval time.Duration
-	handler  func()
-	onStop   func()
-	logger   logfields.Errorer
-	cancel   context.CancelFunc
-	ticker   *time.Ticker
-	Closed   govnr.ContextEndedChan
-	name     string
+	handler func()
+	onStop  func()
+	logger  logfields.Errorer
+	cancel  context.CancelFunc
+	ticker  Ticker
+	Closed  govnr.ContextEndedChan
+	name    string
 }
 
-func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Duration, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
+func NewPeriodicalTrigger(ctx context.Context, name string, ticker Ticker, logger logfields.Errorer, trigger func(), onStop func()) *PeriodicalTrigger {
 	subCtx, cancel := context.WithCancel(ctx)
 	t := &PeriodicalTrigger{
-		ticker:   nil,
-		interval: interval,
-		handler:  trigger,
-		onStop:   onStop,
-		cancel:   cancel,
-		logger:   logger,
-		name:     name,
+		ticker:  ticker,
+		handler: trigger,
+		onStop:  onStop,
+		cancel:  cancel,
+		logger:  logger,
+		name:    name,
 	}
 
 	t.run(subCtx)
@@ -43,11 +63,10 @@ func NewPeriodicalTrigger(ctx context.Context, name string, interval time.Durati
 }
 
 func (t *PeriodicalTrigger) run(ctx context.Context) {
-	t.ticker = time.NewTicker(t.interval)
 	h := govnr.Forever(ctx, t.name, logfields.GovnrErrorer(t.logger), func() {
 		for {
 			select {
-			case <-t.ticker.C:
+			case <-t.ticker.C():
 				t.handler()
 			case <-ctx.Done():
 				t.ticker.Stop()

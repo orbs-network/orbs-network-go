@@ -3,16 +3,18 @@
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
+//
+// +build !javascript
 
-// +build !jsprocessor
-
-package javascript
+package bootstrap
 
 import (
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 )
 
-func (s *service) processMethodCall(executionContextId primitives.ExecutionContextId, code string, methodName primitives.MethodName, args *protocol.ArgumentArray) (contractOutputArgs *protocol.ArgumentArray, contractOutputErr error, err error) {
-	panic("Not implemented")
+func addExtraProcessors(processors map[protocol.ProcessorType]services.Processor, nodeConfig config.NodeConfig, logger log.Logger) {
+
 }

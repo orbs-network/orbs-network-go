@@ -27,14 +27,14 @@ import (
 )
 
 type E2EConfig struct {
-	appVcid           primitives.VirtualChainId
-	mgmtVcid          primitives.VirtualChainId
-	remoteEnvironment bool
-	bootstrap         bool
-	appChainUrl       string
-	mgmtChainUrl      string
-	stressTest        StressTestConfig
-	ethereumEndpoint  string
+	AppVcid           primitives.VirtualChainId
+	MgmtVcid          primitives.VirtualChainId
+	RemoteEnvironment bool
+	Bootstrap         bool
+	AppChainUrl       string
+	MgmtChainUrl      string
+	StressTest        StressTestConfig
+	EthereumEndpoint  string
 }
 
 type StressTestConfig struct {
@@ -47,35 +47,39 @@ type StressTestConfig struct {
 const START_HTTP_PORT = 8090
 const START_GOSSIP_PORT = 8190
 
-type harness struct {
+type Harness struct {
 	client *orbsClient.OrbsClient
 	config *E2EConfig
 }
 
-func newMgmtHarness() *harness {
-	config := getConfig()
+func NewMgmtHarness() *Harness {
+	config := GetConfig()
 
-	return &harness{
-		client: orbsClient.NewClient(config.mgmtChainUrl, uint32(config.mgmtVcid), codec.NETWORK_TYPE_TEST_NET),
+	return &Harness{
+		client: orbsClient.NewClient(config.MgmtChainUrl, uint32(config.MgmtVcid), codec.NETWORK_TYPE_TEST_NET),
 		config: &config,
 	}
 }
 
-func newAppHarness() *harness {
-	config := getConfig()
+func NewAppHarness() *Harness {
+	config := GetConfig()
 
-	return &harness{
-		client: orbsClient.NewClient(config.appChainUrl, uint32(config.appVcid), codec.NETWORK_TYPE_TEST_NET),
+	return &Harness{
+		client: orbsClient.NewClient(config.AppChainUrl, uint32(config.AppVcid), codec.NETWORK_TYPE_TEST_NET),
 		config: &config,
 	}
 }
 
-func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (*codec.TransactionResponse, error) {
+func isNotHttp202Error(err error) bool {
+	return !strings.Contains(err.Error(), "http status 202 Accepted")
+}
+
+func (h *Harness) DeployContract(from *keys.Ed25519KeyPair, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (*codec.TransactionResponse, error) {
 	timeoutDuration := 15 * time.Second
 	beginTime := time.Now()
 
-	txOut, txId, err := h.sendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, code...)
-	if err != nil {
+	txOut, txId, err := h.SendDeployTransaction(from.PublicKey(), from.PrivateKey(), contractName, processorType, code...)
+	if err != nil && isNotHttp202Error(err) { // TODO the SDK treats HTTP 202 as an error
 		return nil, errors.Wrap(err, "failed to deploy native contract")
 	}
 
@@ -87,13 +91,17 @@ func (h *harness) deployNativeContract(from *keys.Ed25519KeyPair, contractName s
 
 		time.Sleep(10 * time.Millisecond)
 
-		txOut, _ = h.getTransactionStatus(txId)
+		txOut, _ = h.GetTransactionStatus(txId)
 	}
 
 	return txOut, err
 }
 
-func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
+func (h *Harness) DeployNativeContract(from *keys.Ed25519KeyPair, contractName string, code ...[]byte) (*codec.TransactionResponse, error) {
+	return h.DeployContract(from, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
+}
+
+func (h *Harness) SendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
 	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
@@ -102,8 +110,8 @@ func (h *harness) sendTransaction(senderPublicKey []byte, senderPrivateKey []byt
 	return out.TransactionResponse, txId, err
 }
 
-func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, code ...[]byte) (*codec.TransactionResponse, string, error) {
-	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, orbsClient.PROCESSOR_TYPE_NATIVE, code...)
+func (h *Harness) SendDeployTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, processorType orbsClient.ProcessorType, code ...[]byte) (*codec.TransactionResponse, string, error) {
+	payload, txId, err := h.client.CreateDeployTransaction(senderPublicKey, senderPrivateKey, contractName, processorType, code...)
 	if err != nil {
 		return nil, txId, err
 	}
@@ -111,18 +119,32 @@ func (h *harness) sendDeployTransaction(senderPublicKey []byte, senderPrivateKey
 	return out.TransactionResponse, txId, err
 }
 
-func (h *harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+func (h *Harness) runQueryAtBlockHeight(timeout time.Duration, expectedBlockHeight uint64, senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (*codec.RunQueryResponse, error) {
+	var lastErr error
+	var response *codec.RunQueryResponse
+
 	if test.Eventually(timeout, func() bool {
-		response, err = h.runQuery(senderPublicKey, contractName, methodName, args...)
-		return err != nil || response.BlockHeight >= expectedBlockHeight
+		var err error
+		response, err = h.RunQuery(senderPublicKey, contractName, methodName, args...)
+		if err != nil {
+			lastErr = err
+			return false
+		}
+		return response.BlockHeight >= expectedBlockHeight // An error could be a result of the contract not being deployed at the currently synced block height, suppress it unless not eventually successful
 	}) {
-		return response, err
+		return response, nil
+	}
+
+	// Couldn't reach the block height
+
+	if lastErr != nil {
+		return nil, lastErr
 	}
 
 	return nil, errors.Errorf("did not reach height %d before timeout (got last response at height %d)", expectedBlockHeight, response.BlockHeight)
 }
 
-func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
+func (h *Harness) RunQuery(senderPublicKey []byte, contractName string, methodName string, args ...interface{}) (response *codec.RunQueryResponse, err error) {
 	payload, err := h.client.CreateQuery(senderPublicKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, err
@@ -131,23 +153,23 @@ func (h *harness) runQuery(senderPublicKey []byte, contractName string, methodNa
 	return
 }
 
-func (h *harness) getTransactionStatus(txId string) (*codec.TransactionResponse, error) {
+func (h *Harness) GetTransactionStatus(txId string) (*codec.TransactionResponse, error) {
 	response, err := h.client.GetTransactionStatus(txId)
 	return response.TransactionResponse, err
 }
 
-func (h *harness) getTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
+func (h *Harness) GetTransactionReceiptProof(txId string) (response *codec.GetTransactionReceiptProofResponse, err error) {
 	response, err = h.client.GetTransactionReceiptProof(txId)
 	return
 }
 
-func (h *harness) absoluteUrlFor(endpoint string) string {
-	return getConfig().appChainUrl + endpoint
+func (h *Harness) absoluteUrlFor(endpoint string) string {
+	return GetConfig().AppChainUrl + endpoint
 }
 
 type metrics map[string]map[string]interface{}
 
-func (h *harness) getMetrics() metrics {
+func (h *Harness) getMetrics() metrics {
 	res, err := http.Get(h.absoluteUrlFor("/metrics"))
 
 	if err != nil {
@@ -165,11 +187,11 @@ func (h *harness) getMetrics() metrics {
 	return m
 }
 
-func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) uint64 {
+func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) uint64 {
 
-	h.waitUntilTransactionPoolIsReady(t)
+	h.WaitUntilTransactionPoolIsReady(t)
 
-	result, dcErr := h.deployNativeContract(keyPair, contractName, contractBytes...)
+	result, dcErr := h.DeployNativeContract(keyPair, contractName, contractBytes...)
 
 	require.Nil(t, dcErr, "expected deploy contract to succeed")
 	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED, result.TransactionStatus, "expected deploy contract to commit")
@@ -178,7 +200,7 @@ func (h *harness) deployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 	return result.BlockHeight
 }
 
-func (h *harness) waitUntilTransactionPoolIsReady(t *testing.T) {
+func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
 	require.True(t, test.Eventually(15*time.Second, func() bool {
@@ -208,15 +230,16 @@ func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
 		"",
 		primitives.NodeAddress{},
 		0,
+		"",
 	).TransactionPoolNodeSyncRejectTime()
 }
 
-func printTestTime(t *testing.T, msg string, last *time.Time) {
+func PrintTestTime(t *testing.T, msg string, last *time.Time) {
 	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
 }
 
-func getConfig() E2EConfig {
+func GetConfig() E2EConfig {
 	appVcid := primitives.VirtualChainId(42)
 	mgmtVcid := primitives.VirtualChainId(40)
 
@@ -256,19 +279,19 @@ func getConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		appVcid:           appVcid,
-		mgmtVcid:          mgmtVcid,
-		bootstrap:         shouldBootstrap,
-		remoteEnvironment: isRemoteEnvironment,
-		appChainUrl:       appChainUrl,
-		mgmtChainUrl:      mgmtChainUrl,
-		stressTest: StressTestConfig{
+		AppVcid:           appVcid,
+		MgmtVcid:          mgmtVcid,
+		Bootstrap:         shouldBootstrap,
+		RemoteEnvironment: isRemoteEnvironment,
+		AppChainUrl:       appChainUrl,
+		MgmtChainUrl:      mgmtChainUrl,
+		StressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
 			numberOfTransactions:  stressTestNumberOfTransactions,
 			acceptableFailureRate: stressTestFailureRate,
 			targetTPS:             stressTestTargetTPS,
 		},
-		ethereumEndpoint: ethereumEndpoint,
+		EthereumEndpoint: ethereumEndpoint,
 	}
 }
 

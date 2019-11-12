@@ -19,12 +19,13 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 
 	InServiceScope(nil, callerAddress, func(m Mockery) {
 		_init()
+		blockHeight := 155
 
 		// prepare
+		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{addrs[0]})
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{addrs[0]}, uint64(blockHeight))
 		m.MockEnvBlockProposerAddress(addrs[0])
-		m.MockEnvBlockHeight(155)
 		m.MockEmitEvent(CommitteeMemberClosedBlock, addrs[0])
 
 		// run & assert
@@ -33,6 +34,30 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 		}, "should not panic because it found who to update in committee")
 	})
 }
+
+func TestOrbsCommitteeContract_updateMisses_EmptyCommittee(t *testing.T) {
+	callerAddress := []byte{0x01}
+	blockProposer := []byte{0x02}
+
+	InServiceScope(nil, callerAddress, func(m Mockery) {
+		_init()
+		blockHeight := 155
+
+		// prepare
+		m.MockEnvBlockHeight(blockHeight)
+		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{[]byte{}}, uint64(blockHeight))
+		m.MockEnvBlockProposerAddress(blockProposer)
+		m.MockEmitEvent(CommitteeMemberClosedBlock, blockProposer)
+
+		// run & assert
+		require.NotPanics(t, func() {
+			updateMisses()
+		}, "should not panic because it found who to update in committee")
+	})
+}
+
+
 
 func TestOrbsCommitteeContract_updateMisses_CallerNotTriggerPanics(t *testing.T) {
 	callerAddress := AnAddress()
@@ -56,12 +81,13 @@ func TestOrbsCommitteeContract_updateMisses_BlockProducerNotFoundPanics(t *testi
 
 	InServiceScope(nil, callerAddress, func(m Mockery) {
 		_init()
+		blockHeight := 155
 
 		// prepare
+		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{addrs[0]})
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{addrs[0]}, uint64(blockHeight))
 		m.MockEnvBlockProposerAddress(makeNodeAddress(77)) // non-committee address
-		m.MockEnvBlockHeight(155)
 
 		// run & aassert
 		require.Panics(t, func() {
