@@ -36,9 +36,8 @@ func TestCompileValidContract(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		tmpDir := test.CreateTempDirForTest(t)
-		defer os.RemoveAll(tmpDir)
-		cfg := &adapterTest.HardcodedConfig{ArtifactPath: tmpDir}
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
 		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
 
 		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
@@ -53,13 +52,12 @@ func TestCompileTimeout(t *testing.T) {
 		if testing.Short() {
 			t.Skip("Skipping compilation of contracts in short mode")
 		}
-		// give the test one minute timeout to compile
-		ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Millisecond)
+		// hopefully enough time to start compiling, but not enough to finish
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		tmpDir := test.CreateTempDirForTest(t)
-		defer os.RemoveAll(tmpDir)
-		cfg := &adapterTest.HardcodedConfig{ArtifactPath: tmpDir}
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
 		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
 
 		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
@@ -79,9 +77,8 @@ func TestCompileInvalidContract(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		tmpDir := test.CreateTempDirForTest(t)
-		defer os.RemoveAll(tmpDir)
-		cfg := &adapterTest.HardcodedConfig{ArtifactPath: tmpDir}
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
 		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
 
 		invalidCode := "package fail"
