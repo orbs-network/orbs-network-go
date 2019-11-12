@@ -6,23 +6,28 @@ import (
 	"testing"
 )
 
-func NewConfigWithTempDir(t *testing.T) (config *HardcodedConfig, cleanupFunc func()) {
+type Config interface {
+	ProcessorArtifactPath() string
+	ProcessorPerformWarmUpCompilation() bool
+}
+
+func NewConfigWithTempDir(t *testing.T) (config Config, cleanupFunc func()) {
 	tmpDir := test.CreateTempDirForTest(t)
 	cleanupFunc = func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
-	config = &HardcodedConfig{ArtifactPath: tmpDir}
+	config = &tempDirConfig{ArtifactPath: tmpDir}
 	return config, cleanupFunc
 }
 
-type HardcodedConfig struct {
+type tempDirConfig struct {
 	ArtifactPath string
 }
 
-func (c *HardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
+func (c *tempDirConfig) ProcessorPerformWarmUpCompilation() bool {
 	return true
 }
 
-func (c *HardcodedConfig) ProcessorArtifactPath() string {
+func (c *tempDirConfig) ProcessorArtifactPath() string {
 	return c.ArtifactPath
 }
