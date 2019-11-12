@@ -58,3 +58,7 @@ func runMultipleTimes(t *testing.T, f func(t *testing.T)) {
 		time.Sleep(100 * time.Millisecond) // give async processes time to separate between iterations
 	}
 }
+
+func jsEnabled() bool {
+	return os.Getenv("JS_ENABLED") != "true"
+}

@@ -25,7 +25,9 @@ func TestDeploymentOfJavascriptContract(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	t.Skip("not implemented")
+	if !jsEnabled() {
+		t.Skip("JS disabled")
+	}
 
 	runMultipleTimes(t, func(t *testing.T) {
 
@@ -132,7 +134,9 @@ func TestDeploymentOfJavascriptContractInteroperableWithGo(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	t.Skip("not implemented")
+	if !jsEnabled() {
+		t.Skip("JS disabled")
+	}
 
 	runMultipleTimes(t, func(t *testing.T) {
 

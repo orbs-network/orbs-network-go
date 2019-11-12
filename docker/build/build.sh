@@ -23,7 +23,6 @@ export SEMVER=$(cat ./.version)
 
 LAST_COMMIT_MESSAGE=`git --no-pager log --decorate=short --pretty=oneline -n1 $CIRCLE_SHA1`
 
-BUILD_FLAG=""
 if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
     BUILD_FLAG="unsafetests"
 fi
