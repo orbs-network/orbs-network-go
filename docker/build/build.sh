@@ -21,10 +21,12 @@ fi
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SEMVER=$(cat ./.version)
 
-LAST_COMMIT_MESSAGE=`git --no-pager log --decorate=short --pretty=oneline -n1 $CIRCLE_SHA1`
+if [ -z "$BUILD_FLAG" ]; then
+    LAST_COMMIT_MESSAGE=`git --no-pager log --decorate=short --pretty=oneline -n1 $CIRCLE_SHA1`
 
-if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
-    BUILD_FLAG="unsafetests"
+    if [[ "${LAST_COMMIT_MESSAGE}" == *"#unsafetests"* ]]; then
+        BUILD_FLAG="unsafetests"
+    fi
 fi
 
 docker build --no-cache -f ./docker/build/Dockerfile.build \
