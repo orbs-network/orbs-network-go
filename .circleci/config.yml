@@ -208,7 +208,6 @@ workflows:
             tags:
               only: /^v.*/
       - races
-      - call_marvin
       - memory_leaks
       - deploy_new_chain_pr_only:
           requires:
@@ -240,6 +239,9 @@ workflows:
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
+      - call_marvin:
+          requires:
+            - e2e_testnet_leanhelix
       - release:
           requires:
             - tests
