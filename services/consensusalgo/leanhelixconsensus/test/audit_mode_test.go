@@ -22,7 +22,7 @@ import (
 func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 
-		h := newLeanHelixServiceHarness().
+		h := newSingleLhcNodeHarness().
 			withAuditBlocksYoungerThan(5*time.Minute).
 			start(parent, ctx)
 
@@ -55,7 +55,7 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 
 func TestHandleBlockConsensus_DoesNotExecuteBlocksOlderThanThreshold_AndModeIsVerify(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness().start(parent, ctx)
+		h := newSingleLhcNodeHarness().start(parent, ctx)
 
 		block := builders.BlockPair().WithTimestampAheadBy(-1 * time.Nanosecond).WithHeight(1).WithEmptyLeanHelixBlockProof().Build()
 
