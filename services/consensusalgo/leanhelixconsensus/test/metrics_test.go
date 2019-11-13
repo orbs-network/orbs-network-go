@@ -100,6 +100,8 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		// timeSinceLastCommitMillis will NOT update because this is the first commit
 		require.True(t, strings.Contains(metrics.timeSinceLastCommitMillis.String(), "samples=0"), "expected lastCommittedTime to not update on first commit")
 
+		firstTermCommitTime := metrics.lastCommittedTime.Value()
+
 		// Starting the second term
 
 		// Use commits from previous term to calculate the new random seed
@@ -125,6 +127,11 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 			}
 			return matched
 		}), "expected timeSinceLastCommitMillis metric to update")
+
+		require.True(t, test.Eventually(1*time.Second, func() bool {
+			return metrics.lastCommittedTime.Value() > firstTermCommitTime
+		}), "expected lastCommittedTime to increase after the second commit")
+
 	})
 
 }
