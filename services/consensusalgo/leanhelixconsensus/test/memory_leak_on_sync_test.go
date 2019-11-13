@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"runtime"
 	"testing"
-	"time"
 )
 
 const MAX_LEAK_BYTES = 5 * 1024 * 1024
@@ -29,7 +28,7 @@ const MAX_LEAK_BYTES = 5 * 1024 * 1024
 
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0, time.Hour).start(parent, ctx)
+		h := newLeanHelixServiceHarness().start(parent, ctx)
 
 		t.Log("Block sync service to block 5")
 

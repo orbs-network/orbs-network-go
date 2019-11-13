@@ -22,7 +22,9 @@ import (
 func TestMetricsAreUpdatedOnElectionTrigger(t *testing.T) {
 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0, 10*time.Millisecond).start(parent, ctx)
+		h := newLeanHelixServiceHarness().
+			withBaseConsensusRoundTimeout(10*time.Millisecond).
+			start(parent, ctx)
 
 		h.beFirstInCommittee() // just so RequestOrderedCommittee will succeed
 		h.expectGossipSendLeanHelixMessage()
@@ -55,7 +57,7 @@ func TestMetricsAreUpdatedOnElectionTrigger(t *testing.T) {
 func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0, time.Hour).start(parent, ctx)
+		h := newLeanHelixServiceHarness().start(parent, ctx)
 
 		h.expectGossipSendLeanHelixMessage()
 		h.expectValidateTransactionBlock()
