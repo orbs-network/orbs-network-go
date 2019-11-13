@@ -92,8 +92,9 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		metrics := h.getMetrics()
 
 		// At this point the first block should be committed, lastCommitTime should update
+		now := time.Now()
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return metrics.lastCommittedTime.Value() != 0
+			return abs(now.UnixNano()-metrics.lastCommittedTime.Value()) < int64(time.Minute)
 		}), "expected lastCommittedTime metric not to update on first commit")
 
 		// timeSinceLastCommitMillis will NOT update because this is the first commit
@@ -126,4 +127,11 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		}), "expected timeSinceLastCommitMillis metric to update")
 	})
 
+}
+
+func abs(x int64) int64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }

@@ -46,7 +46,7 @@ type harness struct {
 	baseConsensusRoundTimeout time.Duration
 	metricRegistry            metric.Registry
 	logger                    log.Logger
-	T                         testing.TB
+	t                         testing.TB
 }
 
 type metrics struct {
@@ -95,10 +95,10 @@ func (h *harness) start(parent *with.ConcurrencyHarness, ctx context.Context) *h
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan, h.baseConsensusRoundTimeout)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 	h.logger = parent.Logger
-	h.T = parent.T
+	h.t = parent.T
 
 	sgnr, err := signer.New(cfg)
-	require.NoError(h.T, err)
+	require.NoError(h.t, err)
 
 	h.consensus = leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, h.gossip, h.blockStorage, h.consensusContext, sgnr, parent.Logger, cfg, h.metricRegistry)
 	parent.Supervise(h.consensus)
@@ -180,8 +180,8 @@ func (h *harness) handleBlockSync(ctx context.Context, blockHeight primitives.Bl
 		BlockPair:              blockPair,
 		PrevCommittedBlockPair: nil,
 	})
-	require.NoError(h.T, err, "expected HandleBlockConsensus to succeed")
-	require.NoError(h.T, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
+	require.NoError(h.t, err, "expected HandleBlockConsensus to succeed")
+	require.NoError(h.t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
 }
 
 func (h *harness) handlePreprepareMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, fromNodeInd int) {
@@ -193,7 +193,7 @@ func (h *harness) handlePreprepareMessage(ctx context.Context, blockPair *protoc
 			BlockPair: blockPair,
 		},
 	})
-	require.NoError(h.T, err, "expected message to be handled successfully")
+	require.NoError(h.t, err, "expected message to be handled successfully")
 }
 
 func (h *harness) handleCommitMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, randomSeed uint64, fromNodeInd int) *interfaces.CommitMessage {
@@ -205,7 +205,7 @@ func (h *harness) handleCommitMessage(ctx context.Context, blockPair *protocol.B
 			BlockPair: blockPair,
 		},
 	})
-	require.NoError(h.T, err, "expected message to be handled successfully")
+	require.NoError(h.t, err, "expected message to be handled successfully")
 	return interfaces.ToConsensusMessage(c).(*interfaces.CommitMessage)
 }
 
@@ -215,7 +215,7 @@ func (h *harness) requestOrderingCommittee(ctx context.Context) *services.Reques
 		RandomSeed:         0,
 		MaxCommitteeSize:   0,
 	})
-	require.NoError(h.T, err, "expected request ordering committee to succeed")
+	require.NoError(h.t, err, "expected request ordering committee to succeed")
 	return out
 }
 
@@ -230,6 +230,6 @@ func (h *harness) myNodeIndex() int {
 func (h *harness) keyManagerForNode(nodeIndex int) interfaces.KeyManager {
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(nodeIndex), h.auditBlocksYoungerThan, h.baseConsensusRoundTimeout)
 	sgnr, err := signer.New(cfg)
-	require.NoError(h.T, err)
+	require.NoError(h.t, err)
 	return leanhelixconsensus.NewKeyManager(h.logger, sgnr)
 }
