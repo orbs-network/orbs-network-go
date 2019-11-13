@@ -36,7 +36,7 @@ const NETWORK_SIZE = 4
 const DEFAULT_AUDIT_BLOCKS_YOUNGER_THAN = 0
 const DEFAULT_BASE_CONSENSUS_ROUND_TIMEOUT = time.Hour
 
-type harness struct {
+type singleLhcNodeHarness struct {
 	consensus                 *leanhelixconsensus.Service
 	gossip                    *gossiptopics.MockLeanHelix
 	blockStorage              *services.MockBlockStorage
@@ -57,8 +57,8 @@ type metrics struct {
 	lastCommittedTime           *metric.Gauge
 }
 
-func newLeanHelixServiceHarness() *harness {
-	h := &harness{
+func newSingleLhcNodeHarness() *singleLhcNodeHarness {
+	h := &singleLhcNodeHarness{
 		gossip:                    &gossiptopics.MockLeanHelix{},
 		blockStorage:              &services.MockBlockStorage{},
 		consensusContext:          &services.MockConsensusContext{},
@@ -72,17 +72,17 @@ func newLeanHelixServiceHarness() *harness {
 	return h
 }
 
-func (h *harness) withAuditBlocksYoungerThan(d time.Duration) *harness {
+func (h *singleLhcNodeHarness) withAuditBlocksYoungerThan(d time.Duration) *singleLhcNodeHarness {
 	h.auditBlocksYoungerThan = d
 	return h
 }
 
-func (h *harness) withBaseConsensusRoundTimeout(d time.Duration) *harness {
+func (h *singleLhcNodeHarness) withBaseConsensusRoundTimeout(d time.Duration) *singleLhcNodeHarness {
 	h.baseConsensusRoundTimeout = d
 	return h
 }
 
-func (h *harness) resetAndApplyMockDefaults() {
+func (h *singleLhcNodeHarness) resetAndApplyMockDefaults() {
 	h.consensusContext.Reset()
 	h.blockStorage.Reset()
 	h.gossip.Reset()
@@ -91,7 +91,7 @@ func (h *harness) resetAndApplyMockDefaults() {
 	h.gossip.When("RegisterLeanHelixHandler", mock.Any).Return().Times(1)
 }
 
-func (h *harness) start(parent *with.ConcurrencyHarness, ctx context.Context) *harness {
+func (h *singleLhcNodeHarness) start(parent *with.ConcurrencyHarness, ctx context.Context) *singleLhcNodeHarness {
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(0), h.auditBlocksYoungerThan, h.baseConsensusRoundTimeout)
 	h.instanceId = leanhelixconsensus.CalcInstanceId(cfg.NetworkType(), cfg.VirtualChainId())
 	h.logger = parent.Logger
@@ -105,7 +105,7 @@ func (h *harness) start(parent *with.ConcurrencyHarness, ctx context.Context) *h
 	return h
 }
 
-func (h *harness) getMetrics() *metrics {
+func (h *singleLhcNodeHarness) getMetrics() *metrics {
 	return &metrics{
 		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.Histogram),
 		timeSinceLastElectionMillis: h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis").(*metric.Histogram),
@@ -115,7 +115,7 @@ func (h *harness) getMetrics() *metrics {
 	}
 }
 
-func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.NodeAddress {
+func (h *singleLhcNodeHarness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.NodeAddress {
 	res := []primitives.NodeAddress{
 		testKeys.EcdsaSecp256K1KeyPairForTests(nodeIndex).NodeAddress(),
 	}
@@ -127,21 +127,21 @@ func (h *harness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.
 	return res
 }
 
-func (h *harness) dontBeFirstInCommitee() {
-	h.expectConsensusContextRequestOrderingCommittee((h.myNodeIndex() + 1) % NETWORK_SIZE)
+func (h *singleLhcNodeHarness) dontBeFirstInCommitee() {
+	h.expectConsensusContextRequestOrderingCommittee((h.nodeIndex() + 1) % NETWORK_SIZE)
 }
 
-func (h *harness) beFirstInCommittee() {
-	h.expectConsensusContextRequestOrderingCommittee(h.myNodeIndex())
+func (h *singleLhcNodeHarness) beFirstInCommittee() {
+	h.expectConsensusContextRequestOrderingCommittee(h.nodeIndex())
 }
 
-func (h *harness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
+func (h *singleLhcNodeHarness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
 	}, nil).Times(1)
 }
 
-func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPairContainer) {
+func (h *singleLhcNodeHarness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPairContainer) {
 	h.consensusContext.When("RequestNewTransactionsBlock", mock.Any, mock.Any).Return(&services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: blockPair.TransactionsBlock,
 	}, nil).Times(1)
@@ -150,28 +150,28 @@ func (h *harness) expectConsensusContextRequestBlock(blockPair *protocol.BlockPa
 	}, nil).Times(1)
 }
 
-func (h *harness) expectGossipSendLeanHelixMessage() {
+func (h *singleLhcNodeHarness) expectGossipSendLeanHelixMessage() {
 	h.gossip.When("SendLeanHelixMessage", mock.Any, mock.Any).Return(nil, nil) // TODO Maybe add .Times(1) like there was before
 }
 
-func (h *harness) expectNeverToProposeABlock() {
+func (h *singleLhcNodeHarness) expectNeverToProposeABlock() {
 	h.consensusContext.Never("RequestNewTransactionsBlock", mock.Any, mock.Any)
 	h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 }
 
-func (h *harness) expectValidateTransactionBlock() {
+func (h *singleLhcNodeHarness) expectValidateTransactionBlock() {
 	h.consensusContext.When("ValidateTransactionsBlock", mock.Any, mock.Any).Return(&services.ValidateTransactionsBlockOutput{})
 }
 
-func (h *harness) expectValidateResultsBlock() {
+func (h *singleLhcNodeHarness) expectValidateResultsBlock() {
 	h.consensusContext.When("ValidateResultsBlock", mock.Any, mock.Any).Return(&services.ValidateResultsBlockOutput{})
 }
 
-func (h *harness) expectCommitBlock() {
+func (h *singleLhcNodeHarness) expectCommitBlock() {
 	h.blockStorage.When("CommitBlock", mock.Any, mock.Any).Return(&services.CommitBlockOutput{})
 }
 
-func (h *harness) handleBlockSync(ctx context.Context, blockHeight primitives.BlockHeight) {
+func (h *singleLhcNodeHarness) handleBlockSync(ctx context.Context, blockHeight primitives.BlockHeight) {
 	blockPair := builders.BlockPair().WithHeight(blockHeight).WithEmptyLeanHelixBlockProof().Build()
 
 	_, err := h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
@@ -184,7 +184,7 @@ func (h *harness) handleBlockSync(ctx context.Context, blockHeight primitives.Bl
 	require.NoError(h.t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
 }
 
-func (h *harness) handlePreprepareMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, fromNodeInd int) {
+func (h *singleLhcNodeHarness) handlePreprepareMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, fromNodeInd int) {
 	block := leanhelixconsensus.ToLeanHelixBlock(blockPair)
 	prpr := generatePreprepareMessage(h.instanceId, block, uint64(blockHeight), view, testKeys.NodeAddressesForTests()[fromNodeInd], h.keyManagerForNode(fromNodeInd))
 	_, err := h.consensus.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{
@@ -196,7 +196,7 @@ func (h *harness) handlePreprepareMessage(ctx context.Context, blockPair *protoc
 	require.NoError(h.t, err, "expected message to be handled successfully")
 }
 
-func (h *harness) handleCommitMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, randomSeed uint64, fromNodeInd int) *interfaces.CommitMessage {
+func (h *singleLhcNodeHarness) handleCommitMessage(ctx context.Context, blockPair *protocol.BlockPairContainer, blockHeight primitives.BlockHeight, view lhprimitives.View, randomSeed uint64, fromNodeInd int) *interfaces.CommitMessage {
 	block := leanhelixconsensus.ToLeanHelixBlock(blockPair)
 	c := generateCommitMessage(h.instanceId, block, uint64(blockHeight), view, testKeys.NodeAddressesForTests()[fromNodeInd], randomSeed, h.keyManagerForNode(fromNodeInd))
 	_, err := h.consensus.HandleLeanHelixMessage(ctx, &gossiptopics.LeanHelixInput{
@@ -209,7 +209,7 @@ func (h *harness) handleCommitMessage(ctx context.Context, blockPair *protocol.B
 	return interfaces.ToConsensusMessage(c).(*interfaces.CommitMessage)
 }
 
-func (h *harness) requestOrderingCommittee(ctx context.Context) *services.RequestCommitteeOutput {
+func (h *singleLhcNodeHarness) requestOrderingCommittee(ctx context.Context) *services.RequestCommitteeOutput {
 	out, err := h.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
 		CurrentBlockHeight: 0,
 		RandomSeed:         0,
@@ -219,15 +219,15 @@ func (h *harness) requestOrderingCommittee(ctx context.Context) *services.Reques
 	return out
 }
 
-func (h *harness) networkSize() int {
+func (h *singleLhcNodeHarness) networkSize() int {
 	return NETWORK_SIZE
 }
 
-func (h *harness) myNodeIndex() int {
+func (h *singleLhcNodeHarness) nodeIndex() int {
 	return 0
 }
 
-func (h *harness) keyManagerForNode(nodeIndex int) interfaces.KeyManager {
+func (h *singleLhcNodeHarness) keyManagerForNode(nodeIndex int) interfaces.KeyManager {
 	cfg := config.ForLeanHelixConsensusTests(testKeys.EcdsaSecp256K1KeyPairForTests(nodeIndex), h.auditBlocksYoungerThan, h.baseConsensusRoundTimeout)
 	sgnr, err := signer.New(cfg)
 	require.NoError(h.t, err)

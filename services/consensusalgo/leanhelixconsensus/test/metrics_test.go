@@ -22,7 +22,7 @@ import (
 func TestMetricsAreUpdatedOnElectionTrigger(t *testing.T) {
 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness().
+		h := newSingleLhcNodeHarness().
 			withBaseConsensusRoundTimeout(10*time.Millisecond).
 			start(parent, ctx)
 
@@ -57,7 +57,7 @@ func TestMetricsAreUpdatedOnElectionTrigger(t *testing.T) {
 func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness().start(parent, ctx)
+		h := newSingleLhcNodeHarness().start(parent, ctx)
 
 		h.expectGossipSendLeanHelixMessage()
 		h.expectValidateTransactionBlock()
@@ -105,7 +105,7 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		// Starting the second term
 
 		// Use commits from previous term to calculate the new random seed
-		proof := blockproof.GenerateLeanHelixBlockProof(h.keyManagerForNode(h.myNodeIndex()), commitMessages)
+		proof := blockproof.GenerateLeanHelixBlockProof(h.keyManagerForNode(h.nodeIndex()), commitMessages)
 		prevBlockProof = protocol.BlockProofReader(proof.Raw())
 		randomSeed = randomseed.CalculateRandomSeed(prevBlockProof.RandomSeedSignature())
 

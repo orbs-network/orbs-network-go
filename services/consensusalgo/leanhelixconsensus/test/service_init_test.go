@@ -20,7 +20,7 @@ import (
 
 func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness()
+		h := newSingleLhcNodeHarness()
 
 		t.Log("Service should do nothing on start")
 
@@ -48,7 +48,7 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 
 func TestService_LeaderProposesBlock(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness().start(parent, ctx)
+		h := newSingleLhcNodeHarness().start(parent, ctx)
 
 		b := builders.BlockPair().WithEmptyLeanHelixBlockProof().Build()
 		h.beFirstInCommittee()

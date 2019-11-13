@@ -28,7 +28,7 @@ const MAX_LEAK_BYTES = 5 * 1024 * 1024
 
 func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness().start(parent, ctx)
+		h := newSingleLhcNodeHarness().start(parent, ctx)
 
 		t.Log("Block sync service to block 5")
 
@@ -57,9 +57,9 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 	})
 }
 
-func (h *harness) incomingLargeConsensusMessageViaGossip(ctx context.Context, blockHeight primitives.BlockHeight) {
+func (h *singleLhcNodeHarness) incomingLargeConsensusMessageViaGossip(ctx context.Context, blockHeight primitives.BlockHeight) {
 	b := builders.BlockPair().WithHeight(blockHeight).WithTransactions(1000).WithEmptyLeanHelixBlockProof().Build()
-	h.handlePreprepareMessage(ctx, b, blockHeight, 0, (h.myNodeIndex()+1)%h.networkSize())
+	h.handlePreprepareMessage(ctx, b, blockHeight, 0, (h.nodeIndex()+1)%h.networkSize())
 }
 
 func getMemUsageBytes() uint64 {
