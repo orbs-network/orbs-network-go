@@ -60,5 +60,5 @@ func runMultipleTimes(t *testing.T, f func(t *testing.T)) {
 }
 
 func jsEnabled() bool {
-	return os.Getenv("JS_ENABLED") != "true"
+	return os.Getenv("JS_ENABLED") == "true"
 }
