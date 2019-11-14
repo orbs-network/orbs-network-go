@@ -43,3 +43,25 @@ func getReputation(addr []byte) uint32 {
 func _clearMiss(addr []byte) {
 	state.Clear(_formatMisses(addr))
 }
+
+func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []uint32) {
+	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
+	committeeAddresses = make([][20]byte, len(addressesArray))
+	committeeMisses = make([]uint32, len(addressesArray))
+	for i, address := range addressesArray {
+		copy(committeeAddresses[i][:], address)
+		committeeMisses[i] = getMisses(address)
+	}
+	return
+}
+
+func getAllCommitteeReputations() (committeeAddresses [][20]byte, committeeReputations []uint32) {
+	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
+	committeeAddresses = make([][20]byte, len(addressesArray))
+	committeeReputations = make([]uint32, len(addressesArray))
+	for i, address := range addressesArray {
+		copy(committeeAddresses[i][:], address)
+		committeeReputations[i] = getReputation(address)
+	}
+	return
+}

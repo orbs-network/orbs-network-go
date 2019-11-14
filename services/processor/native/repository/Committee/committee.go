@@ -20,8 +20,12 @@ func getOrderedCommittee() []byte {
 }
 
 func getOrderedCommitteeForAddresses(addresses []byte) []byte {
+	return _concat(_getOrderedCommitteeForAddresses(addresses))
+}
+
+func _getOrderedCommitteeForAddresses(addresses []byte) [][]byte {
 	addressArray := _split(addresses)
-	return _concat(_getOrderedCommitteeArray(addressArray))
+	return _getOrderedCommitteeArray(addressArray)
 }
 
 func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
