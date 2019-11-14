@@ -11,14 +11,6 @@ import (
 	"testing"
 )
 
-const ContractName = "TestBytesContract"
-
-func generateDeployTx() *protocol.SignedTransaction {
-	return builders.Transaction().WithMethod("_Deployments", "deployService").
-		WithArgs(ContractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), []byte("irrelevant data - contract is already registered")).
-		Build()
-}
-
 func TestVm_WorkingContractWithBytes20(t *testing.T) {
 	bytes20 := [20]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01,
 		0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01}

@@ -6,8 +6,6 @@ import (
 	"math/big"
 )
 
-const CONTRACT_NAME = "fixedBytes"
-
 var PUBLIC = sdk.Export(getAddress, setAddress, getHash, setHash, getBool, setBool, getToken, setToken)
 var SYSTEM = sdk.Export(_init)
 

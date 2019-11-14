@@ -57,11 +57,11 @@ func TestVerifyMethodInputArgs_SimpleOneInputArg(t *testing.T) {
 			0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x04}, func(a [32]byte) [32]byte { return a }},
 		{"*big.Int", big.NewInt(55), func(a *big.Int) *big.Int { return a }},
 		{"[]byte", []byte("hello"), func(a []byte) []byte { return a }},
+		{"[]uint32", []uint32{uint32(50)}, func(a []uint32) []uint32 { return a }},
 		// not allowed as arguments types but allowed in verify
 		{"other-byte-array", [30]byte{0x10}, func(a [30]byte) [30]byte { return a }},
 		{"other-type-array", [32]int{7}, func(a [32]int) [32]int { return a }},
 		{"other pointer", big.NewFloat(5.5), func(a *big.Float) *big.Float { return a }},
-		{"[]uint32", []uint32{uint32(50)}, func(a []uint32) []uint32 { return a }},
 	}
 
 	for i := range tests {
@@ -208,12 +208,18 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 		{"bytes32", false, [32]byte{0x10}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [32]byte { return [32]byte{} }},
 		{"*big.Int", false, big.NewInt(55), protocol.ARGUMENT_TYPE_UINT_256_VALUE, func() *big.Int { return big.NewInt(0) }},
 		{"[]byte", false, []byte{0x10, 0x11}, protocol.ARGUMENT_TYPE_BYTES_VALUE, func() []byte { return []byte{} }},
+		{"[]bool", false, []bool{true}, protocol.ARGUMENT_TYPE_BOOL_ARRAY_VALUE, func() []bool { return []bool{} }},
+		{"[]uint32", false, []uint32{uint32(50)}, protocol.ARGUMENT_TYPE_UINT_32_ARRAY_VALUE, func() []uint32 { return []uint32{} }},
+		{"[]uint64", false, []uint64{uint64(50)}, protocol.ARGUMENT_TYPE_UINT_64_ARRAY_VALUE, func() []uint64 { return  []uint64{} }},
+		{"[]string", false, []string{"foo"}, protocol.ARGUMENT_TYPE_STRING_ARRAY_VALUE, func() []string { return []string{} }},
+		{"[]bytes20", false, [][20]byte{{0x10}}, protocol.ARGUMENT_TYPE_BYTES_20_ARRAY_VALUE, func() [][20]byte { return [][20]byte{} }},
+		{"[]bytes32", false, [][32]byte{{0x10}}, protocol.ARGUMENT_TYPE_BYTES_32_ARRAY_VALUE, func() [][32]byte { return [][32]byte{} }},
+		{"[]*big.Int", false, []*big.Int{big.NewInt(55)}, protocol.ARGUMENT_TYPE_UINT_256_ARRAY_VALUE, func() []*big.Int { return []*big.Int{} }},
+		{"[][]byte", false, [][]byte{{0x11, 0x10}, {0x20, 0x21}}, protocol.ARGUMENT_TYPE_BYTES_ARRAY_VALUE, func() [][]byte { return [][]byte{} }},
 		// not allowed
 		{"other-byte-array", true, [30]byte{0x10}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [30]byte { return [30]byte{} }},
 		{"other-type-array", true, [32]int{7}, protocol.ARGUMENT_TYPE_BYTES_32_VALUE, func() [32]int { return [32]int{} }},
 		{"other-pointer", true, big.NewFloat(5.5), protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() *big.Float { return nil }},
-		{"[]uint32", true, []uint32{uint32(50)}, protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() []uint32 { return []uint32{} }},
-		{"[][]byte", true, [][]byte{{0x11, 0x10}, {0x20, 0x21}}, protocol.ARGUMENT_TYPE_UINT_32_VALUE, func() [][]byte { return [][]byte{} }},
 	}
 
 	for i := range tests {
@@ -223,7 +229,7 @@ func TestCreatMethodOutputArgs(t *testing.T) {
 			require.Error(t, err, "should fail to parse %s", cTest.name)
 		} else {
 			require.NoError(t, err, "should succeed to parse %s", cTest.name)
-			require.EqualValues(t, cTest.argType, outputArgs.ArgumentsIterator().NextArguments().Type(), "should be type %V is not", cTest.argType)
+			require.EqualValues(t, cTest.argType, outputArgs.ArgumentsIterator().NextArguments().Type(), "should be type %v is not", cTest.argType)
 		}
 	}
 }

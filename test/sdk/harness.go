@@ -12,11 +12,20 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 )
+
+const ContractName = "TestContract"
+
+func generateDeployTx() *protocol.SignedTransaction {
+	return builders.Transaction().WithMethod("_Deployments", "deployService").
+		WithArgs(ContractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), []byte("irrelevant data - contract is already registered")).
+		Build()
+}
 
 type harness struct {
 	vm         services.VirtualMachine
