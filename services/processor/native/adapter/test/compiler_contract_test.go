@@ -13,12 +13,10 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -86,14 +84,11 @@ type compilerContractHarness struct {
 }
 
 func aNativeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
-	tmpDir := test.CreateTempDirForTest(t)
-	cfg := &hardcodedConfig{artifactPath: tmpDir}
+	cfg, cleanup := NewConfigWithTempDir(t)
 	compiler := adapter.NewNativeCompiler(cfg, logger, metric.NewRegistry())
 	return &compilerContractHarness{
 		compiler: compiler,
-		cleanup: func() {
-			os.RemoveAll(tmpDir)
-		},
+		cleanup:  cleanup,
 	}
 }
 
@@ -109,16 +104,4 @@ func aFakeCompiler(t *testing.T, logger log.Logger) *compilerContractHarness {
 		compiler: compiler,
 		cleanup:  func() {},
 	}
-}
-
-type hardcodedConfig struct {
-	artifactPath string
-}
-
-func (c *hardcodedConfig) ProcessorPerformWarmUpCompilation() bool {
-	return true
-}
-
-func (c *hardcodedConfig) ProcessorArtifactPath() string {
-	return c.artifactPath
 }

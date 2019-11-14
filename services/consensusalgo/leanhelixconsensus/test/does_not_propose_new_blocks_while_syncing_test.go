@@ -26,7 +26,7 @@ import (
 
 func TestService_DoesNotProposeNewBlocksWhileSyncingBlocksSequentially(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newLeanHelixServiceHarness(0).start(parent, ctx)
+		h := newSingleLhcNodeHarness().start(parent, ctx)
 
 		syncFromBlock := primitives.BlockHeight(5)
 		syncUpToBlock := primitives.BlockHeight(7) // exercise 3 block syncs in succession

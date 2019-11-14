@@ -31,7 +31,7 @@ func (g *Gauge) Export() exportedMetric {
 }
 
 func (g *Gauge) String() string {
-	return fmt.Sprintf("metric %s: %d\n", g.name, g.value)
+	return fmt.Sprintf("metric %s: %d\n", g.name, atomic.LoadInt64(&g.value))
 }
 
 func (g *Gauge) Inc() {
@@ -63,7 +63,7 @@ func (g *Gauge) UpdateUInt32(i int32) {
 }
 
 func (g *Gauge) Value() int64 {
-	return g.value
+	return atomic.LoadInt64(&g.value)
 }
 
 func (g gaugeExport) LogRow() []*log.Field {
