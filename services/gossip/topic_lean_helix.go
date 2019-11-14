@@ -41,9 +41,10 @@ func (s *Service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 
 func (s *Service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
-		Topic:          gossipmessages.HEADER_TOPIC_LEAN_HELIX,
-		RecipientMode:  gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		VirtualChainId: s.config.VirtualChainId(),
+		Topic:                  gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		RecipientMode:          input.RecipientsList.RecipientMode,
+		RecipientNodeAddresses: input.RecipientsList.RecipientNodeAddresses,
+		VirtualChainId:         s.config.VirtualChainId(),
 	}).Build()
 
 	payloads, err := codec.EncodeLeanHelixMessage(header, input.Message)
@@ -52,8 +53,9 @@ func (s *Service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.
 	}
 
 	return nil, s.transport.Send(ctx, &adapter.TransportData{
-		SenderNodeAddress: s.config.NodeAddress(),
-		RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
-		Payloads:          payloads,
+		SenderNodeAddress:      s.config.NodeAddress(),
+		RecipientMode:          input.RecipientsList.RecipientMode,
+		RecipientNodeAddresses: input.RecipientsList.RecipientNodeAddresses,
+		Payloads:               payloads,
 	})
 }
