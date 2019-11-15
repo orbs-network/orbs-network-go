@@ -89,7 +89,7 @@ jobs:
 
   e2e:
     docker:
-      image: docker:19
+      - image: docker:19
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
