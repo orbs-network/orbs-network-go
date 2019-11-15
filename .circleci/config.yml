@@ -105,7 +105,7 @@ jobs:
           environment:
             CONSENSUSALGO: benchmark
       # Logs here belong to root
-      - run: sudo rm -rf _logs
+      - run: rm -rf _logs
       - run:
           command: ./docker/test/test.sh
           name: "Docker test with Lean Helix Consensus"
