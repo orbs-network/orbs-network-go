@@ -89,7 +89,7 @@ jobs:
 
   e2e:
     docker:
-      - image: docker:19
+      - image: aviramstern/aviram-orbs:ubuntu-docker
     steps:
       - checkout
       - run: pwd
