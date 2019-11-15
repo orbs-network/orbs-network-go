@@ -92,6 +92,8 @@ jobs:
       - image: docker:19
     steps:
       - checkout
+      - run: pwd
+      - run: ls -l
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
