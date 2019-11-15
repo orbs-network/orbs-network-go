@@ -94,8 +94,8 @@ jobs:
       - checkout
       - run: pwd
       - run: ls -la
-      - run: ./.circleci/install-go.sh
-      - run: ./.circleci/install-node.sh
+#      - run: ./.circleci/install-go.sh
+#      - run: ./.circleci/install-node.sh
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       - run: ./.circleci/install-docker-compose.sh
