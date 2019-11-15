@@ -88,8 +88,8 @@ jobs:
           path: _reports
 
   e2e:
-    machine:
-      image: ubuntu-1604:201903-01
+    docker:
+      image: docker:19
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
