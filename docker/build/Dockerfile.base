@@ -1,0 +1,12 @@
+FROM golang:1.12.9
+
+RUN apt-get install -y git bash libc6-dev
+
+WORKDIR /tmp
+
+RUN git clone https://github.com/orbs-network/orbs-network-go.git
+
+WORKDIR /tmp/orbs-network-go
+
+RUN go build -o _bin/orbs-node
+

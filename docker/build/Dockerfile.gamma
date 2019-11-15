@@ -1,4 +1,4 @@
-FROM golang:1.12.9
+FROM aviramstern/aviram-orbs:base
 
 RUN apt-get install -y bash git
 
