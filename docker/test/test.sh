@@ -36,7 +36,7 @@ export SRC=/go/src/github.com/orbs-network/orbs-network-go
 # prepare persistent blocks for docker tests
 # skip on Mac
 if [[ $(uname) == "Linux" ]]; then
-    sudo rm -rf _tmp/blocks
+    rm -rf _tmp/blocks
 fi
 
 # At the moment Lean Helix doesn't deal well with an existing blocks file
