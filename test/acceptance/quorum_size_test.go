@@ -15,7 +15,7 @@ import (
 )
 
 func TestNetworkStartedWithEnoughNodes_SucceedsClosingBlocks_BenchmarkConsensus(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithNumNodes(6).
 		WithNumRunningNodes(4).

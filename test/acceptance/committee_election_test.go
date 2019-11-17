@@ -24,7 +24,7 @@ import (
 )
 
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -66,7 +66,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 }
 
 func TestLeanHelix_MultipleReElections(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -102,7 +102,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 }
 
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithEmptyBlockTime(100*time.Millisecond).
 		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
@@ -152,7 +152,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 }
 
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(7).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -191,7 +191,7 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 }
 
 func TestLeanHelix_CommitTransactionWithCommitteeContractTurnedOff(t *testing.T) {
-	newHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
+	NewHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
 		c, err := cfg.MergeWithFileConfig(`{"consensus-context-committee-using-contract": false}`)
 		require.NoError(t, err)
 		return c
@@ -218,7 +218,6 @@ func TestLeanHelix_CommitTransactionWithCommitteeContractTurnedOff(t *testing.T)
 
 		})
 }
-
 
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
 	response := api.GetTransactionReceiptProof(ctx, txHash, nodeIndex)

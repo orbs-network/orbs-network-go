@@ -53,7 +53,7 @@ type networkHarness struct {
 	testTimeout              time.Duration
 }
 
-func newHarness() *networkHarness {
+func NewHarness() *networkHarness {
 	n := &networkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE}
 
 	var algos []consensus.ConsensusAlgoType

@@ -14,7 +14,7 @@ func BenchmarkHappyFlow1k(b *testing.B) {
 	numTransactions := 1000
 
 	rnd := rand.NewControlledRand(b)
-	newHarness().Start(b, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().Start(b, func(t testing.TB, ctx context.Context, network *Network) {
 		for n := 0; n < b.N; n++ {
 			b.StartTimer()
 			transferDuration, waitDuration := sendTransfersAndAssertTotalBalance(ctx, network, t, numTransactions, rnd)
@@ -79,7 +79,7 @@ func BenchmarkHappyFlow1kWithOverrides(b *testing.B) {
 	numTransactions := 1000
 
 	rnd := rand.NewControlledRand(b)
-	newHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
+	NewHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
 		c, err := cfg.MergeWithFileConfig(`{
 	"consensus-context-maximum-transactions-in-block": 70,
 	"transaction-pool-propagation-batch-size": 100

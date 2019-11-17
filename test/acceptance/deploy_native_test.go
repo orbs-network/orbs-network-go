@@ -17,7 +17,7 @@ import (
 )
 
 func TestDeployNativeContract(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
@@ -46,7 +46,7 @@ func TestDeployNativeContract(t *testing.T) {
 }
 
 func TestLockNativeDeployment(t *testing.T) {
-	newHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))

@@ -21,7 +21,7 @@ import (
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
-	newHarness().
+	NewHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 200, rnd)
 		})
@@ -70,7 +70,7 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := rand.NewControlledRand(t)
-	newHarness().
+	NewHarness().
 		AllowingErrors(
 			"transport header is corrupt", // because we corrupt messages
 		).
