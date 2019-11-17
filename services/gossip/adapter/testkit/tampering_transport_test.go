@@ -17,7 +17,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
@@ -57,11 +56,11 @@ func newTamperingHarness(t *testing.T, parent *with.ConcurrencyHarness, ctx cont
 
 	harness := &tamperingHarness{
 		ConcurrencyHarness: parent,
-		senderKey: senderAddress,
-		transport: transport,
-		listeners: listeners,
-		t:         t,
-		mutex:     sync.Mutex{},
+		senderKey:          senderAddress,
+		transport:          transport,
+		listeners:          listeners,
+		t:                  t,
+		mutex:              sync.Mutex{},
 	}
 
 	harness.Supervise(memoryTransport)
@@ -173,7 +172,7 @@ func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
 func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		withTamperingHarness(ctx, t, parent, 1, func(c *tamperingHarness) {
-			const iterations= 3
+			const iterations = 3
 
 			signals := make(chan byte, 1)
 
