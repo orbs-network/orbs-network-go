@@ -1,3 +1,9 @@
+// Copyright 2019 the orbs-network-go authors
+// This file is part of the orbs-network-go library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
 package sdk
 
 import (
@@ -10,14 +16,6 @@ import (
 	"math/big"
 	"testing"
 )
-
-const ContractName = "TestBytesContract"
-
-func generateDeployTx() *protocol.SignedTransaction {
-	return builders.Transaction().WithMethod("_Deployments", "deployService").
-		WithArgs(ContractName, uint32(protocol.PROCESSOR_TYPE_NATIVE), []byte("irrelevant data - contract is already registered")).
-		Build()
-}
 
 func TestVm_WorkingContractWithBytes20(t *testing.T) {
 	bytes20 := [20]byte{0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01, 0x02, 0x03, 0x01,
