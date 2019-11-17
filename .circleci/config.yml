@@ -97,11 +97,6 @@ jobs:
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       - run: ./.circleci/install-docker-compose.sh
-      - run:
-          command: ./docker/test/test.sh
-          name: "Docker test with Benchmark Consensus"
-          environment:
-            CONSENSUSALGO: benchmark
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
