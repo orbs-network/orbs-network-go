@@ -44,6 +44,7 @@ func _clearMiss(addr []byte) {
 	state.Clear(_formatMisses(addr))
 }
 
+// Function for external monitoring of reputation via absolute number of misses
 func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []uint32) {
 	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
 	committeeAddresses = make([][20]byte, len(addressesArray))
@@ -55,6 +56,7 @@ func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []u
 	return
 }
 
+// Function for external monitoring of reputation
 func getAllCommitteeReputations() (committeeAddresses [][20]byte, committeeReputations []uint32) {
 	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
 	committeeAddresses = make([][20]byte, len(addressesArray))
