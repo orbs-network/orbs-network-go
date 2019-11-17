@@ -11,17 +11,82 @@ package adapter
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	adapterTest "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
 	"github.com/orbs-network/orbs-network-go/test/contracts/counter_mock"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 )
 
 const COUNTER_CONTRACT_START_FROM = 100
+
+func TestCompileValidContract(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		if testing.Short() {
+			t.Skip("Skipping compilation of contracts in short mode")
+		}
+		// give the test one minute timeout to compile
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
+		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+
+		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		_, err := compiler.Compile(ctx, code)
+		t.Log("Error : ", err)
+		require.NoError(t, err, "compile should not fail")
+	})
+}
+
+func TestCompileTimeout(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		if testing.Short() {
+			t.Skip("Skipping compilation of contracts in short mode")
+		}
+		// hopefully enough time to start compiling, but not enough to finish
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
+		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+
+		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+		_, err := compiler.Compile(ctx, code)
+		t.Log("Error : ", err)
+		require.Error(t, err, "compile should fail")
+		require.Regexp(t, regexp.MustCompile("deadline exceeded"), err.Error(), "message must hint timeout")
+	})
+}
+
+func TestCompileInvalidContract(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		if testing.Short() {
+			t.Skip("Skipping compilation of contracts in short mode")
+		}
+		// give the test one minute timeout to compile
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+		defer cleanup()
+		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+
+		invalidCode := "package fail"
+		_, err := compiler.Compile(ctx, invalidCode)
+		t.Log("Error : ", err)
+		require.Error(t, err, "compile should fail")
+	})
+}
 
 func TestCompileCodeWithExistingArtifacts(t *testing.T) {
 	if testing.Short() {

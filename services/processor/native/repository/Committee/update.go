@@ -24,10 +24,13 @@ func updateMisses() {
 	ordered := _getOrderedCommitteeArray(elected)
 	blockProposer := env.GetBlockProposerAddress()
 
-	if !_isMemberOfOrderedCommittee(ordered, blockProposer) {
+	if len(ordered) > 0 && !_isMemberOfOrderedCommittee(ordered, blockProposer) {
 		panic(fmt.Errorf("block proposer address from %x was not found in committee of block height %d", blockProposer, env.GetBlockHeight()))
+	} else if len(ordered) == 0 {
+		_clearMissAddEmitEvent(blockProposer)
+	} else {
+		_updateMissesByCommitteeOrder(ordered, blockProposer)
 	}
-	_updateMissesByCommitteeOrder(ordered, blockProposer)
 }
 
 /*
@@ -48,12 +51,20 @@ func CommitteeMemberMissed(address []byte)      {}
 func _updateMissesByCommitteeOrder(orderedCommittee [][]byte, blockProposer []byte) {
 	for _, member := range orderedCommittee {
 		if bytes.Equal(member, blockProposer) {
-			_clearMiss(member)
-			events.EmitEvent(CommitteeMemberClosedBlock, member)
+			_clearMissAddEmitEvent(member)
 			break
 		} else {
-			_addMiss(member)
-			events.EmitEvent(CommitteeMemberMissed, member)
+			_addMissAddEmitEvent(member)
 		}
 	}
+}
+
+func _clearMissAddEmitEvent(address []byte) {
+	_clearMiss(address)
+	events.EmitEvent(CommitteeMemberClosedBlock, address)
+}
+
+func _addMissAddEmitEvent(address []byte) {
+	_addMiss(address)
+	events.EmitEvent(CommitteeMemberMissed, address)
 }

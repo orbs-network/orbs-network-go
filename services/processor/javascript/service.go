@@ -3,11 +3,17 @@
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
+//
+// +build javascript
 
 package javascript
 
 import (
 	"context"
+	"fmt"
+	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/services/processor"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -20,17 +26,34 @@ var LogTag = log.Service("processor-javascript")
 
 type service struct {
 	logger log.Logger
+	config config.JavascriptProcessorConfig
 
-	mutex                        *sync.RWMutex
-	contractSdkHandlerUnderMutex handlers.ContractSdkCallHandler
-	contractsUnderMutex          map[primitives.ContractName]string
+	mutex               *sync.RWMutex
+	sdkHandler          handlers.ContractSdkCallHandler
+	contractsUnderMutex map[primitives.ContractName]string
+
+	worker func(handler sdkContext.SdkHandler) processor.StatelessProcessor
 }
 
-func NewJavaScriptProcessor(logger log.Logger) services.Processor {
+func NewJavaScriptProcessor(logger log.Logger, config config.JavascriptProcessorConfig) services.Processor {
+	var worker func(handler sdkContext.SdkHandler) processor.StatelessProcessor
+	var err error
+
+	if config.ExperimentalExternalProcessorPluginPath() != "" {
+		worker, err = loadPlugin(config.ExperimentalExternalProcessorPluginPath())
+		if err != nil {
+			panic(fmt.Sprintf("Could not load plugin: %s", err))
+		}
+	} else {
+		worker = DefaultWorker
+	}
+
 	return &service{
 		logger:              logger.WithTags(LogTag),
 		mutex:               &sync.RWMutex{},
 		contractsUnderMutex: make(map[primitives.ContractName]string),
+		worker:              worker,
+		config:              config,
 	}
 }
 
@@ -39,7 +62,7 @@ func (s *service) RegisterContractSdkCallHandler(handler handlers.ContractSdkCal
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.contractSdkHandlerUnderMutex = handler
+	s.sdkHandler = handler
 }
 
 func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallInput) (*services.ProcessCallOutput, error) {
@@ -47,7 +70,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	code, err := s.retrieveContractCodeFromRepository(ctx, input.ContextId, input.ContractName)
 	if err != nil {
 		return &services.ProcessCallOutput{
-			OutputArgumentArray: (&protocol.ArgumentArrayBuilder{}).Build(),
+			OutputArgumentArray: protocol.ArgumentsArrayEmpty(),
 			CallResult:          protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
 		}, err
 	}
@@ -55,7 +78,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	// execute
 	outputArgs, contractErr, err := s.processMethodCall(input.ContextId, code, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if err != nil {
 		return &services.ProcessCallOutput{
@@ -83,7 +106,7 @@ func (s *service) getContractSdkHandler() handlers.ContractSdkCallHandler {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	return s.contractSdkHandlerUnderMutex
+	return s.sdkHandler
 }
 
 func (s *service) getContractFromRepository(contractName primitives.ContractName) string {

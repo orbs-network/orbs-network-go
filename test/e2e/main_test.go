@@ -19,12 +19,12 @@ const TIMES_TO_RUN_EACH_TEST = 2
 func TestMain(m *testing.M) {
 	exitCode := 0
 
-	config := getConfig()
-	if config.bootstrap {
+	config := GetConfig()
+	if config.Bootstrap {
 		tl := NewLoggerRandomer()
 
-		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.mgmtVcid, tl)
-		appNetwork := NewInProcessE2EAppNetwork(config.appVcid, tl)
+		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, "")
+		appNetwork := NewInProcessE2EAppNetwork(config.AppVcid, tl, "")
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()

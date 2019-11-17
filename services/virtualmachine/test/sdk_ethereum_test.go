@@ -8,8 +8,8 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -27,7 +27,7 @@ func TestSdkEthereum_CallMethod(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum callMethod")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "callMethod", "EthContractAddress", "EthJsonAbi", uint64(1234), "EthMethodName", []byte{0x01, 0x02, 0x03})
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "callMethod", "EthContractAddress", "EthJsonAbi", uint64(1234), "EthMethodName", []byte{0x01, 0x02, 0x03})
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -54,7 +54,7 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum getTransactionLog")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getTransactionLog", "EthContractAddress", "EthJsonAbi", "EthTxHash", "EthEventName")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "getTransactionLog", "EthContractAddress", "EthJsonAbi", "EthTxHash", "EthEventName")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, []byte{0x04, 0x05, 0x06}, res[0].BytesValue(), "handleSdkCall result should be equal")
 				require.Equal(t, uint64(1234), res[1].Uint64Value(), "handleSdkCall block number result should be equal")
@@ -83,7 +83,7 @@ func TestSdkEthereum_GetBlockNumber(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum getBlockNumber")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getBlockNumber")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "getBlockNumber")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(1234), res[0].Uint64Value(), "handleSdkCall block number result should be equal")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -110,7 +110,7 @@ func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum getBlockNumberByTime")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getBlockNumberByTime", uint64(100))
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "getBlockNumberByTime", uint64(100))
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(5000), res[0].Uint64Value(), "handleSdkCall block number result should be equal")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -137,7 +137,7 @@ func TestSdkEthereum_GetBlockTime(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum getBlockTime")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getBlockTime")
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "getBlockTime")
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(1234), res[0].Uint64Value(), "handleSdkCall block time result should be equal")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil
@@ -164,7 +164,7 @@ func TestSdkEthereum_GetBlockTimeByNumber(t *testing.T) {
 
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Ethereum getBlockTimeByNumber")
-				res, err := h.handleSdkCall(ctx, executionContextId, native.SDK_OPERATION_NAME_ETHEREUM, "getBlockTimeByNumber", uint64(100))
+				res, err := h.handleSdkCall(ctx, executionContextId, sdk.SDK_OPERATION_NAME_ETHEREUM, "getBlockTimeByNumber", uint64(100))
 				require.NoError(t, err, "handleSdkCall should not fail")
 				require.Equal(t, uint64(5000), res[0].Uint64Value(), "handleSdkCall block time result should be equal")
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(), nil

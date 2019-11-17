@@ -40,6 +40,7 @@ type Registry interface {
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
 	WithNodeAddress(nodeAddress primitives.NodeAddress) Registry
 	Remove(metric metric)
+	Get(metricName string) metric
 }
 
 type exportedMetric interface {
@@ -74,6 +75,17 @@ type inMemoryRegistry struct {
 		sync.Mutex
 		metrics []metric
 	}
+}
+
+func (r *inMemoryRegistry) Get(metricName string) metric {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, metric := range r.mu.metrics {
+		if metric.Name() == metricName {
+			return metric
+		}
+	}
+	panic(errors.Errorf("a metric with the name of %s is not registered", metricName))
 }
 
 func (r *inMemoryRegistry) Remove(m metric) {
@@ -163,7 +175,7 @@ func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 }
 
 func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter {
-	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", ROTATE_INTERVAL, logger, func() {
+	return synchronization.NewPeriodicalTrigger(ctx, "Metric registry rotation trigger", synchronization.NewTimeTicker(ROTATE_INTERVAL), logger, func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {

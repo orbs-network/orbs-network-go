@@ -13,7 +13,15 @@ import (
 
 /// Test builders for: protocol.EventsArray, primitives.PackedEventsArray
 
-func PackedEventsArrayEncode(eventBuilders []*protocol.EventBuilder) primitives.PackedEventsArray {
+func PackedEventsArrayEncode(eventBuilders ...*protocol.EventBuilder) primitives.PackedEventsArray {
 	eventsArray := (&protocol.EventsArrayBuilder{Events: eventBuilders}).Build()
 	return eventsArray.RawEventsArray()
+}
+
+func EventBuilder(contract primitives.ContractName, eventName primitives.EventName, args ...interface{}) (*protocol.EventBuilder, error) {
+	outputArgs, err := protocol.PackedInputArgumentsFromNatives(args)
+	if err != nil {
+		return nil, err
+	}
+	return &protocol.EventBuilder{ContractName: contract, EventName: eventName, OutputArgumentArray: outputArgs}, nil
 }

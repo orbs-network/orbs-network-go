@@ -8,43 +8,60 @@ package testkit
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/scribe/log"
+	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
+	"time"
 )
 
 type tamperingHarness struct {
 	*with.ConcurrencyHarness
 	senderKey string
 	transport *TamperingTransport
-	listener  *MockTransportListener
+	listeners []*MockTransportListener
+	t         *testing.T
+
+	mutex sync.Mutex
 }
 
-func newTamperingHarness(ctx context.Context, parent *with.ConcurrencyHarness) *tamperingHarness {
+func newTamperingHarness(t *testing.T, parent *with.ConcurrencyHarness, ctx context.Context, numListeners int) *tamperingHarness {
 	senderAddress := "sender"
-	listenerAddress := "listener"
-	listener := &MockTransportListener{}
-
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
 	genesisValidatorNodes[senderAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(senderAddress))
-	genesisValidatorNodes[listenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(listenerAddress))
+	listeners := []*MockTransportListener{}
+	addresses := []string{}
+
+	for i := 0; i < numListeners; i++ {
+		listenerAddress := fmt.Sprintf("listener%d", i)
+		addresses = append(addresses, listenerAddress)
+		listener := &MockTransportListener{}
+		listeners = append(listeners, listener)
+		genesisValidatorNodes[listenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(listenerAddress))
+	}
 
 	memoryTransport := memory.NewTransport(ctx, parent.Logger, genesisValidatorNodes)
 	transport := NewTamperingTransport(parent.Logger, memoryTransport)
-
-	transport.RegisterListener(listener, primitives.NodeAddress(listenerAddress))
+	for ind, listener := range listeners {
+		transport.RegisterListener(listener, primitives.NodeAddress(addresses[ind]))
+	}
 
 	harness := &tamperingHarness{
 		ConcurrencyHarness: parent,
-		senderKey:          senderAddress,
-		transport:          transport,
-		listener:           listener,
+		senderKey: senderAddress,
+		transport: transport,
+		listeners: listeners,
+		t:         t,
+		mutex:     sync.Mutex{},
 	}
 
 	harness.Supervise(memoryTransport)
@@ -64,51 +81,150 @@ func (c *tamperingHarness) broadcast(ctx context.Context, sender string, payload
 	})
 }
 
+func (c *tamperingHarness) verify() {
+	for _, listener := range c.listeners {
+		ok, err := listener.Verify()
+		if !ok {
+			c.t.Errorf(err.Error())
+		}
+	}
+}
+
+func withTamperingHarness(ctx context.Context, t *testing.T, parent *with.ConcurrencyHarness, numNodes int, f func(*tamperingHarness)) {
+	c := newTamperingHarness(t, parent, ctx, numNodes)
+	f(c)
+	c.verify()
+}
+
 func TestFailingTamperer(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		c := newTamperingHarness(ctx, parent)
+		withTamperingHarness(ctx, t, parent, 1, func(c *tamperingHarness) {
+			c.transport.Fail(anyMessage())
 
-		c.transport.Fail(anyMessage())
+			c.listeners[0].ExpectNotReceive()
+			c.send(ctx, nil)
 
-		c.send(ctx, nil)
+			time.Sleep(50 * time.Millisecond) // TODO we want to make sure something never happens - how long do we wait? instead, wait until the transport is done emitting transmissions
+		})
+	})
+}
 
-		c.listener.ExpectNotReceive()
+func TestFailingTamperer_DoesPartialBroadcast(t *testing.T) {
+	const numNodes = 2
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		withTamperingHarness(ctx, t, parent, numNodes, func(c *tamperingHarness) {
+			const iterations = 5
 
-		ok, err := c.listener.Verify()
-		if !ok {
-			t.Fatal(err)
-		}
+			signals := make(chan byte, iterations*numNodes)
+
+			c.transport.Fail(everySecondTime())
+			c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				signals <- payloads[0][0]
+			}).AtMost(iterations)
+			c.listeners[1].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				signals <- payloads[0][0]
+			}).AtMost(iterations)
+
+			for i := byte(0); i < iterations; i++ {
+				c.send(ctx, [][]byte{{i}})
+				n := <-signals
+				require.Equal(t, i, n, "expected the current iteration number")
+			}
+
+			timeout, cancel := context.WithTimeout(ctx, 50*time.Millisecond) // TODO we want to make sure something never happens - how long do we wait? instead, wait until the transport is done emitting transmissions
+			defer cancel()
+			select {
+			case <-timeout.Done(): // OK
+			case <-signals:
+				t.Fatalf("expected no more signals to arrive after reading %d signals", iterations)
+			}
+		})
+	})
+}
+
+// Make sure the payload is cloned and corrupted per transmission
+func TestCorruptingTamperer_DoesPartialBroadcast(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		withTamperingHarness(ctx, t, parent, 2, func(c *tamperingHarness) {
+			const iterations = 5
+			signals := make(chan byte, 2)
+
+			ctrlRand := rand.NewControlledRand(t)
+			c.transport.Corrupt(everySecondTimeFlipped(), ctrlRand)
+
+			c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				signals <- payloads[0][0]
+			}).Times(iterations)
+			c.listeners[1].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				signals <- payloads[0][0]
+			}).Times(iterations)
+
+			for i := 0; i < iterations; i++ {
+				c.send(ctx, [][]byte{{0}})
+				n1 := <-signals
+				n2 := <-signals
+				require.True(t, n1 == 0 && n2 != 0 || n1 != 0 && n2 == 0,
+					fmt.Sprintf("expected a corruption of exactly one message, got 0x%x 0x%x", n1, n2))
+			}
+		})
+	})
+}
+
+func TestCorruptingTamperer_PreserveInputPayload(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		withTamperingHarness(ctx, t, parent, 1, func(c *tamperingHarness) {
+			const iterations= 3
+
+			signals := make(chan byte, 1)
+
+			ctrlRand := rand.NewControlledRand(t)
+			c.transport.Corrupt(anyMessage(), ctrlRand)
+
+			c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				signals <- payloads[0][0]
+			}).Times(iterations)
+
+			for i := 0; i < iterations; i++ {
+				payloads := [][]byte{{0}}
+				c.send(ctx, payloads)
+				n := <-signals
+				require.NotEqual(t, byte(0), n, "expected received payload to be corrupted")
+				require.Equal(t, byte(0), payloads[0][0], "expected input payload to preserve its original value")
+			}
+		})
 	})
 }
 
 func TestPausingTamperer(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		c := newTamperingHarness(ctx, parent)
+		withTamperingHarness(ctx, t, parent, 1, func(c *tamperingHarness) {
+			const sendCount = 10 // Must be even
+			digits := make(chan byte, sendCount)
 
-		digits := make(chan byte, 10)
-		odds := c.transport.Pause(oddNumbers())
+			odds := c.transport.Pause(oddNumbers())
 
-		c.listener.WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
-			digits <- payloads[0][0]
-		}).Times(10)
+			c.listeners[0].WhenOnTransportMessageReceived(mock.Any).Call(func(ctx context.Context, payloads [][]byte) {
+				digits <- payloads[0][0]
+			}).Times(sendCount)
 
-		for b := 0; b < 10; b++ {
-			c.send(ctx, [][]byte{{byte(b)}})
-		}
-
-		for b := 0; b < 5; b++ {
-			if <-digits%2 != 0 {
-				t.Errorf("got odd number while odds should be paused")
+			for b := 0; b < sendCount; b++ {
+				c.send(ctx, [][]byte{{byte(b)}})
 			}
-		}
 
-		odds.StopTampering(ctx)
-
-		for b := 0; b < 5; b++ {
-			if <-digits%2 != 1 {
-				t.Errorf("got even number while odds should be released")
+			for b := 0; b < sendCount/2; b++ {
+				if <-digits%2 != 0 {
+					t.Errorf("got odd number while odds should be paused")
+				}
 			}
-		}
+
+			odds.StopTampering(ctx)
+
+			for b := 0; b < sendCount/2; b++ {
+				if <-digits%2 != 1 {
+					t.Errorf("got even number while odds should be released")
+				}
+			}
+		})
 	})
 }
 
@@ -116,44 +232,43 @@ func TestPausingTamperer(t *testing.T) {
 func TestLatchingTamperer(t *testing.T) {
 	t.Skip("this test is suspect as having a deadlock, skipping until @ronnno and @electricmonk can look at it; handled in https://github.com/orbs-network/orbs-network-go/pull/769")
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		withTamperingHarness(ctx, t, parent, 1, func(c *tamperingHarness) {
+			called := make(chan bool)
 
-		c := newTamperingHarness(ctx, parent)
+			latch := c.transport.LatchOn(anyMessage())
 
-		called := make(chan bool)
+			c.listeners[0].WhenOnTransportMessageReceived(mock.Any)
 
-		latch := c.transport.LatchOn(anyMessage())
+			afterMessageArrived := sync.WaitGroup{}
+			afterMessageArrived.Add(1)
 
-		c.listener.WhenOnTransportMessageReceived(mock.Any)
+			afterLatched := sync.WaitGroup{}
+			afterLatched.Add(1)
 
-		afterMessageArrived := sync.WaitGroup{}
-		afterMessageArrived.Add(1)
+			go func() {
+				afterLatched.Done()
 
-		afterLatched := sync.WaitGroup{}
-		afterLatched.Add(1)
+				defer func() {
+					latch.Wait()
+					afterMessageArrived.Wait()
+					called <- true
+				}()
 
-		go func() {
-			afterLatched.Done()
-
-			defer func() {
-				latch.Wait()
-				afterMessageArrived.Wait()
-				called <- true
 			}()
 
-		}()
+			afterLatched.Wait()
+			c.send(ctx, nil)
 
-		afterLatched.Wait()
-		c.send(ctx, nil)
+			select {
+			case <-called:
+				t.Error("called too early")
+			default:
+			}
 
-		select {
-		case <-called:
-			t.Error("called too early")
-		default:
-		}
+			afterMessageArrived.Done()
 
-		afterMessageArrived.Done()
-
-		<-called
+			<-called
+		})
 	})
 }
 
@@ -166,5 +281,22 @@ func oddNumbers() MessagePredicate {
 func anyMessage() MessagePredicate {
 	return func(data *adapter.TransportData) bool {
 		return true
+	}
+}
+
+func everySecondTime() MessagePredicate {
+	count := 0
+	return func(data *adapter.TransportData) bool {
+		count += 1
+		return count%2 == 0
+	}
+}
+
+// true, false, false, true, true, false, ....
+func everySecondTimeFlipped() MessagePredicate {
+	count := -1
+	return func(data *adapter.TransportData) bool {
+		count += 1
+		return count%2 == count/2%2
 	}
 }

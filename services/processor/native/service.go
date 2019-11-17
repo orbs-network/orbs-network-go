@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/types"
+	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -116,7 +117,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	}
 
 	// setup context for the contract sdk
-	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), s, contractInfo.Permission)
+	sdkContext.PushContext(sdkContext.ContextId(input.ContextId), sdk.NewSDK(s.sdkHandler, s.config), contractInfo.Permission)
 	defer sdkContext.PopContext(sdkContext.ContextId(input.ContextId))
 
 	start := time.Now()
@@ -128,7 +129,7 @@ func (s *service) ProcessCall(ctx context.Context, input *services.ProcessCallIn
 	functionNameForErrors := fmt.Sprintf("%s.%s", input.ContractName, input.MethodName)
 	outputArgs, contractErr, err := processMethodCall(input.ContextId, contractInstance, methodInstance, input.InputArgumentArray, functionNameForErrors)
 	if outputArgs == nil {
-		outputArgs = (&protocol.ArgumentArrayBuilder{}).Build()
+		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
 	if err != nil {
 		logger.Info("contract execution failed", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), log.Error(err))

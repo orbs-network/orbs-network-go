@@ -3,6 +3,8 @@
 //
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
+//
+// +build javascript
 
 package test
 
@@ -26,7 +28,7 @@ func processCallInput() *processCall {
 			ContextId:              []byte{0x0},
 			ContractName:           "BenchmarkContract",
 			MethodName:             "add",
-			InputArgumentArray:     (&protocol.ArgumentArrayBuilder{}).Build(),
+			InputArgumentArray:     protocol.ArgumentsArrayEmpty(),
 			AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
 			CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 		},

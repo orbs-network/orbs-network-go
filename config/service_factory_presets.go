@@ -94,13 +94,13 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	return cfg
 }
 
-func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, auditBlocksYoungerThan time.Duration) LeanHelixConsensusConfigForTests {
+func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, auditBlocksYoungerThan time.Duration, consensusRoundTimeoutInterval time.Duration) LeanHelixConsensusConfigForTests {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 1*time.Hour)
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, consensusRoundTimeoutInterval)
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MAXIMUM_COMMITTEE_SIZE, 22)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)

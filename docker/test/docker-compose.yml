@@ -2,49 +2,44 @@ version: '2.1'
 
 services:
   ganache:
-    image: trufflesuite/ganache-cli
-    command: ganache-cli --gasLimit 90000000000 --gasPrice 1 -a 10 -m "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
-    ports:
-      - 8545:8545
+    extends:
+      file: common-services.yml
+      service: ganache
     networks:
       orbs-network:
         ipv4_address: 192.168.199.6
 
   signer-node-1:
-    image: orbs:signer
-    volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    extends:
+      file: common-services.yml
+      service: signer-node
     command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node1.json --config /opt/orbs/config/node1.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.9
 
   signer-node-2:
-    image: orbs:signer
-    volumes:
-    - ../../_logs/:/opt/orbs/logs
-    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    extends:
+      file: common-services.yml
+      service: signer-node
     command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node2.json --config /opt/orbs/config/node2.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.10
 
   signer-node-3:
-    image: orbs:signer
-    volumes:
-    - ../../_logs/:/opt/orbs/logs
-    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    extends:
+      file: common-services.yml
+      service: signer-node
     command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node3.json --config /opt/orbs/config/node3.keys.json
     networks:
       orbs-network:
         ipv4_address: 192.168.199.11
 
   signer-node-4:
-    image: orbs:signer
-    volumes:
-    - ../../_logs/:/opt/orbs/logs
-    - ./$CONSENSUSALGO-config/:/opt/orbs/config
+    extends:
+      file: common-services.yml
+      service: signer-node
     command: /opt/orbs/orbs-signer --listen :7777 --config /opt/orbs/config/node4.json --config /opt/orbs/config/node4.keys.json
     networks:
       orbs-network:
@@ -52,137 +47,105 @@ services:
 
 
   orbs-app-chain-node-1:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
         - 8080:8080
     volumes:
-        - ../../_logs/:/opt/orbs/logs
-        - ./$CONSENSUSALGO-config/:/opt/orbs/config
         - ../../_tmp/blocks/node1/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.2
 
   orbs-app-chain-node-2:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
         - 8081:8080
     volumes:
-        - ../../_logs/:/opt/orbs/logs
-        - ./$CONSENSUSALGO-config/:/opt/orbs/config
         - ../../_tmp/blocks/node2/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.3
 
   orbs-app-chain-node-3:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
       - 8082:8080
     volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
       - ../../_tmp/blocks/node3/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.4
 
   orbs-app-chain-node-4:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
         - 8083:8080
     volumes:
-        - ../../_logs/:/opt/orbs/logs
-        - ./$CONSENSUSALGO-config/:/opt/orbs/config
         - ../../_tmp/blocks/node4/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4.json --log /opt/orbs/logs/node4.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.5
 
   orbs-mgmt-chain-node-1:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
       - 8084:8080
     volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
       - ../../_tmp/blocks/node1-mgmt/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1-mgmt.json --log /opt/orbs/logs/node1-mgmt.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.22
 
   orbs-mgmt-chain-node-2:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
       - 8085:8080
     volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
       - ../../_tmp/blocks/node2-mgmt/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2-mgmt.json --log /opt/orbs/logs/node2-mgmt.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.23
 
   orbs-mgmt-chain-node-3:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
       - 8086:8080
     volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
       - ../../_tmp/blocks/node3-mgmt/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3-mgmt.json --log /opt/orbs/logs/node3-mgmt.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.24
 
   orbs-mgmt-chain-node-4:
-    image: orbs:export
-    environment:
-      ETHEREUM_ENDPOINT: http://ganache:8545/
+    extends:
+      file: common-services.yml
+      service: orbs-chain-node
     ports:
       - 8087:8080
     volumes:
-      - ../../_logs/:/opt/orbs/logs
-      - ./$CONSENSUSALGO-config/:/opt/orbs/config
       - ../../_tmp/blocks/node4-mgmt/:/usr/local/var/orbs/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4-mgmt.json --log /opt/orbs/logs/node4-mgmt.log
-    sysctls:
-      net.core.somaxconn: 25000
     networks:
       orbs-network:
         ipv4_address: 192.168.199.25

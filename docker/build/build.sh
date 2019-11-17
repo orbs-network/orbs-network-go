@@ -4,8 +4,8 @@ if [[ ! -z "$CIRCLE_TAG" ]]; then
     echo "This is a release run - Updating the .version file to indicate the correct Semver"
     echo "For this release ($CIRCLE_TAG)..."
 
-    TAG_FIRST_CHAR=$(echo $CIRCLE_TAG | head -c 1)
-    if [[ TAG_FIRST_CHAR != "v" ]]; then
+    TAG_FIRST_CHAR=$(echo "$CIRCLE_TAG" | head -c 1)
+    if [[ $TAG_FIRST_CHAR != "v" ]]; then
         echo "Oops! the tag format supplied is invalid while releasing a new version of the Orbs node"
         echo "Tag supplied is $CIRCLE_TAG and we do not allow that. Must use format vX.X.X!"
         exit 2
@@ -51,6 +51,20 @@ docker cp orbs_build:$SRC/_bin .
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
 ./docker/build/build-gamma.sh
+
+# Builds experimental features (extra libraries)
+if [[ $CIRCLE_TAG != v* ]] ;
+then
+    # We use an experimental go.mod for these builds
+    rm -rf _bin && mkdir -p _bin _dockerbuild
+    rm -f ./_dockerbuild/go.mod.template
+    SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
+    cp ./docker/build/go.mod.template.experimental ./_dockerbuild/go.mod.t
+    sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
+
+    docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
+    docker build -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
+fi
 
 # Builds experimental features (extra libraries)
 if [[ $CIRCLE_TAG != v* ]] ;
