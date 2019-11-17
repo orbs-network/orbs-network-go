@@ -47,7 +47,7 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	getStressTestHarness().
 		WithTestTimeout(time.Minute). // dropped messages cause LH view progression and the test takes longer
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 12)))
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 3)))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
