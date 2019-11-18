@@ -8,7 +8,8 @@ package _manual
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test/harness"
+	"github.com/orbs-network/orbs-network-go/test/acceptance"
+	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"os"
 	"runtime"
@@ -20,44 +21,41 @@ import (
 var globalBlock *protocol.BlockPairContainer
 
 func TestMemoryLeaks_AfterSomeTransactions(t *testing.T) {
-	harness.Network(t).Start(func(ctx context.Context, network harness.NetworkDriver) {
-		network.DeployBenchmarkToken(ctx, 5)
-		globalBlock = nil
+	acceptance.
+		NewHarness().
+		WithTestTimeout(5*time.Minute).
+		Start(t, func(t testing.TB, ctx context.Context, network *acceptance.Network) {
 
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
+			benchmarkTokenClient := network.DeployBenchmarkTokenContract(ctx, 5)
+			globalBlock = nil
 
-		for i := 0; i < 10; i++ {
-			sendTransactionAndWaitUntilInState(ctx, network)
-		}
+			sendTransactionsSequentially(ctx, network, benchmarkTokenClient, 10)
 
-		runtime.MemProfileRate = 100
-		before, _ := os.Create("/tmp/mem-tx-before.prof")
-		defer before.Close()
-		after, _ := os.Create("/tmp/mem-tx-after.prof")
-		defer after.Close()
+			runtime.MemProfileRate = 100
+			before, _ := os.Create("/tmp/mem-tx-before.prof")
+			defer before.Close()
+			after, _ := os.Create("/tmp/mem-tx-after.prof")
+			defer after.Close()
 
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		pprof.WriteHeapProfile(before)
+			runtime.GC()
+			runtime.GC()
+			runtime.GC()
+			runtime.GC()
+			pprof.WriteHeapProfile(before)
 
-		// play with these lines to find memory leaks in closed blocks
-		for i := 0; i < 500; i++ {
-			sendTransactionAndWaitUntilInState(ctx, network)
-		}
+			// play with these lines to find memory leaks in closed blocks
+			sendTransactionsSequentially(ctx, network, benchmarkTokenClient, 500)
 
-		// play with these lines to see a leak example
-		//globalBlock = builders.BlockPair().WithTransactions(10000).Build()
-		//globalBlock = nil
+			// play with these lines to see a leak example
+			//globalBlock = builders.BlockPair().WithTransactions(10000).Build()
+			//globalBlock = nil
 
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		runtime.GC()
-		pprof.WriteHeapProfile(after)
-
-	})
+			runtime.GC()
+			runtime.GC()
+			runtime.GC()
+			runtime.GC()
+			pprof.WriteHeapProfile(after)
+		})
 }
 
 func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
@@ -73,13 +71,14 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	runtime.GC()
 	pprof.WriteHeapProfile(before)
 
-	harness.Network(t).Start(func(ctx context.Context, network harness.NetworkDriver) {
-		network.DeployBenchmarkToken(ctx, 5)
-		t.Log("testing", network.Description()) // leader is nodeIndex 0, validator is nodeIndex 1
-		for i := 0; i < 20; i++ {
-			sendTransactionAndWaitUntilInState(ctx, network)
-		}
-	})
+	acceptance.
+		NewHarness().
+		WithTestTimeout(5*time.Minute).
+		Start(t, func(t testing.TB, ctx context.Context, network *acceptance.Network) {
+			benchmarkTokenClient := network.DeployBenchmarkTokenContract(ctx, 5)
+
+			sendTransactionsSequentially(ctx, network, benchmarkTokenClient, 20)
+		})
 
 	time.Sleep(20 * time.Millisecond) // give goroutines time to terminate
 
@@ -90,8 +89,9 @@ func TestMemoryLeaks_OnSystemShutdown(t *testing.T) {
 	pprof.WriteHeapProfile(after)
 }
 
-func sendTransactionAndWaitUntilInState(ctx context.Context, network harness.NetworkDriver) {
-	tx := network.Transfer(ctx, 0, 1, 5, 6)
-	network.WaitForTransactionInState(ctx, 0, tx.TransactionReceipt().Txhash())
-	network.WaitForTransactionInState(ctx, 1, tx.TransactionReceipt().Txhash())
+func sendTransactionsSequentially(ctx context.Context, network *acceptance.Network, client callcontract.BenchmarkTokenClient, txCount int) {
+	for i := 0; i < txCount; i++ {
+		_, txHash := client.Transfer(ctx, 0, 1, 5, 6)
+		network.WaitForTransactionInState(ctx, txHash)
+	}
 }

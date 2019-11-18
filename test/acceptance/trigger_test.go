@@ -13,7 +13,7 @@ import (
 )
 
 func TestTriggers_ABlockContainsATriggerTransaction(t *testing.T) {
-	newHarness().
+	NewHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 			blockHeight := primitives.BlockHeight(1)
