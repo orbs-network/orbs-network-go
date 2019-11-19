@@ -312,7 +312,7 @@ func _processValidatorsSelection(candidateVotes map[[20]byte]uint64, totalVotes 
 		}
 	}
 	if len(winners) < MIN_ELECTED_VALIDATORS {
-		fmt.Printf("elections %10d: not enought validators left after vote using all validators %v\n", _getProcessCurrentElectionBlockNumber(), validators)
+		fmt.Printf("elections %10d: not enought validators left after vote using all validators %x\n", _getProcessCurrentElectionBlockNumber(), validators)
 		return validators
 	} else {
 		return winners

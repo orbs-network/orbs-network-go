@@ -34,7 +34,7 @@ func mirrorDelegationByTransfer(hexEncodedEthTxHash string) {
 	eventBlockNumber, eventBlockTxIndex := ethereum.GetTransactionLog(getTokenEthereumContractAddress(), getTokenAbi(), hexEncodedEthTxHash, DELEGATION_BY_TRANSFER_NAME, e)
 
 	if DELEGATION_BY_TRANSFER_VALUE.Cmp(e.Value) != 0 {
-		panic(fmt.Errorf("mirrorDelegateByTransfer from %v to %v failed since %d is wrong delegation value", e.From, e.To, e.Value.Uint64()))
+		panic(fmt.Errorf("mirrorDelegateByTransfer from %x to %x failed since %d is wrong delegation value", e.From, e.To, e.Value.Uint64()))
 	}
 
 	_mirrorDelegateImpl(e.From[:], e.To[:], eventBlockNumber, eventBlockTxIndex, DELEGATION_BY_TRANSFER_NAME)
@@ -59,7 +59,7 @@ func mirrorDelegation(hexEncodedEthTxHash string) {
 
 func _mirrorDelegateImpl(delegator []byte, agent []byte, eventBlockNumber uint64, eventBlockTxIndex uint32, eventName string) {
 	if _isMirrorDelegationDataAfterElection(eventBlockNumber) {
-		panic(fmt.Errorf("delegate with medthod %s from %v to %v failed since it happened in block number %d which is after election date, resubmit next election",
+		panic(fmt.Errorf("delegate with medthod %s from %x to %x failed since it happened in block number %d which is after election date, resubmit next election",
 			eventName, delegator, agent, eventBlockNumber))
 	}
 	_mirrorDelegationData(delegator, agent, eventBlockNumber, eventBlockTxIndex, eventName)
@@ -83,7 +83,7 @@ func _mirrorDelegationData(delegator []byte, agent []byte, eventBlockNumber uint
 	stateMethod := state.ReadString(_formatDelegatorMethod(delegator))
 	stateBlockNumber := uint64(0)
 	if stateMethod == DELEGATION_NAME && eventName == DELEGATION_BY_TRANSFER_NAME {
-		panic(fmt.Errorf("delegate with medthod %s from %v to %v failed since already have delegation with method %s",
+		panic(fmt.Errorf("delegate with medthod %s from %x to %x failed since already have delegation with method %s",
 			eventName, delegator, agent, stateMethod))
 	} else if stateMethod == DELEGATION_BY_TRANSFER_NAME && eventName == DELEGATION_NAME {
 		stateBlockNumber = eventBlockNumber
@@ -91,7 +91,7 @@ func _mirrorDelegationData(delegator []byte, agent []byte, eventBlockNumber uint
 		stateBlockNumber = state.ReadUint64(_formatDelegatorBlockNumberKey(delegator))
 		stateBlockTxIndex := state.ReadUint32(_formatDelegatorBlockTxIndexKey(delegator))
 		if stateBlockNumber > eventBlockNumber || (stateBlockNumber == eventBlockNumber && stateBlockTxIndex >= eventBlockTxIndex) {
-			panic(fmt.Errorf("delegate from %v to %v with block-height %d and tx-index %d failed since current delegation is from block-height %d and tx-index %d",
+			panic(fmt.Errorf("delegate from %x to %x with block-height %d and tx-index %d failed since current delegation is from block-height %d and tx-index %d",
 				delegator, agent, eventBlockNumber, eventBlockTxIndex, stateBlockNumber, stateBlockTxIndex))
 		}
 	}
