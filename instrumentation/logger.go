@@ -13,6 +13,24 @@ import (
 	"os"
 )
 
+func GetBootstrapCrashLogger() log.Logger {
+	path := "./orbs-network-bootstrap.log"
+
+	logFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	fileWriter := log.NewTruncatingFileWriter(logFile)
+	outputs := []log.Output{
+		log.NewFormattingOutput(fileWriter, log.NewHumanReadableFormatter()),
+		log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()),
+		log.NewFormattingOutput(os.Stderr, log.NewHumanReadableFormatter()),
+	}
+
+	return log.GetLogger().WithOutput(outputs...)
+}
+
 func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 	if path == "" {
 		path = "./orbs-network.log"
