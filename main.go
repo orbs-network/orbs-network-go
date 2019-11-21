@@ -26,7 +26,7 @@ func main() {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Error("unexpected error during bootstrap", log.Error(errors.Errorf("unknown error: %v", r)))
-				os.Exit(1)
+				os.Exit(8)
 			}
 		}()
 		httpAddress := flag.String("listen", ":8080", "ip address and port for http server")
@@ -61,8 +61,8 @@ func main() {
 	}()
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("unexpected error during runtime", log.Error(errors.Errorf("unknown error: %v", r)))
-			os.Exit(1)
+			logger.Error("unexpected error in main goroutine", log.Error(errors.Errorf("unknown error: %v", r)))
+			os.Exit(2)
 		}
 	}()
 	node.WaitUntilShutdown(context.Background())
