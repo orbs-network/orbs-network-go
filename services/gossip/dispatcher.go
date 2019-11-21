@@ -124,7 +124,22 @@ func (d *gossipMessageDispatcher) dispatch(ctx context.Context, logger log.Logge
 
 	err = ch.send(ctx, header, payloads)
 	if err != nil {
-		logger.Error("message dropped", log.Error(err), log.Stringable("header", header))
+		logger.Error("message dropped", log.Error(err), log.Stringable("header", header), log.String("topic", stringTopic(header)))
+	}
+}
+
+func stringTopic(header *gossipmessages.Header) string {
+	switch header.Topic() {
+	case gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY:
+		return "transaction-relay"
+	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
+		return "lean-helix"
+	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
+		return "block-sync"
+	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
+		return "benchmark-consensus"
+	default:
+		return ""
 	}
 }
 
