@@ -75,6 +75,7 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout
+      - run: ./.circleci/release-base-image.sh
       - run:
           command: ./.circleci/nightly.sh
           no_output_timeout: 300m
@@ -92,7 +93,6 @@ jobs:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
-      - run: ./.circleci/release-base-image.sh
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
@@ -195,12 +195,6 @@ jobs:
       - checkout
       - run: ./.circleci/release.sh
 
-  release_base_image:
-    machine: true
-    steps:
-      - checkout
-      - run: ./.circleci/release-base-image.sh
-
 workflows:
   version: 2
   build:
@@ -253,7 +247,6 @@ workflows:
               only: /^v.*/
             branches:
               only: master
-      - release_base_image
 
   nightly:
     triggers:
