@@ -12,7 +12,7 @@ echo "Cleaned the following containers:"
 (docker ps -aq | xargs docker rm -fv) || echo "No containers to clean! Good!"
 sleep 3
 
-export NVM_DIR="/root/.nvm"
+export NVM_DIR="/opt/circleci/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 nvm install v11.2 && nvm use v11.2
@@ -36,7 +36,7 @@ export SRC=/go/src/github.com/orbs-network/orbs-network-go
 # prepare persistent blocks for docker tests
 # skip on Mac
 if [[ $(uname) == "Linux" ]]; then
-    rm -rf _tmp/blocks
+    sudo rm -rf _tmp/blocks
 fi
 
 # At the moment Lean Helix doesn't deal well with an existing blocks file
