@@ -94,6 +94,7 @@ jobs:
       docker_layer_caching: true
     steps:
       - checkout
+      - run: ./.circleci/release-go-junit-report.sh
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
