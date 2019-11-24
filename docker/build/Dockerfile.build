@@ -1,4 +1,4 @@
-FROM aviramstern/aviram-orbs:base
+FROM orbsnetwork/base:latest
 
 WORKDIR /src
 

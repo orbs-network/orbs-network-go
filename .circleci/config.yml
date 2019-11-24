@@ -88,19 +88,18 @@ jobs:
           path: _reports
 
   e2e:
-    docker:
-      - image: aviramstern/aviram-orbs:ubuntu-docker
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
+      - release_base_image
       - checkout
-      - setup_remote_docker:
-            docker_layer_caching: true
-#      - run: ./.circleci/install-go.sh
-#      - run: ./.circleci/install-node.sh
-#      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
+      - run: ./.circleci/install-go.sh
+      - run: ./.circleci/install-node.sh
+      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       - run: ./.circleci/install-docker-compose.sh
       # Logs here belong to root
-      - run: rm -rf _logs
+      - run: sudo rm -rf _logs
       - run:
           command: ./docker/test/test.sh
           name: "Docker test with Lean Helix Consensus"
@@ -195,6 +194,11 @@ jobs:
     steps:
       - checkout
       - run: ./.circleci/release.sh
+
+  release_base_image:
+    machine: true
+    steps:
+      - run: ./.circleci/release_base_image.sh
 
 workflows:
   version: 2
