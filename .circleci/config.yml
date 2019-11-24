@@ -92,6 +92,7 @@ jobs:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
+      - run: ./.circleci/release-base-image.sh
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
@@ -218,8 +219,6 @@ workflows:
             branches:
               ignore: master
       - e2e:
-          requires:
-            - release_base_image
           filters:
             tags:
               only: /^v.*/
