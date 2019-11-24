@@ -217,7 +217,6 @@ workflows:
             branches:
               ignore: master
       - e2e:
-
           requires:
             - release_base_image
           filters:
