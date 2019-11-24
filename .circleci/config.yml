@@ -92,6 +92,8 @@ jobs:
     machine:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
+    environment:
+      USE_DOCKERIZED_JUNIT_REPORT: "true"
     steps:
       - checkout
       - run: ./.circleci/install-go.sh

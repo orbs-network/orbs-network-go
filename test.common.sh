@@ -3,7 +3,7 @@
 NIGHTLY=0
 mkdir -p _out
 
-sudo chmod +x ./.circleci/dockerized-go-junit-report.sh
+sudo chmod +x ./.circleci/go-junit-report.sh
 
 check_exit_code_and_report () {
     if [ $EXIT_CODE != 0 ]; then
@@ -37,7 +37,7 @@ go_test_junit_report () {
     mkdir -p $REPORTS_DIR
 
     go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
-    ./.circleci/dockerized-go-junit-report.sh -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
+    ./.circleci/go-junit-report.sh -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
 #    go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
     EXIT_CODE=$?
 
