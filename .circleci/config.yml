@@ -91,7 +91,6 @@ jobs:
     machine:
       image: ubuntu-1604:201903-01
     steps:
-      - release_base_image
       - checkout
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
@@ -218,6 +217,8 @@ workflows:
             branches:
               ignore: master
       - e2e:
+          requires:
+            - release_base_image
           filters:
             tags:
               only: /^v.*/
