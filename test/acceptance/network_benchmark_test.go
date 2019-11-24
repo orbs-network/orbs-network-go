@@ -21,7 +21,7 @@ func BenchmarkInMemoryNetwork(b *testing.B) {
 	limiter := rate.NewLimiter(1000, 100)
 	ctrlRand := rand.NewControlledRand(b)
 
-	newHarness().
+	NewHarness().
 		WithLogFilters(log.DiscardAll()).
 		WithNumNodes(4).Start(b, func(t testing.TB, ctx context.Context, network *Network) {
 

@@ -29,30 +29,30 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 
 	blocks := createInitialBlocks(t, txBuilders)
 
-	newHarness().
+	NewHarness().
 		WithInitialBlocks(blocks).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		//AllowingErrors().
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
-		topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
+			topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 
-		_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
-		_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
+			_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
+			_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
 
-		// this is required because GlobalPreOrder contract relies on state (Approve method), and if state storage is too far behind, GlobalPreOrder will fail on gap
-		require.NoError(t, network.stateBlockHeightTrackers[0].WaitForBlock(ctx, topBlockHeight))
-		require.NoError(t, network.stateBlockHeightTrackers[1].WaitForBlock(ctx, topBlockHeight))
+			// this is required because GlobalPreOrder contract relies on state (Approve method), and if state storage is too far behind, GlobalPreOrder will fail on gap
+			require.NoError(t, network.stateBlockHeightTrackers[0].WaitForBlock(ctx, topBlockHeight))
+			require.NoError(t, network.stateBlockHeightTrackers[1].WaitForBlock(ctx, topBlockHeight))
 
-		// Resend an already committed transaction to Leader
-		leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
-		nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
+			// Resend an already committed transaction to Leader
+			leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
+			nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 
-		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), leaderTxResponse.TransactionStatus().String(),
-			"expected a tx that is committed prior to restart and sent again to leader to be rejected")
-		require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), nonLeaderTxResponse.TransactionStatus().String(),
-			"expected a tx that is committed prior to restart and sent again to non leader to be rejected")
-	})
+			require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), leaderTxResponse.TransactionStatus().String(),
+				"expected a tx that is committed prior to restart and sent again to leader to be rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_COMMITTED.String(), nonLeaderTxResponse.TransactionStatus().String(),
+				"expected a tx that is committed prior to restart and sent again to non leader to be rejected")
+		})
 }
 
 func createInitialBlocks(t testing.TB, txBuilders []*builders.TransactionBuilder) (blocks []*protocol.BlockPairContainer) {
@@ -78,7 +78,7 @@ func TestServiceBlockSync_StateStorage(t *testing.T) {
 
 	blocks, txHashes := createTransferBlocks(t, transfers, transferAmount)
 
-	newHarness().
+	NewHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
 		WithInitialBlocks(blocks).
 		WithLogFilters(log.ExcludeField(gossip.LogTag),

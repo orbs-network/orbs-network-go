@@ -21,7 +21,7 @@ import (
 // Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
 func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 
-	newHarness().
+	NewHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
 		//AllowingErrors().

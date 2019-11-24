@@ -21,7 +21,7 @@ import (
 // TODO: add similar test for lean helix
 
 func TestBenchmarkConsensus_LeaderGetsVotesBeforeNextBlock(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // override default consensus algo
 		WithMaxTxPerBlock(1).
