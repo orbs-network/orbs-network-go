@@ -197,6 +197,7 @@ jobs:
   release_base_image:
     machine: true
     steps:
+      - checkout
       - run: ./.circleci/release-base-image.sh
 
 workflows:
