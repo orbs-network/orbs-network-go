@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+$(aws ecr get-login --no-include-email --region us-west-2)
+
 if [[ ! -z "$CIRCLE_TAG" ]]; then
     echo "This is a release run - Updating the .version file to indicate the correct Semver"
     echo "For this release ($CIRCLE_TAG)..."

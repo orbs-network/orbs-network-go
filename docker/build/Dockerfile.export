@@ -1,4 +1,4 @@
-FROM orbsnetwork/base:latest
+FROM 727534866935.dkr.ecr.us-west-2.amazonaws.com/orbs-network-base:latest
 
 RUN apt-get install -y git
 
