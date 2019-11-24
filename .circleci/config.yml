@@ -253,6 +253,7 @@ workflows:
               only: /^v.*/
             branches:
               only: master
+      - release_base_image
 
   nightly:
     triggers:
