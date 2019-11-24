@@ -23,7 +23,7 @@ var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACT
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
-	newHarness().AllowingErrors(
+	NewHarness().AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
@@ -61,7 +61,7 @@ func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastTwiceToSameNode(t *testing.T) {
-	newHarness().AllowingErrors(
+	NewHarness().AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",
@@ -123,7 +123,7 @@ func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *Network,
 }
 
 func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
-	newHarness().AllowingErrors(
+	NewHarness().AllowingErrors(
 		"error adding transaction to pending pool",
 		"error adding forwarded transaction to pending pool",
 		"error sending transaction",

@@ -10,6 +10,7 @@ package acceptance
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
@@ -23,7 +24,7 @@ import (
 )
 
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -65,7 +66,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 }
 
 func TestLeanHelix_MultipleReElections(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(6).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -101,7 +102,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 }
 
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithEmptyBlockTime(100*time.Millisecond).
 		WithNumNodes(8).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
@@ -151,7 +152,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 }
 
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
-	newHarness().
+	NewHarness().
 		WithNumNodes(7).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -183,6 +184,35 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 
 			network.WaitForTransactionReceiptInTransactionPool(ctx, txHash, 0)
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5, 6})
+
+			t.Log("test done, shutting down")
+
+		})
+}
+
+func TestLeanHelix_CommitTransactionWithCommitteeContractTurnedOff(t *testing.T) {
+	NewHarness().WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
+		c, err := cfg.MergeWithFileConfig(`{"consensus-context-committee-using-contract": false}`)
+		require.NoError(t, err)
+		return c
+	}).
+		WithNumNodes(6).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+			contract := callcontract.NewContractClient(network)
+			token := network.DeployBenchmarkTokenContract(ctx, 5)
+
+			t.Log("elect first 4 out of 6")
+
+			response, _ := contract.UnsafeTests_SetElectedValidators(ctx, 0, []int{0, 1, 2, 3})
+			test.RequireSuccess(t, response, "elect first 4 out of 6 failed")
+
+			t.Log("send transaction to one of the elected")
+
+			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
+			network.WaitForTransactionInNodeState(ctx, txHash, 0)
+			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("test done, shutting down")
 

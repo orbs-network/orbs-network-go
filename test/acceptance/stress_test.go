@@ -21,7 +21,7 @@ import (
 // Control group - if this fails, there are bugs unrelated to message tampering
 func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
-	newHarness().
+	NewHarness().
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 200, rnd)
 		})
@@ -45,8 +45,9 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
+		WithTestTimeout(time.Minute). // dropped messages cause LH view progression and the test takes longer
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
-			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 12)))
+			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 3)))
 
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 100, rnd)
 		})
@@ -69,7 +70,7 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 func TestGazillionTxWhileCorruptingMessages(t *testing.T) {
 	t.Skip("This should work - fix and remove Skip")
 	rnd := rand.NewControlledRand(t)
-	newHarness().
+	NewHarness().
 		AllowingErrors(
 			"transport header is corrupt", // because we corrupt messages
 		).

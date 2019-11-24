@@ -178,7 +178,8 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	// compile
-	args := append([]string{"build", "-buildmode=plugin", "-mod=readonly", "-o", soFilePath}, sourceFilePaths...)
+	args := append(addRaceFlagIfNeeded([]string{"build", "-buildmode=plugin", "-mod=readonly"}), "-o", soFilePath)
+	args = append(args, sourceFilePaths...)
 	out, err := runGoCommand(ctx, artifactsPath, args...)
 	if err != nil {
 		buildOutput := string(out)
@@ -202,6 +203,9 @@ func runGoCommand(ctx context.Context, workDir string, cmdArgs ...string) ([]byt
 		// "GOGC=off", (this improves compilation time by a small factor)
 	}
 	out, err := cmd.CombinedOutput()
+	if ctxErr := ctx.Err(); err != nil && ctxErr != nil {
+		err = errors.Wrap(err, "context error: "+ctxErr.Error())
+	}
 	return out, err
 }
 

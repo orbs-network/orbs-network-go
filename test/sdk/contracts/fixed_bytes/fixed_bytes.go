@@ -1,3 +1,10 @@
+// Copyright 2019 the orbs-network-go authors
+// This file is part of the orbs-network-go library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
+// Contract that shows that contract with public function that accept and return types of bool, big.Int, [20]byte and [32]byte
 package fixed_bytes
 
 import (
@@ -5,8 +12,6 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	"math/big"
 )
-
-const CONTRACT_NAME = "fixedBytes"
 
 var PUBLIC = sdk.Export(getAddress, setAddress, getHash, setHash, getBool, setBool, getToken, setToken)
 var SYSTEM = sdk.Export(_init)

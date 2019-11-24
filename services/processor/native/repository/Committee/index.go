@@ -8,6 +8,7 @@ package committee_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
@@ -15,11 +16,11 @@ import (
 
 // helpers for avoiding reliance on strings throughout the system
 const CONTRACT_NAME = "_Committee"
-const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee"
-const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses"
+const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee" // used with election
+const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses" // used before election or for testing
 const METHOD_UPDATE_MISSES = "updateMisses"
 
-var PUBLIC = sdk.Export(getOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getMisses, updateMisses)
+var PUBLIC = sdk.Export(getOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
 var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 
@@ -27,7 +28,7 @@ func _init() {
 }
 
 func _getElectedValidators() []byte {
-	outputArray := service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)
+	outputArray := service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, env.GetBlockHeight())
 	return outputArray[0].([]byte)
 }
 

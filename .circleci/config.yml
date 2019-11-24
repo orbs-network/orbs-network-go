@@ -6,7 +6,7 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.sh
           no_output_timeout: 15m
@@ -25,7 +25,7 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.races.sh
           no_output_timeout: 25m
@@ -44,7 +44,7 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run: ./test.goroutine-leaks.sh
       - run: ./test.memory-leaks.sh
 
@@ -55,7 +55,7 @@ jobs:
     resource_class: xlarge
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
@@ -94,14 +94,9 @@ jobs:
       - checkout
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh
-      - run: go get github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./docker/build/build.sh
       - run: ./.circleci/install-docker-compose.sh
-      - run:
-          command: ./docker/test/test.sh
-          name: "Docker test with Benchmark Consensus"
-          environment:
-            CONSENSUSALGO: benchmark
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
@@ -117,6 +112,13 @@ jobs:
           path: _logs
       - store_artifacts:
           path: _out
+
+  call_marvin:
+    docker:
+      - image: circleci/golang:1.12.9
+    steps:
+      - checkout
+      - run: ./.circleci/marvin-stress.sh
 
   success:
     machine:
@@ -138,7 +140,7 @@ jobs:
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
-      - run: go get github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./docker/test/ganache-related-test.sh
       - store_artifacts:
           path: _out
@@ -151,7 +153,7 @@ jobs:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 42 40
       - store_test_results:
@@ -162,7 +164,7 @@ jobs:
       - image: circleci/golang:1.12.9
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run: sleep 300
       - run: ./.circleci/e2e-testnet.sh 2013 2011
       - store_test_results:
@@ -179,7 +181,7 @@ jobs:
       TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
-      - run: go get github.com/orbs-network/go-junit-report
+      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/chain_on_pr.sh
       - store_test_results:
           path: _reports
@@ -200,11 +202,8 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-
       - races
-
       - memory_leaks
-
       - deploy_new_chain_pr_only:
           requires:
             - e2e
@@ -235,6 +234,9 @@ workflows:
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
+      - call_marvin:
+          requires:
+            - e2e_testnet_leanhelix
       - release:
           requires:
             - tests

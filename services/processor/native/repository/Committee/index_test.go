@@ -41,9 +41,11 @@ func TestOrbsCommitteeContract_getElectedValidators(t *testing.T) {
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
+		blockHeight := 10
 
 		// prepare
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS, []interface{}{_concat(addrs)})
+		m.MockEnvBlockHeight(blockHeight)
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addrs)}, uint64(blockHeight))
 
 		// run with empty seed
 		electedConcatenated := _getElectedValidators()

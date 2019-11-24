@@ -17,7 +17,7 @@ import (
 )
 
 func TestSubscriptionProblemThanBecomesOkAgain(t *testing.T) {
-	newHarness().
+	NewHarness().
 		AllowingErrors("error validating transaction for preorder").
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)

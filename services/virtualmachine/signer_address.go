@@ -13,7 +13,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+var EmptySignerAddress = []byte{0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0}
+
 func (s *service) getSignerAddress(signer *protocol.Signer) (primitives.ClientAddress, error) {
+	if len(signer.Raw()) == 0 {
+		return EmptySignerAddress, nil
+	}
 	switch signer.Scheme() {
 	case protocol.SIGNER_SCHEME_EDDSA:
 		return digest.CalcClientAddressOfEd25519Signer(signer)
