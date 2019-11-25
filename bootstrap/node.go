@@ -43,7 +43,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
-	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
+	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()), log.Uint32("virtual-chain-id", uint32(nodeConfig.VirtualChainId())))
 	metricRegistry := getMetricRegistry(nodeConfig)
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
