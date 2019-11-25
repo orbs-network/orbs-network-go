@@ -24,9 +24,13 @@ func main() {
 
 	clearBlocksFile()
 
-	n := e2e.NewInProcessE2EAppNetwork(42, e2e.NewLoggerRandomer())
+	n := e2e.NewInProcessE2EAppNetwork(42, e2e.NewLoggerRandomer(), "/tmp/dummy")
 
-	time.Sleep(time.Minute) // accumulate blocks
+	var reachedTargetHeight bool
+	for !reachedTargetHeight {
+		time.Sleep(time.Second)
+		reachedTargetHeight = e2e.CannedBlocksFileMinHeight < e2e.NewAppHarness().GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
+	}
 
 	extractBlocksFile()
 

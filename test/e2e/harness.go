@@ -48,16 +48,18 @@ const START_HTTP_PORT = 8090
 const START_GOSSIP_PORT = 8190
 
 type Harness struct {
-	client *orbsClient.OrbsClient
-	config *E2EConfig
+	client     *orbsClient.OrbsClient
+	metricsUrl string
+	config     *E2EConfig
 }
 
 func NewMgmtHarness() *Harness {
 	config := GetConfig()
 
 	return &Harness{
-		client: orbsClient.NewClient(config.MgmtChainUrl, uint32(config.MgmtVcid), codec.NETWORK_TYPE_TEST_NET),
-		config: &config,
+		client:     orbsClient.NewClient(config.MgmtChainUrl, uint32(config.MgmtVcid), codec.NETWORK_TYPE_TEST_NET),
+		metricsUrl: config.MgmtChainUrl + "/metrics",
+		config:     &config,
 	}
 }
 
@@ -65,8 +67,9 @@ func NewAppHarness() *Harness {
 	config := GetConfig()
 
 	return &Harness{
-		client: orbsClient.NewClient(config.AppChainUrl, uint32(config.AppVcid), codec.NETWORK_TYPE_TEST_NET),
-		config: &config,
+		client:     orbsClient.NewClient(config.AppChainUrl, uint32(config.AppVcid), codec.NETWORK_TYPE_TEST_NET),
+		metricsUrl: config.AppChainUrl + "/metrics",
+		config:     &config,
 	}
 }
 
@@ -163,17 +166,13 @@ func (h *Harness) GetTransactionReceiptProof(txId string) (response *codec.GetTr
 	return
 }
 
-func (h *Harness) absoluteUrlFor(endpoint string) string {
-	return GetConfig().AppChainUrl + endpoint
-}
-
 type metrics map[string]map[string]interface{}
 
-func (h *Harness) getMetrics() metrics {
-	res, err := http.Get(h.absoluteUrlFor("/metrics"))
+func (h *Harness) GetMetrics() metrics {
+	res, err := http.Get(h.metricsUrl)
 
 	if err != nil {
-		fmt.Println(h.absoluteUrlFor("/metrics"), err)
+		fmt.Println(h.metricsUrl, err)
 	}
 
 	if res == nil {
@@ -205,7 +204,7 @@ func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
 	require.True(t, test.Eventually(15*time.Second, func() bool {
 
-		m := h.getMetrics()
+		m := h.GetMetrics()
 		if m == nil {
 			return false
 		}
@@ -237,6 +236,10 @@ func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
 func PrintTestTime(t *testing.T, msg string, last *time.Time) {
 	t.Logf("%s (+%.3fs)", msg, time.Since(*last).Seconds())
 	*last = time.Now()
+}
+
+func (h *Harness) envSupportsLoadingWithCannedBlocksFile() bool {
+	return h.config.RemoteEnvironment
 }
 
 func GetConfig() E2EConfig {

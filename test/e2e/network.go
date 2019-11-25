@@ -99,7 +99,7 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 				processorArtifactPath,
 				ethereumEndpoint,
 				leaderKeyPair.NodeAddress(),
-				consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS,
+				consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX,
 				experimentalExternalProcessorPluginPath,
 			)
 

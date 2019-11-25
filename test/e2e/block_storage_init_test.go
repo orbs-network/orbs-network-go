@@ -7,33 +7,29 @@
 package e2e
 
 import (
-	"testing"
-	"time"
-
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 func TestInitialBlockHeight(t *testing.T) {
-	const expectedBlocks = 500
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	runMultipleTimes(t, func(t *testing.T) {
-		h := NewAppHarness()
+	h := NewAppHarness()
 
-		// This test is useless against remote networks since we cannot tamper with their storage
-		// So for the time being we skip this test
-		if h.config.RemoteEnvironment {
-			t.Skip("Running against remote network - skipping")
-		}
+	if h.envSupportsLoadingWithCannedBlocksFile() {
+		t.Skip("Running against remote network - skipping")
+	}
 
-		require.True(t, test.Eventually(2*time.Second, func() bool {
-			blockHeight := h.getMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
-			return blockHeight >= expectedBlocks
-		}), "expected e2e network to launch with %v blocks", expectedBlocks)
+	h.WaitUntilTransactionPoolIsReady(t)
+
+	var blockHeight uint64
+	test.Eventually(5*time.Second, func() bool {
+		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		return blockHeight >= CannedBlocksFileMinHeight
 	})
-
-	//time.Sleep(time.Minute * 5)
+	require.GreaterOrEqual(t, blockHeight, uint64(CannedBlocksFileMinHeight), "expected e2e network to start closing blocks at block height greater than init blocks file")
 }
