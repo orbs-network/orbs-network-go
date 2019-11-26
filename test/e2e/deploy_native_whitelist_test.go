@@ -23,7 +23,6 @@ func TestContractWhitelist(t *testing.T) {
 	}
 
 	runMultipleTimes(t, func(t *testing.T) {
-
 		h := NewAppHarness()
 		lt := time.Now()
 		PrintTestTime(t, "started", &lt)

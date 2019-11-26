@@ -35,6 +35,7 @@ type E2EConfig struct {
 	MgmtChainUrl      string
 	StressTest        StressTestConfig
 	EthereumEndpoint  string
+	IsExperimental    bool
 }
 
 type StressTestConfig struct {
@@ -242,6 +243,7 @@ func PrintTestTime(t *testing.T, msg string, last *time.Time) {
 func GetConfig() E2EConfig {
 	appVcid := primitives.VirtualChainId(42)
 	mgmtVcid := primitives.VirtualChainId(40)
+	isExperimental := strings.HasPrefix(os.Getenv("CIRCLE_TAG"), "v")
 
 	if vcId, err := strconv.ParseUint(os.Getenv("VCHAIN"), 10, 0); err == nil {
 		appVcid = primitives.VirtualChainId(vcId)
@@ -283,6 +285,7 @@ func GetConfig() E2EConfig {
 		MgmtVcid:          mgmtVcid,
 		Bootstrap:         shouldBootstrap,
 		RemoteEnvironment: isRemoteEnvironment,
+		IsExperimental:    isExperimental,
 		AppChainUrl:       appChainUrl,
 		MgmtChainUrl:      mgmtChainUrl,
 		StressTest: StressTestConfig{

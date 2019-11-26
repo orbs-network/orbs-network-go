@@ -19,8 +19,11 @@ func TestContractExperimentalLibraries(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
-	runMultipleTimes(t, func(t *testing.T) {
+	if !GetConfig().IsExperimental {
+		t.Skip("skipping because it's a tagged release")
+	}
 
+	runMultipleTimes(t, func(t *testing.T) {
 		h := NewAppHarness()
 		lt := time.Now()
 		PrintTestTime(t, "started", &lt)
