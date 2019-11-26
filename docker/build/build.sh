@@ -55,13 +55,15 @@ docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
 # Builds experimental features (extra libraries)
 if [[ $CIRCLE_TAG != v* ]] ;
 then
+    export ORBS_EXPERIMENTAL="true"
+    
     # We use an experimental go.mod for these builds
     rm -rf _bin && mkdir -p _bin _dockerbuild
     rm -f ./_dockerbuild/go.mod.template
     SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
     cp ./docker/build/go.mod.template.experimental ./_dockerbuild/go.mod.t
     sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
-
+    
     docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
     docker build -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
 fi
