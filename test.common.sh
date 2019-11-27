@@ -38,7 +38,6 @@ go_test_junit_report () {
 
     go test -v $@ &> ${OUT_DIR}/test.out || true # so that we always go to the junit report step
     ./.circleci/go-junit-report.sh -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
-#    go-junit-report -set-exit-code < ${OUT_DIR}/test.out > ${OUT_DIR}/results.xml
     EXIT_CODE=$?
 
     cp ${OUT_DIR}/results.xml ${REPORTS_DIR}/results.xml # so that we have it in _out for uploading as artifact, and separately in _reports since CircleCI doesn't like test summary dir to contain huge files
