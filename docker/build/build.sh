@@ -1,8 +1,10 @@
 #!/bin/bash -e
 
+GO_MOD_TEMPLATE=./docker/build/go.mod.template
 if [[ $CIRCLE_TAG != v* ]] ;
 then
   export ORBS_EXPERIMENTAL="true"
+  GO_MOD_TEMPLATE=./docker/build/go.mod.template.experimental
 fi
 
 if [[ ! -z "$CIRCLE_TAG" ]]; then
@@ -45,18 +47,6 @@ docker run --name orbs_build orbs:build sleep 1
 
 export SRC=/src
 
-GO_MOD_TEMPLATE=./docker/build/go.mod.template
-DOCKERFILE_SIGNER=./docker/build/Dockerfile.signer
-DOCKERFILE_EXPORT=./docker/build/Dockerfile.export
-DOCKERFILE_GAMMA=./docker/build/Dockerfile.gamma
-
-if [[ $ORBS_EXPERIMENTAL == "true" ]] ;
-then
-  GO_MOD_TEMPLATE=./docker/build/go.mod.template.experimental
-  DOCKERFILE_EXPORT=./docker/build/Dockerfile.export.experimental
-  DOCKERFILE_GAMMA=./docker/build/Dockerfile.gamma.experimental
-fi
-
 rm -rf _bin && mkdir -p _bin _dockerbuild
 rm -f ./_dockerbuild/go.mod.template
 SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
@@ -65,6 +55,12 @@ sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.templ
 
 docker cp orbs_build:$SRC/_bin .
 
-docker build -f $DOCKERFILE_EXPORT -t orbs:export .
-docker build -f $DOCKERFILE_SIGNER -t orbs:signer .
-docker build --no-cache -f $DOCKERFILE_GAMMA -t orbs:gamma-server .
+docker build -f ./docker/build/Dockerfile.export -t orbs:export .
+docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
+docker build --no-cache -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
+
+if [[ $ORBS_EXPERIMENTAL == "true" ]] ;
+then
+  docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
+  docker build --no-cache -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
+fi
