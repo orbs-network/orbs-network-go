@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"os"
+	"runtime/pprof"
 	"testing"
 	"time"
 )
@@ -30,16 +31,36 @@ func TestMain(m *testing.M) {
 		appNetwork.GracefulShutdownAndWipeDisk()
 		mgmtNetwork.GracefulShutdownAndWipeDisk()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		appNetwork.WaitUntilShutdown(shutdownCtx)
-		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+		func() {
+			defer func() { // TODO remove once https://github.com/orbs-network/govnr/issues/8 is resolved
+				if err := recover(); err != nil {
+					printErrorAndStackTraces(err)
+				}
+			}()
+			appNetwork.WaitUntilShutdown(shutdownCtx)
+			mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+		}()
 
 	} else {
 		exitCode = m.Run()
 	}
 
 	os.Exit(exitCode)
+}
+
+func printErrorAndStackTraces(err interface{}) {
+	fmt.Printf("Error waiting for system shutdown: %v\n", err)
+	fmt.Println("------------------------------------------")
+	fmt.Println("Locking goroutines: ")
+	fmt.Println("------------------------------------------")
+	pprof.Lookup("block").WriteTo(os.Stdout, 1)
+	fmt.Println()
+	fmt.Println("------------------------------------------")
+	fmt.Println("All goroutines: ")
+	fmt.Println("------------------------------------------")
+	pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 }
 
 func runMultipleTimes(t *testing.T, f func(t *testing.T)) {
