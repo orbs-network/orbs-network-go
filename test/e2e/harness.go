@@ -35,6 +35,7 @@ type E2EConfig struct {
 	MgmtChainUrl      string
 	StressTest        StressTestConfig
 	EthereumEndpoint  string
+	IsExperimental    bool
 }
 
 type StressTestConfig struct {
@@ -245,6 +246,9 @@ func (h *Harness) envSupportsLoadingWithCannedBlocksFile() bool {
 func GetConfig() E2EConfig {
 	appVcid := primitives.VirtualChainId(42)
 	mgmtVcid := primitives.VirtualChainId(40)
+	experimentalFlag := strings.ToLower(os.Getenv("ORBS_EXPERIMENTAL"))
+	isExperimental := experimentalFlag != "" && experimentalFlag != "false" &&
+		experimentalFlag != "0"
 
 	if vcId, err := strconv.ParseUint(os.Getenv("VCHAIN"), 10, 0); err == nil {
 		appVcid = primitives.VirtualChainId(vcId)
@@ -286,6 +290,7 @@ func GetConfig() E2EConfig {
 		MgmtVcid:          mgmtVcid,
 		Bootstrap:         shouldBootstrap,
 		RemoteEnvironment: isRemoteEnvironment,
+		IsExperimental:    isExperimental,
 		AppChainUrl:       appChainUrl,
 		MgmtChainUrl:      mgmtChainUrl,
 		StressTest: StressTestConfig{
