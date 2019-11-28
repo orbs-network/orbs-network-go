@@ -32,18 +32,30 @@ func TestCompileValidContract(t *testing.T) {
 		if testing.Short() {
 			t.Skip("Skipping compilation of contracts in short mode")
 		}
-		// give the test one minute timeout to compile
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
+		err := compilationOfMockCounterContract(t, parent)
+		require.NoError(t, err)
+	})
+}
 
-		cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
-		defer cleanup()
-		compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+func TestCompileContractConcurrently(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		if testing.Short() {
+			t.Skip("Skipping compilation of contracts in short mode")
+		}
 
-		code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
-		_, err := compiler.Compile(ctx, code)
-		t.Log("Error : ", err)
-		require.NoError(t, err, "compile should not fail")
+		const concurrentCount = 5
+		doneChan := make(chan interface{}, concurrentCount)
+		for i := 0; i < concurrentCount; i++ {
+			go func() {
+				err := compilationOfMockCounterContract(t, parent)
+				doneChan <- err
+			}()
+		}
+
+		for i := 0; i < concurrentCount; i++ {
+			ctxErr := <-doneChan
+			require.Nil(t, ctxErr, "expected concurrent contract compilation to succeed")
+		}
 	})
 }
 
@@ -174,4 +186,16 @@ func getFileSize(filePath string) int64 {
 		panic("could not get file size")
 	}
 	return fi.Size()
+}
+
+func compilationOfMockCounterContract(t *testing.T, parent *with.LoggingHarness) error {
+	// give the test one minute timeout to compile
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	cfg, cleanup := adapterTest.NewConfigWithTempDir(t)
+	defer cleanup()
+	compiler := NewNativeCompiler(cfg, parent.Logger, metric.NewRegistry())
+	code := string(contracts.NativeSourceCodeForCounter(contracts.MOCK_COUNTER_CONTRACT_START_FROM))
+	_, err := compiler.Compile(ctx, code)
+	return err
 }
