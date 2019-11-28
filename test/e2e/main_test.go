@@ -33,16 +33,15 @@ func TestMain(m *testing.M) {
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		func() {
-			defer func() { // TODO remove once https://github.com/orbs-network/govnr/issues/8 is resolved
-				if err := recover(); err != nil {
-					printErrorAndStackTraces(err)
-				}
-			}()
-			appNetwork.WaitUntilShutdown(shutdownCtx)
-			mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+
+		defer func() { // TODO remove once https://github.com/orbs-network/govnr/issues/8 is resolved
+			if err := recover(); err != nil {
+				printErrorAndStackTraces(err)
+			}
 		}()
 
+		appNetwork.WaitUntilShutdown(shutdownCtx)
+		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
 	} else {
 		exitCode = m.Run()
 	}
