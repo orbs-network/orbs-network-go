@@ -63,7 +63,7 @@ func (s *service) callGetOrderedCommitteeSystemContractUntilSuccess(ctx context.
 		// log every 500 failures
 		if attempts%500 == 1 {
 			if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
-				s.logger.Error("cannot get ordered committee from system contract", log.Error(err), logfields.BlockHeight(blockHeight), log.Int("attempts", attempts))
+				s.logger.Info("cannot get ordered committee from system contract", log.Error(err), logfields.BlockHeight(blockHeight), log.Int("attempts", attempts))
 			}
 		}
 
@@ -139,7 +139,7 @@ func (s *service) callGetOrderedCommitteeForAddressesSystemContractUntilSuccess(
 		// log every 500 failures
 		if attempts%500 == 1 {
 			if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
-				s.logger.Error("cannot get ordered committee for addresses", log.Error(err), logfields.BlockHeight(blockHeight), log.Int("attempts", attempts))
+				s.logger.Info("cannot get ordered committee for addresses", log.Error(err), logfields.BlockHeight(blockHeight), log.Int("attempts", attempts))
 			}
 		}
 
