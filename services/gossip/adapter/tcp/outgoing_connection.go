@@ -28,16 +28,11 @@ type timingsConfig interface {
 	GossipConnectionKeepAliveInterval() time.Duration
 }
 
-type singleConnectionMetric struct {
-	latency *metric.Histogram
-}
-
 type outgoingConnection struct {
 	logger         log.Logger
 	metricRegistry metric.Registry
 	config         timingsConfig
 	sharedMetrics  *outgoingConnectionMetrics // TODO this is smelly, see how we can restructure metrics so that an outgoing connection doesn't have to share the parent metrics
-	metrics        *singleConnectionMetric
 	queue          *transportQueue
 	peerHexAddress string
 	cancel         context.CancelFunc
@@ -59,11 +54,8 @@ func newOutgoingConnection(peer config.GossipPeer, parentLogger log.Logger, metr
 	queue.Disable() // until connection is established
 
 	client := &outgoingConnection{
-		logger:        logger,
-		sharedMetrics: sharedMetrics,
-		metrics: &singleConnectionMetric{
-			latency: metricFactory.NewLatency(fmt.Sprintf("Gossip.OutgoingConnection.Latency.%s", hexAddressSliceForLogging), time.Hour),
-		},
+		logger:          logger,
+		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
 		config:          transportConfig,
 		queue:           queue,
@@ -233,7 +225,6 @@ func (c *outgoingConnection) sendToSocket(ctx context.Context, conn net.Conn, da
 }
 
 func (c *outgoingConnection) sendKeepAlive(ctx context.Context, conn net.Conn) error {
-	start := time.Now()
 	timeout := c.config.GossipNetworkTimeout()
 	zeroBuffer := make([]byte, 4)
 
@@ -242,8 +233,6 @@ func (c *outgoingConnection) sendKeepAlive(ctx context.Context, conn net.Conn) e
 	if err != nil {
 		return err
 	}
-
-	c.metrics.latency.RecordSince(start)
 
 	return nil
 }
