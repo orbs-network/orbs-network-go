@@ -2,6 +2,13 @@
 
 $(aws ecr get-login --no-include-email --region us-west-2)
 
+GO_MOD_TEMPLATE=./docker/build/go.mod.template
+if [[ $CIRCLE_TAG != v* ]] ;
+then
+  export ORBS_EXPERIMENTAL="true"
+  GO_MOD_TEMPLATE=./docker/build/go.mod.template.experimental
+fi
+
 if [[ ! -z "$CIRCLE_TAG" ]]; then
     echo "This is a release run - Updating the .version file to indicate the correct Semver"
     echo "For this release ($CIRCLE_TAG)..."
@@ -45,39 +52,17 @@ export SRC=/src
 rm -rf _bin && mkdir -p _bin _dockerbuild
 rm -f ./_dockerbuild/go.mod.template
 SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
-cp ./docker/build/go.mod.template ./_dockerbuild/go.mod.t
+cp $GO_MOD_TEMPLATE ./_dockerbuild/go.mod.t
 sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
 
 docker cp orbs_build:$SRC/_bin .
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
-./docker/build/build-gamma.sh
+docker build --no-cache -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
 
-# Builds experimental features (extra libraries)
-if [[ $CIRCLE_TAG != v* ]] ;
+if [[ $ORBS_EXPERIMENTAL == "true" ]] ;
 then
-    # We use an experimental go.mod for these builds
-    rm -rf _bin && mkdir -p _bin _dockerbuild
-    rm -f ./_dockerbuild/go.mod.template
-    SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
-    cp ./docker/build/go.mod.template.experimental ./_dockerbuild/go.mod.t
-    sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
-
-    docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
-    docker build -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
-fi
-
-# Builds experimental features (extra libraries)
-if [[ $CIRCLE_TAG != v* ]] ;
-then
-    # We use an experimental go.mod for these builds
-    rm -rf _bin && mkdir -p _bin _dockerbuild
-    rm -f ./_dockerbuild/go.mod.template
-    SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
-    cp ./docker/build/go.mod.template.experimental ./_dockerbuild/go.mod.t
-    sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
-
-    docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
-    docker build -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
+  docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
+  docker build --no-cache -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
 fi
