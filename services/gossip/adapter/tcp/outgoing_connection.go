@@ -29,13 +29,14 @@ type timingsConfig interface {
 }
 
 type outgoingConnection struct {
-	logger         log.Logger
-	metricRegistry metric.Registry
-	config         timingsConfig
-	sharedMetrics  *outgoingConnectionMetrics // TODO this is smelly, see how we can restructure metrics so that an outgoing connection doesn't have to share the parent metrics
-	queue          *transportQueue
-	peerHexAddress string
-	cancel         context.CancelFunc
+	logger          log.Logger
+	metricRegistry  metric.Registry
+	config          timingsConfig
+	sharedMetrics   *outgoingConnectionMetrics // TODO this is smelly, see how we can restructure metrics so that an outgoing connection doesn't have to share the parent metrics
+	roundtripMetric *metric.Histogram
+	queue           *transportQueue
+	peerHexAddress  string
+	cancel          context.CancelFunc
 
 	sendErrors      *metric.Gauge
 	sendQueueErrors *metric.Gauge
@@ -57,6 +58,7 @@ func newOutgoingConnection(peer config.GossipPeer, parentLogger log.Logger, metr
 		logger:          logger,
 		sharedMetrics:   sharedMetrics,
 		metricRegistry:  metricFactory,
+		roundtripMetric: metricFactory.NewLatency(fmt.Sprintf("Gossip.OutgoingConnection.Roundtrip.%s", hexAddressSliceForLogging), time.Hour),
 		config:          transportConfig,
 		queue:           queue,
 		peerHexAddress:  hexAddressSliceForLogging,
@@ -106,6 +108,20 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 	}
 }
 
+func isTimeoutError(err error) bool {
+	e, ok := err.(net.Error)
+	return ok && e.Timeout()
+}
+
+func tryRead(errCh chan error) (error, bool) {
+	select {
+	case err := <-errCh:
+		return err, true
+	default:
+		return nil, false
+	}
+}
+
 // returns true if should attempt reconnect on error
 func (c *outgoingConnection) handleOutgoingConnection(ctx context.Context, conn net.Conn) bool {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx), log.Stringable("local-address", conn.LocalAddr()))
@@ -119,9 +135,22 @@ func (c *outgoingConnection) handleOutgoingConnection(ctx context.Context, conn 
 
 	defer conn.Close() // we only exit this function when this connection has errored, or if we're disconnecting, so we can safely defer close()
 
+	transmissionTimeQueue := newTransmissionTimeQueue()
+
+	ackThreadErrChan := make(chan error)
+	childCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	c.receiveAcks(childCtx, conn, transmissionTimeQueue, func(err error) { ackThreadErrChan <- err })
+
 	for {
+		if err, ok := tryRead(ackThreadErrChan); ok && err != nil { // if receiveAcks closed without an error, then we are closing as well
+			logger.Info("connection closing due to error on ack thread")
+			return c.reconnectAfterSocketError(logger, err)
+		}
+
 		if data := c.popMessageFromQueue(ctx); data != nil {
 			// got data from queue
+			transmissionTimeQueue.push(time.Now()) // must push before sending to avoid race with ack thread
 			err := c.sendToSocket(ctx, conn, data)
 			if err != nil {
 				logger.Info("connection closing due to socket error")
@@ -235,6 +264,37 @@ func (c *outgoingConnection) sendKeepAlive(ctx context.Context, conn net.Conn) e
 	}
 
 	return nil
+}
+
+func (c *outgoingConnection) receiveAcks(ctx context.Context, conn net.Conn, transmissionTimeRecorder *TransmissionTimeQueue, onClose func(err error)) {
+	govnr.Once(logfields.GovnrErrorer(c.logger), func() {
+		var err error
+		defer func() {
+			panicErr := recover()
+			if panicErr != nil {
+				err = fmt.Errorf("reciveAcks thread panicked: %s", panicErr)
+			}
+			if ctx.Err() == nil {
+				c.logger.Info("shutting down ack thread:", log.Error(err))
+				onClose(err)
+			} else {
+				onClose(nil)
+			}
+		}()
+		for {
+			_, err = readTotal(ctx, conn, uint32(len(ACK_BUFFER)), c.config.GossipConnectionKeepAliveInterval())
+			if err != nil {
+				if !isTimeoutError(err) {
+					return // error is passed to onClose by defer
+				}
+			} else {
+				t, ok := transmissionTimeRecorder.pop()
+				if ok {
+					c.roundtripMetric.RecordSince(t)
+				}
+			}
+		}
+	})
 }
 
 func write(ctx context.Context, conn net.Conn, buffer []byte, timeout time.Duration) error {

@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+var ACK_BUFFER = []byte{0x11, 0x22, 0x33, 0x44}
+
 type serverConfig interface {
 	GossipListenPort() uint16
 	GossipNetworkTimeout() time.Duration
@@ -216,6 +218,12 @@ func (t *transportServer) receiveTransportData(ctx context.Context, conn net.Con
 		}
 	}
 
+	// send ack
+	err = write(ctx, conn, ACK_BUFFER, timeout)
+	if err != nil {
+		return nil, err
+	}
+
 	return res, nil
 }
 
@@ -254,9 +262,11 @@ func (t *transportServer) GracefulShutdown(shutdownContext context.Context) {
 	defer t.Unlock()
 	l := t.netListener
 	t.netListener = nil
-	err := l.Close()
-	if err != nil {
-		t.logger.Error("Failed to close direct transport lister", log.Error(err))
+	if l != nil {
+		err := l.Close()
+		if err != nil {
+			t.logger.Error("Failed to close direct transport lister", log.Error(err))
+		}
 	}
 	t.shutdownServer()
 }
