@@ -50,7 +50,7 @@ jobs:
 
   flakiness:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
     parallelism: 6
     resource_class: xlarge
     steps:
