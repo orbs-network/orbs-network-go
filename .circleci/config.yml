@@ -236,11 +236,13 @@ workflows:
       - memory_leaks
       - deploy_new_chain_pr_only:
           requires:
-            - e2e
+            - node_e2e
             - tests
           filters:
             branches:
               ignore: master
+      - build_docker_node
+      - build_docker_gamma
       - node_e2e:
           requires:
             - build_docker_node
