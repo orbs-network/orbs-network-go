@@ -87,6 +87,22 @@ jobs:
       - store_test_results:
           path: _reports
 
+  build_docker_node:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - checkout
+      - run: ./docker/build/build-docker-node.sh
+      - run: ./.circleci/release-node-to-ecr.sh
+
+  build_docker_gamma:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - checkout
+      - run: ./docker/build/build-docker-gamma.sh
+      - run: ./.circleci/release-gamma-to-ecr.sh
+
   e2e:
     machine:
       image: ubuntu-1604:201903-01
