@@ -3,6 +3,13 @@
 NIGHTLY=0
 mkdir -p _out
 
+OS=$(uname -s)
+if [ $OS == "Darwin" ]; then
+    tac () {
+        tail -r -- "$@";
+    }
+fi
+
 check_exit_code_and_report () {
     if [ $EXIT_CODE != 0 ]; then
         grep -B 150 -A 15 -- "FAIL:" ./$OUT_DUR/test.out > ./$OUT_DUR/fail.out
