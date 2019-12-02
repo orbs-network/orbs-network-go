@@ -101,7 +101,7 @@ jobs:
     steps:
       - checkout
       - run: ./docker/build/build-docker-gamma.sh #TODO dedup commonalities between this and build-docker-node.sh
-      - run: ./.circleci/release_gamma-to-ecr.sh
+      - run: ./.circleci/release-gamma-to-ecr.sh
 
   node_e2e:
     machine:
