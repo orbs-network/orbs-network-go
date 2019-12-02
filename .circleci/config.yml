@@ -98,6 +98,7 @@ jobs:
   build_docker_gamma:
     machine:
       image: ubuntu-1604:201903-01
+      docker_layer_caching: true
     steps:
       - checkout
       - run: ./docker/build/build-docker-gamma.sh #TODO dedup commonalities between this and build-docker-node.sh
@@ -130,6 +131,7 @@ jobs:
   gamma_e2e: #TODO dedup common steps with node_e2e
     machine:
       image: ubuntu-1604:201903-01
+      docker_layer_caching: true
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
