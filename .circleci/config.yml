@@ -90,6 +90,7 @@ jobs:
   build_docker_node:
     machine:
       image: ubuntu-1604:201903-01
+      docker_layer_caching: true
     steps:
       - checkout
       - run: ./docker/build/build-docker-node.sh
@@ -107,6 +108,7 @@ jobs:
   node_e2e:
     machine:
       image: ubuntu-1604:201903-01
+      docker_layer_caching: true
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
@@ -120,7 +122,6 @@ jobs:
           name: "Docker test with Lean Helix Consensus"
           environment:
             CONSENSUSALGO: leanhelix
-      - run: ./.circleci/release-node-to-ecr.sh
       - store_test_results:
           path: _reports
       - store_artifacts:
@@ -139,7 +140,6 @@ jobs:
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/gamma-e2e.sh
-      - run: ./.circleci/release_gamma-to-ecr.sh #TODO dedup commonalities with release-node-to-ecr
       - store_test_results:
           path: _reports
       - store_artifacts:
