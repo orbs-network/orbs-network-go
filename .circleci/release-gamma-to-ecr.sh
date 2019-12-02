@@ -1,7 +1,6 @@
 #!/bin/bash
 
 $(aws ecr get-login --no-include-email --region us-west-2)
-
 DOCKER_TAG=$(./docker/tag.sh)
 DOCKER_HASH=$(./docker/hash.sh)
 
