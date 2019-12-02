@@ -58,7 +58,7 @@ func (c *client) Sign(ctx context.Context, input []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, "error creating request to signer server")
 	}
 	request.Header.Set("Content-Type", "binary/octet-stream")
-	if traceContext, ok := trace.FromContext(ctx); ok {
+	if traceContext, _ := trace.FromContext(ctx); traceContext != nil {
 		traceContext.WriteTraceToRequest(request)
 	}
 
