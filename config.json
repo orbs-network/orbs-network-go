@@ -1,0 +1,242 @@
+{
+  "network": [],
+  "orchestrator": {
+    "storage-driver": "rexray/ebs",
+    "max-reload-time-delay": "1m"
+  },
+  "chains": [
+    {
+      "Id": 1000000,
+      "Disabled": true,
+      "HttpPort": 8000,
+      "GossipPort": 4000,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "7a11b8f6e739ca74d7c4fe3b8a2a8d213d83e768",
+          "e30a30069209aa4e7e7b07ab391966a0f071afd9"
+        ],
+        "ethereum-endpoint": "http://ec2-18-222-114-71.us-east-2.compute.amazonaws.com:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1"
+      }
+    },
+    {
+      "Id": 1000001,
+      "HttpPort": 8001,
+      "GossipPort": 4001,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1-1"
+      }
+    },
+    {
+      "Id": 1100000,
+      "HttpPort": 8002,
+      "GossipPort": 4003,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c",
+          "74a53750cb23b14b8e256f777a2df9f4a57984db",
+          "f19bafe71844282a88776f87496328de19658992",
+          "d78869ba2436abfa639724c6ff8cf1a7b451cdb5"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "lean-helix-show-debug": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1"
+      }
+    },
+    {
+      "Id": 1000,
+      "Disabled": true,
+      "HttpPort": 8004,
+      "GossipPort": 4004,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c",
+          "74a53750cb23b14b8e256f777a2df9f4a57984db",
+          "f19bafe71844282a88776f87496328de19658992",
+          "d78869ba2436abfa639724c6ff8cf1a7b451cdb5"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "lean-helix-show-debug": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1"
+      }
+    },
+    {
+      "Id": 5110,
+      "HttpPort": 8005,
+      "GossipPort": 4005,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c",
+          "74a53750cb23b14b8e256f777a2df9f4a57984db",
+          "f19bafe71844282a88776f87496328de19658992",
+          "d78869ba2436abfa639724c6ff8cf1a7b451cdb5"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "lean-helix-show-debug": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.2.2"
+      }
+    },
+    {
+      "Id": 1660000,
+      "Disabled": true,
+      "HttpPort": 8006,
+      "GossipPort": 4006,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c",
+          "74a53750cb23b14b8e256f777a2df9f4a57984db",
+          "f19bafe71844282a88776f87496328de19658992",
+          "d78869ba2436abfa639724c6ff8cf1a7b451cdb5"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "lean-helix-show-debug": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1"
+      }
+    },
+    {
+      "Id": 1960000,
+      "HttpPort": 8007,
+      "GossipPort": 4007,
+      "DockerConfig": {
+        "ContainerNamePrefix": "orbs-network",
+        "Image": "orbsnetwork/node",
+        "Tag": "65c87e89",
+        "Pull": true
+      },
+      "Config": {
+        "genesis-validator-addresses": [
+          "8A44E9c662dcF0677D529Ef3b000f29a8f741B60",
+          "718d4317e8d75f6494da9c8f7abb0554f58fafe4",
+          "ebd89878947689dfd8353239ec9fe0330ae808ac",
+          "6ea62E3Abd6Bdd597fE73002a30C29659D7fe88D",
+          "E30A30069209aA4e7e7B07aB391966a0f071aFD9",
+          "F2D94675d9A10085fEb499359FcD42a2Dc16d62B",
+          "7a11b8f6E739CA74d7C4fe3B8a2a8D213D83e768",
+          "71CbE6F119d99C6CD5c1EC0eC59678F36F1Fed85",
+          "7Ab403dE6F3eD5d203932dD3DD5D0D5d86C66301",
+          "B5651D9962c7757b26489e091Fe97F540E3edA6c",
+          "74a53750cb23b14b8e256f777a2df9f4a57984db",
+          "f19bafe71844282a88776f87496328de19658992",
+          "d78869ba2436abfa639724c6ff8cf1a7b451cdb5"
+        ],
+        "ethereum-endpoint": "http://172.31.100.100:8545",
+        "active-consensus-algo": 2,
+        "logger-file-truncation-interval": "15m",
+        "profiling": true,
+        "lean-helix-show-debug": true,
+        "logger-http-endpoint": "https://listener.logz.io:8071/?token=kATbDvYGTXTOOfyvDYGbWrGdIFBPpvHI&type=prod",
+        "reload": "v1.1.1"
+      }
+    }
+  ]
+}

@@ -220,7 +220,7 @@ jobs:
     docker:
       - image: circleci/golang:1.12.9
     steps:
-      - run: echo "updating the boyar config for the Core Team audit node" #TODO reuse code that updates boyar config on testnet?
+      - run: ./.circleci/deploy-audit-node.sh
 
 workflows:
   version: 2
