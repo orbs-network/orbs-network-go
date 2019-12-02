@@ -241,9 +241,9 @@ workflows:
               only: /^v.*/
       - races
       - memory_leaks
-      - deploy_new_chain_pr_only:
+      - deploy_new_chain_pr_only: #TODO unify with deploy_testnet job if we want to keep this a single workflow; marvin needs to run against the deployed chain as well
           requires:
-            - node_e2e
+            - build_docker_node
             - tests
           filters:
             branches:
