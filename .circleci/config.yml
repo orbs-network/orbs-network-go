@@ -243,13 +243,6 @@ workflows:
               only: /^v.*/
       - races
       - memory_leaks
-      - deploy_new_chain_pr_only: #TODO unify with deploy_testnet job if we want to keep this a single workflow; marvin needs to run against the deployed chain as well
-          requires:
-            - build_docker_node
-            - tests
-          filters:
-            branches:
-              ignore: master
       - build_docker_node
       - build_docker_gamma
       - node_e2e:
@@ -273,6 +266,13 @@ workflows:
             branches:
               only:
                 - master
+      - deploy_new_chain_pr_only: #TODO unify with deploy_testnet job if we want to keep this a single workflow; marvin needs to run against the deployed chain as well
+          requires:
+            - build_docker_node
+            - tests # no point in deploying to testnet if one of the fast tests has failed
+          filters:
+            branches:
+              ignore: master
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
