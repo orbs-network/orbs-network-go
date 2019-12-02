@@ -51,6 +51,10 @@ fi
 
 # run docker-reliant tests
 docker-compose -f ./docker/test/docker-compose.yml up -d
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]
+  then exit $EXIT_CODE
+fi
 
 export API_ENDPOINT=http://localhost:8082/api/v1/ \
       MGMT_API_ENDPOINT=http://localhost:8086/api/v1/ \
@@ -61,7 +65,7 @@ export API_ENDPOINT=http://localhost:8082/api/v1/ \
       STRESS_TEST_TARGET_TPS=100 \
       STRESS_TEST='true' \
       ETHEREUM_ENDPOINT=http://localhost:8545/ \
-      ETHEREUM_PRIVATE_KEY=f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19 
+      ETHEREUM_PRIVATE_KEY=f2ce3a9eddde6e5d996f6fe7c1882960b0e8ee8d799e0ef608276b8de4dc7f19
       ETHEREUM_PUBLIC_KEY=037a809cc481303d337c1c83d1ba3a2222c7b1b820ac75e3c6f8dc63fa0ed79b18 \
       EXTERNAL_TEST='true'
 
@@ -69,10 +73,10 @@ export API_ENDPOINT=http://localhost:8082/api/v1/ \
 
 echo "The network has started with pre-existing (ancient) 500-some blocks"
 
-echo "Polling the app network for liveness.." 
+echo "Polling the app network for liveness.."
 ./.circleci/check-e2e-network-liveness.js 42 10
 
-echo "Polling the management network for liveness.." 
+echo "Polling the management network for liveness.."
 ./.circleci/check-e2e-network-liveness.js 40 10
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
