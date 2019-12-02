@@ -214,8 +214,8 @@ jobs:
       TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
-      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
-      - run: ./.circleci/chain_on_pr.sh
+      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report #TODO remove as this shouldn't actually run the tests
+      - run: ./.circleci/chain_on_pr.sh #TODO this step should only deploy, and return when then chain is closing blocks; tests will run in Marvin.
       - store_test_results:
           path: _reports
       - store_artifacts:
