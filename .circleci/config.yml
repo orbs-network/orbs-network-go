@@ -112,7 +112,7 @@ jobs:
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
-      - run: ./.circleci/install-node.sh
+      - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
       # Logs here belong to root
@@ -136,7 +136,7 @@ jobs:
     steps:
       - checkout
       - run: ./.circleci/install-go.sh
-      - run: ./.circleci/install-node.sh
+      - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/gamma-e2e.sh
