@@ -211,7 +211,8 @@ jobs:
           path: _out
 
   release_ga:
-    machine: true
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - checkout
       - run: ./.circleci/release.sh
