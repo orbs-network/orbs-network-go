@@ -115,6 +115,7 @@ jobs:
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
+      - run: ./docker/test/import-node-ecr.sh
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
@@ -139,6 +140,7 @@ jobs:
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
+      - run: ./docker/test/import-gamma-ecr.sh
       - run: ./docker/test/gamma-e2e.sh
       - store_test_results:
           path: _reports
