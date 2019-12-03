@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const path = require('path');
-const { waitUntilSync, waitUntilVersion, getBlockHeight } = require('@orbs-network/orbs-nebula/lib/metrics');
+const { waitUntilSync, getVersion, getBlockHeight } = require('@orbs-network/orbs-nebula/lib/metrics');
 
 const configFilePath = path.join(process.cwd(), 'config.json');
 const topology = require(configFilePath);
@@ -28,8 +28,26 @@ async function eventuallyDeployed({ chainId, nodes }) {
     let versionDeployed = false;
 
     const promises = nodes.map(({ ip }) => {
-        console.log('waiting until commit for chain id: ', chainId, ' and IP: ', ip, ' and commit: ', chainSpecificTargetHash);
-        return waitUntilVersion(`${ip}/vchains/${chainId}`, chainSpecificTargetHash);
+        return new Promise((resolve, reject) => {
+            console.log('waiting until commit for chain id: ', chainId, ' and IP: ', ip, ' and commit: ', chainSpecificTargetHash);
+            let attempts = 0;
+            let allowedAttempts = 50;
+
+            const pid = setInterval(async () => {
+                attempts++;
+                const versionHash = await getVersion(`${ip}/vchains/${chainId}`);
+                console.log('Getting version from audit node..');
+                console.log('Got: ', versionHash, ' we need: ', chainSpecificTargetHash);
+
+                if (versionHash.indexOf(chainSpecificTargetHash) !== -1) {
+                    clearInterval(pid);
+                    resolve();
+                }
+                if (attempts >= allowedAttempts) {
+                    reject();
+                }
+            }, 15 * 1000);
+        });
     });
 
     try {
