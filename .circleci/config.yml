@@ -220,8 +220,8 @@ jobs:
       - run: ./.circleci/release.sh
 
   deploy_audit_node:
-    machine:
-      image: ubuntu-1604:201903-01
+    docker:
+      - image: itamararjuan/golang_with_node_aws
     steps:
       - checkout
       - run: ./.circleci/deploy-audit-node.sh
