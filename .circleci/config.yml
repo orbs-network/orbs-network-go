@@ -224,7 +224,10 @@ jobs:
       - image: itamararjuan/golang_with_node_aws
     steps:
       - checkout
-      - run: ./.circleci/deploy-audit-node.sh
+      - run:
+          name: "Deploy Audit Node"
+          command: ./.circleci/deploy-audit-node.sh
+          no_output_timeout: 45m
 
 workflows:
   version: 2
