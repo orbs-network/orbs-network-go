@@ -8,6 +8,7 @@ package tcp
 
 import (
 	"context"
+	membuffers "github.com/orbs-network/membuffers/go"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test"
@@ -82,15 +83,47 @@ type serverStub struct {
 	listener net.Listener
 	conn     net.Conn
 	port     int
+	t        testing.TB
 }
 
 func newServerStub(t testing.TB) *serverStub {
-	s := &serverStub{}
+	s := &serverStub{t: t}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "test peer server could not listen")
 	s.listener = listener
 	s.port = listener.Addr().(*net.TCPAddr).Port
 	return s
+}
+
+// TODO this is based on transportServer.receiveTransportData, consider unifying
+func (s *serverStub) readMessage(ctx context.Context) [][]byte {
+	var res [][]byte
+
+	// receive num payloads
+	sizeBuffer, err := readTotal(ctx, s.conn, 4, time.Second)
+	require.NoError(s.t, err)
+	numPayloads := membuffers.GetUint32(sizeBuffer)
+
+	for i := uint32(0); i < numPayloads; i++ {
+		// receive payload size
+		sizeBuffer, err := readTotal(ctx, s.conn, 4, time.Second)
+		require.NoError(s.t, err)
+		payloadSize := membuffers.GetUint32(sizeBuffer)
+
+		// receive payload data
+		payload, err := readTotal(ctx, s.conn, payloadSize, time.Second)
+		require.NoError(s.t, err)
+		res = append(res, payload)
+
+		// receive padding
+		paddingSize := calcPaddingSize(uint32(len(payload)))
+		if paddingSize > 0 {
+			_, err := readTotal(ctx, s.conn, paddingSize, time.Second)
+			require.NoError(s.t, err)
+		}
+	}
+
+	return res
 }
 
 func (s *serverStub) Close() {

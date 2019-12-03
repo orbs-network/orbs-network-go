@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const MaxQueueSize = 100
+const MaxTransmissionTimeQueueSize = 100
 
 type TransmissionTimeQueue struct {
 	times        chan time.Time
@@ -15,7 +15,7 @@ type TransmissionTimeQueue struct {
 
 func newTransmissionTimeQueue() *TransmissionTimeQueue {
 	return &TransmissionTimeQueue{
-		times:        make(chan time.Time, MaxQueueSize),
+		times:        make(chan time.Time, MaxTransmissionTimeQueueSize),
 		droppedCount: 0,
 		lock:         sync.Mutex{},
 	}
