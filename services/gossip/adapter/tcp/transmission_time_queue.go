@@ -29,7 +29,7 @@ func (c *TransmissionTimeQueue) push(sentAt time.Time) {
 	case c.times <- sentAt:
 		return
 	default:
-		_ = <-c.times
+		<-c.times
 		c.droppedCount++
 		c.times <- sentAt
 	}
