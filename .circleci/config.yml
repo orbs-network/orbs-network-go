@@ -220,8 +220,8 @@ jobs:
       - run: ./.circleci/release.sh
 
   deploy_audit_node:
-    docker:
-      - image: circleci/golang:1.12.9
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - run: ./.circleci/deploy-audit-node.sh
 
