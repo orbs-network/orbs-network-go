@@ -8,7 +8,6 @@ package instrumentation
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/scribe/log"
 	"os"
 )
@@ -60,9 +59,7 @@ func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(cfg.LoggerHttpEndpoint()), customJSONFormatter, bulkSize))
 	}
 
-	logger := log.GetLogger().WithTags(
-		logfields.VirtualChainId(cfg.VirtualChainId()),
-	).WithOutput(outputs...)
+	logger := log.GetLogger().WithOutput(outputs...)
 
 	conditionalFilter := log.NewConditionalFilter(false, nil)
 

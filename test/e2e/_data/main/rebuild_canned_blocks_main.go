@@ -24,7 +24,7 @@ func main() {
 
 	clearBlocksFile()
 
-	n := e2e.NewInProcessE2EAppNetwork(42, e2e.NewLoggerRandomer(), "/tmp/dummy")
+	n := e2e.NewInProcessE2EAppNetwork(42, e2e.NewLoggerRandomer(), "")
 
 	var reachedTargetHeight bool
 	for !reachedTargetHeight {

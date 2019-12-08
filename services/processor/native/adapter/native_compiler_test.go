@@ -43,18 +43,22 @@ func TestCompileContractConcurrently(t *testing.T) {
 			t.Skip("Skipping compilation of contracts in short mode")
 		}
 
-		const concurrentCount = 5
-		doneChan := make(chan interface{}, concurrentCount)
-		for i := 0; i < concurrentCount; i++ {
+		const concurrencyCount = 5
+		done := make(chan struct{}, concurrencyCount)
+		signalDone := func() {
+			done <- struct{}{}
+		}
+
+		for i := 0; i < concurrencyCount; i++ {
 			go func() {
+				defer signalDone() // defer since NoError() may Goexit()
 				err := compilationOfMockCounterContract(t, parent)
-				doneChan <- err
+				require.NoError(t, err, "expected concurrent contract compilation to succeed")
 			}()
 		}
 
-		for i := 0; i < concurrentCount; i++ {
-			ctxErr := <-doneChan
-			require.Nil(t, ctxErr, "expected concurrent contract compilation to succeed")
+		for i := 0; i < concurrencyCount; i++ { // wait for goroutines termination
+			<-done
 		}
 	})
 }
