@@ -26,6 +26,10 @@ func TestDeploymentOfProcessorPlugin(t *testing.T) {
 		t.Skip("Skipping E2E tests in short mode")
 	}
 
+	if !e2e.GetConfig().Bootstrap {
+		t.Skip("this test only makes sense in a local build")
+	}
+
 	runMultipleTimes(t, func(t *testing.T) {
 
 		h := e2e.NewAppHarness()

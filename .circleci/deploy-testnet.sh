@@ -18,7 +18,5 @@ aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/confi
 echo "Configuration updated for all nodes in the CI testnet"
 echo "Waiting for all nodes to restart and reflect the new version is running"
 
-node .circleci/check-testnet-deployment.js 40
-node .circleci/check-testnet-deployment.js 42
 node .circleci/check-testnet-deployment.js 2011
 node .circleci/check-testnet-deployment.js 2013

@@ -1,4 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash
+$(aws ecr get-login --no-include-email --region us-west-2)
 
 . ./test.common.sh
 
@@ -11,6 +12,11 @@ sleep 3
 
 echo "Spinning a Gamma instance.."
 docker-compose -f ./docker/test/docker-compose-gamma.yml up -d
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]
+  then exit $EXIT_CODE
+fi
+
 export API_ENDPOINT=http://localhost:8080
 
 echo "Running Gamma server tests with Ganache.."
