@@ -162,6 +162,9 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 			var err error
 			lhBlockProof, err = ExtractBlockProof(blockPair)
 			if err != nil {
+				if s.config.ActiveConsensusAlgo() == consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX {
+					s.logger.Info("HandleBlockConsensus(): LeanHelix is the active consensus algo but it failed to extract block proof", log.Error(err))
+				}
 				return nil, err
 			}
 			lhBlock = ToLeanHelixBlock(blockPair)

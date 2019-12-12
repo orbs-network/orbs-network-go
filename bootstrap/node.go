@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap/httpserver"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
@@ -43,7 +44,10 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
-	nodeLogger := logger.WithTags(log.Node(nodeConfig.NodeAddress().String()))
+	nodeLogger := logger.WithTags(
+		log.Node(nodeConfig.NodeAddress().String()),
+		logfields.VirtualChainId(nodeConfig.VirtualChainId()),
+	)
 	metricRegistry := getMetricRegistry(nodeConfig)
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)

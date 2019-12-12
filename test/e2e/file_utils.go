@@ -19,6 +19,7 @@ import (
 )
 
 const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
+const CannedBlocksFileMinHeight = 500
 
 func CopyFile(sourcePath string, targetPath string) error {
 	rawBlocks, err := ioutil.ReadFile(sourcePath)

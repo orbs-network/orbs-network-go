@@ -20,6 +20,7 @@ import (
 	"plugin"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
@@ -89,7 +90,12 @@ func (c *nativeCompiler) warmUpCompilationCache() {
 	}
 }
 
+var compilerLock sync.Mutex // workaround to make TestCompileContractConcurrently() pass. TODO resolve without locking
+
 func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkContext.ContractInfo, error) {
+	compilerLock.Lock()
+	defer compilerLock.Unlock()
+
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 	c.metrics.sourceSize.Record(int64(len(code)))
 	start := time.Now()

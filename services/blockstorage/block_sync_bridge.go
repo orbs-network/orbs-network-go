@@ -31,7 +31,7 @@ func (s *Service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 		blockHeight = lastCommittedBlock.TransactionsBlock.Header.BlockHeight()
 	}
 
-	logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock calling notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
+	logger.Info("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence calling notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	err = s.notifyConsensusAlgos(
 		ctx,
 		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block
@@ -41,7 +41,7 @@ func (s *Service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 		logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))
 		return
 	} else {
-		logger.Info("UpdateConsensusAlgosAboutLatestCommittedBlock returned from notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
+		logger.Info("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence returned from notifyConsensusAlgos with UPDATE_ONLY", logfields.BlockHeight(blockHeight))
 	}
 }
 
