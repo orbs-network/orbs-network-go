@@ -1,15 +1,15 @@
 #!/bin/bash -e
 
-# aws --version
-# export NVM_DIR="$HOME/.nvm"
-# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+aws --version
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-# nvm use $NODE_VERSION
+nvm use $NODE_VERSION
 
-# export COMMIT_HASH=$(./docker/hash.sh)
+export COMMIT_HASH=$(./docker/hash.sh)
 
-# cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
+cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
 
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
