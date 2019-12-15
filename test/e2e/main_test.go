@@ -24,12 +24,12 @@ func TestMain(m *testing.M) {
 	if config.Bootstrap {
 		tl := NewLoggerRandomer()
 
-		mgmtNetwork := NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, "")
+		//mgmtNetwork := NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, "")
 		appNetwork := NewInProcessE2EAppNetwork(config.AppVcid, tl, "")
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()
-		mgmtNetwork.GracefulShutdownAndWipeDisk()
+		//mgmtNetwork.GracefulShutdownAndWipeDisk()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 		}()
 
 		appNetwork.WaitUntilShutdown(shutdownCtx)
-		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+		//mgmtNetwork.WaitUntilShutdown(shutdownCtx)
 	} else {
 		exitCode = m.Run()
 	}
