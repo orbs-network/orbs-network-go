@@ -3,9 +3,9 @@
 . ./test.common.sh
 
 # Get the vchains to act upon from CircleCI's workspace
-$VCHAIN=$(cat ./workspace/app_chain_id)
-$MGMT_VCHAIN=$(cat ./workspace/mgmt_chain_id)
-$TESTNET_IP=$(cat ./workspace/testnet_ip)
+VCHAIN=$(cat workspace/app_chain_id)
+MGMT_VCHAIN=$(cat workspace/mgmt_chain_id)
+TESTNET_IP=$(cat workspace/testnet_ip)
 
 export API_ENDPOINT=http://$TESTNET_IP/vchains/$VCHAIN/ \
     MGMT_API_ENDPOINT=http://$TESTNET_IP/vchains/$MGMT_VCHAIN/ \
