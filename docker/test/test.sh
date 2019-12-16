@@ -57,9 +57,9 @@ if [ $EXIT_CODE -ne 0 ]
 fi
 
 export API_ENDPOINT=http://localhost:8082/api/v1/ \
-      MGMT_API_ENDPOINT=http://localhost:8086/api/v1/ \
+#      MGMT_API_ENDPOINT=http://localhost:8086/api/v1/ \
       VCHAIN=42 \
-      MGMT_VCHAIN=40 \
+#      MGMT_VCHAIN=40 \
       STRESS_TEST_NUMBER_OF_TRANSACTIONS=5000 \
       STRESS_TEST_FAILURE_RATE=20 \
       STRESS_TEST_TARGET_TPS=100 \
@@ -76,8 +76,8 @@ echo "The network has started with pre-existing (ancient) 500-some blocks"
 echo "Polling the app network for liveness.."
 ./.circleci/check-e2e-network-liveness.js 42 10
 
-echo "Polling the management network for liveness.."
-./.circleci/check-e2e-network-liveness.js 40 10
+#echo "Polling the management network for liveness.."
+#./.circleci/check-e2e-network-liveness.js 40 10
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 time go_test_junit_report e2e -timeout 10m -count=1 ./test/e2e/...

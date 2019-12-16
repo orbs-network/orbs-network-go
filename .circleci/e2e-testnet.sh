@@ -1,12 +1,12 @@
 #!/bin/bash -x
 
 export VCHAIN=$1
-export MGMT_VCHAIN=$2
+#export MGMT_VCHAIN=$2
 
 . ./test.common.sh
 
 export API_ENDPOINT=http://35.167.243.123/vchains/$VCHAIN/ \
-    MGMT_API_ENDPOINT=http://35.167.243.123/vchains/$MGMT_VCHAIN/ \
+#    MGMT_API_ENDPOINT=http://35.167.243.123/vchains/$MGMT_VCHAIN/ \
     REMOTE_ENV="true" \
     STRESS_TEST_NUMBER_OF_TRANSACTIONS=100 \
     STRESS_TEST_FAILURE_RATE=20 \

@@ -26,13 +26,13 @@ var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant 
 // Also Lean Helix consensus algo requires it to be >= 4 or it will panic
 const LOCAL_NETWORK_SIZE = 4
 
-func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
-	randomer.logger.Info("starting management network")
-	cleanNativeProcessorCache(virtualChainId)
-	cleanBlockStorage(virtualChainId)
-
-	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false, randomer, experimentalExternalProcessorPluginPath)
-}
+//func NewInProcessE2EMgmtNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
+//	randomer.logger.Info("starting management network")
+//	cleanNativeProcessorCache(virtualChainId)
+//	cleanBlockStorage(virtualChainId)
+//
+//	return bootstrapE2ENetwork(LOCAL_NETWORK_SIZE, "mgmt", virtualChainId, false, randomer, experimentalExternalProcessorPluginPath)
+//}
 
 func NewInProcessE2EAppNetwork(virtualChainId primitives.VirtualChainId, randomer *loggerRandomer, experimentalExternalProcessorPluginPath string) *inProcessE2ENetwork {
 	randomer.logger.Info("starting application network")

@@ -98,57 +98,57 @@ services:
       orbs-network:
         ipv4_address: 192.168.199.5
 
-  orbs-mgmt-chain-node-1:
-    extends:
-      file: common-services.yml
-      service: orbs-chain-node
-    ports:
-      - 8084:8080
-    volumes:
-      - ../../_tmp/blocks/node1-mgmt/:/usr/local/var/orbs/
-    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1-mgmt.json --log /opt/orbs/logs/node1-mgmt.log
-    networks:
-      orbs-network:
-        ipv4_address: 192.168.199.22
-
-  orbs-mgmt-chain-node-2:
-    extends:
-      file: common-services.yml
-      service: orbs-chain-node
-    ports:
-      - 8085:8080
-    volumes:
-      - ../../_tmp/blocks/node2-mgmt/:/usr/local/var/orbs/
-    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2-mgmt.json --log /opt/orbs/logs/node2-mgmt.log
-    networks:
-      orbs-network:
-        ipv4_address: 192.168.199.23
-
-  orbs-mgmt-chain-node-3:
-    extends:
-      file: common-services.yml
-      service: orbs-chain-node
-    ports:
-      - 8086:8080
-    volumes:
-      - ../../_tmp/blocks/node3-mgmt/:/usr/local/var/orbs/
-    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3-mgmt.json --log /opt/orbs/logs/node3-mgmt.log
-    networks:
-      orbs-network:
-        ipv4_address: 192.168.199.24
-
-  orbs-mgmt-chain-node-4:
-    extends:
-      file: common-services.yml
-      service: orbs-chain-node
-    ports:
-      - 8087:8080
-    volumes:
-      - ../../_tmp/blocks/node4-mgmt/:/usr/local/var/orbs/
-    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4-mgmt.json --log /opt/orbs/logs/node4-mgmt.log
-    networks:
-      orbs-network:
-        ipv4_address: 192.168.199.25
+#  orbs-mgmt-chain-node-1:
+#    extends:
+#      file: common-services.yml
+#      service: orbs-chain-node
+#    ports:
+#      - 8084:8080
+#    volumes:
+#      - ../../_tmp/blocks/node1-mgmt/:/usr/local/var/orbs/
+#    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1-mgmt.json --log /opt/orbs/logs/node1-mgmt.log
+#    networks:
+#      orbs-network:
+#        ipv4_address: 192.168.199.22
+#
+#  orbs-mgmt-chain-node-2:
+#    extends:
+#      file: common-services.yml
+#      service: orbs-chain-node
+#    ports:
+#      - 8085:8080
+#    volumes:
+#      - ../../_tmp/blocks/node2-mgmt/:/usr/local/var/orbs/
+#    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2-mgmt.json --log /opt/orbs/logs/node2-mgmt.log
+#    networks:
+#      orbs-network:
+#        ipv4_address: 192.168.199.23
+#
+#  orbs-mgmt-chain-node-3:
+#    extends:
+#      file: common-services.yml
+#      service: orbs-chain-node
+#    ports:
+#      - 8086:8080
+#    volumes:
+#      - ../../_tmp/blocks/node3-mgmt/:/usr/local/var/orbs/
+#    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3-mgmt.json --log /opt/orbs/logs/node3-mgmt.log
+#    networks:
+#      orbs-network:
+#        ipv4_address: 192.168.199.24
+#
+#  orbs-mgmt-chain-node-4:
+#    extends:
+#      file: common-services.yml
+#      service: orbs-chain-node
+#    ports:
+#      - 8087:8080
+#    volumes:
+#      - ../../_tmp/blocks/node4-mgmt/:/usr/local/var/orbs/
+#    command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4-mgmt.json --log /opt/orbs/logs/node4-mgmt.log
+#    networks:
+#      orbs-network:
+#        ipv4_address: 192.168.199.25
 
 networks:
   orbs-network:
