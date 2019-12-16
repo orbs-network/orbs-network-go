@@ -2,7 +2,7 @@
 
 echo "Downloading the current testnet Boyar config.json"
 curl -O $BOOTSTRAP_URL
-echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs which already closed"
+echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs that are already closed"
 
 node .circleci/testnet-cleanup-mark.js
 
