@@ -23,6 +23,8 @@ var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumCon
 	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidatorStake, getValidatorVote, getExcellenceProgramGuardians,
 	getCurrentEthereumBlockNumber,
 
+	_fixRewardsDrift9108900,
+
 	// feature flag
 	switchToTimeBasedElections,
 
