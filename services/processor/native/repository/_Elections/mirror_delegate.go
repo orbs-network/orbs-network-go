@@ -41,8 +41,9 @@ func mirrorDelegationByTransfer(hexEncodedEthTxHash string) {
 }
 
 type Delegate struct {
-	Delegator [20]byte
-	To        [20]byte
+	Delegator         [20]byte
+	To                [20]byte
+	DelegationCounter *big.Int // this is needed even though we don't read it, otherwise ABI parse would fail with message abi: field delegationCounter can't be found in the given value
 }
 
 func mirrorDelegation(hexEncodedEthTxHash string) {
