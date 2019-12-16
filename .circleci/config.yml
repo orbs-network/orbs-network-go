@@ -237,10 +237,22 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - races
-      - memory_leaks
-      - node_docker_build
-      - gamma_docker_build
+      - races:
+          filters:
+            tags:
+              only: /^v.*/
+      - memory_leaks:
+          filters:
+            tags:
+              only: /^v.*/
+      - node_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
+      - gamma_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
       - node_e2e:
           requires:
             - node_docker_build
@@ -253,23 +265,21 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - flakiness
-      - ganache_related_tests
+      - flakiness:
+          filters:
+            tags:
+              only: /^v.*/
+      - ganache_related_tests:
+          filters:
+            tags:
+              only: /^v.*/
       - deploy_testnet:
           requires:
             - node_docker_build
             - tests # no point in deploying to testnet if one of the fast tests has failed
           filters:
-            branches:
-              only:
-                - master
-      - deploy_new_chain_pr_only: #TODO unify with deploy_testnet job if we want to keep this a single workflow; marvin needs to run against the deployed chain as well
-          requires:
-            - node_docker_build
-            - tests # no point in deploying to testnet if one of the fast tests has failed
-          filters:
-            branches:
-              ignore: master
+            tags:
+              only: /^v.*/
       - e2e_testnet_leanhelix:
           requires:
             - deploy_testnet
