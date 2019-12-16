@@ -197,6 +197,12 @@ jobs:
       - store_artifacts:
           path: _out
 
+  success:
+    docker:
+      - image: circleci/golang:1.12.9
+    steps:
+      - run: echo "We have passed all required steps and are mergeable!"
+
   deploy_testnet:
     docker:
       - image: itamararjuan/golang_with_node_aws
@@ -262,7 +268,7 @@ workflows:
       - deploy_testnet:
           requires:
             - node_docker_build
-            - tests # no point in deploying to testnet if one of the fast tests has failed
+            - tests
       - e2e_testnet:
           requires:
             - deploy_testnet
@@ -276,13 +282,19 @@ workflows:
       - marvin_reporter:
           requires:
             - marvin_analysis
+      - success:
+          requires:
+            - gamma_e2e
+            - node_e2e           
+            - marvin_analysis
+            - tests
+            - ganache_related_tests
+            - races
+            - flakiness
+            - memory_leaks
       - release_ga:
           requires:
-            - tests
-            - node_e2e
-            - gamma_e2e
-            - marvin_reporter
-            - ganache_related_tests
+            - success
           filters:
             tags:
               only: /^v.*/

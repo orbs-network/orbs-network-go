@@ -32,17 +32,17 @@ func TestMain(m *testing.M) {
 	if config.Bootstrap {
 		tl := e2e.NewLoggerRandomer()
 
-		mgmtNetwork := e2e.NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, pluginPath)
+		//mgmtNetwork := e2e.NewInProcessE2EMgmtNetwork(config.MgmtVcid, tl, pluginPath)
 		appNetwork := e2e.NewInProcessE2EAppNetwork(config.AppVcid, tl, pluginPath)
 
 		exitCode = m.Run()
 		appNetwork.GracefulShutdownAndWipeDisk()
-		mgmtNetwork.GracefulShutdownAndWipeDisk()
+		//mgmtNetwork.GracefulShutdownAndWipeDisk()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		appNetwork.WaitUntilShutdown(shutdownCtx)
-		mgmtNetwork.WaitUntilShutdown(shutdownCtx)
+		//mgmtNetwork.WaitUntilShutdown(shutdownCtx)
 
 	} else {
 		exitCode = m.Run()

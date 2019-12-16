@@ -24,9 +24,7 @@ echo "Done!"
 
 echo "Creating a network for this PR within the config.json file.."
 PR_APP_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH "APP")
-PR_MGMT_CHAIN_ID=$(node .circleci/testnet-deploy-new-chain-for-pr.js $CI_PULL_REQUESTS $COMMIT_HASH "MGMT")
 echo "Done adding a new app chain ($PR_APP_CHAIN_ID)"
-echo "Done adding a new mgmt chain ($PR_MGMT_CHAIN_ID)"
 
 echo "Copying the newly updated config.json to S3"
 aws s3 cp --acl public-read config.json $BOOTSTRAP_S3_URI
@@ -39,4 +37,3 @@ sleep 120
 
 echo "Checking deployment status:"
 node .circleci/check-testnet-deployment.js $PR_APP_CHAIN_ID
-node .circleci/check-testnet-deployment.js $PR_MGMT_CHAIN_ID
