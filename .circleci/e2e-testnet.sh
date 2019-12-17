@@ -6,10 +6,15 @@
 VCHAIN=$(cat workspace/app_chain_id)
 TESTNET_IP=$(cat workspace/testnet_ip)
 
+echo "Downloading the current testnet Boyar config.json"
+curl -O $BOOTSTRAP_URL
+
+./.circleci/check-testnet-deployment.js $VCHAIN
+
 echo "Running E2E on deployed app chain ($VCHAIN)"
 echo "on IP: $TESTNET_IP"
 
-export API_ENDPOINT=http://$TESTNET_IP/vchains/$VCHAIN/ \    
+export API_ENDPOINT=http://$TESTNET_IP/vchains/$VCHAIN/ \
     REMOTE_ENV="true" \
     STRESS_TEST_NUMBER_OF_TRANSACTIONS=100 \
     STRESS_TEST_FAILURE_RATE=20 \

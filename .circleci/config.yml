@@ -186,12 +186,17 @@ jobs:
   e2e_testnet:
     docker:
       - image: circleci/golang:1.12.9
+    environment:
+      BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
     steps:
       - checkout
       - attach_workspace:
           at: workspace
       - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/e2e-testnet.sh
+      - store_artifacts:
+          path: _out
+          destination: test-output
       - store_test_results:
           path: _reports
       - store_artifacts:
@@ -247,10 +252,22 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - races
-      - memory_leaks
-      - node_docker_build
-      - gamma_docker_build
+      - races:
+          filters:
+            tags:
+              only: /^v.*/
+      - memory_leaks:
+          filters:
+            tags:
+              only: /^v.*/
+      - node_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
+      - gamma_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
       - node_e2e:
           requires:
             - node_docker_build
@@ -263,15 +280,27 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - flakiness
-      - ganache_related_tests
+      - flakiness:
+          filters:
+            tags:
+              only: /^v.*/
+      - ganache_related_tests:
+          filters:
+            tags:
+              only: /^v.*/
       - deploy_testnet:
           requires:
             - node_docker_build
-            - tests
+            - tests # no point in deploying to testnet if one of the fast tests has failed
+          filters:
+            tags:
+              only: /^v.*/
       - e2e_testnet:
           requires:
             - deploy_testnet
+          filters:
+            tags:
+              only: /^v.*/
       - marvin_tests:
           requires:
             - e2e_testnet
