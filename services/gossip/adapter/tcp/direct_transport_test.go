@@ -136,6 +136,45 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 	})
 }
 
+func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipient(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("failed sending gossip message")
+
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
+		superviseAll(harness, node1, node2)
+		defer shutdownAll(ctx, node1, node2)
+
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
+
+		firstTopology := aTopologyContaining(node1, node2)
+		node1.transport.UpdateTopology(ctx, firstTopology)
+		node2.transport.UpdateTopology(ctx, firstTopology)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all nodes to have peers added",
+			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			node1, node2)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all outgoing queues to become enabled after topology change",
+			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
+			node1, node2)
+
+		payloads := aMessage()
+
+		node2.listener.ExpectReceive(payloads)
+		require.NoError(t, node1.transport.Send(ctx, &adapter.TransportData{
+			SenderNodeAddress:      node1.address,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{{0x1}, node2.address},
+			Payloads:               payloads,
+		}))
+
+		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, node2.listener), "message was not sent to target node")
+	})
+}
+
 type nodeHarness struct {
 	transport *DirectTransport
 	address   primitives.NodeAddress
