@@ -41,6 +41,8 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 
 func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("failed sending gossip message") // because the test will send to node3 which is not in topology
+
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
 		node3 := aNode(ctx, harness.Logger)
@@ -86,12 +88,16 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		node1.requireSendsSuccessfullyTo(t, ctx, node4)
 		node1.requireSendsSuccessfullyTo(t, ctx, node2)
-		require.Error(t, node2.transport.Send(ctx, &adapter.TransportData{
+		node2.listener.ExpectNotReceive()
+
+		node2.transport.Send(ctx, &adapter.TransportData{
 			SenderNodeAddress:      node2.address,
 			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
 			RecipientNodeAddresses: []primitives.NodeAddress{node3.address},
 			Payloads:               aMessage(),
-		}), "node 2 was able to send a message to node 3 which is no longer a part of its topology")
+		})
+
+		require.NoError(t, test.ConsistentlyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, node1.listener, node2.listener, node3.listener), "node 2 was able to send a message to node 3 which is no longer a part of its topology")
 	})
 }
 
@@ -138,7 +144,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 
 func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipient(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
-		harness.AllowErrorsMatching("failed sending gossip message")
+		harness.AllowErrorsMatching("failed sending gossip message") // because the test will send to an arbitrary recipient which is not in topology
 
 		node1 := aNode(ctx, harness.Logger)
 		node2 := aNode(ctx, harness.Logger)
