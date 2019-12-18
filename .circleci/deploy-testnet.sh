@@ -9,7 +9,7 @@ nvm use $NODE_VERSION
 
 export COMMIT_HASH=$(./docker/hash.sh)
 
-cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
+cd .circleci && npm install && cd ..
 
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
