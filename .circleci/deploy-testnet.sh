@@ -9,7 +9,7 @@ nvm use $NODE_VERSION
 
 export COMMIT_HASH=$(./docker/hash.sh)
 
-cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
+cd .circleci && npm install && cd ..
 
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
@@ -22,7 +22,6 @@ then
     # will cause this parent script to exit too which is intended by design.
     source ./.circleci/chain_on_pr.sh
 
-    echo "$PR_MGMT_CHAIN_ID" > workspace/mgmt_chain_id
     echo "$PR_APP_CHAIN_ID" > workspace/app_chain_id
 else
     echo "Running in master mode"
@@ -34,10 +33,8 @@ else
     echo "Configuration updated for all nodes in the CI testnet"
     echo "Waiting for all nodes to restart and reflect the new version is running"
 
-    node .circleci/check-testnet-deployment.js 2011
     node .circleci/check-testnet-deployment.js 2013
 
-    echo "2011" > workspace/mgmt_chain_id
     echo "2013" > workspace/app_chain_id
 fi
 
