@@ -5,8 +5,3 @@
 BUILD_CMD="./build-gamma.sh" ./docker/build/build-binaries-in-superfluous-container.sh
 
 docker build --no-cache -f ./docker/build/Dockerfile.gamma -t orbs:gamma-server .
-
-if [[ $ORBS_EXPERIMENTAL == "true" ]] ;
-then
-  docker build --no-cache -f ./docker/build/Dockerfile.gamma.experimental -t orbs:gamma-server .
-fi
