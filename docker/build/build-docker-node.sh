@@ -6,8 +6,3 @@ BUILD_CMD="./build-node.sh" ./docker/build/build-binaries-in-superfluous-contain
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
 docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
-
-if [[ $ORBS_EXPERIMENTAL == "true" ]] ;
-then
-  docker build -f ./docker/build/Dockerfile.export.experimental -t orbs:export .
-fi

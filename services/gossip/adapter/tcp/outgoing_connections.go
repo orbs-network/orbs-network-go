@@ -152,7 +152,8 @@ func (c *outgoingConnections) send(ctx context.Context, data *adapter.TransportD
 				client.addDataToOutgoingPeerQueue(ctx, data)
 				c.metrics.messageSize.Record(int64(data.TotalSize()))
 			} else {
-				return errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
+				err := errors.Errorf("unknown recipient public key: %s", recipientPublicKey.String())
+				c.logger.Error("failed sending gossip message", log.Error(err), log.Stringable("recipient-public-key", recipientPublicKey))
 			}
 		}
 		return nil

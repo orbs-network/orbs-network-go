@@ -1,10 +1,9 @@
 #!/bin/bash -xe
 
-GO_MOD_TEMPLATE=./docker/build/go.mod.template
+GO_MOD_TEMPLATE="./docker/build/go.mod.template"
 if [[ $CIRCLE_TAG != v* ]] ;
 then
-  export ORBS_EXPERIMENTAL="true"
-  GO_MOD_TEMPLATE=./docker/build/go.mod.template.experimental
+  GO_MOD_TEMPLATE="./docker/build/go.mod.template.experimental"
 fi
 
 export GIT_COMMIT=$(git rev-parse HEAD)
