@@ -175,7 +175,7 @@ jobs:
       - run: echo "35.161.123.97" > workspace/testnet_ip # REMOVE THIS AFTER RESTORING marvin_tests deps
       - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
       - run: echo "export JOB_ID=$(cat workspace/job_id)" >> $BASH_ENV
-      - run: ./.circleci/marvin_analyze.sh > workspace/
+      - run: ./.circleci/marvin_analyze.sh > workspace/job_result
 
   marvin_reporter:
     docker:
@@ -183,7 +183,7 @@ jobs:
     steps:
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
-      - run: ./.circleci/marvin_reporter.sh
+      - run: ./.circleci/marvin_reporter.js workspace/job_result
 
   ganache_related_tests:
     machine:
@@ -318,8 +318,7 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
-            - tests # RESTORE THIS TO DEPEND ON e2e_testnet AND deploy_testnet
-#            - e2e_testnet
+#            - e2e_testnet # RESTORE THIS TO DEPEND ON e2e_testnet AND deploy_testnet
 #            - deploy_testnet
       - marvin_analysis:
           requires:
