@@ -154,13 +154,24 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: cat workspace/app_chain_id
+      - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
+      - run: ./.circleci/marvin_stress.sh
+     - persist_to_workspace:
+     root: workspace
+     paths:
+       - app_chain_id
+       - testnet_ip
+
 
   marvin_analysis:
     docker:
       - image: circleci/golang:1.12.9
+    environment:
+      JOB_ID=20191219_153813_078 # THIS IS HARD-CODED, TAKE IT FROM THE POLLING PROCESS THAT LISTENS TO WHEN A JOB IS DONE.
     steps:
-      - run: echo "analyzing stuff"
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/marvin_analyze.sh > workspace/
 
   marvin_reporter:
     docker:
@@ -168,6 +179,7 @@ jobs:
     steps:
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
+      - run: ./.circleci/marvin_reporter.sh
 
   ganache_related_tests:
     machine:
@@ -302,8 +314,9 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
-            - e2e_testnet
-            - deploy_testnet
+            - tests
+#            - e2e_testnet
+#            - deploy_testnet
       - marvin_analysis:
           requires:
             - marvin_tests
