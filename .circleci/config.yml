@@ -156,11 +156,11 @@ jobs:
           at: workspace
       - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
       - run: ./.circleci/marvin_stress.sh
-     - persist_to_workspace:
-     root: workspace
-     paths:
-       - app_chain_id
-       - testnet_ip
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - app_chain_id
+            - testnet_ip
 
 
   marvin_analysis:
