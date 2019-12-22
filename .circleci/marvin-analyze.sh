@@ -10,6 +10,7 @@ fi
 # Defined on job-level in .circleci/config.yml
 if [[ -z "${JOB_ID}" ]] ; then
   echo "environment variable JOB_ID must be defined"
+  echo "environment variable JOB_ID must be defined"
   exit 1
 fi
 
