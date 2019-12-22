@@ -154,7 +154,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: ./.circleci/marvin-endurance.js $(cat workspace/app_chain_id) $(cat workspace/app_chain_id) workspace/job_id
+      - run: ./.circleci/marvin-endurance.sh
       - persist_to_workspace:
           root: workspace
           paths:
