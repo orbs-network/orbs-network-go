@@ -154,13 +154,20 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: cat workspace/app_chain_id
+      - run: ./.circleci/marvin-endurance.js $(cat workspace/app_chain_id) $(cat workspace/app_chain_id) workspace/job_id
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - job_id
 
   marvin_analysis:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
     steps:
-      - run: echo "analyzing stuff"
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: cat workspace/job_id
 
   marvin_reporter:
     docker:
@@ -313,7 +320,7 @@ workflows:
       - success:
           requires:
             - gamma_e2e
-            - node_e2e           
+            - node_e2e
             - marvin_analysis
             - tests
             - ganache_related_tests
