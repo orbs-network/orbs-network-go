@@ -2,7 +2,7 @@
 
 const fetch = require('node-fetch');
 
-const marvinUrl = process.env.MARVIN_URL;
+const marvinUrl = process.env.MARVIN_ORCHESTRATOR_URL;
 let vchain = process.argv[2];
 const targetIp = process.argv[3];
 const writeTargetPath = process.argv[4];
@@ -16,12 +16,12 @@ function printUsage() {
 }
 
 if (!marvinUrl) {
-    console.error('Cannot query Marvin API without knowing it\'s address. Please set MARVIN_URL to something');
+    console.error('Environment variable MARVIN_ORCHESTRATOR_URL not set');
     process.exit(2);
 }
 
 if (!vchain) {
-    console.error('vchain not provided, cannot call marvin without a vchain!');
+    console.error('Command line argument vchain was not provided');
     printUsage();
     process.exit(1);
 }
@@ -29,7 +29,7 @@ if (!vchain) {
 vchain = parseInt(vchain);
 
 if (!targetIp) {
-    console.error('targetIp not provided, cannot call marvin without a targetIp!');
+    console.error('Command line argument targetIp was not provided');
     printUsage();
     process.exit(1);
 }
@@ -54,13 +54,13 @@ if (!writeTargetPath) {
     const result = await fetch(`${marvinUrl}/jobs/start/transferFrenzy`, {
         method: 'post',
         body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
     });
 
     const responseAsJson = await result.json();
 
     console.log(`Marvin response (HTTP ${result.status}): `);
-    const { jobId } = responseAsJson;
+    const {jobId} = responseAsJson;
     console.log('Received jobId: ', jobId);
 
     const pollingBoolRes = await waitUntilDone({
@@ -79,20 +79,22 @@ if (!writeTargetPath) {
 
         process.exit(0);
     } else {
-        console.log('Marvin test did not complete within the alloted time frame!');
+        console.log('Marvin test did not complete within the allotted time frame!');
         process.exit(100);
     }
 })();
 
 function pSleep(s) {
-    return new Promise((r) => { setTimeout(r, s * 1000) });
+    return new Promise((r) => {
+        setTimeout(r, s * 1000)
+    });
 }
 
 function nowInUnix() {
     return Math.floor(Date.now() / 1000);
 }
 
-async function waitUntilDone({ jobId, timeoutInSeconds = 30, acceptableDurationInSeconds = 100 }) {
+async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationInSeconds = 100}) {
     const startTime = nowInUnix();
     const maxAllowedEndTime = startTime + acceptableDurationInSeconds + timeoutInSeconds;
     let tick = 0;
@@ -116,7 +118,7 @@ async function waitUntilDone({ jobId, timeoutInSeconds = 30, acceptableDurationI
         console.log(`------------------------------------------`);
         console.log('');
 
-        if (response.status == 'DONE') {
+        if (response.status === 'DONE') {
             returnValue = true;
             break;
         }
