@@ -223,7 +223,6 @@ jobs:
       - persist_to_workspace:
           root: workspace
           paths:
-            - mgmt_chain_id
             - app_chain_id
             - testnet_ip
 
