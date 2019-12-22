@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Defined on CircleCI project-level, see https://circleci.com/gh/orbs-network/orbs-network-go/edit#env-vars
-# MARVIN_ORCHESTRATOR_URL="ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
+# MARVIN_ORCHESTRATOR_URL="http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
 if [[ -z "${MARVIN_ORCHESTRATOR_URL}" ]] ; then
   echo "environment variable MARVIN_ORCHESTRATOR_URL must be defined"
   exit 1

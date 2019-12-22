@@ -158,7 +158,7 @@ jobs:
       - run: echo "35.161.123.97" > workspace/testnet_ip # REMOVE THIS AFTER RESTORING marvin_tests deps
       - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
       - run: echo "export TESTNET_IP=$(cat workspace/testnet_ip)" >> $BASH_ENV
-      - run: ./.circleci/marvin-endurance.sh
+      - run: ./.circleci/marvin-endurance.sh # Its output is workspace/job_id file
       - persist_to_workspace:
           root: workspace
           paths:
