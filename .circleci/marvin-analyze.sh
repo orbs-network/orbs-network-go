@@ -14,6 +14,14 @@ if [[ -z "${JOB_ID}" ]] ; then
   exit 1
 fi
 
+# If running locally, need to disable these next 4 lines
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+nvm use "${NODE_VERSION}"
+
+cd .circleci && npm install && cd ..
+
 
 # Get the JOB_ID from a file on the workspace
 
