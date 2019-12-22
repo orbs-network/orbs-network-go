@@ -154,6 +154,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
+      - run: echo "2013" > workspace/app_chain_id # REMOVE THIS AFTER RESTORING marvin_tests deps
       - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
       - run: ./.circleci/marvin-endurance.sh
       - persist_to_workspace:
@@ -168,6 +169,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
+      - run: echo "2013" > workspace/app_chain_id # REMOVE THIS AFTER RESTORING marvin_tests deps
       - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
       - run: ./.circleci/marvin_analyze.sh > workspace/
 
@@ -312,7 +314,7 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
-            - tests
+            - tests # RESTORE THIS TO DEPEND ON e2e_testnet AND deploy_testnet
 #            - e2e_testnet
 #            - deploy_testnet
       - marvin_analysis:
