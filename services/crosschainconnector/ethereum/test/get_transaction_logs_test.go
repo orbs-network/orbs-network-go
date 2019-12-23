@@ -153,6 +153,70 @@ func TestEthereumConnector_GetTransactionLogs_ParsesEventsWithAddressArray(t *te
 	})
 }
 
+func TestEthereumConnector_GetTransactionLogs_VotingDelegateEvent(t *testing.T) {
+	if !runningWithDocker() {
+		t.Skip("Not running with Docker, Ganache is unavailable")
+	}
+
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			cfg := ConfigForExternalRPCConnection()
+			h := newRpcEthereumConnectorHarness(parent.Logger, cfg)
+			h.moveBlocksInGanache(t, ctx, 100, 1) // pad Ganache nicely so that any previous test doesn't affect this one
+
+			contractABI, err := readFile("../contract/FakeVoting.abi")
+			require.NoError(t, err, "failed reading contract ABI")
+
+			contractBin, err := readFile("../contract/FakeVoting.bin")
+			require.NoError(t, err, "failed reading contract binary")
+
+			auth, err := cfg.GetAuthFromConfig()
+			require.NoError(t, err, "failed reading auth from config")
+
+			contractAddress, deployedContract, err := h.rpcAdapter.DeployEthereumContract(auth, string(contractABI), string(contractBin))
+			require.NoError(t, err, "failed deploying contract to Ethereum")
+			blockAtDeploy, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			t.Logf("block at deploy: %s", blockAtDeploy)
+
+			target := common.Address{0x1, 0x2, 0x3}
+
+			tx, err := deployedContract.Transact(auth, "delegate", target)
+			require.NoError(t, err, "failed emitting event")
+
+			t.Logf("finality is %f seconds, %d blocks", h.config.finalityTimeComponent.Seconds(), h.config.finalityBlocksComponent)
+			h.moveBlocksInGanache(t, ctx, int(h.config.finalityBlocksComponent*2), 1) // finality blocks + block we will request below of because of the finder algo
+
+			blockAfterPad, err := h.rpcAdapter.HeaderByNumber(ctx, nil)
+			require.NoError(t, err, "failed to get latest block in ganache")
+			referenceTime := time.Unix(int64(blockAfterPad.TimeInSeconds), 0)
+
+			t.Logf("reference time: %d", referenceTime.UnixNano())
+
+			out, err := h.connector.EthereumGetTransactionLogs(ctx, &services.EthereumGetTransactionLogsInput{
+				EthereumContractAddress: contractAddress.Hex(),
+				EthereumTxhash:          tx.Hash().Hex(),
+				EthereumEventName:       "Delegate",
+				EthereumJsonAbi:         string(contractABI),
+				ReferenceTimestamp:      primitives.TimestampNano(referenceTime.UnixNano()),
+			})
+			require.NoError(t, err, "failed getting logs")
+
+			parsedABI, err := abi.JSON(bytes.NewReader(contractABI))
+			require.NoError(t, err, "failed parsing ABI")
+
+			event := new(struct {
+				Delegator         common.Address
+				To                common.Address
+				DelegationCounter *big.Int
+			})
+			err = ethereum.ABIUnpackAllEventArguments(parsedABI, event, "Delegate", out.EthereumAbiPackedOutputs[0])
+			require.NoError(t, err, "failed unpacking event")
+			require.EqualValues(t, target, event.To, "event did not include expected addresses")
+		})
+	})
+}
+
 func TestEthereumConnector_GetTransactionLogs_FailsOnWrongContract(t *testing.T) {
 	if !runningWithDocker() {
 		t.Skip("Not running with Docker, Ganache is unavailable")

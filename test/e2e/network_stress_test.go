@@ -111,7 +111,7 @@ func getTransactionCount(t *testing.T, h *Harness) float64 {
 	var m metrics
 
 	require.True(t, test.Eventually(1*time.Minute, func() bool {
-		m = h.getMetrics()
+		m = h.GetMetrics()
 		return m != nil
 	}), "could not retrieve metrics")
 

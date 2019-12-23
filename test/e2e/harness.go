@@ -27,15 +27,15 @@ import (
 )
 
 type E2EConfig struct {
-	AppVcid           primitives.VirtualChainId
-	MgmtVcid          primitives.VirtualChainId
+	AppVcid primitives.VirtualChainId
+	//MgmtVcid          primitives.VirtualChainId
 	RemoteEnvironment bool
 	Bootstrap         bool
 	AppChainUrl       string
-	MgmtChainUrl      string
-	StressTest        StressTestConfig
-	EthereumEndpoint  string
-	IsExperimental    bool
+	//MgmtChainUrl      string
+	StressTest       StressTestConfig
+	EthereumEndpoint string
+	IsExperimental   bool
 }
 
 type StressTestConfig struct {
@@ -49,25 +49,28 @@ const START_HTTP_PORT = 8090
 const START_GOSSIP_PORT = 8190
 
 type Harness struct {
-	client *orbsClient.OrbsClient
-	config *E2EConfig
+	client     *orbsClient.OrbsClient
+	metricsUrl string
+	config     *E2EConfig
 }
 
-func NewMgmtHarness() *Harness {
-	config := GetConfig()
-
-	return &Harness{
-		client: orbsClient.NewClient(config.MgmtChainUrl, uint32(config.MgmtVcid), codec.NETWORK_TYPE_TEST_NET),
-		config: &config,
-	}
-}
+//func NewMgmtHarness() *Harness {
+//	config := GetConfig()
+//
+//	return &Harness{
+//		client:     orbsClient.NewClient(config.MgmtChainUrl, uint32(config.MgmtVcid), codec.NETWORK_TYPE_TEST_NET),
+//		metricsUrl: config.MgmtChainUrl + "/metrics",
+//		config:     &config,
+//	}
+//}
 
 func NewAppHarness() *Harness {
 	config := GetConfig()
 
 	return &Harness{
-		client: orbsClient.NewClient(config.AppChainUrl, uint32(config.AppVcid), codec.NETWORK_TYPE_TEST_NET),
-		config: &config,
+		client:     orbsClient.NewClient(config.AppChainUrl, uint32(config.AppVcid), codec.NETWORK_TYPE_TEST_NET),
+		metricsUrl: config.AppChainUrl + "/metrics",
+		config:     &config,
 	}
 }
 
@@ -164,17 +167,13 @@ func (h *Harness) GetTransactionReceiptProof(txId string) (response *codec.GetTr
 	return
 }
 
-func (h *Harness) absoluteUrlFor(endpoint string) string {
-	return GetConfig().AppChainUrl + endpoint
-}
-
 type metrics map[string]map[string]interface{}
 
-func (h *Harness) getMetrics() metrics {
-	res, err := http.Get(h.absoluteUrlFor("/metrics"))
+func (h *Harness) GetMetrics() metrics {
+	res, err := http.Get(h.metricsUrl)
 
 	if err != nil {
-		fmt.Println(h.absoluteUrlFor("/metrics"), err)
+		fmt.Println(h.metricsUrl, err)
 	}
 
 	if res == nil {
@@ -206,7 +205,7 @@ func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
 	require.True(t, test.Eventually(15*time.Second, func() bool {
 
-		m := h.getMetrics()
+		m := h.GetMetrics()
 		if m == nil {
 			return false
 		}
@@ -240,24 +239,28 @@ func PrintTestTime(t *testing.T, msg string, last *time.Time) {
 	*last = time.Now()
 }
 
+func (h *Harness) envSupportsLoadingWithCannedBlocksFile() bool {
+	return h.config.RemoteEnvironment
+}
+
 func GetConfig() E2EConfig {
 	appVcid := primitives.VirtualChainId(42)
-	mgmtVcid := primitives.VirtualChainId(40)
-	experimentalFlag := strings.ToLower(os.Getenv("ORBS_EXPERIMENTAL"))
-	isExperimental := experimentalFlag != "" && experimentalFlag != "false" &&
-		experimentalFlag != "0"
+	//mgmtVcid := primitives.VirtualChainId(40)
+
+	circleTag := os.Getenv("CIRCLE_TAG")
+	isExperimental := !strings.HasPrefix(circleTag, "v")
 
 	if vcId, err := strconv.ParseUint(os.Getenv("VCHAIN"), 10, 0); err == nil {
 		appVcid = primitives.VirtualChainId(vcId)
 	}
 
-	if vcId, err := strconv.ParseUint(os.Getenv("MGMT_VCHAIN"), 10, 0); err == nil {
-		mgmtVcid = primitives.VirtualChainId(vcId)
-	}
+	//if vcId, err := strconv.ParseUint(os.Getenv("MGMT_VCHAIN"), 10, 0); err == nil {
+	//	mgmtVcid = primitives.VirtualChainId(vcId)
+	//}
 
 	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	appChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2)                     // 8090 is leader, 8082 is node-3
-	mgmtChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+LOCAL_NETWORK_SIZE+2) // 8090+LOCAL_NETWORK_SIZE is mgmt leader, use node-3
+	appChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8090 is leader, 8082 is node-3
+	//mgmtChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+LOCAL_NETWORK_SIZE+2) // 8090+LOCAL_NETWORK_SIZE is mgmt leader, use node-3
 
 	isRemoteEnvironment := os.Getenv("REMOTE_ENV") == "true"
 
@@ -271,8 +274,8 @@ func GetConfig() E2EConfig {
 	if !shouldBootstrap {
 		apiEndpoint := os.Getenv("API_ENDPOINT")
 		appChainUrl = strings.TrimSuffix(strings.TrimRight(apiEndpoint, "/"), "/api/v1")
-		mgmtEndpoint := os.Getenv("MGMT_API_ENDPOINT")
-		mgmtChainUrl = strings.TrimSuffix(strings.TrimRight(mgmtEndpoint, "/"), "/api/v1")
+		//mgmtEndpoint := os.Getenv("MGMT_API_ENDPOINT")
+		//mgmtChainUrl = strings.TrimSuffix(strings.TrimRight(mgmtEndpoint, "/"), "/api/v1")
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
@@ -283,13 +286,13 @@ func GetConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		AppVcid:           appVcid,
-		MgmtVcid:          mgmtVcid,
+		AppVcid: appVcid,
+		//MgmtVcid:          mgmtVcid,
 		Bootstrap:         shouldBootstrap,
 		RemoteEnvironment: isRemoteEnvironment,
 		IsExperimental:    isExperimental,
 		AppChainUrl:       appChainUrl,
-		MgmtChainUrl:      mgmtChainUrl,
+		//MgmtChainUrl:      mgmtChainUrl,
 		StressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
 			numberOfTransactions:  stressTestNumberOfTransactions,

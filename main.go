@@ -41,7 +41,7 @@ func main() {
 
 		if *version {
 			fmt.Println(config.GetVersion())
-			return
+			os.Exit(0)
 		}
 
 		cfg, err := config.GetNodeConfigFromFiles(configFiles, *httpAddress)

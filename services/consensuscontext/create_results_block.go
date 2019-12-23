@@ -9,7 +9,6 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"time"
@@ -55,7 +54,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:                 primitives.ProtocolVersion(s.config.ProtocolVersion()),
+			ProtocolVersion:                 s.config.ProtocolVersion(),
 			VirtualChainId:                  s.config.VirtualChainId(),
 			BlockHeight:                     input.CurrentBlockHeight,
 			PrevBlockHashPtr:                input.PrevBlockHash,
@@ -66,7 +65,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 			PreExecutionStateMerkleRootHash: preExecutionStateRootHash.StateMerkleRootHash,
 			NumTransactionReceipts:          uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:           uint32(len(output.ContractStateDiffs)),
-			BlockProposerAddress: 			 input.BlockProposerAddress,
+			BlockProposerAddress:            input.BlockProposerAddress,
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,
