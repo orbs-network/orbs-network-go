@@ -20,11 +20,12 @@ if (!jobAnalysisFile) {
 (async () => {
 
     const job = await readJobAnalysis(jobAnalysisFile);
-    if (!job.status) {
-        job.status = 'ERROR';
-        job.error = 'No status property';
-    }
     console.log(`Will create a Slack message from job: ${JSON.stringify(job)}`);
+    if (!job.status || !job.summary) {
+        job.status = 'ERROR';
+        job.error = 'No status or summary property';
+    }
+    job.summary = job.summary || {};
     let msg;
     switch (job.status) {
         case 'DONE':

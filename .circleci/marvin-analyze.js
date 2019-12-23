@@ -15,7 +15,7 @@ const { passed } = require('@orbs-network/judge-dredd');
 (async function () {
     try {
         const result = await passed(jobResults);
-
+        console.log(`Writing job analysis results to disk: ${JSON.stringify(result)}`);
         fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));
 
         if (result.passed) {
