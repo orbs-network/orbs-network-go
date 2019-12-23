@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@orbs-network/judge-dredd": "^0.0.5",
+    "@orbs-network/judge-dredd": "^0.0.6",
     "@orbs-network/orbs-nebula": "https://github.com/orbs-network/nebula.git#master",
     "node-fetch": "^2.6.0"
   },
