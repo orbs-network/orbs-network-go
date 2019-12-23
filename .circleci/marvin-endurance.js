@@ -7,6 +7,7 @@ let vchain = process.argv[2];
 const targetIp = process.argv[3];
 const writeTargetPath = process.argv[4];
 const fs = require('fs');
+const gitBranch = process.env.CIRCLE_BRANCH;
 
 function printUsage() {
     console.log('marvin-endurance usage: ');
@@ -44,8 +45,9 @@ if (!writeTargetPath) {
     const body = {
         vchain,
         tpm: 60,
-        duration_sec: 60,
+        duration_sec: 120,
         client_timeout_sec: 120,
+        gitBranch,
         target_ips: [targetIp]
     };
 
