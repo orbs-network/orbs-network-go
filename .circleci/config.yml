@@ -174,14 +174,21 @@ jobs:
       - attach_workspace:
           at: workspace
       - run: ./.circleci/marvin-analyze.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - analysis_results.json
 
   marvin_reporter:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/9.9.0-stretch
     steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
-      - run: ./.circleci/marvin-reporter.js workspace/job_result
+      - run: ./.circleci/marvin-reporter.js workspace/analysis_results.json
 
   ganache_related_tests:
     machine:

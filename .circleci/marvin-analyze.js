@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+
 const pathToJobResults = process.argv[2];
 
 if (!pathToJobResults) {
@@ -13,6 +15,8 @@ const { passed } = require('@orbs-network/judge-dredd');
 (async function () {
     try {
         const result = await passed(jobResults);
+
+        fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));
 
         if (result.passed) {
             console.log('Marvin analysis is successful!');
