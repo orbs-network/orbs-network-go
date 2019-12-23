@@ -156,10 +156,6 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: echo "2013" > workspace/app_chain_id # REMOVE THIS AFTER RESTORING marvin_tests deps
-      - run: echo "35.161.123.97" > workspace/testnet_ip # REMOVE THIS AFTER RESTORING marvin_tests deps
-      - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
-      - run: echo "export TESTNET_IP=$(cat workspace/testnet_ip)" >> $BASH_ENV
       - run: ./.circleci/marvin-endurance.sh # Its output is workspace/job_id file
       - persist_to_workspace:
           root: workspace
@@ -323,8 +319,8 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
-#            - e2e_testnet # RESTORE THIS TO DEPEND ON e2e_testnet AND deploy_testnet
-#            - deploy_testnet
+           - e2e_testnet
+           - deploy_testnet
       - marvin_analysis:
           requires:
             - marvin_tests
