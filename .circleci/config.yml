@@ -150,6 +150,8 @@ jobs:
   marvin_tests:
     docker:
       - image: itamararjuan/golang_with_node_aws
+    environment:
+      MARVIN_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
     steps:
       - checkout
       - attach_workspace:
@@ -171,11 +173,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: echo "2013" > workspace/app_chain_id # REMOVE THIS AFTER RESTORING marvin_tests deps
-      - run: echo "35.161.123.97" > workspace/testnet_ip # REMOVE THIS AFTER RESTORING marvin_tests deps
-      - run: echo "export APP_CHAIN_ID=$(cat workspace/app_chain_id)" >> $BASH_ENV
-      - run: echo "export JOB_ID=$(cat workspace/job_id)" >> $BASH_ENV
-      - run: ./.circleci/marvin-analyze.sh > workspace/job_result
+      - run: ./.circleci/marvin-analyze.sh
 
   marvin_reporter:
     docker:
