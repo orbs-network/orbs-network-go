@@ -10,34 +10,40 @@ if (!slackKey || slackKey.length === 0) {
 }
 
 const slackUrl = `https://hooks.slack.com/services/${slackKey}`;
-const jobResultsFile = process.argv[2];
+const jobAnalysisFile = process.argv[2];
 
-if (!jobResultsFile) {
-    console.log('No job results file given!');
+if (!jobAnalysisFile) {
+    console.log('No job analysis file given!');
     process.exit(1);
 }
 
 (async () => {
 
-    const jobResults = await readJobResults(jobResultsFile);
+    const job = await readJobAnalysis(jobAnalysisFile);
+    if (!job.status) {
+        job.status = 'ERROR';
+        job.error = 'No status property';
+    }
+    console.log(`Will create a Slack message from job: ${JSON.stringify(job)}`);
     let msg;
-    switch (jobResults.status) {
+    switch (job.status) {
         case 'DONE':
-            msg = await createSlackMessageJobDone(jobResults);
+            msg = await createSlackMessageJobDone(job);
             break;
         case 'ERROR':
-            msg = await createSlackMessageJobError(jobResults);
+            msg = await createSlackMessageJobError(job);
             break;
         default:
-            console.log(`Not sending to Slack when jobResult.status is ${jobResults.status}`);
+            console.log(`Not sending to Slack because status is ${job.status}`);
             process.exit(2);
     }
 
+    console.log(`Sending message to Slack: ${msg}`);
     notifySlack(slackUrl, msg);
 
 })();
 
-async function readJobResults(jobResultsFilePath) {
+async function readJobAnalysis(jobResultsFilePath) {
     return new Promise((resolve, reject) => {
         fs.readFile(jobResultsFilePath, (err, contents) => {
             if (err) {
@@ -104,7 +110,7 @@ function createSlackMessageJobError(jobUpdate) {
     jobUpdate = jobUpdate || {};
     jobUpdate.summary = jobUpdate.summary || {};
 
-    return `*[${jobUpdate.summary.semantic_version || ''}]* _[${jobUpdate.job_id || ''}]_ *ERROR:* ${jobUpdate.error||'NA'}`;
+    return `*[${jobUpdate.summary.semantic_version || 'NA'}]* _[${jobUpdate.job_id || 'NA'}]_ *ERROR:* ${jobUpdate.error||'NA'}`;
 }
 
 
