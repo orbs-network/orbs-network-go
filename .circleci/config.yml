@@ -181,7 +181,7 @@ jobs:
 
   marvin_reporter:
     docker:
-      - image: circleci/node:9.9.0-stretch
+      - image: itamararjuan/golang_with_node_aws
     steps:
       - checkout
       - attach_workspace:
