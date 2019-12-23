@@ -219,6 +219,8 @@ func translateRequestStatusToHttpCode(responseCode protocol.RequestStatus) int {
 		return http.StatusInternalServerError
 	case protocol.REQUEST_STATUS_OUT_OF_SYNC:
 		return http.StatusServiceUnavailable
+	case protocol.REQUEST_STATUS_NOT_FOUND:
+		return http.StatusNotFound
 	case protocol.REQUEST_STATUS_RESERVED:
 		return http.StatusInternalServerError
 	}
