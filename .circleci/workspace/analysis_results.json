@@ -15,10 +15,12 @@
   "start_time": "2019-12-23T12:34:53.316Z",
   "end_time": "2019-12-23T12:35:18.873Z",
   "client_cmd": "docker run -t --rm endurance:client ./client 2013,35.161.123.97 20191223_123452_088_1,4,60",
+  "error": "Fill error here in case status=ERROR",
   "meta": {
   },
   "analysis": {
-    "passed": true
+    "passed": true,
+    "reason": "Fill here"
   },
   "summary": {
     "total_dur": 1336,
@@ -31,8 +33,9 @@
     "p90_service_time_ms": 118,
     "p95_service_time_ms": 119,
     "p99_service_time_ms": 119,
-    "max_alloc_mem": 0,
-    "max_goroutines": 0,
+    "min_alloc_mem": 10000000,
+    "max_alloc_mem": 123456789,
+    "max_goroutines": 47,
     "semantic_version": "v1.3.6-994aa87e",
     "commit_hash": "994aa87e74805a058060191270cbfc5aca450fec"
   }
