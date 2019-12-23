@@ -149,12 +149,29 @@ jobs:
 
   marvin_tests:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
+    environment:
+      MARVIN_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
     steps:
       - checkout
-      - run: ./.circleci/marvin-stress.sh #TODO rename file
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/marvin-endurance.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - job_id
 
-  marvin_report_results:
+  marvin_analysis:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: cat workspace/job_id
+
+  marvin_reporter:
     docker:
       - image: circleci/golang:1.12.9
     steps:
@@ -175,32 +192,28 @@ jobs:
       - store_test_results:
           path: _reports
 
-  e2e_testnet_leanhelix:
+  e2e_testnet:
     docker:
       - image: circleci/golang:1.12.9
+    environment:
+      BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
     steps:
       - checkout
+      - attach_workspace:
+          at: workspace
       - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
-      - run: sleep 300
-      - run: ./.circleci/e2e-testnet.sh 2013 2011
+      - run: ./.circleci/e2e-testnet.sh
       - store_artifacts:
           path: _out
           destination: test-output
       - store_test_results:
           path: _reports
+      - store_artifacts:
+          path: _out
 
   deploy_testnet:
     docker:
       - image: itamararjuan/golang_with_node_aws
-    steps:
-      - checkout
-      - run: ./.circleci/set-aws-credentials.sh
-      - run: ./.circleci/deploy-testnet.sh
-
-  deploy_new_chain_pr_only:
-    docker:
-      - image: itamararjuan/golang_with_node_aws
-    working_directory: /go/src/github.com/orbs-network/orbs-network-go/
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
       BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
@@ -208,12 +221,13 @@ jobs:
       TESTNET_IGNORE_IPS: ""
     steps:
       - checkout
-      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report #TODO remove as this shouldn't actually run the tests
-      - run: ./.circleci/chain_on_pr.sh #TODO this step should only deploy, and return when then chain is closing blocks; tests will run in Marvin.
-      - store_test_results:
-          path: _reports
-      - store_artifacts:
-          path: _out
+      - run: ./.circleci/set-aws-credentials.sh
+      - run: ./.circleci/deploy-testnet.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - app_chain_id
+            - testnet_ip
 
   release_ga:
     machine:
@@ -283,7 +297,7 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - e2e_testnet_leanhelix:
+      - e2e_testnet:
           requires:
             - deploy_testnet
           filters:
@@ -291,17 +305,22 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
+            - e2e_testnet
             - deploy_testnet
-      - marvin_report_results:
+      - marvin_analysis:
           requires:
             - marvin_tests
+      - marvin_reporter:
+          requires:
+            - marvin_analysis
       - release_ga:
           requires:
-            - tests
-            - node_e2e
             - gamma_e2e
-            - marvin_report_results
+            - node_e2e
+            - marvin_analysis
+            - tests
             - ganache_related_tests
+            - memory_leaks
           filters:
             tags:
               only: /^v.*/
