@@ -80,7 +80,7 @@ function notifySlack(slackUrl, message) {
 // Service times (ms): AVG=*${jobUpdate.summary.avg_service_time_ms}* MEDIAN=*${jobUpdate.summary.median_service_time_ms}* P90=*${jobUpdate.summary.p90_service_time_ms}* P99=*${jobUpdate.summary.p99_service_time_ms}* MAX=*${jobUpdate.summary.max_service_time_ms}* STDDEV=*${jobUpdate.summary.stddev_service_time_ms}*
 // MinAllocMem: ${jobUpdate.summary.min_alloc_mem} MaxAllocMem: ${jobUpdate.summary.max_alloc_mem} bytes, MaxGoroutines: ${jobUpdate.summary.max_goroutines}
 // Errors: ${jobUpdate.error || 'none'}
-// <http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> | _Job ID: [${jobUpdate.job_id || 'NA'}] Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}_`;
+// <http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> | _Job ID: [${jobUpdate.jobId || 'NA'}] Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}_`;
 //
 //     // All: ${JSON.stringify(jobUpdate)}`;
 // }
@@ -101,7 +101,7 @@ Sent *${jobUpdate.summary.total_tx_count}* transactions with *${jobUpdate.summar
 Service times (ms): AVG=*${jobUpdate.summary.avg_service_time_ms}* MEDIAN=*${jobUpdate.summary.median_service_time_ms}* P90=*${jobUpdate.summary.p90_service_time_ms}* P99=*${jobUpdate.summary.p99_service_time_ms}* MAX=*${jobUpdate.summary.max_service_time_ms}* STDDEV=*${jobUpdate.summary.stddev_service_time_ms}*
 MinAllocMem: ${jobUpdate.summary.min_alloc_mem} MaxAllocMem: ${jobUpdate.summary.max_alloc_mem} bytes, MaxGoroutines: ${jobUpdate.summary.max_goroutines}
 Errors: ${jobUpdate.error || 'none'}
-<http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> | _Job ID: [${jobUpdate.job_id || 'NA'}] Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}_
+<http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> | _Job ID: [${jobUpdate.jobId || 'NA'}] Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}_
 Marvin build triggered by <${slackUsername}>
 `;
     // All: ${JSON.stringify(jobUpdate)}`;
@@ -111,7 +111,7 @@ function createSlackMessageJobError(jobUpdate) {
     jobUpdate = jobUpdate || {};
     jobUpdate.summary = jobUpdate.summary || {};
 
-    return `*[${jobUpdate.summary.semantic_version || 'NA'}]* _[${jobUpdate.job_id || 'NA'}]_ *ERROR:* ${jobUpdate.error||'NA'}`;
+    return `*[${jobUpdate.summary.semantic_version || 'NA'}]* _Job ID: [${jobUpdate.jobId || 'NA'}]_ *ERROR:* ${jobUpdate.error||'NA'}`;
 }
 
 
