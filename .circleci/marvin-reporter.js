@@ -91,18 +91,22 @@ async function createSlackMessageJobDone(jobUpdate) {
 
     const committer = await getCommitterUsernameByCommitHash(jobUpdate.summary.commit_hash);
     const slackUsername = getSlackUsernameForGithubUser(committer);
-    const noPassReason = jobUpdate.analysis.passed ? '' : `Reason: ${jobUpdate.analysis.reason}`;
+    const failReason = jobUpdate.analysis.passed ? '' : `*Reason: ${jobUpdate.analysis.reason}*`;
+    const passedEmoji = jobUpdate.analysis.passed ? ':white_check_mark:' : ':x:';
+    const passedWord = jobUpdate.analysis.passed ? 'PASSED' : 'FAILED';
 
     return `*--------------------------------------------------------------------------*
 *DONE* running after *${Math.floor((jobUpdate.runtime || 0) / 1000)}* seconds on vchain ${jobUpdate.vchain} with ${jobUpdate.tpm} tx/min.
 *--------------------------------------------------------------------------*
-*PASSED? ${jobUpdate.analysis.passed}* ${noPassReason}
+${passedEmoji} _Job ID: [${jobUpdate.jobId || 'NA'}] ${passedWord}_ ${passedEmoji} 
+${failReason}
 Sent *${jobUpdate.summary.total_tx_count}* transactions with *${jobUpdate.summary.err_tx_count}* errors.
 Service times (ms): AVG=*${jobUpdate.summary.avg_service_time_ms}* MEDIAN=*${jobUpdate.summary.median_service_time_ms}* P90=*${jobUpdate.summary.p90_service_time_ms}* P99=*${jobUpdate.summary.p99_service_time_ms}* MAX=*${jobUpdate.summary.max_service_time_ms}* STDDEV=*${jobUpdate.summary.stddev_service_time_ms}*
 MinAllocMem: ${jobUpdate.summary.min_alloc_mem} MaxAllocMem: ${jobUpdate.summary.max_alloc_mem} bytes, MaxGoroutines: ${jobUpdate.summary.max_goroutines}
 Errors: ${jobUpdate.error || 'none'}
-<http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> | _Job ID: [${jobUpdate.jobId || 'NA'}] Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}_
-Marvin build triggered by <${slackUsername}>
+<http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> 
+Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}
+${passedEmoji} Marvin build triggered by <${slackUsername}> ${passedEmoji}
 `;
     // All: ${JSON.stringify(jobUpdate)}`;
 }
@@ -111,7 +115,7 @@ function createSlackMessageJobError(jobUpdate) {
     jobUpdate = jobUpdate || {};
     jobUpdate.summary = jobUpdate.summary || {};
 
-    return `*[${jobUpdate.summary.semantic_version || 'NA'}]* _Job ID: [${jobUpdate.jobId || 'NA'}]_ *ERROR:* ${jobUpdate.error||'NA'}`;
+    return `:x: *[${jobUpdate.summary.semantic_version || 'NA'}]* _Job ID: [${jobUpdate.jobId || 'NA'}]_ *ERROR:* ${jobUpdate.error || 'NA'} :x:`;
 }
 
 
@@ -157,7 +161,7 @@ function getSlackUsernameForGithubUser(githubLoginHandle) {
     };
 
     console.log(githubLoginHandle);
-    if (!githubLoginHandle || githubLoginHandle.length===0) {
+    if (!githubLoginHandle || githubLoginHandle.length === 0) {
         return 'NA';
     }
 
