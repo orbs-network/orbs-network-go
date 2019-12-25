@@ -154,7 +154,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: ./.circleci/marvin-endurance.sh # Its output is workspace/job_id file
+      - run: ./.circleci/marvin/marvin-endurance.sh # Its output is workspace/job_id file
       - persist_to_workspace:
           root: workspace
           paths:
@@ -167,7 +167,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: ./.circleci/marvin-analyze.sh
+      - run: ./.circleci/marvin/marvin-analyze.sh
       - persist_to_workspace:
           root: workspace
           paths:
@@ -183,7 +183,7 @@ jobs:
           at: workspace
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
-      - run: ./.circleci/marvin-reporter.sh workspace/analysis_results.json
+      - run: ./.circleci/marvin/marvin-reporter.sh workspace/analysis_results.json
 
   ganache_related_tests:
     machine:

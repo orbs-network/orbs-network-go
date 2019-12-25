@@ -1,0 +1,15 @@
+{
+  "name": "orbs-network-go-circleci-marvin",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@orbs-network/judge-dredd": "^0.0.8",
+    "node-fetch": "^2.6.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
+  }
+}
