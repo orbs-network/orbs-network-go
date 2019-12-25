@@ -21,7 +21,7 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
 nvm use "${NODE_VERSION}"
 
-cd .circleci && npm install && cd ..
+cd .circleci/marvin && npm install && cd ../..
 
 # Get the vchains to act upon from CircleCI's workspace
 echo "Running Marvin tests on deployed app chain ($APP_CHAIN_ID) on IP: $TESTNET_IP"

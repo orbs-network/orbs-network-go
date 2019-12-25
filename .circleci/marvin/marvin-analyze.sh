@@ -24,7 +24,7 @@ if [[ "$CI" == "true" ]]; then
   nvm use "${NODE_VERSION}"
 fi
 
-cd .circleci && npm install && cd ..
+cd .circleci/marvin && npm install && cd ../..
 
 # Get the JOB_ID from a file on the workspace
 
