@@ -10,11 +10,11 @@ if (!pathToJobResults) {
 }
 
 const jobResults = require(pathToJobResults);
-const { passed } = require('@orbs-network/judge-dredd');
+const {passed} = require('@orbs-network/judge-dredd');
 
 (async function () {
     try {
-        const result = await passed(jobResults);
+        const result = await passed({current: jobResults, previous: null, config: null});
         console.log(`Writing job analysis results to disk: ${JSON.stringify(result)}`);
         fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));
 
@@ -24,6 +24,7 @@ const { passed } = require('@orbs-network/judge-dredd');
         } else {
             console.log('Marvin analysis found some errors. Reason:', passed.reason);
             // The test failed, but not the process that determined that the test failed..
+            // If we fail here, marvin-reporter will not run.
             process.exit(0);
         }
     } catch (err) {
