@@ -29,9 +29,17 @@ cd .circleci && npm install && cd ..
 # Get the JOB_ID from a file on the workspace
 
 JOB_STATUS_URL="${MARVIN_ORCHESTRATOR_URL}/jobs/${JOB_ID}/status"
-OUTPUT_FILE="results.json"
+JOB_RESULTS_FILE="results.json"
 
-curl "${JOB_STATUS_URL}" > "${OUTPUT_FILE}"
+curl "${JOB_STATUS_URL}" > "${JOB_RESULTS_FILE}"
+
+# Probably the job was not found, just print the curl result
+if [[ $(cat "${JOB_RESULTS_FILE}" | grep -c "not found") -ne 0 ]] ; then
+  cat "${JOB_RESULTS_FILE}"
+  exit 2
+fi
 
 # Can collect stdout into a file on the workspace and send it further
-./.circleci/marvin-analyze.js "../$OUTPUT_FILE"
+./.circleci/marvin-analyze.js "../$JOB_RESULTS_FILE"
+
+echo "Job analysis complete. Results written to ../${JOB_RESULTS_FILE}"
