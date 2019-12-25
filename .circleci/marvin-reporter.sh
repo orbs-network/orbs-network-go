@@ -1,5 +1,12 @@
 #!/bin/bash -e
 
+JOB_ANALYSIS_FILE="$1"
+
+if [[ -z "${JOB_ANALYSIS_FILE}" ]] ; then
+  echo "Job analysis file was not provided"
+  exit 1
+fi
+
 # If running locally, need to disable these next 4 lines
 if [[ "$CI" == "true" ]]; then
   export NVM_DIR="$HOME/.nvm"
@@ -11,4 +18,4 @@ fi
 cd .circleci && npm install && cd ..
 
 
-./.circleci/marvin-reporter.js "$1"
+./.circleci/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
