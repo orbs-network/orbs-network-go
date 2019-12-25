@@ -40,6 +40,6 @@ if [[ $(cat "${JOB_RESULTS_FILE}" | grep -c "not found") -ne 0 ]] ; then
 fi
 
 # Can collect stdout into a file on the workspace and send it further
-./.circleci/marvin-analyze.js "../$JOB_RESULTS_FILE"
+./.circleci/marvin/marvin-analyze.js "../$JOB_RESULTS_FILE"
 
 echo "Job analysis complete. Results written to ../${JOB_RESULTS_FILE}"

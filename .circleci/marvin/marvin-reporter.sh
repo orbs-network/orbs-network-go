@@ -18,4 +18,4 @@ fi
 cd .circleci && npm install && cd ..
 
 
-./.circleci/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
+./.circleci/marvin/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
