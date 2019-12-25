@@ -33,6 +33,11 @@ JOB_RESULTS_FILE="results.json"
 
 curl "${JOB_STATUS_URL}" > "${JOB_RESULTS_FILE}"
 
+LAST_MASTER_JOBS_URL="${MARVIN_ORCHESTRATOR_URL}/jobs/list/all/transferFrenzy/branch/master"
+LAST_MASTERS_FILE="last_masters.json"
+
+curl "${LAST_MASTER_JOBS_URL}" > "${LAST_MASTERS_FILE}"
+
 # Probably the job was not found, just print the curl result
 if [[ $(cat "${JOB_RESULTS_FILE}" | grep -c "not found") -ne 0 ]] ; then
   cat "${JOB_RESULTS_FILE}"
@@ -40,6 +45,6 @@ if [[ $(cat "${JOB_RESULTS_FILE}" | grep -c "not found") -ne 0 ]] ; then
 fi
 
 # Can collect stdout into a file on the workspace and send it further
-./.circleci/marvin/marvin-analyze.js "../../$JOB_RESULTS_FILE"
+./.circleci/marvin/marvin-analyze.js "../../${JOB_RESULTS_FILE}" "../../${LAST_MASTERS_FILE}"
 
 echo "Job analysis complete. Results written to ../../${JOB_RESULTS_FILE}"

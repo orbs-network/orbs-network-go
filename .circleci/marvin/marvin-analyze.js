@@ -3,18 +3,40 @@
 const fs = require('fs');
 
 const pathToJobResults = process.argv[2];
+const pathToLastMasterJobsResults = process.argv[3];
 
 if (!pathToJobResults) {
     console.error('Path to results.json not provided!');
     process.exit(1);
 }
 
+if (!pathToLastMasterJobsResults) {
+    console.error('Path to last masters JSON not provided!');
+    process.exit(1);
+}
+
 const jobResults = require(pathToJobResults);
-const {passed} = require('@orbs-network/judge-dredd');
+const lastMasterJobsResults = require(pathToLastMasterJobsResults).data;
+
+// Need to take the latest master job which is in DONE state.
+let lastMasterJob = null;
+
+for (let n in lastMasterJobsResults) {
+    if (lastMasterJobsResults[n].status == "DONE") {
+        lastMasterJob = lastMasterJobsResults[n];
+        break;
+    }
+}
+
+if (!lastMasterJob) {
+    console.warn('No latest job from master at this stage');
+}
+
+const { passed } = require('@orbs-network/judge-dredd');
 
 (async function () {
     try {
-        const result = await passed({current: jobResults, previous: null, config: null});
+        const result = await passed({ current: jobResults, previous: lastMasterJob, config: null });
         console.log(`Writing job analysis results to disk: ${JSON.stringify(result)}`);
         fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));
 
