@@ -1,5 +1,12 @@
 #!/bin/bash -e
 
+if [[ $(grep -ci FAILED workspace/pass_fail.txt) -ne 0 ]] ; then
+  echo "Test failed, cannot release GA. See previous steps for reasons."
+  echo "I decided this because I found the file workspace/pass_fail.txt with the word 'FAILED' in it"
+  echo "If that file were not there, or did not contain FAILED, I wouldn't have failed."
+  exit 1
+fi
+
 if [[ $CIRCLE_TAG == v* ]] ;
 then
   VERSION=$CIRCLE_TAG

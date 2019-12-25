@@ -18,11 +18,14 @@ const {passed} = require('@orbs-network/judge-dredd');
         console.log(`Writing job analysis results to disk: ${JSON.stringify(result)}`);
         fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));
 
-        if (result.passed) {
-            console.log('Marvin analysis is successful!');
+        if (result.analysis.passed) {
+            fs.writeFileSync('workspace/pass_fail.txt', 'PASSED');
+            console.log('Marvin analysis determined that the test passed!');
             process.exit(0);
         } else {
-            console.log('Marvin analysis found some errors. Reason:', passed.reason);
+            fs.writeFileSync('workspace/pass_fail.txt', 'FAILED');
+            console.log('Marvin analysis determined that the test failed.');
+            console.log('Reason:', result.analysis.reason);
             // The test failed, but not the process that determined that the test failed..
             // If we fail here, marvin-reporter will not run.
             process.exit(0);
