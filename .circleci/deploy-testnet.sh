@@ -14,9 +14,11 @@ cd .circleci && npm install && cd ..
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
 
-if [ ! -z "$CI_PULL_REQUESTS" ]
+echo "Value of CI_PULL_REQUESTS: ${$CI_PULL_REQUESTS}"
+
+if [ "${CIRCLE_BRANCH}" != "master" ]
 then
-    echo "We have an active PR ($CI_PULL_REQUESTS)"
+    echo "Running in non-master mode for branch ${CIRCLE_BRANCH}"
     
     # I use source in this script on purpose so that any exits from the chain on pr scrits
     # will cause this parent script to exit too which is intended by design.
