@@ -95,7 +95,7 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		conn, err := net.DialTimeout("tcp", c.queue.networkAddress, c.config.GossipNetworkTimeout())
 
 		if err != nil {
-			logger.Info("cannot connect to gossip peer endpoint")
+			logger.Info("cannot connect to gossip peer endpoint", log.Error(err))
 			time.Sleep(c.config.GossipReconnectInterval())
 			continue
 		}
