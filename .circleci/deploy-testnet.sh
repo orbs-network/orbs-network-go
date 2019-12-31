@@ -14,7 +14,7 @@ cd .circleci && npm install && cd ..
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
 
-echo "Value of CI_PULL_REQUESTS: ${$CI_PULL_REQUESTS}"
+echo "Value of CI_PULL_REQUESTS: ${CI_PULL_REQUESTS}"
 
 if [ "${CIRCLE_BRANCH}" != "master" ]
 then
@@ -22,7 +22,7 @@ then
     
     # I use source in this script on purpose so that any exits from the chain on pr scrits
     # will cause this parent script to exit too which is intended by design.
-    source ./.circleci/chain_on_pr.sh
+    source ./.circleci/deploy_new_chain.sh
 
     echo "$PR_APP_CHAIN_ID" > workspace/app_chain_id
 else

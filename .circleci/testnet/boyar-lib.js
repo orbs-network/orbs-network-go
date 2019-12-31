@@ -1,10 +1,15 @@
 const fetch = require('node-fetch');
+const crypto = require('crypto');
 
-const vChainIdOffsetByType = { // values must be ordinal integers
-    "MGMT": 0,
-    "APP": 1,
-};
-const vChainTypesCount=Object.keys(vChainIdOffsetByType).length;
+function getChainIdFromBranchName(branch) {
+    let v = 0;
+
+    for (let k in branch) {
+        v = v ^ branch[k].charCodeAt(0) << k % 64;
+    }
+
+    return Math.abs(v);
+}
 
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
@@ -126,6 +131,7 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
+    getChainIdFromBranchName,
     getPrChainId,
     getAllPrChainIds,
     getBoyarChainConfigurationById,
