@@ -197,6 +197,8 @@ github.com/orbs-network/membuffers v0.4.0 h1:tqeCLjdXJX3JIGy2mEMroeE+vG5mWTZx1vp
 github.com/orbs-network/membuffers v0.4.0/go.mod h1:mhOIfhkMQWKhbQbwD2BoIlV9eAA3LwZXMC0+JIrDmCM=
 github.com/orbs-network/orbs-client-sdk-go v0.12.0 h1:PAL20XhOpw16DI4Fekb6qrikwjtC3gkSOtUTtj31IgI=
 github.com/orbs-network/orbs-client-sdk-go v0.12.0/go.mod h1:QRXSsQUr5JUhU6lZdklwWLJkj1rAcHQkQ9Ws4EpDrws=
+github.com/orbs-network/orbs-client-sdk-go v0.14.0 h1:eqZvE48XS3kgqRvE8gz6MegTQl9dPZxz/bLtRxKgnl8=
+github.com/orbs-network/orbs-client-sdk-go v0.14.0/go.mod h1:1KsIoX5oZrLRwi96bF6k0Dy9dZaym2H88hCDi92R2YM=
 github.com/orbs-network/orbs-contract-sdk v1.4.0 h1:lbpo83A4cIQPzvyloVmNk/cVP6MO5BEn+zw0/Vg+OeI=
 github.com/orbs-network/orbs-contract-sdk v1.4.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401 h1:Ys4loL0ngBW4i7PvNKu/Q/m6IuK94PhRCKPScGG9efI=
