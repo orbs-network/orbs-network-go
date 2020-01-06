@@ -24,7 +24,7 @@ func TestGetTxStatus(t *testing.T) {
 		PrintTestTime(t, "send deploy - start", &lt)
 
 		res, err := h.GetTransactionStatus("0xC0058950d1Bdde15d06C2d7354C3Cb15Dae02CFC6BF5934b358D43dEf1DFE1a0C420Da72e541bd6e")
-		require.EqualError(t, err, "http status 404 Not Found", "expected polling for the status of an unsent transaction to return 404 http code")
+		require.NoError(t, err, "expected polling for the status of an unsent transaction to return status without error")
 		require.EqualValues(t, codec.TRANSACTION_STATUS_NO_RECORD_FOUND, res.TransactionStatus)
 	})
 }
