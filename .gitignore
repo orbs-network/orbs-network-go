@@ -27,6 +27,8 @@ orbs-network-go
 orbs-node
 test/gamma/e2e/
 
+node_modules/
+
 ### Intellij/GoLand ###
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 # Ignore all XML files except run configurations

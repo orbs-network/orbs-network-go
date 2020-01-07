@@ -1,9 +1,9 @@
 {
-  "name": "orbs-network-go-circleci-testnet",
+  "name": "orbs-network-go",
   "version": "1.0.0",
-  "description": "",
+  "description": "This package json is here to be able to test CI scripts health",
   "scripts": {
-    "test": "mocha --no-timeouts"
+    "test": "mocha ./.circleci/testnet/test"
   },
   "author": "",
   "license": "ISC",
