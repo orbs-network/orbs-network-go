@@ -15,4 +15,6 @@ if [[ "$CI" == "true" ]]; then
   nvm use "${NODE_VERSION}"
 fi
 
+npm install
+
 ./.circleci/marvin/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
