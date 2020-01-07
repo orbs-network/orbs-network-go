@@ -35,7 +35,7 @@ else
     echo "Configuration updated for all nodes in the CI testnet"
     echo "Waiting for all nodes to restart and reflect the new version is running"
 
-    node .circleci/check-testnet-deployment.js 2013
+    node .circleci/testnet/check-deployment.js 2013
 
     echo "2013" > workspace/app_chain_id
 fi

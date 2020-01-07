@@ -9,7 +9,7 @@ TESTNET_IP=$(cat workspace/testnet_ip)
 echo "Downloading the current testnet Boyar config.json"
 curl -O $BOOTSTRAP_URL
 
-./.circleci/check-testnet-deployment.js $VCHAIN
+node .circleci/testnet/check-deployment.js $VCHAIN
 
 echo "Running E2E on deployed app chain ($VCHAIN)"
 echo "on IP: $TESTNET_IP"
