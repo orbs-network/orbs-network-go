@@ -191,6 +191,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: workspace
+      - run: npm install
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
       - run: ./.circleci/marvin/marvin-reporter.sh workspace/analysis_results.json
