@@ -101,8 +101,8 @@ jobs:
       - image: circleci/node
     steps:
       - checkout
-      - run: cd .circleci && npm install
-      - run: cd .circleci && npm test
+      - run: npm install
+      - run: npm test
 
   gamma_docker_build:
     machine:
