@@ -171,6 +171,8 @@ jobs:
   marvin_analysis:
     docker:
       - image: itamararjuan/golang_with_node_aws
+    environment:
+      MARVIN_ORCHESTRATOR_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
     steps:
       - checkout
       - attach_workspace:
