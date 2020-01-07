@@ -44,19 +44,13 @@ if (!branchName) {
     process.exit(1);
 }
 
-if (!githubPRLink) {
-    console.error('No GitHub PR link supplied!');
-    printUsage();
-    process.exit(1);
-}
-
 if (!targetTag) {
     console.error('No version hash!');
     printUsage();
     process.exit(1);
 }
 
-const prLinkParts = githubPRLink.split('/');
+const prLinkParts = (githubPRLink || '').split('/') || [];
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
 const chainNumber = getChainIdFromBranchName(branchName);
 let chain;
@@ -70,7 +64,6 @@ if (chain !== false) {
     chain.DockerConfig.Tag = targetTag;
     chain.HttpPort = newVacantTCPPort(configuration);
     chain.GossipPort = newVacantTCPPort(configuration);
-    chain.Config.prNumber = prNumber;
 } else {
     // We need to spawn a new chain for this PR
     let Id = chainNumber;
@@ -79,6 +72,10 @@ if (chain !== false) {
     let Tag = targetTag;
 
     chain = newChainConfiguration({ Id, HttpPort, GossipPort, Tag });
+}
+
+
+if (prNumber > 0) {
     chain.Config.prNumber = prNumber;
 }
 
