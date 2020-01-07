@@ -96,6 +96,14 @@ jobs:
       - run: ./docker/build/build-docker-node.sh
       - run: ./.circleci/release-node-to-ecr.sh
 
+  circleci_scripts:
+    docker:
+      - image: circleci/node
+    steps:
+      - checkout
+      - run: cd .circleci && npm install
+      - run: cd .circleci && npm test
+
   gamma_docker_build:
     machine:
       image: ubuntu-1604:201903-01
@@ -271,6 +279,7 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+      - circleci_scripts
       - node_docker_build:
           filters:
             tags:
@@ -314,8 +323,8 @@ workflows:
               only: /^v.*/
       - marvin_tests:
           requires:
-           - e2e_testnet
-           - deploy_testnet
+            - e2e_testnet
+            - deploy_testnet
       - marvin_analysis:
           requires:
             - marvin_tests
