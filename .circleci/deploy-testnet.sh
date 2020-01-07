@@ -29,7 +29,7 @@ else
     echo "Running in master mode"
 
     curl -O https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json
-    node .circleci/testnet-deploy-tag.js $COMMIT_HASH
+    node .circleci/testnet/deploy-tag.js $COMMIT_HASH
     aws s3 cp --acl public-read config.json s3://boyar-testnet-bootstrap/boyar/config.json
 
     echo "Configuration updated for all nodes in the CI testnet"
