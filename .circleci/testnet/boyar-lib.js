@@ -115,9 +115,7 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
-    getChainIdFromBranchName,
-    getPrChainId,
-    getAllPrChainIds,
+    getChainIdFromBranchName,    
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,
