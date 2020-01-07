@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const { commentWithMarvinOnGitHub } = require('./github');
+
+const pullRequestUrl = process.env.CI_PULL_REQUESTS || '';
 
 const pathToJobResults = process.argv[2];
 const pathToLastMasterJobsResults = process.argv[3];
@@ -36,6 +39,18 @@ const { passed } = require('@orbs-network/judge-dredd');
 
 (async function () {
     try {
+        // Let's see if we can report something to GitHub
+        if (pullRequestUrl.length > 0) {
+            const prLinkParts = pullRequestUrl.split('/');
+            const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
+
+            await commentWithMarvinOnGitHub({
+                id: prNumber,
+                data: jobResults,
+                master: lastMasterJob,
+            });
+        }
+
         const result = await passed({ current: jobResults, previous: lastMasterJob, config: null });
         console.log(`Writing job analysis results to disk: ${JSON.stringify(result)}`);
         fs.writeFileSync('workspace/analysis_results.json', JSON.stringify(result, 2, 2));

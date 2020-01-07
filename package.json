@@ -8,6 +8,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@octokit/auth-app": "^2.4.2",
+    "@orbs-network/judge-dredd": "^0.0.8",
+    "moment": "^2.24.0",
+    "sprintf-js": "^1.1.2",
     "@orbs-network/orbs-nebula": "*",
     "node-fetch": "^2.6.0"
   },

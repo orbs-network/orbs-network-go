@@ -51,7 +51,7 @@ async function commentWithMarvinOnGitHub({ id, data, master }) {
         },
     });
 
-    return await commentResult.json();
+    return commentResult.json();
 }
 
 function calculateSign(c, m) {
@@ -130,10 +130,6 @@ function getStatsFromRun(o) {
         totalMemoryConsumptionInMegabytes,
     };
 }
-
-// (async function () {
-//     const res = await commentWithMarvinOnGitHub({ token, id: 1510, data, master });
-// })();
 
 module.exports = {
     commentWithMarvinOnGitHub,

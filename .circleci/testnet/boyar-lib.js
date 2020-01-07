@@ -1,6 +1,9 @@
 const fetch = require('node-fetch');
-const crypto = require('crypto');
 
+/**
+ * 
+ * @param {String} branch 
+ */
 function getChainIdFromBranchName(branch) {
     let v = 0;
 
@@ -101,25 +104,6 @@ function updateChainConfiguration(configuration, chain) {
     removeChainConfigurationById(configuration, chain.Id)
     configuration.chains.push(chain)
     return configuration
-}
-
-function getAllPrChainIds(prNumber) {
-    const chainIds = [];
-    for (let aChainType in vChainIdOffsetByType) {
-        chainIds.push(getPrChainId(prNumber, aChainType))
-    }
-    return chainIds;
-}
-
-// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
-function getPrChainId(prNumber, vChainType) {
-    let offset = vChainIdOffsetByType[vChainType];
-
-    if (offset === undefined) {
-        throw `Unknown virtual chain type ${vChainType}`
-    }
-
-    return 100000 + (prNumber * vChainTypesCount + offset) % 1000000;
 }
 
 async function getClosedPullRequests(page = 1) {

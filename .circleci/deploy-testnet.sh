@@ -9,7 +9,7 @@ nvm use $NODE_VERSION
 
 export COMMIT_HASH=$(./docker/hash.sh)
 
-cd .circleci && npm install && cd ..
+npm install
 
 mkdir -p workspace
 echo "$TESTNET_NODE_IP" > workspace/testnet_ip
@@ -24,7 +24,7 @@ then
     # will cause this parent script to exit too which is intended by design.
     source ./.circleci/deploy_new_chain.sh
 
-    echo "$PR_APP_CHAIN_ID" > workspace/app_chain_id
+    echo "$PR_CHAIN_ID" > workspace/app_chain_id
 else
     echo "Running in master mode"
 

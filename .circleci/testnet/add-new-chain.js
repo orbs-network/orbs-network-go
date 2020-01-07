@@ -21,8 +21,8 @@ const fs = require('fs');
 const {
     newChainConfiguration,
     getBoyarChainConfigurationById,
+    getChainIdFromBranchName,
     updateChainConfiguration,
-    getPrChainId,
     newVacantTCPPort,
 } = require('./boyar-lib');
 
@@ -58,7 +58,7 @@ if (!targetTag) {
 
 const prLinkParts = githubPRLink.split('/');
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-const chainNumber = getPrChainId(prNumber, vChainType);
+const chainNumber = getChainIdFromBranchName(branchName);
 let chain;
 
 // Read the Boyar config from file
@@ -70,6 +70,7 @@ if (chain !== false) {
     chain.DockerConfig.Tag = targetTag;
     chain.HttpPort = newVacantTCPPort(configuration);
     chain.GossipPort = newVacantTCPPort(configuration);
+    chain.Config.prNumber = prNumber;
 } else {
     // We need to spawn a new chain for this PR
     let Id = chainNumber;
@@ -78,6 +79,7 @@ if (chain !== false) {
     let Tag = targetTag;
 
     chain = newChainConfiguration({ Id, HttpPort, GossipPort, Tag });
+    chain.Config.prNumber = prNumber;
 }
 
 const updatedConfiguration = updateChainConfiguration(configuration, chain);
