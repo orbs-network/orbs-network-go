@@ -1,8 +1,5 @@
 #!/bin/bash
 
-echo "Still work in progress"
-exit 1
-
 echo "Downloading the current testnet Boyar config.json"
 curl -O $BOOTSTRAP_URL
 echo "Done downloading! Let's begin by cleaning up the testnet of any stale networks for PRs that are already closed"
