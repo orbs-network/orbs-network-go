@@ -211,7 +211,7 @@ jobs:
 
   e2e_testnet:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
     steps:
