@@ -340,7 +340,6 @@ workflows:
             - marvin_analysis
             - tests
             - ganache_related_tests
-            - memory_leaks
           filters:
             tags:
               only: /^v.*/
