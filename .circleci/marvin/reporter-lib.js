@@ -46,9 +46,13 @@ function notifySlack(slackUrl, message) {
 async function createSlackMessageJobDone(jobUpdate) {
     const startTime = jobUpdate.start_time || '1h';
     const endTime = jobUpdate.end_time || 'now';
+    const gitHubUserWhoTriggeredTheBuild = process.env.CIRCLE_USERNAME;
+    let triggeredBy = '';
 
-    const committer = await getCommitterUsernameByCommitHash(jobUpdate.summary.commit_hash);
-    const slackUsername = getSlackUsernameForGithubUser(committer);
+    if (gitHubUserWhoTriggeredTheBuild) {
+        triggeredBy = `Marvin build triggered by <${getSlackUsernameForGithubUser(gitHubUserWhoTriggeredTheBuild)}>`;
+    }
+
     const failReason = jobUpdate.analysis.passed ? '' : `*Reason: ${jobUpdate.analysis.reason}*`;
     const passedEmoji = jobUpdate.analysis.passed ? ':white_check_mark:' : ':x:';
     const passedWord = jobUpdate.analysis.passed ? 'PASSED' : 'FAILED';
@@ -64,7 +68,7 @@ MaxGoroutines: ${jobUpdate.summary.max_goroutines}
 Errors: ${jobUpdate.error || 'none'}
 <http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:3000/d/a-3pW-3mk/testnet-results?orgId=1&from=${startTime}&to=${endTime}&var-vchain=${jobUpdate.vchain}&var-validator=All|Grafana> 
 Version: ${jobUpdate.summary.semantic_version || 'NA'} Hash: ${jobUpdate.summary.commit_hash || 'NA'}
-Marvin build triggered by <${slackUsername}>
+${triggeredBy}
 *--------------------------------------------------------------------------*
 `;
     // All: ${JSON.stringify(jobUpdate)}`;
