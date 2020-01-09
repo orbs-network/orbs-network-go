@@ -117,8 +117,8 @@ async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationIn
         console.log(`Status #${tick}: ${response.status}`);
         console.log(`Time: ${new Date().toISOString()}`);
         console.log(`Updates so far: ${response.updates.length}`);
-        console.log(`Total Successful Transactions: ${latestSummary.total_tx_count}`);
-        console.log(`Total Erroneous Transactions: ${latestSummary.err_tx_count}`);
+        console.log(`Total successful transactions: ${latestSummary.total_tx_count}`);
+        console.log(`Total erroneous transactions: ${latestSummary.err_tx_count}`);
         console.log(`Average service time: ${latestSummary.avg_service_time_ms}`);
         console.log(`------------------------------------------`);
         console.log('');
