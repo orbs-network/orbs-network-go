@@ -41,14 +41,13 @@ if (!writeTargetPath) {
     console.warn(` ./marvin-endurance.js ${vchain} ${targetIp} workspace-dir/job_id`);
 }
 
-// Transfer frenzy has these default values which can be overridden here:
-// tpm, duration_sec, client_timeout_sec
+// Must specify tpm, duration_sec, client_timeout_sec here, because they are used below.
 (async function () {
     const body = {
         vchain,
-        // tpm: 60, // OVERRIDE
-        // duration_sec: 120, // OVERRIDE
-        // client_timeout_sec: 120, // OVERRIDE
+        tpm: 18000,
+        duration_sec: 3600,
+        client_timeout_sec: 300,
         gitBranch,
         target_ips: [targetIp]
     };
@@ -115,6 +114,7 @@ async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationIn
         console.log('');
         console.log(`------------------------------------------`);
         console.log(`Status #${tick}: ${response.status}`);
+        console.log(`Time: ${new Date().toISOString()}`);
         console.log(`Updates so far: ${response.updates.length}`);
         console.log(`Total Successful Transactions: ${latestSummary.total_tx_count}`);
         console.log(`Total Errornous Transactions: ${latestSummary.err_tx_count}`);
@@ -127,7 +127,7 @@ async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationIn
             break;
         }
 
-        await pSleep(10);
+        await pSleep(90);
     } while (nowInUnix() <= maxAllowedEndTime);
 
     return returnValue;
