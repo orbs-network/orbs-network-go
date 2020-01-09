@@ -47,7 +47,7 @@ if (!writeTargetPath) {
         vchain,
         tpm: 18000,
         duration_sec: 3600,
-        client_timeout_sec: 300,
+        client_timeout_sec: 60,
         gitBranch,
         target_ips: [targetIp]
     };
@@ -113,11 +113,12 @@ async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationIn
 
         console.log('');
         console.log(`------------------------------------------`);
+        console.log(`JobId: ${response.jobId} - ${response.duration_sec} seconds at ${response.tpm} tx/minute on vchain ${response.vchain}`);
         console.log(`Status #${tick}: ${response.status}`);
         console.log(`Time: ${new Date().toISOString()}`);
         console.log(`Updates so far: ${response.updates.length}`);
         console.log(`Total Successful Transactions: ${latestSummary.total_tx_count}`);
-        console.log(`Total Errornous Transactions: ${latestSummary.err_tx_count}`);
+        console.log(`Total Erroneous Transactions: ${latestSummary.err_tx_count}`);
         console.log(`Average service time: ${latestSummary.avg_service_time_ms}`);
         console.log(`------------------------------------------`);
         console.log('');
