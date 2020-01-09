@@ -41,12 +41,14 @@ if (!writeTargetPath) {
     console.warn(` ./marvin-endurance.js ${vchain} ${targetIp} workspace-dir/job_id`);
 }
 
+// Transfer frenzy has these default values which can be overridden here:
+// tpm, duration_sec, client_timeout_sec
 (async function () {
     const body = {
         vchain,
-        tpm: 60,
-        duration_sec: 120,
-        client_timeout_sec: 120,
+        // tpm: 60, // OVERRIDE
+        // duration_sec: 120, // OVERRIDE
+        // client_timeout_sec: 120, // OVERRIDE
         gitBranch,
         target_ips: [targetIp]
     };
