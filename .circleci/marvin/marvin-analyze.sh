@@ -18,13 +18,16 @@ fi
 
 # If running locally, need to disable these next 4 lines
 if [[ "$CI" == "true" ]]; then 
+  sudo apt-get install -y gnupg
+  gpg --yes --batch --passphrase="${MARVIN_PRIVATE_KEY_SECRET}" .circleci/marvin/marvin.pem.gpg
+
   export NVM_DIR="$HOME/.nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
   nvm use "${NODE_VERSION}"
 fi
 
-cd .circleci/marvin && npm install && cd ../..
+npm install
 
 # Get the JOB_ID from a file on the workspace
 
@@ -45,6 +48,6 @@ if [[ $(cat "${JOB_RESULTS_FILE}" | grep -c "not found") -ne 0 ]] ; then
 fi
 
 # Can collect stdout into a file on the workspace and send it further
-./.circleci/marvin/marvin-analyze.js "../../${JOB_RESULTS_FILE}" "../../${LAST_MASTERS_FILE}"
+node .circleci/marvin/marvin-analyze.js "../../${JOB_RESULTS_FILE}" "../../${LAST_MASTERS_FILE}"
 
 echo "Job analysis complete. Results written to ../../${JOB_RESULTS_FILE}"

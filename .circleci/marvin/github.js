@@ -1,10 +1,14 @@
 const fetch = require('node-fetch');
 const { sprintf } = require('sprintf-js');
 const { createAppAuth } = require("@octokit/auth-app");
+const fs = require('fs');
+const path = require('path');
+const pathToMarvinPrivateKey = path.join(__dirname, 'marvin.pem');
+const privateKey = fs.readFileSync(pathToMarvinPrivateKey, 'utf-8');
 
 const auth = createAppAuth({
     id: process.env.MARVIN_APP_ID,
-    privateKey: process.env.MARVIN_PRIVATE_KEY,
+    privateKey,
     installationId: process.env.MARVIN_ORBS_INSTALLATION_ID,
     clientId: process.env.MARVIN_CLIENT_ID,
     clientSecret: process.env.MARVIN_CLIENT_SECRET
