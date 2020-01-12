@@ -33,8 +33,10 @@ import (
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
 type NodeLogic interface {
@@ -88,12 +90,7 @@ func NewNodeLogic(
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, nodeConfig, logger, metricRegistry)
 
-	benchmarkConsensusAlgo := benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, nodeConfig, metricRegistry)
-	leanHelixAlgo := leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, nodeConfig, metricRegistry)
-
-	consensusAlgos := make([]services.ConsensusAlgo, 0)
-	consensusAlgos = append(consensusAlgos, benchmarkConsensusAlgo)
-	consensusAlgos = append(consensusAlgos, leanHelixAlgo)
+	consensusAlgo := createConsensusAlgo(nodeConfig)(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, metricRegistry)
 
 	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
@@ -101,13 +98,12 @@ func NewNodeLogic(
 
 	node := &nodeLogic{
 		publicApi:      publicApiService,
-		consensusAlgos: consensusAlgos,
+		consensusAlgos: []services.ConsensusAlgo{consensusAlgo},
 	}
 
 	node.Supervise(gossipService)
 	node.Supervise(blockStorageService)
-	node.Supervise(benchmarkConsensusAlgo)
-	node.Supervise(leanHelixAlgo)
+	node.Supervise(consensusAlgo)
 	node.Supervise(metric.NewSystemReporter(ctx, metricRegistry, logger))
 	node.Supervise(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
 	node.Supervise(metricRegistry.PeriodicallyRotate(ctx, logger))
@@ -116,6 +112,31 @@ func NewNodeLogic(
 	}
 
 	return node
+}
+
+type consensusAlgo interface {
+	services.ConsensusAlgo
+	govnr.ShutdownWaiter
+}
+
+func createConsensusAlgo(nodeConfig config.NodeConfig) func(ctx context.Context,
+	gossip services.Gossip,
+	blockStorage services.BlockStorage,
+	consensusContext services.ConsensusContext,
+	signer signer.Signer,
+	parentLogger log.Logger,
+	metricFactory metric.Factory) consensusAlgo {
+
+	return func(ctx context.Context, gossip services.Gossip, blockStorage services.BlockStorage, consensusContext services.ConsensusContext, signer signer.Signer, parentLogger log.Logger, metricFactory metric.Factory) consensusAlgo {
+		switch nodeConfig.ActiveConsensusAlgo() {
+		case consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX:
+			return leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossip, blockStorage, consensusContext, signer, parentLogger, nodeConfig, metricFactory)
+		case consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS:
+			return benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, signer, parentLogger, nodeConfig, metricFactory)
+		default:
+			panic(errors.Errorf("unknown consensus algo type %s", nodeConfig.ActiveConsensusAlgo()))
+		}
+	}
 }
 
 func (n *nodeLogic) PublicApi() services.PublicApi {
