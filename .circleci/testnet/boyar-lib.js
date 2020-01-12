@@ -1,10 +1,18 @@
 const fetch = require('node-fetch');
 
-const vChainIdOffsetByType = { // values must be ordinal integers
-    "MGMT": 0,
-    "APP": 1,
-};
-const vChainTypesCount=Object.keys(vChainIdOffsetByType).length;
+/**
+ * 
+ * @param {String} branch 
+ */
+function getChainIdFromBranchName(branch) {
+    let v = 0;
+
+    for (let k in branch) {
+        v = v ^ branch[k].charCodeAt(0) << k % 64;
+    }
+
+    return Math.abs(v);
+}
 
 function getBoyarChainConfigurationById(configuration, chainId) {
     const chainIndex = configuration.chains.findIndex(chain => chain.Id === chainId);
@@ -98,25 +106,6 @@ function updateChainConfiguration(configuration, chain) {
     return configuration
 }
 
-function getAllPrChainIds(prNumber) {
-    const chainIds = [];
-    for (let aChainType in vChainIdOffsetByType) {
-        chainIds.push(getPrChainId(prNumber, aChainType))
-    }
-    return chainIds;
-}
-
-// to get the first vChain id allocated to prNumber PR, pass undefined to vChainType
-function getPrChainId(prNumber, vChainType) {
-    let offset = vChainIdOffsetByType[vChainType];
-
-    if (offset === undefined) {
-        throw `Unknown virtual chain type ${vChainType}`
-    }
-
-    return 100000 + (prNumber * vChainTypesCount + offset) % 1000000;
-}
-
 async function getClosedPullRequests(page = 1) {
     const response = await fetch(`https://api.github.com/repos/orbs-network/orbs-network-go/pulls?state=closed&per_page=100&page=${page}`);
     const closedPRs = await response.json();
@@ -126,8 +115,7 @@ async function getClosedPullRequests(page = 1) {
 module.exports = {
     getClosedPullRequests,
     newChainConfiguration,
-    getPrChainId,
-    getAllPrChainIds,
+    getChainIdFromBranchName,    
     getBoyarChainConfigurationById,
     updateChainConfiguration,
     newVacantTCPPort,

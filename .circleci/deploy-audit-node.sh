@@ -15,7 +15,7 @@ else
   VERSION=$(./docker/hash.sh)
 fi
 
-cd .circleci && npm install @orbs-network/orbs-nebula && cd ..
+cd .circleci && npm install && cd ..
 
 echo "Downloading current Orbs Core Audit Node configuration from S3.."
 curl -O https://orbs-core-audit-node.s3.us-east-2.amazonaws.com/config.json

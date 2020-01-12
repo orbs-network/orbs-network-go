@@ -1,0 +1,22 @@
+{
+  "name": "orbs-network-go",
+  "version": "1.0.0",
+  "description": "This package json is here to be able to test CI scripts health",
+  "scripts": {
+    "test": "mocha ./.circleci/testnet/test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@octokit/auth-app": "^2.4.2",
+    "@orbs-network/judge-dredd": "^0.0.8",
+    "moment": "^2.24.0",
+    "sprintf-js": "^1.1.2",
+    "@orbs-network/orbs-nebula": "*",
+    "node-fetch": "^2.6.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
+  }
+}

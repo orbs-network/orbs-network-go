@@ -96,6 +96,14 @@ jobs:
       - run: ./docker/build/build-docker-node.sh
       - run: ./.circleci/release-node-to-ecr.sh
 
+  circleci_scripts:
+    docker:
+      - image: circleci/node
+    steps:
+      - checkout
+      - run: npm install
+      - run: npm test
+
   gamma_docker_build:
     machine:
       image: ubuntu-1604:201903-01
@@ -150,13 +158,11 @@ jobs:
   marvin_tests:
     docker:
       - image: itamararjuan/golang_with_node_aws
-    environment:
-      MARVIN_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
     steps:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: ./.circleci/marvin-endurance.sh
+      - run: ./.circleci/marvin/marvin-endurance.sh # Its output is workspace/job_id file
       - persist_to_workspace:
           root: workspace
           paths:
@@ -165,18 +171,29 @@ jobs:
   marvin_analysis:
     docker:
       - image: itamararjuan/golang_with_node_aws
+    environment:
+      MARVIN_ORCHESTRATOR_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
     steps:
       - checkout
       - attach_workspace:
           at: workspace
-      - run: cat workspace/job_id
+      - run: ./.circleci/marvin/marvin-analyze.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - analysis_results.json
+            - pass_fail.txt
 
   marvin_reporter:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
     steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
       - run: echo "report results to github if branch != master"
       - run: echo "report results to slack"
+      - run: ./.circleci/marvin/marvin-reporter.sh workspace/analysis_results.json
 
   ganache_related_tests:
     machine:
@@ -194,7 +211,7 @@ jobs:
 
   e2e_testnet:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: itamararjuan/golang_with_node_aws
     environment:
       BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
     steps:
@@ -234,6 +251,8 @@ jobs:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
+      - attach_workspace:
+          at: workspace
       - run: ./.circleci/release.sh
 
   deploy_audit_node:
@@ -262,6 +281,7 @@ workflows:
           filters:
             tags:
               only: /^v.*/
+      - circleci_scripts
       - node_docker_build:
           filters:
             tags:
@@ -320,7 +340,6 @@ workflows:
             - marvin_analysis
             - tests
             - ganache_related_tests
-            - memory_leaks
           filters:
             tags:
               only: /^v.*/

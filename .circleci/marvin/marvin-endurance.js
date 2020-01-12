@@ -2,11 +2,12 @@
 
 const fetch = require('node-fetch');
 
-const marvinUrl = process.env.MARVIN_URL;
+const marvinUrl = process.env.MARVIN_ORCHESTRATOR_URL;
 let vchain = process.argv[2];
 const targetIp = process.argv[3];
 const writeTargetPath = process.argv[4];
 const fs = require('fs');
+const gitBranch = process.env.CIRCLE_BRANCH;
 
 function printUsage() {
     console.log('marvin-endurance usage: ');
@@ -16,12 +17,12 @@ function printUsage() {
 }
 
 if (!marvinUrl) {
-    console.error('Cannot query Marvin API without knowing it\'s address. Please set MARVIN_URL to something');
+    console.error('Environment variable MARVIN_ORCHESTRATOR_URL not set');
     process.exit(2);
 }
 
 if (!vchain) {
-    console.error('vchain not provided, cannot call marvin without a vchain!');
+    console.error('Command line argument vchain was not provided');
     printUsage();
     process.exit(1);
 }
@@ -29,7 +30,7 @@ if (!vchain) {
 vchain = parseInt(vchain);
 
 if (!targetIp) {
-    console.error('targetIp not provided, cannot call marvin without a targetIp!');
+    console.error('Command line argument targetIp was not provided');
     printUsage();
     process.exit(1);
 }
@@ -40,12 +41,14 @@ if (!writeTargetPath) {
     console.warn(` ./marvin-endurance.js ${vchain} ${targetIp} workspace-dir/job_id`);
 }
 
+// Must specify tpm, duration_sec, client_timeout_sec here, because they are used below.
 (async function () {
     const body = {
         vchain,
-        tpm: 60,
-        duration_sec: 60,
-        client_timeout_sec: 120,
+        tpm: 18000,
+        duration_sec: 600,
+        client_timeout_sec: 60,
+        gitBranch,
         target_ips: [targetIp]
     };
 
@@ -54,13 +57,13 @@ if (!writeTargetPath) {
     const result = await fetch(`${marvinUrl}/jobs/start/transferFrenzy`, {
         method: 'post',
         body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
     });
 
     const responseAsJson = await result.json();
 
     console.log(`Marvin response (HTTP ${result.status}): `);
-    const { jobId } = responseAsJson;
+    const {jobId} = responseAsJson;
     console.log('Received jobId: ', jobId);
 
     const pollingBoolRes = await waitUntilDone({
@@ -79,20 +82,22 @@ if (!writeTargetPath) {
 
         process.exit(0);
     } else {
-        console.log('Marvin test did not complete within the alloted time frame!');
+        console.log('Marvin test did not complete within the allotted time frame!');
         process.exit(100);
     }
 })();
 
 function pSleep(s) {
-    return new Promise((r) => { setTimeout(r, s * 1000) });
+    return new Promise((r) => {
+        setTimeout(r, s * 1000)
+    });
 }
 
 function nowInUnix() {
     return Math.floor(Date.now() / 1000);
 }
 
-async function waitUntilDone({ jobId, timeoutInSeconds = 30, acceptableDurationInSeconds = 100 }) {
+async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationInSeconds = 100}) {
     const startTime = nowInUnix();
     const maxAllowedEndTime = startTime + acceptableDurationInSeconds + timeoutInSeconds;
     let tick = 0;
@@ -108,20 +113,22 @@ async function waitUntilDone({ jobId, timeoutInSeconds = 30, acceptableDurationI
 
         console.log('');
         console.log(`------------------------------------------`);
+        console.log(`JobId: ${response.jobId} - ${response.duration_sec} seconds at ${response.tpm} tx/minute on vchain ${response.vchain}`);
         console.log(`Status #${tick}: ${response.status}`);
+        console.log(`Time: ${new Date().toISOString()}`);
         console.log(`Updates so far: ${response.updates.length}`);
-        console.log(`Total Successful Transactions: ${latestSummary.total_tx_count}`);
-        console.log(`Total Errornous Transactions: ${latestSummary.err_tx_count}`);
+        console.log(`Total successful transactions: ${latestSummary.total_tx_count}`);
+        console.log(`Total erroneous transactions: ${latestSummary.err_tx_count}`);
         console.log(`Average service time: ${latestSummary.avg_service_time_ms}`);
         console.log(`------------------------------------------`);
         console.log('');
 
-        if (response.status == 'DONE') {
+        if (response.status === 'DONE') {
             returnValue = true;
             break;
         }
 
-        await pSleep(10);
+        await pSleep(90);
     } while (nowInUnix() <= maxAllowedEndTime);
 
     return returnValue;

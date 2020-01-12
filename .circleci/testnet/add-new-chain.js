@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 /*
+
 This script updates a local Boyar config.json file to provision a new chain
 for E2E purposes on an isolated blockchain network
 
-Usage: 
+Usage:
 
-$ testnet-deploy-new-chain-for-pr.js <GitHub PR Link>
+$ add-new-chain.js <branch> <docker-tag> <GitHub PR Link>
 
 Examples:
 
-$ testnet-deploy-new-chain-for-pr.js https://github.com/orbs-network/orbs-network-go/pull/1184
+$ add-new-chain.js https://github.com/orbs-network/orbs-network-go/pull/1184
 
 */
 
@@ -20,29 +21,38 @@ const fs = require('fs');
 const {
     newChainConfiguration,
     getBoyarChainConfigurationById,
+    getChainIdFromBranchName,
     updateChainConfiguration,
-    getPrChainId,
     newVacantTCPPort,
 } = require('./boyar-lib');
 
-const githubPRLink = process.argv[2];
+const branchName = process.argv[2];
 const targetTag = process.argv[3];
-const vChainType=process.argv[4]; //"MGMT", "APP"
+const githubPRLink = process.argv[4];
+
 const configFilePath = path.join(process.cwd(), 'config.json');
 
-if (!githubPRLink) {
-    console.log('No GitHub PR link supplied!');
+function printUsage() {
+    console.log('add new chain usage:');
+    console.log('add-new-chain.js <branch_name> <docker_tag> <github_pr_url>');
+    console.log('');
+}
+
+if (!branchName) {
+    console.error('No branch name specified');
+    printUsage();
     process.exit(1);
 }
 
 if (!targetTag) {
-    console.log('No version hash!');
+    console.error('No version hash!');
+    printUsage();
     process.exit(1);
 }
 
-const prLinkParts = githubPRLink.split('/');
+const prLinkParts = (githubPRLink || '').split('/') || [];
 const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-const chainNumber = getPrChainId(prNumber, vChainType);
+const chainNumber = getChainIdFromBranchName(branchName);
 let chain;
 
 // Read the Boyar config from file
@@ -62,6 +72,11 @@ if (chain !== false) {
     let Tag = targetTag;
 
     chain = newChainConfiguration({ Id, HttpPort, GossipPort, Tag });
+}
+
+
+if (prNumber > 0) {
+    chain.Config.prNumber = prNumber;
 }
 
 const updatedConfiguration = updateChainConfiguration(configuration, chain);

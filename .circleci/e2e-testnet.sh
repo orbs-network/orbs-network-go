@@ -2,6 +2,16 @@
 
 . ./test.common.sh
 
+# If running locally, need to disable these next 4 lines
+if [[ "$CI" == "true" ]]; then
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+  nvm use "${NODE_VERSION}"
+fi
+
+npm install
+
 # Get the vchains to act upon from CircleCI's workspace
 VCHAIN=$(cat workspace/app_chain_id)
 TESTNET_IP=$(cat workspace/testnet_ip)
@@ -9,7 +19,7 @@ TESTNET_IP=$(cat workspace/testnet_ip)
 echo "Downloading the current testnet Boyar config.json"
 curl -O $BOOTSTRAP_URL
 
-./.circleci/check-testnet-deployment.js $VCHAIN
+node .circleci/testnet/check-deployment.js $VCHAIN
 
 echo "Running E2E on deployed app chain ($VCHAIN)"
 echo "on IP: $TESTNET_IP"
