@@ -3,6 +3,7 @@ const { sprintf } = require('sprintf-js');
 const { createAppAuth } = require("@octokit/auth-app");
 const fs = require('fs');
 const path = require('path');
+const {calculatePct, secondsToHumanReadable} = require('./calc');
 const pathToMarvinPrivateKey = path.join(__dirname, 'marvin.pem');
 const privateKey = fs.readFileSync(pathToMarvinPrivateKey, 'utf-8');
 
@@ -14,18 +15,6 @@ const auth = createAppAuth({
     clientSecret: process.env.MARVIN_CLIENT_SECRET
 });
 
-function secondsToHumanReadable(seconds) {
-    var numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
-    var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
-    var numseconds = (((seconds % 31536000) % 86400) % 3600) % 60;
-    let humanReadable = '';
-
-    humanReadable += (numhours > 0) ? numhours + " hours " : '';
-    humanReadable += (numminutes > 0) ? numminutes + " minutes " : '';
-    humanReadable += (numseconds > 0) ? numseconds + " seconds " : '';
-
-    return humanReadable;
-}
 
 async function getPullRequest(id) {
     const response = await fetch(`https://api.github.com/repos/orbs-network/orbs-network-go/pulls/${id}`);
@@ -58,56 +47,52 @@ async function commentWithMarvinOnGitHub({ id, data, master }) {
     return commentResult.json();
 }
 
-function calculateSign(c, m) {
-    if (c > m) {
-        const gain = c - m;
-        const gainPercent = gain / m;
-        const textualGain = sprintf("%.1f", gainPercent * 100);
-
-        return `*+%${textualGain}*`;
-    } else if (m > c) {
-        const loss = m - c;
-        const lossPercent = loss / c;
-        const textualLoss = sprintf("%.1f", lossPercent * 100);
-
-        return `*-%${textualLoss}*`;
-    } else {
-        return "";
-    }
-}
 
 function createCommentMessage({ data, master }) {
     const branchStats = getStatsFromRun(data);
     const masterStats = getStatsFromRun(master);
-    let message = sprintf("Hey, I've completed an endurance test on this code <br />" +
-        "for a duration of %s <br />" +
-        "Key metrics from the run (compared to master):<br />", secondsToHumanReadable(branchStats.durationInSeconds));
+    let message = sprintf("Hey, I've completed a %s endurance test on this code.<br />" +
+        "Key metrics for this run (compared to master):<br />", secondsToHumanReadable(branchStats.durationInSeconds));
 
     message += sprintf(
-        "*%f* transactions processed successfully %s(%f)<br />",
+        "*%f* transactions processed successfully (%+.1f%% from master's %d)<br />",
         branchStats.totalTxCount,
-        calculateSign(branchStats.totalTxCount, masterStats.totalTxCount),
+        calculatePct(branchStats.totalTxCount, masterStats.totalTxCount),
         masterStats.totalTxCount
     );
 
     message += sprintf(
-        "*%d* transactions failed %s(%d)<br />",
+        "*%d* transactions failed (%+.1f%% from master's %d)<br />",
         branchStats.totalTxErrorCount,
-        calculateSign(branchStats.totalTxErrorCount, masterStats.totalTxErrorCount),
+        calculatePct(branchStats.totalTxErrorCount, masterStats.totalTxErrorCount),
         masterStats.totalTxErrorCount,
     );
 
     message += sprintf(
-        "average service time: *%dms* %s(%dms)<br />",
-        branchStats.avgServiceTimeInMilis,
-        calculateSign(branchStats.avgServiceTimeInMilis, masterStats.avgServiceTimeInMilis),
-        masterStats.avgServiceTimeInMilis,
+        "Average service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        branchStats.avgServiceTimeInMillis,
+        calculatePct(branchStats.avgServiceTimeInMillis, masterStats.avgServiceTimeInMillis),
+        masterStats.avgServiceTimeInMillis,
     );
 
     message += sprintf(
-        "Memory consumption: *%.2fMB* %s(%.2fMB)<br />",
+        "P99 service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        branchStats.p99ServiceTimeInMillis,
+        calculatePct(branchStats.p99ServiceTimeInMillis, masterStats.p99ServiceTimeInMillis),
+        masterStats.p99ServiceTimeInMillis,
+    );
+
+    message += sprintf(
+        "Max service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        branchStats.maxServiceTimeInMillis,
+        calculatePct(branchStats.maxServiceTimeInMillis, masterStats.maxServiceTimeInMillis),
+        masterStats.maxServiceTimeInMillis,
+    );
+
+    message += sprintf(
+        "Memory consumption: *%.2fMB* %s (%+.1f%% from master's %.2fMB)<br />",
         branchStats.totalMemoryConsumptionInMegabytes,
-        calculateSign(branchStats.totalMemoryConsumptionInMegabytes, masterStats.totalMemoryConsumptionInMegabytes),
+        calculatePct(branchStats.totalMemoryConsumptionInMegabytes, masterStats.totalMemoryConsumptionInMegabytes),
         masterStats.totalMemoryConsumptionInMegabytes,
     );
 
@@ -121,7 +106,9 @@ function getStatsFromRun(o) {
     const durationInSeconds = o.meta.duration_sec;
     const totalTxCount = lastUpdate.summary.total_tx_count;
     const totalTxErrorCount = lastUpdate.summary.err_tx_count;
-    const avgServiceTimeInMilis = lastUpdate.summary.avg_service_time_ms;
+    const avgServiceTimeInMillis = lastUpdate.summary.avg_service_time_ms;
+    const p99ServiceTimeInMillis = lastUpdate.summary.p99_service_time_ms;
+    const maxServiceTimeInMillis = lastUpdate.summary.max_service_time_ms;
     const totalMemoryConsumptionInBytes = parseInt(lastUpdate.summary.max_alloc_mem) - parseInt(firstUpdate.summary.max_alloc_mem);
     const totalMemoryConsumptionInMegabytes = totalMemoryConsumptionInBytes / 1000000;
 
@@ -129,7 +116,9 @@ function getStatsFromRun(o) {
         durationInSeconds,
         totalTxCount,
         totalTxErrorCount,
-        avgServiceTimeInMilis,
+        avgServiceTimeInMillis,
+        p99ServiceTimeInMillis,
+        maxServiceTimeInMillis,
         totalMemoryConsumptionInBytes,
         totalMemoryConsumptionInMegabytes,
     };
