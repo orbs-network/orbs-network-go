@@ -105,7 +105,7 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	// TODO POSV2 should be seperate provider ?
 	var committeeNodeAddresses []primitives.NodeAddress
 	var err error
-	//committeeNodeAddresses, err := s.callElectionsSystemContract(ctx, executionContext.currentBlockHeight)
+	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
 		committeeNodeAddresses, err = s.committeeProvider.GetCommittee(ctx, uint64(executionContext.currentBlockHeight))
@@ -117,17 +117,25 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	return committee, err
 }
 
-func (s *service) callElectionsSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+// TODO POSv2
+func (s *service) callElectionsSystemContract(ctx context.Context, executionContext *executionContext) ([]primitives.NodeAddress, error) {
 	systemContractName := primitives.ContractName(elections_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)
 
-	output, err := s.CallSystemContract(ctx, &services.CallSystemContractInput{
-		BlockHeight:        blockHeight,
-		BlockTimestamp:     0, // unfortunately we don't know the timestamp here, this limits which contract SDK API can be used
-		ContractName:       systemContractName,
-		MethodName:         systemMethodName,
-		InputArgumentArray: protocol.ArgumentsArrayEmpty(),
+	// modify execution context
+	executionContext.serviceStackPush(systemContractName)
+	defer executionContext.serviceStackPop()
+
+	// execute the call
+	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(ctx, &services.ProcessCallInput{
+		ContextId:              executionContext.contextId,
+		ContractName:           systemContractName,
+		MethodName:             systemMethodName,
+		InputArgumentArray:     protocol.ArgumentsArrayEmpty(),
+		AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
+		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
 	})
+
 	if err != nil {
 		return nil, err
 	}

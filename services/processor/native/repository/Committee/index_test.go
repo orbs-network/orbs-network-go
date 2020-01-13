@@ -7,11 +7,7 @@
 package committee_systemcontract
 
 import (
-	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func makeNodeAddress(a int) []byte {
@@ -26,31 +22,4 @@ func makeNodeAddressArray(n int) [][]byte {
 		addrs = append(addrs, makeNodeAddress(i))
 	}
 	return addrs
-}
-
-func TestOrbsCommitteeContract_getElectedValidators(t *testing.T) {
-	addrs := [][]byte{
-		makeNodeAddress(100),
-		makeNodeAddress(10),
-		makeNodeAddress(254),
-		makeNodeAddress(17),
-		makeNodeAddress(66),
-		makeNodeAddress(8),
-		makeNodeAddress(18),
-	}
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-		blockHeight := 10
-
-		// prepare
-		m.MockEnvBlockHeight(blockHeight)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addrs)}, uint64(blockHeight))
-
-		// run with empty seed
-		electedConcatenated := _getElectedValidators()
-
-		//assert
-		require.EqualValues(t, addrs, _split(electedConcatenated))
-	})
 }
