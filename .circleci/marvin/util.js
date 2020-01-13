@@ -10,7 +10,7 @@ function secondsToHumanReadable(seconds) {
     humanReadable += (numMinutes > 0) ? numMinutes + " minutes " : '';
     humanReadable += (numSeconds > 0) ? numSeconds + " seconds " : '';
 
-    return humanReadable;
+    return humanReadable.trim();
 }
 
 function calculatePct(cur, prev) {
@@ -53,28 +53,28 @@ function createGithubCommentWithMessage({data, master}) {
     );
 
     message += sprintf(
-        "Average service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        "Average service time: *%dms* (%+.1f%% from master's %dms)<br />",
         branchStats.avgServiceTimeInMillis,
         calculatePct(branchStats.avgServiceTimeInMillis, masterStats.avgServiceTimeInMillis),
         masterStats.avgServiceTimeInMillis,
     );
 
     message += sprintf(
-        "P99 service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        "P99 service time: *%dms* (%+.1f%% from master's %dms)<br />",
         branchStats.p99ServiceTimeInMillis,
         calculatePct(branchStats.p99ServiceTimeInMillis, masterStats.p99ServiceTimeInMillis),
         masterStats.p99ServiceTimeInMillis,
     );
 
     message += sprintf(
-        "Max service time: *%dms* %s (%+.1f%% from master's %dms)<br />",
+        "Max service time: *%dms* (%+.1f%% from master's %dms)<br />",
         branchStats.maxServiceTimeInMillis,
         calculatePct(branchStats.maxServiceTimeInMillis, masterStats.maxServiceTimeInMillis),
         masterStats.maxServiceTimeInMillis,
     );
 
     message += sprintf(
-        "Memory consumption: *%.2fMB* %s (%+.1f%% from master's %.2fMB)<br />",
+        "Memory consumption: *%.2fMB* (%+.1f%% from master's %.2fMB)<br />",
         branchStats.totalMemoryConsumptionInMegabytes,
         calculatePct(branchStats.totalMemoryConsumptionInMegabytes, masterStats.totalMemoryConsumptionInMegabytes),
         masterStats.totalMemoryConsumptionInMegabytes,
