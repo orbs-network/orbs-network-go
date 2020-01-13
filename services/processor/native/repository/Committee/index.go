@@ -17,7 +17,6 @@ import (
 // helpers for avoiding reliance on strings throughout the system
 const CONTRACT_NAME = "_Committee"
 const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee" // used with election
-const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses" // used before election or for testing
 const METHOD_UPDATE_MISSES = "updateMisses"
 
 var PUBLIC = sdk.Export(getOrderedCommittee, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)

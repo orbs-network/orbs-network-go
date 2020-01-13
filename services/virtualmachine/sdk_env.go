@@ -48,7 +48,7 @@ func (s *service) handleSdkEnvCall(ctx context.Context, executionContext *execut
 		}
 		return []*protocol.Argument{(&protocol.ArgumentBuilder{
 			// value
-			Type:        protocol.ARGUMENT_TYPE_BYTES_VALUE,
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value,
 		}).Build()}, nil
 
@@ -59,10 +59,9 @@ func (s *service) handleSdkEnvCall(ctx context.Context, executionContext *execut
 		}
 		return []*protocol.Argument{(&protocol.ArgumentBuilder{
 			// value
-			Type:        protocol.ARGUMENT_TYPE_BYTES_ARRAY_VALUE,
+			Type:            protocol.ARGUMENT_TYPE_BYTES_ARRAY_VALUE,
 			BytesArrayValue: value,
 		}).Build()}, nil
-
 
 	default:
 		return nil, errors.Errorf("unknown SDK env call method: %s", methodName)
@@ -104,7 +103,10 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	}
 
 	// TODO POSV2 should be seperate provider ?
-	committeeNodeAddresses, err := s.callElectionsSystemContract(ctx, executionContext.currentBlockHeight)
+	var committeeNodeAddresses []primitives.NodeAddress
+	var err error
+	//committeeNodeAddresses, err := s.callElectionsSystemContract(ctx, executionContext.currentBlockHeight)
+
 	if err != nil || len(committeeNodeAddresses) == 0 {
 		committeeNodeAddresses, err = s.committeeProvider.GetCommittee(ctx, uint64(executionContext.currentBlockHeight))
 	}

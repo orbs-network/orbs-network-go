@@ -42,28 +42,6 @@ func calculateCommitteeSize(maximumCommitteeSize uint32, minimumCommitteeSize ui
 	return maximumCommitteeSize
 }
 
-// Older version to be deleted in future
-func (s *service) generateCommitteeUsingConsensus(ctx context.Context, input *services.RequestCommitteeInput) ([]primitives.NodeAddress, error) {
-	electedValidatorsAddresses, err := s.getElectedValidators(ctx, input.CurrentBlockHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	committeeSize := calculateCommitteeSize(input.MaxCommitteeSize, s.config.LeanHelixConsensusMinimumCommitteeSize(), uint32(len(electedValidatorsAddresses)))
-	s.logger.Info("Calculated committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Uint32("committee-size", committeeSize), log.Int("elected-validators-count", len(electedValidatorsAddresses)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
-	indices, err := chooseRandomCommitteeIndices(committeeSize, input.RandomSeed, electedValidatorsAddresses)
-	if err != nil {
-		return nil, err
-	}
-
-	committeeNodeAddresses := make([]primitives.NodeAddress, len(indices))
-	for i, index := range indices {
-		committeeNodeAddresses[i] = primitives.NodeAddress(electedValidatorsAddresses[int(index)])
-	}
-
-	return committeeNodeAddresses, nil
-}
-
 // See https://github.com/orbs-network/orbs-spec/issues/111
 func chooseRandomCommitteeIndices(committeeSize uint32, randomSeed uint64, nodes []primitives.NodeAddress) ([]uint32, error) {
 	type gradedIndex struct {
