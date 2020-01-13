@@ -40,7 +40,7 @@ const { passed } = require('@orbs-network/judge-dredd');
 (async function () {
     try {
         // Let's see if we can report something to GitHub
-        if (pullRequestUrl.length > 0) {
+        if (pullRequestUrl.length > 0 && lastMasterJob) {
             const prLinkParts = pullRequestUrl.split('/');
             const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
 

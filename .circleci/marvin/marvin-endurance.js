@@ -109,17 +109,20 @@ async function waitUntilDone({jobId, timeoutInSeconds = 30, acceptableDurationIn
         const res = await fetch(`${marvinUrl}/jobs/${jobId}/status`);
         const response = await res.json();
 
-        const latestSummary = response.updates[response.updates.length - 1].summary;
+        const latestUpdate = response.updates[response.updates.length - 1];
+        const latestSummary = latestUpdate.summary;
 
         console.log('');
         console.log(`------------------------------------------`);
-        console.log(`JobId: ${response.jobId} - ${response.duration_sec} seconds at ${response.tpm} tx/minute on vchain ${response.vchain}`);
+        console.log(`JobId: ${response.jobId} - ${response.meta.duration_sec} seconds at ${response.meta.tpm} tx/minute on vchain ${response.meta.vchain}`);
         console.log(`Status #${tick}: ${response.status}`);
-        console.log(`Time: ${new Date().toISOString()}`);
+        console.log(`Time: ${new Date().toISOString()}. Runtime so far: ${latestUpdate.runtime}ms`);
         console.log(`Updates so far: ${response.updates.length}`);
         console.log(`Total successful transactions: ${latestSummary.total_tx_count}`);
         console.log(`Total erroneous transactions: ${latestSummary.err_tx_count}`);
         console.log(`Average service time: ${latestSummary.avg_service_time_ms}`);
+        console.log(`P99 service time: ${latestSummary.p99_service_time_ms}`);
+        console.log(`Max service time: ${latestSummary.max_service_time_ms}`);
         console.log(`------------------------------------------`);
         console.log('');
 
