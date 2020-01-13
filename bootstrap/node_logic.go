@@ -32,6 +32,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -50,20 +51,7 @@ type nodeLogic struct {
 	consensusAlgos []services.ConsensusAlgo
 }
 
-func NewNodeLogic(
-	parentCtx context.Context,
-	gossipTransport gossipAdapter.Transport,
-	blockPersistence blockStorageAdapter.BlockPersistence,
-	statePersistence stateStorageAdapter.StatePersistence,
-	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
-	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
-	maybeClock txPoolAdapter.Clock,
-	nativeCompiler nativeProcessorAdapter.Compiler,
-	logger log.Logger,
-	metricRegistry metric.Registry,
-	nodeConfig config.NodeConfig,
-	ethereumConnection ethereumAdapter.EthereumConnection,
-) NodeLogic {
+func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Transport, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter, transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter, maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler, committeeProvider committeeProviderAdapter.CommitteeProvider, logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig, ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
 
 	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
@@ -83,7 +71,7 @@ func NewNodeLogic(
 
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
-	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, logger)
+	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, committeeProvider, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, maybeClock, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)

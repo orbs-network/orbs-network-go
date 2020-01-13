@@ -9,6 +9,7 @@ package committee_systemcontract
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/safemath/safeuint32"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
@@ -46,7 +47,7 @@ func _clearMiss(addr []byte) {
 
 // Function for external monitoring of reputation via absolute number of misses
 func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []uint32) {
-	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
+	addressesArray := _getOrderedCommitteeForAddresses(env.GetBlockCommittee())
 	committeeAddresses = make([][20]byte, len(addressesArray))
 	committeeMisses = make([]uint32, len(addressesArray))
 	for i, address := range addressesArray {
@@ -58,7 +59,7 @@ func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []u
 
 // Function for external monitoring of reputation
 func getAllCommitteeReputations() (committeeAddresses [][20]byte, committeeReputations []uint32) {
-	addressesArray := _getOrderedCommitteeForAddresses(_getElectedValidators())
+	addressesArray := _getOrderedCommitteeForAddresses(env.GetBlockCommittee())
 	committeeAddresses = make([][20]byte, len(addressesArray))
 	committeeReputations = make([]uint32, len(addressesArray))
 	for i, address := range addressesArray {

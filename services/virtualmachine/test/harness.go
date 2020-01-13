@@ -51,12 +51,7 @@ func newHarness(logger log.Logger) *harness {
 		crosschainConnectorsForService[key] = value
 	}
 
-	service := virtualmachine.NewVirtualMachine(
-		stateStorage,
-		processorsForService,
-		crosschainConnectorsForService,
-		logger,
-	)
+	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService,, logger, )
 
 	return &harness{
 		blockStorage:         blockStorage,

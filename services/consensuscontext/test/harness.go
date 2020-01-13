@@ -151,7 +151,7 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 		genesisValidatorNodes[nodeAddress] = config.NewHardCodedValidatorNode(bytes)
 	}
 
-	cfg := config.ForConsensusContextTests(genesisValidatorNodes, enableTriggers)
+	cfg := config.ForConsensusContextTests(enableTriggers)
 
 	metricFactory := metric.NewRegistry()
 

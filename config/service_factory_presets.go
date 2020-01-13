@@ -39,7 +39,7 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 	return cfg
 }
 
-func ForConsensusContextTests(genesisValidatorNodes map[string]ValidatorNode, triggersEnabled bool) ConsensusContextConfig {
+func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
@@ -49,10 +49,20 @@ func ForConsensusContextTests(genesisValidatorNodes map[string]ValidatorNode, tr
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, triggersEnabled)
-	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
-	if genesisValidatorNodes != nil {
-		cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
+
+	return cfg
+}
+
+func ForCommitteeProviderTests(numOfNodes int) CommitteeProviderConfig {
+	cfg := emptyConfig()
+
+	nodes := make(map[string]ValidatorNode)
+	for i := 0; i < numOfNodes;i++ {
+		nodeAddr := testKeys.NodeAddressesForTests()[i]
+		nodes[nodeAddr.KeyForMap()] = &hardCodedValidatorNode{nodeAddress: nodeAddr}
 	}
+	cfg.SetGenesisValidatorNodes(nodes)
+
 	return cfg
 }
 

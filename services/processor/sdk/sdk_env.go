@@ -70,3 +70,20 @@ func (s *service) SdkEnvGetBlockProposerAddress(executionContextId sdkContext.Co
 	}
 	return output.OutputArguments[0].BytesValue()
 }
+
+func (s *service) SdkEnvGetBlockCommittee(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) [][]byte {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ENV,
+		MethodName:      "getBlockCommittee",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesArrayValue() {
+		panic("getBlockCommittee Sdk.Env returned corrupt output value")
+	}
+	return output.OutputArguments[0].BytesArrayValueCopiedToNative()
+}

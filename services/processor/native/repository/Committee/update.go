@@ -20,8 +20,7 @@ func updateMisses() {
 	if !bytes.Equal(address.GetCallerAddress(), address.GetContractAddress(TRIGGER_CONTRACT)) {
 		panic(fmt.Errorf("must be called from %s contract only", TRIGGER_CONTRACT))
 	}
-	elected := _split(_getElectedValidators())
-	ordered := _getOrderedCommitteeArray(elected)
+	ordered := _getOrderedCommitteeArray(env.GetBlockCommittee())
 	blockProposer := env.GetBlockProposerAddress()
 
 	if len(ordered) > 0 && !_isMemberOfOrderedCommittee(ordered, blockProposer) {
