@@ -80,7 +80,7 @@ func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blo
 		return nil, err
 	}
 	if output.CallResult != protocol.EXECUTION_RESULT_SUCCESS {
-		return nil, errors.Errorf("%s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
+		return nil, errors.Errorf("call system %s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
 	}
 
 	argIterator := output.OutputArgumentArray.ArgumentsIterator()
@@ -96,14 +96,9 @@ func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blo
 
 // helper
 func toAddresses(input *protocol.Argument) (addresses []primitives.NodeAddress) {
-
-	//TODO POSV2 use iterator when it works
-	//for input.BytesArrayValueIterator().HasNext() {
-	//	addresses = append(addresses, input.BytesArrayValueIterator().NextBytes())
-	//}
-	raw := input.BytesArrayValueCopiedToNative()
-	for _, address := range raw {
-		addresses = append(addresses, address)
+	itr := input.BytesArrayValueIterator()
+	for itr.HasNext() {
+		addresses = append(addresses, itr.NextBytes())
 	}
 	return
 }

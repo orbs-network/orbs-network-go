@@ -23,7 +23,7 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockGetBlockCommittee(addrs)
+		m.MockEnvGetBlockCommittee(addrs)
 		m.MockEnvBlockProposerAddress(addrs[0])
 		m.MockEmitEvent(CommitteeMemberClosedBlock, addrs[0])
 
@@ -45,7 +45,7 @@ func TestOrbsCommitteeContract_updateMisses_EmptyCommittee(t *testing.T) {
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockGetBlockCommittee([][]byte{})
+		m.MockEnvGetBlockCommittee([][]byte{})
 		m.MockEnvBlockProposerAddress(blockProposer)
 		m.MockEmitEvent(CommitteeMemberClosedBlock, blockProposer)
 
@@ -85,7 +85,7 @@ func TestOrbsCommitteeContract_updateMisses_BlockProducerNotFoundPanics(t *testi
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockGetBlockCommittee(addrs)
+		m.MockEnvGetBlockCommittee(addrs)
 		m.MockEnvBlockProposerAddress(makeNodeAddress(77)) // non-committee address
 
 		// run & aassert

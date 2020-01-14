@@ -201,6 +201,8 @@ github.com/orbs-network/orbs-client-sdk-go v0.14.0 h1:eqZvE48XS3kgqRvE8gz6MegTQl
 github.com/orbs-network/orbs-client-sdk-go v0.14.0/go.mod h1:1KsIoX5oZrLRwi96bF6k0Dy9dZaym2H88hCDi92R2YM=
 github.com/orbs-network/orbs-contract-sdk v1.4.0 h1:lbpo83A4cIQPzvyloVmNk/cVP6MO5BEn+zw0/Vg+OeI=
 github.com/orbs-network/orbs-contract-sdk v1.4.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
+github.com/orbs-network/orbs-contract-sdk v1.5.0 h1:aToFZbAVMzEX4oCINRhe7exT0DkGIfC5LVT7b/+v42k=
+github.com/orbs-network/orbs-contract-sdk v1.5.0/go.mod h1:MxTTJgGjkEQsJ1aRxlUNRuZ4MRgUYDpSK9vgrWk4c1I=
 github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401 h1:Ys4loL0ngBW4i7PvNKu/Q/m6IuK94PhRCKPScGG9efI=
 github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401/go.mod h1:+/ayyqTUVcQeT2J4wNdDlcPXtt+lAQrWAR8vQLQ/Sac=
 github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e h1:2uhGT3x5lcuvdX7rkw1nKwPjzgA1bBQ3RzNkWSSPGP0=
