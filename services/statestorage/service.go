@@ -188,7 +188,8 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 	result := make(adapter.ChainState)
 	for _, stateDiffs := range csd {
-		contract := stateDiffs.ContractName()
+		// copying here is very important to free up the underlying structures
+		contract := primitives.ContractName(stateDiffs.ContractName().String())
 		contractMap, ok := result[contract]
 		if !ok {
 			contractMap = make(map[string]*protocol.StateRecord)
