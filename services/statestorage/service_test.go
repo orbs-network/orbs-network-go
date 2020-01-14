@@ -26,5 +26,5 @@ func Test_inflateChainState(t *testing.T) {
 	singleDiff.MutateContractName("Album1")
 
 	require.NotNil(t, chainState["Albums"])
-	require.EqualValues(t, []byte("Station to Station"), chainState["Albums"]["David Bowie"].Value(), "the underlying buffer was not copied")
+	require.EqualValues(t, []byte("Station to Station"), chainState["Albums"]["David Bowie"], "the underlying buffer was not copied")
 }

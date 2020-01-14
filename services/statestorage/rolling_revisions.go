@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
@@ -112,10 +111,10 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
 	result := make(merkle.TrieDiffs, 0, len(diff))
 	for contractName, contractState := range diff {
-		for _, r := range contractState {
+		for key, value := range contractState {
 			result = append(result, &merkle.TrieDiff{
-				Key:   hash.CalcSha256([]byte(contractName), r.Key()),
-				Value: hash.CalcSha256(r.Value()),
+				Key:   hash.CalcSha256([]byte(contractName), []byte(key)),
+				Value: hash.CalcSha256(value),
 			})
 		}
 	}
@@ -140,7 +139,7 @@ func (ls *rollingRevisions) evictRevisions() error {
 	return nil
 }
 
-func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, contract primitives.ContractName, key string) ([]byte, bool, error) {
 	if ls.currentHeight < height {
 		return nil, false, errors.Errorf("requested height %d is too new. most recent available block height is %d", height, ls.currentHeight)
 	}
@@ -150,7 +149,7 @@ func (ls *rollingRevisions) getRevisionRecord(height primitives.BlockHeight, con
 			continue
 		}
 		if record, exists := ls.revisions[i].diff[contract][key]; exists {
-			return record, !isZeroValue(record.Value()), nil // cached state increments must include zero values
+			return record, !isZeroValue(record), nil // cached state increments must include zero values
 		}
 	}
 
