@@ -44,7 +44,7 @@ if (!writeTargetPath) {
     const body = {
         vchain,
         tpm: 18000,
-        duration_sec: 600,
+        duration_sec: 300,
         client_timeout_sec: 60,
         gitBranch,
         target_ips: [targetIp]
