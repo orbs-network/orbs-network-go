@@ -27,6 +27,8 @@ async function commentWithMarvinOnGitHub({id, data, master}) {
 
     const commentAsString = createGithubCommentWithMessage({data, master});
 
+    console.log(`[GITHUB] Posting comment to Github: ${commentAsString}`);
+
     const body = {
         body: commentAsString
     };
