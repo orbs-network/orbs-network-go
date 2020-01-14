@@ -123,7 +123,7 @@ function getSlackUsernameForGithubUser(githubLoginHandle) {
         'andr444': 'UCX7XHX1A'
     };
 
-    console.log(githubLoginHandle);
+    console.log(`getSlackUsernameForGithubUser(): committer's Github login handle is [${githubLoginHandle}]`);
     if (!githubLoginHandle || githubLoginHandle.length === 0) {
         return 'NA';
     }

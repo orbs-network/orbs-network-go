@@ -43,12 +43,14 @@ const { passed } = require('@orbs-network/judge-dredd');
         if (pullRequestUrl.length > 0 && lastMasterJob) {
             const prLinkParts = pullRequestUrl.split('/');
             const prNumber = parseInt(prLinkParts[prLinkParts.length - 1]);
-
+            console.log(`Posting comment on Github for PR ${prNumber}`);
             await commentWithMarvinOnGitHub({
                 id: prNumber,
                 data: jobResults,
                 master: lastMasterJob,
             });
+        } else {
+            console.log(`Not posting to Github because either PR number is not available or no details for last master test run`);
         }
 
         const result = await passed({ current: jobResults, previous: lastMasterJob, config: null });
