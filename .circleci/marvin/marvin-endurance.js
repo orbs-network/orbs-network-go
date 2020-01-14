@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const fetch = require('node-fetch');
 
 const marvinUrl = process.env.MARVIN_ORCHESTRATOR_URL;

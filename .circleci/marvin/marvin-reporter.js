@@ -1,9 +1,4 @@
-#!/usr/bin/env node
-
 const {
-    getSlackUsernameForGithubUser,
-    getCommitterUsernameByCommitHash,
-    getCommitFromMetricsURL,
     createSlackMessageJobError,
     createSlackMessageJobDone,
     notifySlack,
