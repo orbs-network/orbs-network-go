@@ -50,7 +50,7 @@ func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence
 		fullState:  adapter.ChainState{},
 		height:     0,
 		ts:         0,
-		proposer:    []byte{},
+		proposer:   []byte{},
 		merkleRoot: merkleRoot,
 	}
 }
