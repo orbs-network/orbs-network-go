@@ -203,7 +203,7 @@ func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 			copy(detachedBuffer, r.Raw())
 
 			diffToApply := protocol.StateRecordReader(detachedBuffer)
-			contractMap[string(diffToApply.Key())] = diffToApply.Value()
+			contractMap[string(diffToApply.Key())] = append([]byte{}, diffToApply.Value()...)
 		}
 	}
 	return result
