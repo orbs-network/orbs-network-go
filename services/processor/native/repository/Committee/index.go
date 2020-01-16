@@ -8,7 +8,6 @@ package committee_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 // helpers for avoiding reliance on strings throughout the system
@@ -21,21 +20,4 @@ var SYSTEM = sdk.Export(_init)
 var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 
 func _init() {
-}
-
-func _concat(addresses [][]byte) []byte {
-	oneArrayOfAddresses := make([]byte, 0, len(addresses)*digest.NODE_ADDRESS_SIZE_BYTES)
-	for _, addr := range addresses {
-		oneArrayOfAddresses = append(oneArrayOfAddresses, addr[:]...)
-	}
-	return oneArrayOfAddresses
-}
-
-func _split(oneArrayOfAddresses []byte) [][]byte {
-	numAddresses := len(oneArrayOfAddresses) / digest.NODE_ADDRESS_SIZE_BYTES
-	res := make([][]byte, numAddresses)
-	for i := 0; i < numAddresses; i++ {
-		res[i] = oneArrayOfAddresses[digest.NODE_ADDRESS_SIZE_BYTES*i : digest.NODE_ADDRESS_SIZE_BYTES*(i+1)]
-	}
-	return res
 }

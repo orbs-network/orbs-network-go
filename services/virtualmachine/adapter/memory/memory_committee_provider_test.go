@@ -18,7 +18,6 @@ func TestMemoryCommittee_GetCommitteeWhenOnlyOneTerm(t *testing.T) {
 
 			committee, err := cp.GetCommittee(ctx, 0)
 			require.NoError(t, err)
-			require.Len(t, committee, 4, "wrong size of committee")
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
 			committee, err = cp.GetCommittee(ctx, 10)

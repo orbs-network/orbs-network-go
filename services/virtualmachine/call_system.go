@@ -15,7 +15,7 @@ import (
 
 func (s *service) callSystemContract(
 	ctx context.Context,
-	blockHeight primitives.BlockHeight,
+	currentBlockHeight primitives.BlockHeight,
 	blockTimestamp primitives.TimestampNano,
 	systemContractName primitives.ContractName,
 	systemMethodName primitives.MethodName,
@@ -23,8 +23,9 @@ func (s *service) callSystemContract(
 ) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 
 	// create execution context
+	// call System is special RunQuery, where like sendTx, the state is read via last committed block height, and env is by current block height
 	// currentBlockProposerAddress is nil because in call system it is meaningless.
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(blockHeight, blockHeight, blockTimestamp, nil, protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(currentBlockHeight-1, currentBlockHeight, blockTimestamp, nil, protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 
 	// modify execution context

@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"sort"
 	"strings"
 	"sync"
@@ -50,7 +49,7 @@ func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence
 		fullState:  adapter.ChainState{},
 		height:     0,
 		ts:         0,
-		proposer:    []byte{},
+		proposer:   []byte{},
 		merkleRoot: merkleRoot,
 	}
 }
@@ -76,28 +75,28 @@ func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts prim
 	sp.merkleRoot = root
 
 	for contract, records := range diff {
-		for _, record := range records {
-			sp._writeOneRecord(primitives.ContractName(contract), record)
+		for key, value := range records {
+			sp._writeOneRecord(primitives.ContractName(contract), key, value)
 		}
 	}
 	sp.reportSize()
 	return nil
 }
 
-func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, r *protocol.StateRecord) {
+func (sp *InMemoryStatePersistence) _writeOneRecord(c primitives.ContractName, key string, value []byte) {
 	if _, ok := sp.fullState[c]; !ok {
-		sp.fullState[c] = map[string]*protocol.StateRecord{}
+		sp.fullState[c] = map[string][]byte{}
 	}
 
-	if isZeroValue(r.Value()) {
-		delete(sp.fullState[c], string(r.Key()))
+	if isZeroValue(value) {
+		delete(sp.fullState[c], key)
 		return
 	}
 
-	sp.fullState[c][string(r.Key())] = r
+	sp.fullState[c][key] = value
 }
 
-func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key string) ([]byte, bool, error) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
@@ -133,9 +132,9 @@ func (sp *InMemoryStatePersistence) Dump() string {
 
 		output.WriteString(string(currentContract) + ":{")
 		for _, k := range keys {
-			output.WriteString(sp.fullState[currentContract][k].StringKey())
+			output.WriteString(k)
 			output.WriteString(":")
-			output.WriteString(sp.fullState[currentContract][k].StringValue())
+			output.WriteString(string(sp.fullState[currentContract][k]))
 			output.WriteString(",")
 		}
 		output.WriteString("},")

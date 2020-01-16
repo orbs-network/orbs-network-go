@@ -166,7 +166,6 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	GenesisValidatorNodes() map[string]ValidatorNode // TODO POSV2 remove
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool

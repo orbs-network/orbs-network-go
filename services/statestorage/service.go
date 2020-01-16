@@ -133,7 +133,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
 		if ok {
-			records = append(records, record)
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: record}).Build())
 		} else { // implicitly return the zero value if key is missing in db
 			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
@@ -188,15 +188,22 @@ func (s *service) GetStateHash(ctx context.Context, input *services.GetStateHash
 func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 	result := make(adapter.ChainState)
 	for _, stateDiffs := range csd {
-		contract := stateDiffs.ContractName()
+		// copying here is very important to free up the underlying structures
+		contract := primitives.ContractName(stateDiffs.ContractName().String())
 		contractMap, ok := result[contract]
 		if !ok {
-			contractMap = make(map[string]*protocol.StateRecord)
+			contractMap = make(map[string][]byte)
 			result[contract] = contractMap
 		}
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
 			r := i.NextStateDiffs()
-			contractMap[string(r.Key())] = r
+
+			// copying here is very important to free up the underlying structures
+			detachedBuffer := make([]byte, len(r.Raw()))
+			copy(detachedBuffer, r.Raw())
+
+			diffToApply := protocol.StateRecordReader(detachedBuffer)
+			contractMap[string(diffToApply.Key())] = append([]byte{}, diffToApply.Value()...)
 		}
 	}
 	return result

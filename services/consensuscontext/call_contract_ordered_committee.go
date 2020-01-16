@@ -24,14 +24,13 @@ const CALL_COMMITTEE_CONTRACT_INTERVAL = 200 * time.Millisecond
 func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	lastCommittedBlockHeight := currentBlockHeight - 1
-
-	logger.Info("querying GetOrderedCommittee", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_COMMITTEE_CONTRACT_INTERVAL))
-	orderedCommittee, err := s.callGetOrderedCommitteeSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
+	// current block is used as seed and needs to be for the block being calculated Now.
+	logger.Info("system-call GetOrderedCommittee", logfields.BlockHeight(currentBlockHeight), log.Stringable("interval-between-attempts", CALL_COMMITTEE_CONTRACT_INTERVAL))
+	orderedCommittee, err := s.callGetOrderedCommitteeSystemContractUntilSuccess(ctx, currentBlockHeight)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("queried elected validators", log.Int("num-results", len(orderedCommittee)), logfields.BlockHeight(lastCommittedBlockHeight))
+	logger.Info("system-call elected validators", log.Int("num-results", len(orderedCommittee)), logfields.BlockHeight(currentBlockHeight))
 
 	return orderedCommittee, nil
 }

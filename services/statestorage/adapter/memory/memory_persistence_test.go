@@ -10,7 +10,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -29,8 +28,8 @@ func TestWriteStateAddAndRemoveKeyFromPersistentStorage(t *testing.T) {
 	record, ok, err := d.Read("foo", "foo")
 	require.NoError(t, err, "unexpected error")
 	require.EqualValues(t, true, ok, "after writing a key it should exist")
-	require.EqualValues(t, "foo", record.Key(), "after writing a key/value it should be returned")
-	require.EqualValues(t, "bar", record.Value(), "after writing a key/value it should be returned")
+	// require.EqualValues(t, "foo", "foo"), "after writing a key/value it should be returned")
+	require.EqualValues(t, "bar", record, "after writing a key/value it should be returned")
 
 	d.writeSingleValueBlock(1, "foo", "foo", "")
 
@@ -50,7 +49,6 @@ func newDriver() *driver {
 }
 
 func (d *driver) writeSingleValueBlock(h primitives.BlockHeight, c, k, v string) error {
-	record := (&protocol.StateRecordBuilder{Key: []byte(k), Value: []byte(v)}).Build()
-	diff := adapter.ChainState{primitives.ContractName(c): {k: record}}
+	diff := adapter.ChainState{primitives.ContractName(c): {k: []byte(v)}}
 	return d.InMemoryStatePersistence.Write(h, 0, []byte{}, []byte{}, diff)
 }
