@@ -26,22 +26,21 @@ const CALL_ELECTIONS_CONTRACT_INTERVAL = 200 * time.Millisecond
 func (s *service) getElectedValidators(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	lastCommittedBlockHeight := currentBlockHeight - 1
-
 	genesisValidatorNodes := s.config.GenesisValidatorNodes()
 	genesisValidatorNodesAddresses := toNodeAddresses(genesisValidatorNodes)
 
 	// genesis
+	lastCommittedBlockHeight := currentBlockHeight - 1
 	if lastCommittedBlockHeight == 0 {
 		return genesisValidatorNodesAddresses, nil
 	}
 
-	logger.Info("querying elected validators", logfields.BlockHeight(lastCommittedBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
-	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, lastCommittedBlockHeight)
+	logger.Info("system-call elected validators", logfields.BlockHeight(currentBlockHeight), log.Stringable("interval-between-attempts", CALL_ELECTIONS_CONTRACT_INTERVAL))
+	electedValidatorsAddresses, err := s.callElectionsSystemContractUntilSuccess(ctx, currentBlockHeight)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("queried elected validators", log.Int("num-results", len(electedValidatorsAddresses)), logfields.BlockHeight(lastCommittedBlockHeight))
+	logger.Info("system-call elected validators", log.Int("num-results", len(electedValidatorsAddresses)), logfields.BlockHeight(currentBlockHeight))
 
 	// elections not active yet
 	if len(electedValidatorsAddresses) == 0 {

@@ -22,6 +22,8 @@ func TestCallSystemContract_Success(t *testing.T) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 
+			currentBlockHeight := primitives.BlockHeight(12)
+
 			h.expectNativeContractMethodCalled("Contract1", "method1", func(executionContextId primitives.ExecutionContextId, inputArgs *protocol.ArgumentArray) (protocol.ExecutionResult, *protocol.ArgumentArray, error) {
 				t.Log("Input arguments are propagated correctly")
 				require.EqualValues(t, builders.ArgumentsArray(uint32(17), "hello", []byte{0x01, 0x02}), inputArgs, "call system contract should propagate matching input args")
@@ -33,9 +35,9 @@ func TestCallSystemContract_Success(t *testing.T) {
 
 				return protocol.EXECUTION_RESULT_SUCCESS, builders.ArgumentsArray(uint32(19), "goodbye", []byte{0x03, 0x04}), nil
 			})
-			h.expectStateStorageRead(12, "Contract1", []byte{0x01}, []byte{0xaa, 0xbb})
+			h.expectStateStorageRead(currentBlockHeight-1/*state is last "committed block"*/, "Contract1", []byte{0x01}, []byte{0xaa, 0xbb})
 
-			result, outputArgs, err := h.callSystemContract(ctx, 12, "Contract1", "method1", uint32(17), "hello", []byte{0x01, 0x02})
+			result, outputArgs, err := h.callSystemContract(ctx, currentBlockHeight, "Contract1", "method1", uint32(17), "hello", []byte{0x01, 0x02})
 			require.NoError(t, err, "call system contract should not fail")
 			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, result, "call system contract should return successful result")
 			require.EqualValues(t, builders.ArgumentsArray(uint32(19), "goodbye", []byte{0x03, 0x04}), outputArgs, "call system contract should return matching output args")
