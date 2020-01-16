@@ -93,7 +93,7 @@ func TestMergeToPersistence(t *testing.T) {
 			When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
 			Call(func(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 				expectedValue := fmt.Sprintf("v%v", writeCallCount)
-				v := string(diff["c"]["k"].Value())
+				v := string(diff["c"]["k"])
 				require.EqualValues(t, expectedValue, v)
 				require.EqualValues(t, writeCallCount, height)
 				require.EqualValues(t, writeCallCount, ts)
@@ -194,7 +194,7 @@ func newDriver(logger log.Logger, persistence adapter.StatePersistence, layers i
 func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractName, kv ...string) error {
 	diff := adapter.ChainState{contract: make(adapter.ContractState)}
 	for i := 0; i < len(kv); i += 2 {
-		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
+		diff[contract][kv[i]] = []byte(kv[i+1])
 	}
 	return d.inner.addRevision(h, 0, []byte{}, diff)
 }
@@ -202,18 +202,18 @@ func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractNam
 func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, contract primitives.ContractName, kv ...string) error {
 	diff := adapter.ChainState{contract: make(adapter.ContractState)}
 	for i := 0; i < len(kv); i += 2 {
-		diff[contract][kv[i]] = (&protocol.StateRecordBuilder{Key: []byte(kv[i]), Value: []byte(kv[i+1])}).Build()
+		diff[contract][kv[i]] = []byte(kv[i+1])
 	}
 	return d.inner.addRevision(h, ts, proposer, diff)
 }
 
 func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName, key string) (string, bool, error) {
-	r, exists, err := d.inner.getRevisionRecord(h, contract, key)
-	value := ""
-	if r != nil {
-		value = string(r.Value())
+	value, exists, err := d.inner.getRevisionRecord(h, contract, key)
+	valueOrEmpty := ""
+	if value != nil {
+		valueOrEmpty = string(value)
 	}
-	return value, exists, err
+	return valueOrEmpty, exists, err
 }
 
 func (d *driver) readHash(h primitives.BlockHeight) (primitives.Sha256, error) {
@@ -236,9 +236,9 @@ func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceM
 func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 	return spm.Mock.Called(height, ts, proposer, root, diff).Error(0)
 }
-func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key string) (*protocol.StateRecord, bool, error) {
+func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key string) ([]byte, bool, error) {
 	ret := spm.Mock.Called(contract, key)
-	return ret.Get(0).(*protocol.StateRecord), ret.Bool(1), ret.Error(2)
+	return []byte(fmt.Sprintf("%v", ret.Get(0))), ret.Bool(1), ret.Error(2)
 }
 func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, primitives.Sha256, error) {
 	return 0, 0, []byte{}, primitives.Sha256{}, nil

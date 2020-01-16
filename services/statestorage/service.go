@@ -133,7 +133,7 @@ func (s *service) ReadKeys(ctx context.Context, input *services.ReadKeysInput) (
 			return nil, errors.Wrap(err, "persistence layer error")
 		}
 		if ok {
-			records = append(records, record)
+			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: record}).Build())
 		} else { // implicitly return the zero value if key is missing in db
 			records = append(records, (&protocol.StateRecordBuilder{Key: key, Value: newZeroValue()}).Build())
 		}
@@ -192,7 +192,7 @@ func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 		contract := primitives.ContractName(stateDiffs.ContractName().String())
 		contractMap, ok := result[contract]
 		if !ok {
-			contractMap = make(map[string]*protocol.StateRecord)
+			contractMap = make(map[string][]byte)
 			result[contract] = contractMap
 		}
 		for i := stateDiffs.StateDiffsIterator(); i.HasNext(); {
@@ -203,7 +203,7 @@ func inflateChainState(csd []*protocol.ContractStateDiff) adapter.ChainState {
 			copy(detachedBuffer, r.Raw())
 
 			diffToApply := protocol.StateRecordReader(detachedBuffer)
-			contractMap[string(diffToApply.Key())] = diffToApply
+			contractMap[string(diffToApply.Key())] = append([]byte{}, diffToApply.Value()...)
 		}
 	}
 	return result
