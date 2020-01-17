@@ -27,4 +27,4 @@ npm install
 # Get the vchains to act upon from CircleCI's workspace
 echo "Running Marvin tests on deployed app chain ($APP_CHAIN_ID) on IP: $TESTNET_IP"
 
-./.circleci/marvin/marvin-endurance.js "${APP_CHAIN_ID}" "${TESTNET_IP}" workspace/job_id
+node .circleci/marvin/marvin-endurance.js "${APP_CHAIN_ID}" "${TESTNET_IP}" workspace/job_id

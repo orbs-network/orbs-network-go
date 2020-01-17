@@ -1,9 +1,4 @@
-#!/usr/bin/env node
-
 const {
-    getSlackUsernameForGithubUser,
-    getCommitterUsernameByCommitHash,
-    getCommitFromMetricsURL,
     createSlackMessageJobError,
     createSlackMessageJobDone,
     notifySlack,
@@ -45,7 +40,7 @@ if (!jobAnalysisFile) {
             process.exit(2);
     }
 
-    console.log(`Sending message to Slack: ${msg}`);
+    console.log(`[SLACK] Posting message to Slack: ${msg}`);
     notifySlack(slackUrl, msg);
 })();
 

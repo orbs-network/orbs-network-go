@@ -17,4 +17,4 @@ fi
 
 npm install
 
-./.circleci/marvin/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
+node .circleci/marvin/marvin-reporter.js "${JOB_ANALYSIS_FILE}"
