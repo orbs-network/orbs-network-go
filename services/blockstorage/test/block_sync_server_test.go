@@ -10,12 +10,14 @@ import (
 	"context"
 	"errors"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
+	"math"
 	"testing"
 )
 
@@ -197,5 +199,46 @@ func TestSourceIgnoresBlockSyncRequestIfSourceIsBehind(t *testing.T) {
 
 		harness.verifyMocks(t, 1) // eventually
 		harness.verifyMocksConsistently(t, 1)
+	})
+}
+
+func TestSourceRetriesSendingSmallerChunksOnChunkTooBigError(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		batchSize := uint32(10)
+		harness := newBlockStorageHarness(parent).
+			withBatchSize(batchSize).
+			withNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()).
+			withSyncBroadcast(1).
+			expectValidateConsensusAlgos().
+			start(ctx)
+
+		lastBlock := 12
+		harness.commitSomeBlocks(ctx, lastBlock)
+
+		firstHeight := primitives.BlockHeight(1)
+
+		msg := builders.BlockSyncRequestInput().
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()).
+			WithFirstBlockHeight(firstHeight).
+			Build()
+
+		expectedChunkSize := batchSize
+		SendBlockSyncResponse := func(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+			require.Len(t, input.Message.BlockPairs, int(expectedChunkSize), "actual batch size does not match the currently expected size")
+			require.Equal(t, firstHeight, input.Message.SignedChunkRange.FirstBlockHeight(), "first block height mismatch")
+			require.Equal(t, firstHeight+primitives.BlockHeight(expectedChunkSize)-1, input.Message.SignedChunkRange.LastBlockHeight(), "last block height mismatch")
+
+			if expectedChunkSize == 0 {
+				return nil, nil
+			}
+
+			expectedChunkSize = expectedChunkSize / 2
+			return nil, tcp.NewQueueFullError(123, 123, 123) // the actual values are irrelevant
+		}
+		expectedAttemptsCount := int(math.Ceil(math.Log2(float64(batchSize)))) + 1
+		harness.gossip.When("SendBlockSyncResponse", mock.Any, mock.Any).Call(SendBlockSyncResponse).Times(expectedAttemptsCount)
+		_, err := harness.blockStorage.HandleBlockSyncRequest(ctx, msg)
+		require.NoError(t, err, "expected SendBlockSyncResponse to succeed")
+		harness.verifyMocks(t, 1)
 	})
 }

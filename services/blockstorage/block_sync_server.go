@@ -9,6 +9,7 @@ package blockstorage
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -104,31 +105,55 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1)
 	}
 
-	blocks, firstAvailableBlockHeight, lastAvailableBlockHeight, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	blocks, firstAvailableBlockHeight, _, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)
 	if err != nil {
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}
 
-	logger.Info("sending blocks to another node via block sync",
-		log.Stringable("petitioner", senderNodeAddress),
-		log.Uint64("first-available-block-height", uint64(firstAvailableBlockHeight)),
-		log.Uint64("last-available-block-height", uint64(lastAvailableBlockHeight)))
+	var chunkSize = len(blocks)
+	var lastError error
 
-	response := &gossiptopics.BlockSyncResponseInput{
-		RecipientNodeAddress: senderNodeAddress,
-		Message: &gossipmessages.BlockSyncResponseMessage{
-			Sender: (&gossipmessages.SenderSignatureBuilder{
-				SenderNodeAddress: s.config.NodeAddress(),
-			}).Build(),
-			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                blockType,
-				FirstBlockHeight:         firstAvailableBlockHeight,
-				LastBlockHeight:          lastAvailableBlockHeight,
-				LastCommittedBlockHeight: lastCommittedBlockHeight,
-			}).Build(),
-			BlockPairs: blocks,
-		},
+	const maxAttempts = 100 // we will never server more than 2^100 blocks..
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		lastAvailableBlockHeight := firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1
+		logger.Info("sending blocks to another node via block sync",
+			log.Stringable("petitioner", senderNodeAddress),
+			log.Uint64("first-available-block-height", uint64(firstAvailableBlockHeight)),
+			log.Uint64("last-available-block-height", uint64(lastAvailableBlockHeight)))
+
+		response := &gossiptopics.BlockSyncResponseInput{
+			RecipientNodeAddress: senderNodeAddress,
+			Message: &gossipmessages.BlockSyncResponseMessage{
+				Sender: (&gossipmessages.SenderSignatureBuilder{
+					SenderNodeAddress: s.config.NodeAddress(),
+				}).Build(),
+				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
+					BlockType:                blockType,
+					FirstBlockHeight:         firstAvailableBlockHeight,
+					LastBlockHeight:          firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1,
+					LastCommittedBlockHeight: lastCommittedBlockHeight,
+				}).Build(),
+				BlockPairs: blocks[:chunkSize],
+			},
+		}
+		_, err = s.gossip.SendBlockSyncResponse(ctx, response)
+		if err == nil {
+			return nil
+		}
+		if !gossip.IsChunkTooBigError(err) {
+			return err
+		}
+		lastError = err
+
+		if chunkSize == 0 { // test before dividing by 2, to attempt a zero length chunk at least once
+			break
+		}
+		chunkSize /= 2 // Chunk too big, retry with a smaller chunk
 	}
-	_, err = s.gossip.SendBlockSyncResponse(ctx, response)
-	return err
+
+	// Must be an error indicating chunk-too-big
+	if !gossip.IsChunkTooBigError(lastError) {
+		panic(errors.Wrap(err, "unreachable code - expected chunk-too-big error"))
+	}
+	return lastError
 }
