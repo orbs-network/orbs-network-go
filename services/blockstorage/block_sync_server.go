@@ -130,7 +130,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
 					BlockType:                blockType,
 					FirstBlockHeight:         firstAvailableBlockHeight,
-					LastBlockHeight:          firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1,
+					LastBlockHeight:          lastAvailableBlockHeight,
 					LastCommittedBlockHeight: lastCommittedBlockHeight,
 				}).Build(),
 				BlockPairs: blocks[:chunkSize],
