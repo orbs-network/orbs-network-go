@@ -59,18 +59,18 @@ func TestOrbsCommitteeContract_getReputation(t *testing.T) {
 		_init()
 
 		// Prepare
-		moreThanRepCap := int(ReputationBottomCap) + 2
+		moreThanRepCap := int(ReputationBottomCap) + 3
 
 		// assert
 		for i := 0; i < moreThanRepCap; i++ {
 			rep := getReputation(addr)
 			miss := getMisses(addr)
-			if i < int(ToleranceLevel) {
+			if i <= int(ToleranceLevel) {
 				require.EqualValues(t, 0, rep, "upto tolerance should be 0")
 			} else if i < int(ReputationBottomCap) {
-				require.EqualValues(t, miss, rep, "upto cap should be miss")
+				require.EqualValues(t, miss-ToleranceLevel, rep, "upto cap should be miss")
 			} else {
-				require.EqualValues(t, ReputationBottomCap, rep, "cannot go over cap of reputation")
+				require.EqualValues(t, ReputationBottomCap-ToleranceLevel, rep, "cannot go over cap of reputation")
 			}
 			_addMiss(addr)
 		}

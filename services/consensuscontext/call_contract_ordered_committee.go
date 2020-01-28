@@ -7,6 +7,7 @@
 package consensuscontext
 
 import (
+	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
@@ -18,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"sort"
 	"time"
 )
 
@@ -115,9 +117,15 @@ func (s *service) generateGenesisCommittee(ctx context.Context, currentBlockHeig
 }
 
 func generateGenesisCommitteeAddresses(nodes map[string]config.ValidatorNode) []byte {
-	res := make([]byte, 0, len(nodes)*digest.NODE_ADDRESS_SIZE_BYTES)
+	listOfAddresses := make([][]byte, 0, len(nodes))
 	for _, value := range nodes {
-		res = append(res, value.NodeAddress()...)
+		listOfAddresses = append(listOfAddresses, value.NodeAddress())
+	}
+	// committee contract expects same order for input on all nodes so a sort is a must here.
+	sort.Slice(listOfAddresses, func(i, j int) bool { return bytes.Compare(listOfAddresses[i], listOfAddresses[j]) > 0})
+	res := make([]byte, 0, len(nodes)*digest.NODE_ADDRESS_SIZE_BYTES)
+	for _, value := range listOfAddresses {
+		res = append(res, value...)
 	}
 	return res
 }
