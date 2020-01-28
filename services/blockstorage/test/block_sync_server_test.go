@@ -227,6 +227,7 @@ func TestSourceRetriesSendingSmallerChunksOnChunkTooBigError(t *testing.T) {
 			require.Len(t, input.Message.BlockPairs, int(expectedChunkSize), "actual batch size does not match the currently expected size")
 			require.Equal(t, firstHeight, input.Message.SignedChunkRange.FirstBlockHeight(), "first block height mismatch")
 			require.Equal(t, firstHeight+primitives.BlockHeight(expectedChunkSize)-1, input.Message.SignedChunkRange.LastBlockHeight(), "last block height mismatch")
+			require.Equal(t, primitives.BlockHeight(lastBlock), input.Message.SignedChunkRange.LastCommittedBlockHeight(), "last committed block height mismatch")
 
 			if expectedChunkSize == 0 {
 				return nil, nil
