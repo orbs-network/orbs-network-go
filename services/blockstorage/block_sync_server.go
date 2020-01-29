@@ -111,10 +111,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	}
 
 	var chunkSize = len(blocks)
-	var lastError error
-
-	const maxAttempts = 100 // we will never server more than 2^100 blocks..
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for {
 		lastAvailableBlockHeight := firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1
 		logger.Info("sending blocks to another node via block sync",
 			log.Stringable("petitioner", senderNodeAddress),
@@ -140,20 +137,11 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		if err == nil {
 			return nil
 		}
-		if !gossip.IsChunkTooBigError(err) {
+
+		if !gossip.IsChunkTooBigError(err) || chunkSize == 0 { // test before dividing by 2, to attempt a zero length chunk at least once
 			return err
 		}
-		lastError = err
 
-		if chunkSize == 0 { // test before dividing by 2, to attempt a zero length chunk at least once
-			break
-		}
 		chunkSize /= 2 // Chunk too big, retry with a smaller chunk
 	}
-
-	// Must be an error indicating chunk-too-big
-	if !gossip.IsChunkTooBigError(lastError) {
-		panic(errors.Wrap(err, "unreachable code - expected chunk-too-big error"))
-	}
-	return lastError
 }
