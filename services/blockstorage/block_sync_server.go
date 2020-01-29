@@ -110,7 +110,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}
 
-	var chunkSize = len(blocks)
+	chunkSize := len(blocks)
 	for {
 		lastAvailableBlockHeight := firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1
 		logger.Info("sending blocks to another node via block sync",
