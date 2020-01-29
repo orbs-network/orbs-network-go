@@ -19,6 +19,8 @@ type loggerWrapper struct {
 
 const LH_PREFIX = "=LH= "
 
+var ConsensusLogTag = log.String("flow", "Consensus")
+
 func NewLoggerWrapper(log log.Logger, showDebug bool) *loggerWrapper {
 	return &loggerWrapper{
 		log:       log,
@@ -45,4 +47,9 @@ func (l *loggerWrapper) Info(format string, args ...interface{}) {
 
 func (l *loggerWrapper) Error(format string, args ...interface{}) {
 	l.log.Error(fmt.Sprintf(strings.Join([]string{LH_PREFIX, format}, ""), args...), log.String("lhlib", "true"))
+}
+
+func (l *loggerWrapper) ConsensusTrace(msg string, fields ...*log.Field) {
+	fields = append(fields, ConsensusLogTag)
+	l.log.Info(msg, fields...)
 }
