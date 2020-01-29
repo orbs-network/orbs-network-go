@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
+	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -70,8 +71,7 @@ func TestOrbsCommitteeContract_orderList_AllRepIs0(t *testing.T) {
 		midLocation := committeeSize / 2
 		endLocation := committeeSize - 1
 		for i := 1 ; i <= max ; i++ {
-			m.MockEnvBlockHeight(i) // to generate random seed
-			outputArr := _orderList(addresses, _generateSeed())
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
 			if bytes.Equal(outputArr[0], checkAddress) {
 				foundAtPos0++
 			} else if bytes.Equal(outputArr[midLocation], checkAddress){
@@ -106,8 +106,7 @@ func TestOrbsCommitteeContract_orderList_OneRepIsWorst(t *testing.T) {
 
 		// run
 		for i := 1 ; i <= max ; i++ {
-			m.MockEnvBlockHeight(i) // to generate random seed
-			outputArr := _orderList(addresses, _generateSeed())
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
 			if bytes.Equal(outputArr[0], badAddress) {
 				foundBadAddressInFirstPosition++
 			}
@@ -143,8 +142,7 @@ func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
 
 		// run
 		for i := 1 ; i <= max ; i++ {
-			m.MockEnvBlockHeight(i) // to generate random seed
-			outputArr := _orderList(addresses, _generateSeed())
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
 			if bytes.Equal(outputArr[0], badAddress) {
 				foundBadAddressInFirstPosition++
 			}
@@ -161,4 +159,30 @@ func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
 
 func requireCountToBeInRange(t testing.TB, actual, expected int) {
 	require.InDelta(t, expected, actual, 0.05 * float64(expected), "expect (%d) to be five precent delta to (%d)", actual, expected)
+}
+
+func TestOrbsCommitteeContract_getNextOrderedCommittee(t *testing.T) {
+	committeeSize := 20
+	addresses := makeNodeAddressArray(committeeSize)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		blockHeight := 10
+
+		// prepare
+		m.MockEnvBlockHeight(blockHeight)
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight))
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight+1))
+
+		// run
+		currentCommittee := _split(getOrderedCommittee())
+		nextCommittee := getNextOrderedCommittee()
+		m.MockEnvBlockHeight(blockHeight+1)
+		nextCurrentCommittee := _split(getOrderedCommittee())
+
+		//assert
+		require.NotEqual(t, currentCommittee, nextCommittee)
+		require.ElementsMatch(t, currentCommittee, nextCommittee, "must actually be same list in diff order")
+		require.Equal(t, nextCommittee, nextCurrentCommittee)
+	})
 }

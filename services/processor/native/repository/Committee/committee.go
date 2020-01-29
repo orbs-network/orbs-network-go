@@ -28,42 +28,41 @@ func _getOrderedCommitteeForAddresses(addresses []byte) [][]byte {
 	return _getOrderedCommitteeArray(addressArray)
 }
 
-func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
-	return _orderList(addresses, _generateSeed())
+func getNextOrderedCommittee() [][]byte {
+	addresses := _split(_getElectedValidators())
+	return _orderList(addresses, _generateSeed(env.GetBlockHeight()+1))
 }
 
-func _generateSeed() []byte {
+func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
+	return _orderList(addresses, _generateSeed(env.GetBlockHeight()))
+}
+
+func _generateSeed(blockHeight uint64) []byte {
 	seedBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(seedBytes, env.GetBlockHeight())
+	binary.LittleEndian.PutUint64(seedBytes, blockHeight)
 	return seedBytes
 }
 
 func _orderList(addresses [][]byte, seed []byte) [][]byte {
-	committeeSize := len(addresses)
-	accumulatedWeights := make([]int, committeeSize)
-	totalWeight := 0
-	for i, address := range addresses {
-		weight := _absoluteWeight(address)
-		totalWeight += weight
-		accumulatedWeights[i] = totalWeight
-	}
 
+	committeeSize := len(addresses)
 	orderedCommitteeAddresses := make([][]byte, 0, committeeSize)
 	random := seed
+	accumulatedWeights, totalWeight := _calculateAccumulatedWeightArray(addresses)
 
 	for j := 0; j < committeeSize; j++ {
 		random = _nextRandom(random)
 		curr := _getRandomWeight(random, totalWeight)
 
 		for i := 0; i < committeeSize; i++ {
-			if curr > accumulatedWeights[i] || accumulatedWeights[i] == 0 {
+			if curr > accumulatedWeights[i] {
 				continue
 			}
 			orderedCommitteeAddresses = append(orderedCommitteeAddresses, addresses[i])
 			currWeight := _absoluteWeight(addresses[i])
 			totalWeight -= currWeight
 			accumulatedWeights[i] = 0
-			for k := i + 1;k < committeeSize;k++ {
+			for k := i + 1; k < committeeSize; k++ {
 				if accumulatedWeights[k] != 0 {
 					accumulatedWeights[k] -= currWeight
 				}
@@ -72,6 +71,17 @@ func _orderList(addresses [][]byte, seed []byte) [][]byte {
 		}
 	}
 	return orderedCommitteeAddresses
+}
+
+func _calculateAccumulatedWeightArray(addresses [][]byte) ([]int, int) {
+	accumulatedWeights := make([]int, len(addresses))
+	totalWeight := 0
+	for i, address := range addresses {
+		weight := _absoluteWeight(address)
+		totalWeight += weight
+		accumulatedWeights[i] = totalWeight
+	}
+	return accumulatedWeights, totalWeight
 }
 
 func _absoluteWeight(address []byte) int {
