@@ -8,6 +8,7 @@ package instrumentation
 
 import (
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/scribe/log"
 	"os"
 )
@@ -64,7 +65,7 @@ func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 	conditionalFilter := log.NewConditionalFilter(false, nil)
 
 	if !cfg.LoggerFullLog() {
-		conditionalFilter = log.NewConditionalFilter(true, log.OnlyErrors())
+		conditionalFilter = log.NewConditionalFilter(true, log.Or(log.OnlyErrors(), log.MatchField(leanhelixconsensus.ConsensusLogTag)))
 	}
 
 	return logger.WithFilters(conditionalFilter)

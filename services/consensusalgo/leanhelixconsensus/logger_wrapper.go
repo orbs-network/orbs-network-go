@@ -19,7 +19,7 @@ type loggerWrapper struct {
 
 const LH_PREFIX = "=LH= "
 
-var ConsensusLogTag = log.String("flow", "Consensus")
+var ConsensusLogTag = log.String("flow", "consensus")
 
 func NewLoggerWrapper(log log.Logger, showDebug bool) *loggerWrapper {
 	return &loggerWrapper{
