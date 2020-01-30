@@ -7,14 +7,14 @@
 package committee_systemcontract
 
 import (
-	"bytes"
 	"encoding/binary"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"math"
-	"sort"
 )
 
+/**
+ * This function is meant ot be used via the callsystemcontract func ... it will not give same result when used with RunQuery
+ */
 func getOrderedCommittee() []byte {
 	return getOrderedCommitteeForAddresses(_getElectedValidators())
 }
@@ -28,54 +28,70 @@ func _getOrderedCommitteeForAddresses(addresses []byte) [][]byte {
 	return _getOrderedCommitteeArray(addressArray)
 }
 
-func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
-	return _orderList(addresses, _generateSeed())
+func getNextOrderedCommittee() [][]byte {
+	addresses := _split(_getElectedValidators())
+	return _orderList(addresses, _generateSeed(env.GetBlockHeight()+1))
 }
 
-func _generateSeed() []byte {
+func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
+	return _orderList(addresses, _generateSeed(env.GetBlockHeight()))
+}
+
+func _generateSeed(blockHeight uint64) []byte {
 	seedBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(seedBytes, env.GetBlockHeight())
+	binary.LittleEndian.PutUint64(seedBytes, blockHeight)
 	return seedBytes
 }
 
-func _orderList(addrs [][]byte, seed []byte) [][]byte {
-	addrsToSort := addrsAndScores{addrs, make([]float64, len(addrs))}
-	for i, addr := range addrs {
-		addrsToSort.scores[i] = _calculateScoreWithReputation(addr, seed)
+func _orderList(addresses [][]byte, seed []byte) [][]byte {
+
+	committeeSize := len(addresses)
+	orderedCommitteeAddresses := make([][]byte, 0, committeeSize)
+	random := seed
+	accumulatedWeights, totalWeight := _calculateAccumulatedWeightArray(addresses)
+
+	for j := 0; j < committeeSize; j++ {
+		random = _nextRandom(random)
+		curr := _getRandomWeight(random, totalWeight)
+
+		for i := 0; i < committeeSize; i++ {
+			if curr > accumulatedWeights[i] {
+				continue
+			}
+			orderedCommitteeAddresses = append(orderedCommitteeAddresses, addresses[i])
+			currWeight := _absoluteWeight(addresses[i])
+			totalWeight -= currWeight
+			accumulatedWeights[i] = 0
+			for k := i + 1; k < committeeSize; k++ {
+				if accumulatedWeights[k] != 0 {
+					accumulatedWeights[k] -= currWeight
+				}
+			}
+			break
+		}
 	}
-	sort.Sort(addrsToSort)
-	return addrsToSort.addresses
+	return orderedCommitteeAddresses
 }
 
-func _calculateScoreWithReputation(addr []byte, seed []byte) float64 {
-	rep := getReputation(addr)
-	return float64(_calculateScore(addr, seed)) / _reputationAsFactor(rep)
+func _calculateAccumulatedWeightArray(addresses [][]byte) ([]int, int) {
+	accumulatedWeights := make([]int, len(addresses))
+	totalWeight := 0
+	for i, address := range addresses {
+		weight := _absoluteWeight(address)
+		totalWeight += weight
+		accumulatedWeights[i] = totalWeight
+	}
+	return accumulatedWeights, totalWeight
 }
 
-func _calculateScore(addr []byte, seed []byte) uint32 {
-	random := hash.CalcSha256(addr, seed)
-	return binary.LittleEndian.Uint32(random[hash.SHA256_HASH_SIZE_BYTES-4:])
+func _absoluteWeight(address []byte) int {
+	return 1 << (_getMaxReputation() - getReputation(address))
 }
 
-func _reputationAsFactor(reputation uint32) float64 {
-	return math.Pow(2, float64(reputation))
+func _nextRandom(random []byte) []byte {
+	return hash.CalcSha256(random)
 }
 
-type addrsAndScores struct {
-	addresses [][]byte
-	scores    []float64
-}
-
-func (s addrsAndScores) Len() int {
-	return len(s.addresses)
-}
-
-func (s addrsAndScores) Swap(i, j int) {
-	s.addresses[i], s.addresses[j] = s.addresses[j], s.addresses[i]
-	s.scores[i], s.scores[j] = s.scores[j], s.scores[i]
-}
-
-// descending order
-func (s addrsAndScores) Less(i, j int) bool {
-	return s.scores[i] > s.scores[j] || (s.scores[i] == s.scores[j] && bytes.Compare(s.addresses[i], s.addresses[j]) > 0)
+func _getRandomWeight(random []byte, maxWeight int) int {
+	return int(binary.LittleEndian.Uint32(random[hash.SHA256_HASH_SIZE_BYTES-4:]) % uint32(maxWeight)) + 1
 }

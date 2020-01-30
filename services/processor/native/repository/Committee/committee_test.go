@@ -7,142 +7,182 @@
 package committee_systemcontract
 
 import (
-	"encoding/binary"
+	"bytes"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-func appendAndOrder(newAddr []byte, addrs [][]byte) [][]byte {
-	return appendAndOrderWithSeed(newAddr, addrs, []byte{})
-}
-
-func appendAndOrderWithSeed(newAddr []byte, addrs [][]byte, seed []byte) [][]byte {
-	currScore := _calculateScoreWithReputation(newAddr, seed)
-	addrs = append(addrs, newAddr)
-	for i := len(addrs) - 1; i > 0; i-- {
-		if currScore > _calculateScoreWithReputation(addrs[i-1], seed) {
-			addrs[i], addrs[i-1] = addrs[i-1], addrs[i]
-		} else {
-			break
+func TestOrbsCommitteeContract_check_random(t *testing.T) {
+	totalWeight := 1280
+	random := []byte{0x02, 0x1, 0x2, 0x3, 0x5, 0x5, 0x6, 0x4}
+	maxRuns := 1000000
+	res := make([]int, totalWeight+1)
+	for i := 0; i < maxRuns; i++ {
+		random = _nextRandom(random)
+		ind := _getRandomWeight(random, totalWeight)
+		res[ind] += 1
+	}
+	expected := maxRuns / totalWeight
+	expectedOver := expected * 98 / 100
+	expectedUnder := expected * 102 / 100
+	tooFar := 0
+	for i := 1; i <= totalWeight; i++ {
+		if res[i] < expectedOver || res[i] > expectedUnder {
+			tooFar++
 		}
 	}
-	return addrs
+	require.LessOrEqual(t, float64(tooFar)/float64(maxRuns), 0.001, "misses of+-2 percent should be under 0.1 percent")
 }
 
-func TestOrbsCommitteeContract_getOrderedCommittee_withoutReputation(t *testing.T) {
-	addrs := makeNodeAddressArray(10)
-	blockHeight := 155
+func TestOrbsCommitteeContract_check_OrderWithDiffSeedAndRep(t *testing.T) {
+	committeeSize := 5
+	addressArray := makeNodeAddressArray(committeeSize)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		ordered := _orderList(addressArray, []byte{7})
+		orderedDiffSeed := _orderList(addressArray, []byte{8})
+		require.NotEqual(t, ordered, orderedDiffSeed)
+		require.ElementsMatch(t, ordered, orderedDiffSeed, "must actually be same list in diff order")
+		orderedSameSeed := _orderList(addressArray, []byte{7})
+		require.EqualValues(t, ordered, orderedSameSeed)
+		state.WriteUint32(_formatMisses(addressArray[0]), ReputationBottomCap)
+		orderedSameSeedDiffProb := _orderList(addressArray, []byte{7})
+		require.NotEqual(t, ordered, orderedSameSeedDiffProb)
+		require.ElementsMatch(t, ordered, orderedSameSeedDiffProb, "must actually be same list in diff order")
+	})
+}
+
+func TestOrbsCommitteeContract_orderList_AllRepIs0(t *testing.T) {
+	max := 10000
+	committeeSize := 20
+	addresses := makeNodeAddressArray(committeeSize)
+	checkAddress := addresses[0]
+	var foundAtPos0, foundAtPosMid, foundAtPosLast int
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		// no setup
+
+		// run
+		midLocation := committeeSize / 2
+		endLocation := committeeSize - 1
+		for i := 1 ; i <= max ; i++ {
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
+			if bytes.Equal(outputArr[0], checkAddress) {
+				foundAtPos0++
+			} else if bytes.Equal(outputArr[midLocation], checkAddress){
+				foundAtPosMid++
+			} else if bytes.Equal(outputArr[endLocation], checkAddress){
+				foundAtPosLast++
+			}
+		}
+
+		// assert
+		expected := max / committeeSize // equal chance
+		requireCountToBeInRange(t, foundAtPos0, expected)
+		requireCountToBeInRange(t, foundAtPosMid, expected)
+		requireCountToBeInRange(t, foundAtPosLast, expected)
+	})
+}
+
+func TestOrbsCommitteeContract_orderList_OneRepIsWorst(t *testing.T) {
+	max := 100000
+	committeeSize := 4 // to allow a good spread in a small amount of runs we need a small committee size.
+	addresses := makeNodeAddressArray(committeeSize)
+	badAddress := addresses[0]
+	goodAddress := addresses[1]
+	foundBadAddressInFirstPosition := 0
+	foundGoodAddressInFirstPosition := 0
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 
 		// prepare
-		m.MockEnvBlockHeight(blockHeight)
-
-		// add each to the correct place
-		expectedOrder := make([][]byte, 0, len(addrs))
-		for _, addr := range addrs {
-			expectedOrder = appendAndOrderWithSeed(addr, expectedOrder, _generateSeed())
-		}
+		state.WriteUint32(_formatMisses(badAddress), ReputationBottomCap)
 
 		// run
-		ordered := _getOrderedCommitteeArray(addrs)
+		for i := 1 ; i <= max ; i++ {
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
+			if bytes.Equal(outputArr[0], badAddress) {
+				foundBadAddressInFirstPosition++
+			}
+			if bytes.Equal(outputArr[0], goodAddress) {
+				foundGoodAddressInFirstPosition++
+			}
+		}
 
-		//assert
-		require.EqualValues(t, expectedOrder, ordered)
+		// assert
+		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 64) / ((committeeSize-1) * 64 + 1))
+		requireCountToBeInRange(t, foundBadAddressInFirstPosition, max / ((committeeSize-1) * 64 + 1))
 	})
 }
 
-func TestOrbsCommitteeContract_getOrderedCommittee_SimpleReputation(t *testing.T) {
-	addrs := makeNodeAddressArray(3)
-	blockHeight := 155
+func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
+	max := 10000
+	committeeSize := 20
+	addresses := makeNodeAddressArray(committeeSize)
+	badAddress := addresses[0]
+	goodAddress := addresses[5]
+	foundBadAddressInFirstPosition := 0
+	foundGoodAddressInFirstPosition := 0
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
 
 		// prepare
-		m.MockEnvBlockHeight(blockHeight)
-		state.WriteUint32(_formatMisses(addrs[0]), 10)
-
-		// sort with simplified calculation
-		expectedOrder := make([][]byte, 0, len(addrs))
-		for _, addr := range addrs {
-			expectedOrder = appendAndOrderWithSeed(addr, expectedOrder, _generateSeed())
-		}
+		state.WriteUint32(_formatMisses(addresses[0]), ToleranceLevel+2)
+		state.WriteUint32(_formatMisses(addresses[1]), ToleranceLevel+2)
+		state.WriteUint32(_formatMisses(addresses[2]), ToleranceLevel+2)
+		state.WriteUint32(_formatMisses(addresses[3]), ToleranceLevel+2)
+		state.WriteUint32(_formatMisses(addresses[4]), ToleranceLevel+2)
 
 		// run
-		ordered := _getOrderedCommitteeArray(addrs)
-
-		//assert
-		require.EqualValues(t, expectedOrder, ordered)
-	})
-}
-
-func TestOrbsCommitteeContract_orderList_noReputation_noSeed(t *testing.T) {
-	addrs := makeNodeAddressArray(10)
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-
-		// Prepare do calculation in similar way
-		expectedOrder := make([][]byte, 0, len(addrs))
-		for _, addr := range addrs {
-			expectedOrder = appendAndOrder(addr, expectedOrder)
+		for i := 1 ; i <= max ; i++ {
+			outputArr := _orderList(addresses, _generateSeed(uint64(i)))
+			if bytes.Equal(outputArr[0], badAddress) {
+				foundBadAddressInFirstPosition++
+			}
+			if bytes.Equal(outputArr[0], goodAddress) {
+				foundGoodAddressInFirstPosition++
+			}
 		}
 
-		// run with empty seed
-		ordered := _orderList(addrs, []byte{})
-
-		//assert
-		require.EqualValues(t, expectedOrder, ordered)
+		// assert
+		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 64) / ((committeeSize-5) * 64 + 5 * 16))
+		requireCountToBeInRange(t, foundBadAddressInFirstPosition, (max * 16) / ((committeeSize-5) * 64 + 5 * 16))
 	})
 }
 
-func TestOrbsCommitteeContract_calculateScoreWithReputation(t *testing.T) {
-	addr := makeNodeAddress(25)
-	blockHeight := 777744444
+func requireCountToBeInRange(t testing.TB, actual, expected int) {
+	require.InDelta(t, expected, actual, 0.05 * float64(expected), "expect (%d) to be five precent delta to (%d)", actual, expected)
+}
+
+func TestOrbsCommitteeContract_getNextOrderedCommittee(t *testing.T) {
+	committeeSize := 20
+	addresses := makeNodeAddressArray(committeeSize)
 
 	InServiceScope(nil, nil, func(m Mockery) {
 		_init()
+		blockHeight := 10
 
-		// Prepare
+		// prepare
 		m.MockEnvBlockHeight(blockHeight)
-		scoreWithOutRep := _calculateScore(addr, _generateSeed())
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight))
+		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight+1))
 
-		// rep below cap
-		state.WriteUint32(_formatMisses(addr), 2)
-		score := _calculateScoreWithReputation(addr, _generateSeed())
-		require.EqualValues(t, scoreWithOutRep, score)
+		// run
+		currentCommittee := _split(getOrderedCommittee())
+		nextCommittee := getNextOrderedCommittee()
+		m.MockEnvBlockHeight(blockHeight+1)
+		nextCurrentCommittee := _split(getOrderedCommittee())
 
-		// rep with factor (2^5)
-		state.WriteUint32(_formatMisses(addr), 5)
-		score = _calculateScoreWithReputation(addr, _generateSeed())
-		require.EqualValues(t, float64(scoreWithOutRep)/float64(32), score)
-
-		// rep with factor (2^10) miss is above cap
-		state.WriteUint32(_formatMisses(addr), 11)
-		score = _calculateScoreWithReputation(addr, _generateSeed())
-		require.EqualValues(t, float64(scoreWithOutRep)/float64(1024), score)
+		//assert
+		require.NotEqual(t, currentCommittee, nextCommittee)
+		require.ElementsMatch(t, currentCommittee, nextCommittee, "must actually be same list in diff order")
+		require.Equal(t, nextCommittee, nextCurrentCommittee)
 	})
-}
-
-func TestOrbsCommitteeContract_calculateScore(t *testing.T) {
-	addr := []byte{0xa1, 0x33}
-	var emptySeed = []byte{}
-	nonEmptySeed := []byte{0x44}
-	nonEmptySeedOneBitDiff := []byte{0x43}
-
-	scoreWithEmpty := _calculateScore(addr, emptySeed)
-	scoreWithNonEmpty := _calculateScore(addr, nonEmptySeed)
-	scoreWithNonEmptyOneBitDiff := _calculateScore(addr, nonEmptySeedOneBitDiff)
-
-	shaOfAddrWithNoSeed := hash.CalcSha256(addr)
-	expectedScoreWithEmpty := binary.LittleEndian.Uint32(shaOfAddrWithNoSeed[hash.SHA256_HASH_SIZE_BYTES-4:])
-
-	require.Equal(t, expectedScoreWithEmpty, scoreWithEmpty, "for score with empty seed doesn't match expected")
-	require.NotEqual(t, scoreWithNonEmpty, scoreWithEmpty, "for score with and without seed must not match")
-	require.NotEqual(t, scoreWithNonEmpty, scoreWithNonEmptyOneBitDiff, "score is diff even with one bit difference in seed")
 }

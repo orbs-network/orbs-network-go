@@ -20,7 +20,7 @@ const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee" // used with election
 const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses" // used before election or for testing
 const METHOD_UPDATE_MISSES = "updateMisses"
 
-var PUBLIC = sdk.Export(getOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
+var PUBLIC = sdk.Export(getOrderedCommittee, getNextOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
 var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 
