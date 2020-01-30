@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	"github.com/orbs-network/orbs-network-go/services/gossip/codec"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
@@ -159,6 +160,10 @@ func (s *Service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 			s.logger.Info("HandleBlockSyncRequest failed", log.Error(err))
 		}
 	}
+}
+
+func IsChunkTooBigError(err error) bool {
+	return tcp.IsQueueFullError(err)
 }
 
 func (s *Service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {

@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"strings"
 	"sync"
 )
 
@@ -104,6 +105,14 @@ func (q *transportQueue) OnNewConnection(ctx context.Context) {
 	q.Enable()
 }
 
+func IsQueueFullError(err error) bool {
+	return strings.Contains(err.Error(), " bytes to queue - full with ")
+}
+
+func NewQueueFullError(bytesAttempted int, bytesInQueue int, queueSize int) error {
+	return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", bytesAttempted, bytesInQueue, queueSize)
+}
+
 func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 	q.protected.Lock()
 	defer q.protected.Unlock()
@@ -114,7 +123,7 @@ func (q *transportQueue) consumeBytes(data *adapter.TransportData) error {
 
 	dataSize := data.TotalSize()
 	if dataSize > q.protected.bytesLeft {
-		return errors.Errorf("failed to push %d bytes to queue - full with %d bytes out of %d bytes", dataSize, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
+		return NewQueueFullError(dataSize, q.maxBytes-q.protected.bytesLeft, q.maxBytes)
 	}
 
 	q.protected.bytesLeft -= dataSize
