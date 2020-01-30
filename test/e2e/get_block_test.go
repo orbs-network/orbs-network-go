@@ -17,4 +17,7 @@ func TestGetBlock(t *testing.T) {
 	blockResponse, err := h.GetBlock(1)
 	require.NoError(t, err)
 	require.EqualValues(t, 1, blockResponse.BlockHeight)
+
+	_, err = h.GetBlock(42341234)
+	require.Error(t, err)
 }
