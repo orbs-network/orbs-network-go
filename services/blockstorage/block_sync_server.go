@@ -110,7 +110,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}
 
-	chunkSize := len(blocks)
+	chunkSize := uint(len(blocks))
 	for {
 		lastAvailableBlockHeight := firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1
 		logger.Info("sending blocks to another node via block sync",
@@ -134,14 +134,17 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 			},
 		}
 		_, err = s.gossip.SendBlockSyncResponse(ctx, response)
-		if err == nil {
-			return nil
+		if err != nil {
+			if !gossip.IsChunkTooBigError(err) { // A non chunk-size related error, return immediately
+				return err
+			}
+			if chunkSize == 0 { // We just tried sending a zero-length chunk and failed, time to give up
+				return err
+			}
+			chunkSize /= 2 // try again with a smaller chunk
+			continue
 		}
 
-		if !gossip.IsChunkTooBigError(err) || chunkSize == 0 { // test before dividing by 2, to attempt a zero length chunk at least once
-			return err
-		}
-
-		chunkSize /= 2 // Chunk too big, retry with a smaller chunk
+		return nil
 	}
 }
