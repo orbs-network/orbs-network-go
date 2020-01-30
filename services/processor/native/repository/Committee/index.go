@@ -15,7 +15,7 @@ const CONTRACT_NAME = "_Committee"
 const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee" // used with election
 const METHOD_UPDATE_MISSES = "updateMisses"
 
-var PUBLIC = sdk.Export(getOrderedCommittee, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
+var PUBLIC = sdk.Export(getOrderedCommittee, getNextOrderedCommittee, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
 var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 

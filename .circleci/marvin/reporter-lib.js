@@ -17,14 +17,14 @@ async function readJobAnalysis(jobResultsFilePath) {
 // Read a url from the environment variables
 function notifySlack(slackUrl, message) {
     if (slackUrl.length === 0) {
-        throw `Failed to notify Slack, missing Slack URL`;
+        throw `[SLACK] Failed to notify Slack, missing Slack URL`;
     }
 
     const baseCommand = `curl -s -X POST --data-urlencode "payload={\\"text\\": \\"${message}\\"}" ${slackUrl}`;
     try {
         execSync(baseCommand);
     } catch (ex) {
-        throw `Failed to notify Slack: ${ex}`;
+        throw `[SLACK] Failed to notify Slack: ${ex}`;
     }
 }
 
@@ -123,7 +123,7 @@ function getSlackUsernameForGithubUser(githubLoginHandle) {
         'andr444': 'UCX7XHX1A'
     };
 
-    console.log(githubLoginHandle);
+    console.log(`getSlackUsernameForGithubUser(): committer's Github login handle is [${githubLoginHandle}]`);
     if (!githubLoginHandle || githubLoginHandle.length === 0) {
         return 'NA';
     }

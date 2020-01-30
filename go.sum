@@ -190,6 +190,8 @@ github.com/orbs-network/govnr v0.2.0 h1:Txazgo4Jd29hiARXg6nMqK2pmJA85KeXR+ZjLNy9
 github.com/orbs-network/govnr v0.2.0/go.mod h1:kZctUOFclDbO3Z6w559++l4qh0FPb57XdE5IdOFCbI4=
 github.com/orbs-network/lean-helix-go v0.2.4 h1:n3e3PBM86ylQiiJUzOEFf00k6BWRWKCf8vk+yvSykN8=
 github.com/orbs-network/lean-helix-go v0.2.4/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
+github.com/orbs-network/lean-helix-go v0.2.6 h1:9b7eGChry3Z18xtlvYHO0wTaj5HBOEwLTVYr61Xpa/Q=
+github.com/orbs-network/lean-helix-go v0.2.6/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/membuffers v0.3.2/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
 github.com/orbs-network/membuffers v0.3.6 h1:SEfVtDhzi8YHR4qY8ouu8G57sKGsT4vfgdBC5bjG8TE=
 github.com/orbs-network/membuffers v0.3.6/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=

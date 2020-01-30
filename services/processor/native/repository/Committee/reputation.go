@@ -14,8 +14,8 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 )
 
-const ToleranceLevel = uint32(4)
-const ReputationBottomCap = uint32(10)
+const ToleranceLevel = uint32(2)
+const ReputationBottomCap = uint32(8)
 
 func _formatMisses(addr []byte) []byte {
 	return []byte(fmt.Sprintf("Address_%s_Misses", hex.EncodeToString(addr)))
@@ -32,13 +32,17 @@ func _addMiss(addr []byte) {
 
 func getReputation(addr []byte) uint32 {
 	currMiss := getMisses(addr)
-	if currMiss < ToleranceLevel {
+	if currMiss <= ToleranceLevel {
 		return 0
 	}
 	if currMiss < ReputationBottomCap {
-		return currMiss
+		return currMiss - ToleranceLevel
 	}
-	return ReputationBottomCap
+	return _getMaxReputation()
+}
+
+func _getMaxReputation() uint32 {
+	return ReputationBottomCap - ToleranceLevel
 }
 
 func _clearMiss(addr []byte) {
@@ -47,7 +51,7 @@ func _clearMiss(addr []byte) {
 
 // Function for external monitoring of reputation via absolute number of misses
 func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []uint32) {
-	addressesArray := _getOrderedCommitteeForAddresses(env.GetBlockCommittee())
+	addressesArray := env.GetBlockCommittee()
 	committeeAddresses = make([][20]byte, len(addressesArray))
 	committeeMisses = make([]uint32, len(addressesArray))
 	for i, address := range addressesArray {
@@ -59,7 +63,7 @@ func getAllCommitteeMisses() (committeeAddresses [][20]byte, committeeMisses []u
 
 // Function for external monitoring of reputation
 func getAllCommitteeReputations() (committeeAddresses [][20]byte, committeeReputations []uint32) {
-	addressesArray := _getOrderedCommitteeForAddresses(env.GetBlockCommittee())
+	addressesArray := env.GetBlockCommittee()
 	committeeAddresses = make([][20]byte, len(addressesArray))
 	committeeReputations = make([]uint32, len(addressesArray))
 	for i, address := range addressesArray {
