@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -92,6 +93,33 @@ func TestProcessQuery_UnexpectedError(t *testing.T) {
 			h.verifySystemContractCalled(t)
 			h.verifyStateStorageBlockHeightRequested(t)
 			h.verifyNativeContractMethodCalled(t)
+		})
+	})
+}
+
+func TestProcessQuery_WithSpecificBlockHeight(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+
+			h := newHarness(parent.Logger)
+
+			h.expectStateStorageLastCommittedBlockInfoBlockHeightRequested(12)
+			output, err := h.service.ProcessQuery(ctx, &services.ProcessQueryInput{
+				BlockHeight: 123,
+				SignedQuery: (&protocol.SignedQueryBuilder{
+					Query: &protocol.QueryBuilder{
+						Signer:             nil,
+						ContractName:       "SomeContract",
+						MethodName:         "SomeMethod",
+						InputArgumentArray: []byte{},
+					},
+				}).Build(),
+			})
+
+			require.Error(t, err, "Run local method with specific block height is not yet supported")
+			require.EqualValues(t, protocol.EXECUTION_RESULT_ERROR_INPUT, output.CallResult)
+			require.EqualValues(t, 12, output.ReferenceBlockHeight)
+			h.verifyStateStorageBlockHeightRequested(t)
 		})
 	})
 }
