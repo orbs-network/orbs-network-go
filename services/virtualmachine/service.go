@@ -56,15 +56,21 @@ func NewVirtualMachine(
 func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQueryInput) (*services.ProcessQueryOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	if input.BlockHeight != 0 {
-		panic("Run local method with specific block height is not yet supported")
-	}
-
 	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
 	if err != nil {
 		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
-			OutputArgumentArray:     []byte{},
+			OutputArgumentArray:     protocol.ArgumentsArrayEmpty().Raw(),
+			ReferenceBlockHeight:    committedBlockHeight,
+			ReferenceBlockTimestamp: committedBlockTimestamp,
+		}, err
+	}
+
+	if input.BlockHeight != 0 {
+		err := errors.New("Run local method with specific block height is not yet supported")
+		return &services.ProcessQueryOutput{
+			CallResult:              protocol.EXECUTION_RESULT_ERROR_INPUT,
+			OutputArgumentArray:     protocol.ArgumentsArrayEmpty().Raw(),
 			ReferenceBlockHeight:    committedBlockHeight,
 			ReferenceBlockTimestamp: committedBlockTimestamp,
 		}, err
