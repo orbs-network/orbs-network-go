@@ -37,6 +37,7 @@ type harness struct {
 
 type actor struct {
 	stake   int
+	lockedStake int
 	address [20]byte
 }
 
@@ -52,14 +53,9 @@ func (g *guardian) withIsGuardian(isGuardian bool) *guardian {
 	return g
 }
 
-type delegator struct {
-	actor
-	delegate [20]byte
-}
-
-type validator struct {
-	actor
-	orbsAddress [20]byte
+func (g *guardian) vote(asOfBlock uint64, validators ...*validator) {
+	g.voteBlock = asOfBlock
+	g.votedValidators = getValidatorAddresses(validators)
 }
 
 func getValidatorAddresses(validatorObjs []*validator) [][20]byte {
@@ -69,9 +65,20 @@ func getValidatorAddresses(validatorObjs []*validator) [][20]byte {
 	}
 	return addresses
 }
-func (g *guardian) vote(asOfBlock uint64, validators ...*validator) {
-	g.voteBlock = asOfBlock
-	g.votedValidators = getValidatorAddresses(validators)
+
+type delegator struct {
+	actor
+	delegate [20]byte
+}
+
+func (d *delegator) withLockedStake(lockedStake int) *delegator {
+	d.lockedStake = lockedStake
+	return d
+}
+
+type validator struct {
+	actor
+	orbsAddress [20]byte
 }
 
 func newHarness(isTime bool) *harness {
@@ -182,7 +189,7 @@ func (f *harness) setupEthereumStateBeforeProcess(m Mockery) {
 	f.setupEthereumGuardiansDataBeforeProcess(m)
 
 	for _, d := range f.delegators {
-		mockStakeInEthereum(m, f.electionBlock, d.address, d.stake)
+		mockStakedAndLockedInEthereum(m, f.electionBlock, d.address, d.stake, d.lockedStake)
 	}
 }
 
@@ -191,7 +198,7 @@ func (f *harness) setupEthereumGuardiansDataBeforeProcess(m Mockery) {
 		if a.isGuardian {
 			mockGuardianVoteInEthereum(m, f.electionBlock, a.address, a.votedValidators, a.voteBlock)
 			if a.voteBlock >= _getProcessCurrentElectionEarliestValidVoteBlockNumber() {
-				mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
+				mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
 			}
 		}
 	}
@@ -202,7 +209,7 @@ func (f *harness) setupEthereumValidatorsBeforeProcess(m Mockery) {
 		validatorAddresses := make([][20]byte, len(f.validators))
 		for i, a := range f.validators {
 			validatorAddresses[i] = a.address
-			mockStakeInEthereum(m, f.electionBlock, a.address, a.stake)
+			mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
 			mockValidatorOrbsAddressInEthereum(m, f.electionBlock, a.address, a.orbsAddress)
 		}
 		mockValidatorsInEthereum(m, f.electionBlock, validatorAddresses)
@@ -289,10 +296,28 @@ func mockValidatorOrbsAddressInEthereum(m Mockery, blockNumber uint64, validator
 		}, validatorAddress)
 }
 
+func mockStakedAndLockedInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int, lockedStake int) {
+	mockStakeInEthereum(m, blockNumber, address, stake)
+	mockLockedStakeInEthereum(m, blockNumber, address, lockedStake)
+}
+
 func mockStakeInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int) {
 	stakeValue := big.NewInt(int64(stake))
 	stakeValue = stakeValue.Mul(stakeValue, ETHEREUM_STAKE_FACTOR)
 	m.MockEthereumCallMethodAtBlock(blockNumber, getTokenEthereumContractAddress(), getTokenAbi(), "balanceOf", func(out interface{}) {
+		i, ok := out.(**big.Int)
+		if ok {
+			*i = stakeValue
+		} else {
+			panic(fmt.Sprintf("wrong something %s", out))
+		}
+	}, address)
+}
+
+func mockLockedStakeInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int) {
+	stakeValue := big.NewInt(int64(stake))
+	stakeValue = stakeValue.Mul(stakeValue, ETHEREUM_STAKE_FACTOR)
+	m.MockEthereumCallMethodAtBlock(blockNumber, getStakingEthereumContractAddress(), getStakingAbi(), "getStakeBalanceOf", func(out interface{}) {
 		i, ok := out.(**big.Int)
 		if ok {
 			*i = stakeValue
