@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -21,7 +22,7 @@ type NodeConfig interface {
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	GenesisValidatorNodes() map[string]ValidatorNode
-	GossipPeers() map[string]GossipPeer
+	GossipPeers() topologyProviderAdapter.GossipPeers
 	TransactionExpirationWindow() time.Duration
 
 	// consensus
@@ -127,7 +128,7 @@ type mutableNodeConfig interface {
 	SetString(key string, value string) mutableNodeConfig
 	SetBool(key string, value bool) mutableNodeConfig
 	SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig
-	SetGossipPeers(peers map[string]GossipPeer) mutableNodeConfig
+	SetGossipPeers(peers topologyProviderAdapter.GossipPeers) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
 	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
@@ -155,7 +156,7 @@ type FilesystemBlockPersistenceConfig interface {
 
 type GossipTransportConfig interface {
 	NodeAddress() primitives.NodeAddress
-	GossipPeers() map[string]GossipPeer
+	GossipPeers() topologyProviderAdapter.GossipPeers
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
@@ -236,12 +237,6 @@ type LeanHelixConsensusConfigForTests interface {
 
 type ValidatorNode interface {
 	NodeAddress() primitives.NodeAddress
-}
-
-type GossipPeer interface {
-	GossipPort() int
-	GossipEndpoint() string
-	HexOrbsAddress() string
 }
 
 type HttpServerConfig interface {

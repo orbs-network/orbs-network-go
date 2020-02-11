@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"strconv"
@@ -69,8 +70,8 @@ func parseNodes(value interface{}) (nodes map[string]ValidatorNode, err error) {
 	return nodes, nil
 }
 
-func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
-	peers = make(map[string]GossipPeer)
+func parsePeers(value interface{}) (peers topologyProviderAdapter.GossipPeers, err error) {
+	peers = make(topologyProviderAdapter.GossipPeers)
 
 	if nodeList, ok := value.([]interface{}); ok {
 		for _, item := range nodeList {
@@ -85,7 +86,7 @@ func parsePeers(value interface{}) (peers map[string]GossipPeer, err error) {
 				if i, err := parseUint32(kv["port"].(float64)); err != nil {
 					return peers, err
 				} else {
-					peers[nodeAddress.KeyForMap()] = NewHardCodedGossipPeer(int(i), kv["ip"].(string), hexAddress)
+					peers[nodeAddress.KeyForMap()] = topologyProviderAdapter.NewGossipPeer(int(i), kv["ip"].(string), hexAddress)
 				}
 			}
 		}
@@ -171,7 +172,7 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		}
 
 		if key == "federation-nodes" || key == "topology-nodes" { // note: "federation-nodes" is deprecated but kept for backwards-compatibility
-			var peers map[string]GossipPeer
+			var peers topologyProviderAdapter.GossipPeers
 			peers, err = parsePeers(value)
 			cfg.SetGossipPeers(peers)
 			continue

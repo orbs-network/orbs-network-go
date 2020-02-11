@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
+func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers topologyProviderAdapter.GossipPeers, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetGossipPeers(gossipPeers)
@@ -29,7 +30,7 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map
 func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(make(map[string]GossipPeer))
+	cfg.SetGossipPeers(make(topologyProviderAdapter.GossipPeers))
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(0))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)

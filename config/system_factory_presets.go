@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -124,7 +125,7 @@ func ForE2E(
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
-	gossipPeers map[string]GossipPeer,
+	gossipPeers topologyProviderAdapter.GossipPeers,
 	genesisValidatorNodes map[string]ValidatorNode,
 	blockStorageDataDirPrefix string,
 	processorArtifactPath string,

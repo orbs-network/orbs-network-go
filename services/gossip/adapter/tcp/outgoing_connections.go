@@ -12,8 +12,6 @@ import (
 	"sync"
 )
 
-type GossipPeers map[string]config.GossipPeer
-
 type outgoingConnectionMetrics struct {
 	sendErrors      *metric.Gauge
 	KeepaliveErrors *metric.Gauge
@@ -26,7 +24,7 @@ type outgoingConnectionMetrics struct {
 type outgoingConnections struct {
 	sync.RWMutex
 	activeConnections map[string]*outgoingConnection
-	peerTopology      GossipPeers // this is important - we use own copy of peer configuration, otherwise nodes in e2e tests that run in-process can mutate each other's peerTopology
+	peerTopology      adapter.GossipPeers // this is important - we use own copy of peer configuration, otherwise nodes in e2e tests that run in-process can mutate each other's peerTopology
 	logger            log.Logger
 	metrics           *outgoingConnectionMetrics
 	config            timingsConfig
@@ -38,7 +36,7 @@ func newOutgoingConnections(logger log.Logger, registry metric.Registry, config 
 	c := &outgoingConnections{
 		logger:            logger,
 		activeConnections: make(map[string]*outgoingConnection),
-		peerTopology:      make(GossipPeers),
+		peerTopology:      make(adapter.GossipPeers),
 		metrics:           createOutgoingConnectionMetrics(registry),
 		metricRegistry:    registry,
 		nodeAddress:       config.NodeAddress(),
@@ -80,7 +78,7 @@ func (c *outgoingConnections) WaitUntilShutdown(shutdownContext context.Context)
 
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
-func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddress string, peer config.GossipPeer) {
+func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddress string, peer adapter.GossipPeer) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -92,7 +90,7 @@ func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddr
 	}
 }
 
-func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers GossipPeers) {
+func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
 	oldPeers := c.readOldPeerConfig()
 	peersToRemove, peersToAdd := peerDiff(oldPeers, newPeers)
 
@@ -103,13 +101,13 @@ func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers Gos
 	}
 }
 
-func (c *outgoingConnections) connectAll(parent context.Context, peers GossipPeers) {
+func (c *outgoingConnections) connectAll(parent context.Context, peers adapter.GossipPeers) {
 	for peerNodeAddress, peer := range peers {
 		c.connectForever(parent, peerNodeAddress, peer)
 	}
 }
 
-func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect GossipPeers) {
+func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect adapter.GossipPeers) {
 	c.Lock()
 	defer c.Unlock()
 	for key, peer := range peersToDisconnect {
@@ -128,7 +126,7 @@ func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconne
 	}
 }
 
-func (c *outgoingConnections) readOldPeerConfig() GossipPeers {
+func (c *outgoingConnections) readOldPeerConfig() adapter.GossipPeers {
 	c.RLock()
 	defer c.RUnlock()
 	return c.peerTopology

@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -27,9 +28,10 @@ import (
 
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	cfg := config.ForDirectTransportTests(address, make(adapter.GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
-		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
+		topology := memory.NewTopologyProvider(cfg, harness.Logger)
+		transport := NewDirectTransport(ctx, topology, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
 
@@ -201,8 +203,8 @@ func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Conte
 	require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, other.listener), "message was not sent to target node")
 }
 
-func (n *nodeHarness) toGossipPeer() config.GossipPeer {
-	return config.NewHardCodedGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
+func (n *nodeHarness) toGossipPeer() adapter.GossipPeer {
+	return adapter.NewGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
 }
 
 func waitForAllNodesToSatisfy(t *testing.T, message string, predicate func(node *nodeHarness) bool, nodes ...*nodeHarness) {
@@ -231,7 +233,8 @@ func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	address := aKey()
 	peers := aTopologyContaining()
 	cfg := config.ForDirectTransportTests(address, peers, 20*time.Hour /*disable keep alive*/, 1*time.Second)
-	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
+	topology := memory.NewTopologyProvider(cfg, logger)
+	transport := NewDirectTransport(ctx, topology, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
 	return &nodeHarness{transport, address, listener}
@@ -245,8 +248,8 @@ func aKey() primitives.NodeAddress {
 	return address
 }
 
-func aTopologyContaining(nodes ...*nodeHarness) GossipPeers {
-	peers := make(map[string]config.GossipPeer)
+func aTopologyContaining(nodes ...*nodeHarness) adapter.GossipPeers {
+	peers := make(adapter.GossipPeers)
 	for _, node := range nodes {
 		peers[node.address.KeyForMap()] = node.toGossipPeer()
 	}

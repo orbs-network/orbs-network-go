@@ -16,6 +16,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
@@ -57,7 +58,8 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
 	}
 
-	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
+	topologyProvider := topologyProviderAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
+	transport := tcp.NewDirectTransport(ctx, topologyProvider, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)

@@ -1,10 +1,12 @@
 package tcp
 
-import "github.com/orbs-network/orbs-network-go/config"
+import (
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+)
 
-func peerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipPeers, peersToAdd GossipPeers) {
-	peersToRemove = make(GossipPeers)
-	peersToAdd = make(GossipPeers)
+func peerDiff(oldPeers adapter.GossipPeers, newPeers adapter.GossipPeers) (peersToRemove adapter.GossipPeers, peersToAdd adapter.GossipPeers) {
+	peersToRemove = make(adapter.GossipPeers)
+	peersToAdd = make(adapter.GossipPeers)
 
 	for a, n := range newPeers {
 		if o, peerExistsInOldList := oldPeers[a]; !peerExistsInOldList || peerHasChangedPortOrIPAddress(n, o) {
@@ -21,6 +23,6 @@ func peerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipP
 	return
 }
 
-func peerHasChangedPortOrIPAddress(p1 config.GossipPeer, p2 config.GossipPeer) bool {
+func peerHasChangedPortOrIPAddress(p1 adapter.GossipPeer, p2 adapter.GossipPeer) bool {
 	return p1.GossipEndpoint() != p2.GossipEndpoint() || p1.GossipPort() != p2.GossipPort()
 }

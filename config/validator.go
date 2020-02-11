@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"reflect"
@@ -62,7 +63,7 @@ func (v *validator) requireNonEmptyValidatorMap(nodes map[string]ValidatorNode, 
 	}
 }
 
-func (v *validator) requireNonEmptyPeerMap(gossipPeers map[string]GossipPeer, msg string) {
+func (v *validator) requireNonEmptyPeerMap(gossipPeers topologyProviderAdapter.GossipPeers, msg string) {
 	if len(gossipPeers) == 0 {
 		panic(msg)
 	}

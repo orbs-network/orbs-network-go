@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -59,12 +60,12 @@ func bootstrapE2ENetwork(portOffset int, logFilePrefix string, virtualChainId pr
 	}
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	gossipPeers := make(map[string]config.GossipPeer)
+	gossipPeers := make(topologyProviderAdapter.GossipPeers)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		gossipPortByNodeIndex = append(gossipPortByNodeIndex, START_GOSSIP_PORT+i+portOffset)
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
 		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		gossipPeers[nodeAddress.KeyForMap()] = config.NewHardCodedGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
+		gossipPeers[nodeAddress.KeyForMap()] = topologyProviderAdapter.NewGossipPeer(gossipPortByNodeIndex[i], "127.0.0.1", hex.EncodeToString(nodeAddress))
 	}
 
 	ethereumEndpoint := os.Getenv("ETHEREUM_ENDPOINT") //TODO v1 unite how this config is fetched

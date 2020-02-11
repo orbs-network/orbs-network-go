@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -15,12 +16,6 @@ import (
 
 type hardCodedValidatorNode struct {
 	nodeAddress primitives.NodeAddress
-}
-
-type hardCodedGossipPeer struct {
-	gossipPort     int
-	gossipEndpoint string
-	hexOrbsAddress string
 }
 
 type NodeConfigValue struct {
@@ -33,7 +28,7 @@ type NodeConfigValue struct {
 type config struct {
 	kv                      map[string]NodeConfigValue
 	genesisValidatorNodes   map[string]ValidatorNode
-	gossipPeers             map[string]GossipPeer
+	gossipPeers             topologyProviderAdapter.GossipPeers
 	nodeAddress             primitives.NodeAddress
 	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
 	constantConsensusLeader primitives.NodeAddress
@@ -122,14 +117,6 @@ func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode
 	}
 }
 
-func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) GossipPeer {
-	return &hardCodedGossipPeer{
-		gossipPort:     gossipPort,
-		gossipEndpoint: gossipEndpoint,
-		hexOrbsAddress: hexAddress,
-	}
-}
-
 func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
 	c.kv[key] = value
 	return c
@@ -180,25 +167,13 @@ func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutabl
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeConfig {
+func (c *config) SetGossipPeers(gossipPeers topologyProviderAdapter.GossipPeers) mutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
 
 func (c *hardCodedValidatorNode) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
-}
-
-func (c *hardCodedGossipPeer) GossipPort() int {
-	return c.gossipPort
-}
-
-func (c *hardCodedGossipPeer) GossipEndpoint() string {
-	return c.gossipEndpoint
-}
-
-func (c *hardCodedGossipPeer) HexOrbsAddress() string {
-	return c.hexOrbsAddress
 }
 
 func (c *config) NodeAddress() primitives.NodeAddress {
@@ -225,7 +200,7 @@ func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
 	return c.genesisValidatorNodes
 }
 
-func (c *config) GossipPeers() map[string]GossipPeer {
+func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
 	return c.gossipPeers
 }
 
