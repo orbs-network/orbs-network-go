@@ -21,7 +21,7 @@ func (s *service) handleSdkIPFSCall(ctx context.Context, executionContext *execu
 
 		return []*protocol.Argument{(&protocol.ArgumentBuilder{
 			// value
-			Type:       protocol.ARGUMENT_TYPE_BYTES_ARRAY_VALUE,
+			Type:       protocol.ARGUMENT_TYPE_BYTES_VALUE,
 			BytesValue: value.Content,
 		}).Build()}, nil
 	default:

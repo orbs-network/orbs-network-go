@@ -6,6 +6,10 @@
 
 package ipfs_systemcontract
 
+import (
+	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/ipfs"
+)
+
 func read(hash []byte) []byte {
-	return []byte("Diamond Dogs")
+	return ipfs.Read(hash)
 }

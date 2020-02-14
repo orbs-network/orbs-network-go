@@ -70,3 +70,7 @@ func (s *service) SdkEnvGetBlockProposerAddress(executionContextId sdkContext.Co
 	}
 	return output.OutputArguments[0].BytesValue()
 }
+
+func (s *service) SdkEnvGetBlockCommittee(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) [][]byte {
+	panic("not implemented yet")
+}

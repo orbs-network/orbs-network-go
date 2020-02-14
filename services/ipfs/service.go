@@ -46,7 +46,9 @@ func NewIPFS(
 }
 
 func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutput, error) {
-	panic("implement me")
+	return &IPFSReadOutput{
+		Content: []byte("Diamond Dogs"),
+	}, nil
 }
 
 func (s *service) WaitUntilShutdown(shutdownContext context.Context) {
