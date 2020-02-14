@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/ipfs"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -23,6 +24,7 @@ var LogTag = log.Service("virtual-machine")
 
 type service struct {
 	stateStorage         services.StateStorage
+	ipfs                 ipfs.IPFSService
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
 	logger               log.Logger
@@ -35,12 +37,14 @@ func NewVirtualMachine(
 	processors map[protocol.ProcessorType]services.Processor,
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector,
 	logger log.Logger,
+	ipfs ipfs.IPFSService,
 ) services.VirtualMachine {
 
 	s := &service{
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
+		ipfs:                 ipfs,
 		logger:               logger.WithTags(LogTag),
 
 		contexts: newExecutionContextProvider(),

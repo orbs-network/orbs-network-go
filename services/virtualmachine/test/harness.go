@@ -56,6 +56,7 @@ func newHarness(logger log.Logger) *harness {
 		processorsForService,
 		crosschainConnectorsForService,
 		logger,
+		nil,
 	)
 
 	return &harness{

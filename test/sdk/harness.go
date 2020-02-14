@@ -55,7 +55,7 @@ func newVmHarness(logger log.Logger) *harness {
 	processorMap := map[protocol.ProcessorType]services.Processor{protocol.PROCESSOR_TYPE_NATIVE: processorService}
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = &services.MockCrosschainConnector{}
-	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, logger)
+	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, logger, nil)
 
 	return &harness{
 		vm:         vm,
