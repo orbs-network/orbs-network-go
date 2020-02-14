@@ -114,6 +114,10 @@ const (
 	SIGNER_ENDPOINT = "SIGNER_ENDPOINT"
 
 	EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH = "EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH"
+
+	IPFS_ENDPOINT = "IPFS_ENDPOINT"
+
+	IPFS_TIMEOUT = "IPFS_TIMEOUT"
 )
 
 func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
@@ -439,4 +443,12 @@ func (c *config) SignerEndpoint() string {
 
 func (c *config) ExperimentalExternalProcessorPluginPath() string {
 	return c.kv[EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH].StringValue
+}
+
+func (c *config) IPFSEndpoint() string {
+	return c.kv[IPFS_ENDPOINT].StringValue
+}
+
+func (c *config) IPFSTimeout() time.Duration {
+	return c.kv[IPFS_TIMEOUT].DurationValue
 }

@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/ipfs"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ func TestIPFSWithLocalNode(t *testing.T) {
 		err := h.AddFile(ExampleJSONPath())
 		require.NoError(t, err)
 
-		s := ipfs.NewIPFS(nil, harness.Logger)
+		s := ipfs.NewIPFS(config.ForIPFSTests(), harness.Logger)
 
 		readme, err := ioutil.ReadFile(ExampleJSONPath())
 		require.NoError(t, err)

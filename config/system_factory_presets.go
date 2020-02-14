@@ -104,6 +104,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetBool(PROFILING, false)
 	cfg.SetString(HTTP_ADDRESS, ":8080")
 
+	cfg.SetDuration(IPFS_TIMEOUT, 30*time.Second)
+
 	return cfg
 }
 
@@ -193,6 +195,9 @@ func ForE2E(
 	cfg.SetNodePrivateKey(nodePrivateKey)
 
 	cfg.SetString(EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH, experimentalExternalProcessorPluginPath)
+
+	cfg.SetString(IPFS_ENDPOINT, "127.0.0.1:5001")
+	cfg.SetDuration(IPFS_TIMEOUT, 5*time.Second)
 
 	return cfg
 }

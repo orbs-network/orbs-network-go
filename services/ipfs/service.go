@@ -60,7 +60,7 @@ func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutp
 		},
 	}
 
-	api, err := ipfsClient.NewURLApiWithClient("127.0.0.1:5001", client)
+	api, err := ipfsClient.NewURLApiWithClient(s.config.IPFSEndpoint(), client)
 	if err != nil {
 		return nil, errors.Errorf( "could not initialize ipfs client: %s", err)
 	}

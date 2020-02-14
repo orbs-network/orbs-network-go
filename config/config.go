@@ -109,6 +109,10 @@ type NodeConfig interface {
 	// Remote signer
 	SignerEndpoint() string
 
+	// IPFS
+	IPFSEndpoint() string
+	IPFSTimeout() time.Duration
+
 	// Build-dependent configuration
 	ExtraConfig
 }
@@ -255,4 +259,6 @@ type SignerConfig interface {
 }
 
 type IPFSConfig interface {
+	IPFSEndpoint() string
+	IPFSTimeout() time.Duration
 }

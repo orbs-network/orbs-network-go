@@ -131,3 +131,10 @@ func ForNativeProcessorTests(id primitives.VirtualChainId) NativeProcessorConfig
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(id))
 	return cfg
 }
+
+func ForIPFSTests() IPFSConfig {
+	cfg := emptyConfig()
+	cfg.SetString(IPFS_ENDPOINT, "127.0.0.1:5001")
+	cfg.SetDuration(IPFS_TIMEOUT, 1*time.Second)
+	return cfg
+}
