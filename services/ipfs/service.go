@@ -21,9 +21,11 @@ type service struct {
 }
 
 type IPFSReadInput struct {
+	Hash []byte
 }
 
 type IPFSReadOutput struct {
+	Content []byte
 }
 
 type IPFSService interface {
