@@ -8,6 +8,7 @@ package ipfs
 
 import (
 	"context"
+	//ipfsClient "github.com/ipfs/go-ipfs-http-client"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
@@ -46,6 +47,13 @@ func NewIPFS(
 }
 
 func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutput, error) {
+	//api, err := ipfsClient.NewLocalApi()
+	//if err != nil {
+	//	return &IPFSReadOutput{}, err
+	//}
+
+	//r, err := api.Block().Get(ctx, input.Hash)
+
 	return &IPFSReadOutput{
 		Content: []byte("Diamond Dogs"),
 	}, nil
