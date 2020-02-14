@@ -253,3 +253,6 @@ type SignerConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	SignerEndpoint() string
 }
+
+type IPFSConfig interface {
+}

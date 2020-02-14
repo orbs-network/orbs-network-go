@@ -8,17 +8,23 @@ package ipfs
 
 import (
 	"context"
-	//ipfsClient "github.com/ipfs/go-ipfs-http-client"
+	ipfsClient "github.com/ipfs/go-ipfs-http-client"
+	"github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/mr-tron/base58"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
+	"io/ioutil"
+	"net/http"
+	"time"
 )
 
 var LogTag = log.Service("virtual-machine")
 
 type service struct {
 	logger log.Logger
-	config config.NodeConfig // FIXME scale down
+	config config.IPFSConfig
 }
 
 type IPFSReadInput struct {
@@ -35,7 +41,7 @@ type IPFSService interface {
 }
 
 func NewIPFS(
-	config config.NodeConfig,
+	config config.IPFSConfig,
 	logger log.Logger,
 ) IPFSService {
 	s := &service{
@@ -47,15 +53,34 @@ func NewIPFS(
 }
 
 func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutput, error) {
-	//api, err := ipfsClient.NewLocalApi()
-	//if err != nil {
-	//	return &IPFSReadOutput{}, err
-	//}
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy:             http.ProxyFromEnvironment,
+			DisableKeepAlives: true,
+		},
+	}
 
-	//r, err := api.Block().Get(ctx, input.Hash)
+	api, err := ipfsClient.NewURLApiWithClient("127.0.0.1:5001", client)
+	if err != nil {
+		return nil, errors.Errorf( "could not initialize ipfs client: %s", err)
+	}
+
+	timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	r, err := api.Object().Data(timeout, path.New(base58.Encode(input.Hash)))
+	if err != nil {
+		return nil, errors.Errorf("could not retrieve data from IPFS: %s", err)
+	}
+
+	raw, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	content := raw[5:len(raw)-3]
 
 	return &IPFSReadOutput{
-		Content: []byte("Diamond Dogs"),
+		Content: content,
 	}, nil
 }
 
