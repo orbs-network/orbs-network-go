@@ -16,7 +16,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Deployments"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_IPFSTemp"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
@@ -56,10 +55,6 @@ func NewPrebuilt() *prebuiltRepository {
 			benchmarktoken.CONTRACT_NAME: {
 				PublicMethods: benchmarktoken.PUBLIC,
 				SystemMethods: benchmarktoken.SYSTEM,
-				Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
-			},
-			ipfs_systemcontract.CONTRACT_NAME: { // FIXME remove later
-				PublicMethods: ipfs_systemcontract.PUBLIC,
 				Permission:    sdkContext.PERMISSION_SCOPE_SERVICE,
 			},
 			// add new pre-built native system contracts here

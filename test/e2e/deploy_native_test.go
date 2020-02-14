@@ -37,6 +37,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 		PrintTestTime(t, "send deploy - start", &lt)
 
 		h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName,
+
 			contracts.NativeSourceCodeForCounterPart1(counterStart),
 			contracts.NativeSourceCodeForCounterPart2(counterStart))
 

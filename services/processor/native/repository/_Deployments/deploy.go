@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_IPFSTemp"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Info"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"strconv"
@@ -86,7 +85,6 @@ func IsImplicitlyDeployed(serviceName string) bool {
 	case
 		CONTRACT_NAME,
 		info_systemcontract.CONTRACT_NAME,
-		ipfs_systemcontract.CONTRACT_NAME, // FIXME delete
 		triggers_systemcontract.CONTRACT_NAME,
 		committee_systemcontract.CONTRACT_NAME,
 		elections_systemcontract.CONTRACT_NAME,

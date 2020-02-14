@@ -2,9 +2,10 @@ package e2e
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
+	"github.com/orbs-network/orbs-client-sdk-go/orbs"
 	ipfsTest "github.com/orbs-network/orbs-network-go/services/ipfs/test"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_IPFSTemp"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -12,7 +13,7 @@ import (
 	"time"
 )
 
-func TestIPFSSystemContract(t *testing.T) {
+func TestIPFSProxyContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}
@@ -31,7 +32,14 @@ func TestIPFSSystemContract(t *testing.T) {
 		h.WaitUntilTransactionPoolIsReady(t)
 		PrintTestTime(t, "first block committed", &lt)
 
-		contractName := ipfs_systemcontract.CONTRACT_NAME
+		contractName := fmt.Sprintf("IPFSProxy%d", time.Now().UnixNano())
+
+		PrintTestTime(t, "send deploy - start", &lt)
+
+		sources, err := orbs.ReadSourcesFromDir("./contracts/ipfs_proxy")
+		require.NoError(t, err)
+
+		h.DeployContractAndRequireSuccess(t, OwnerOfAllSupply, contractName, sources...)
 
 		PrintTestTime(t, "send deploy - start", &lt)
 

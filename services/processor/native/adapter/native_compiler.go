@@ -184,7 +184,9 @@ func buildSharedObject(ctx context.Context, filenamePrefix string, sourceFilePat
 	}
 
 	// compile
-	args := append(addRaceFlagIfNeeded([]string{"build", "-buildmode=plugin", "-mod=readonly"}), "-o", soFilePath)
+	//args := append(addRaceFlagIfNeeded([]string{"build", "-buildmode=plugin", "-mod=readonly"}), "-o", soFilePath)
+	// FIXME readonly
+	args := append(addRaceFlagIfNeeded([]string{"build", "-buildmode=plugin"}), "-o", soFilePath)
 	args = append(args, sourceFilePaths...)
 	out, err := runGoCommand(ctx, artifactsPath, args...)
 	if err != nil {
