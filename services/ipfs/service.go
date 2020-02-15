@@ -67,7 +67,7 @@ func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutp
 	timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	r, err := api.Object().Data(timeout, path.New(input.Hash))
+	r, err := api.Block().Get(timeout, path.New(input.Hash))
 	if err != nil {
 		return nil, errors.Errorf("could not retrieve data from IPFS: %s", err)
 	}
@@ -76,10 +76,8 @@ func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutp
 	if err != nil {
 		return nil, err
 	}
-	content := raw[5:len(raw)-3]
-
 	return &IPFSReadOutput{
-		Content: content,
+		Content: raw,
 	}, nil
 }
 

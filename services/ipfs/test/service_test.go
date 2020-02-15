@@ -30,6 +30,6 @@ func TestIPFSWithLocalNode(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		require.EqualValues(t, readme, out.Content)
+		require.EqualValues(t, string(readme), string(out.Content))
 	})
 }

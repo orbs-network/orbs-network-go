@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const EXAMPLE_JSON_HASH = "QmZCibsKZbJtwUgfvJUQeyKor7i5XqKimCVHp5qpUmS26d"
+const EXAMPLE_JSON_HASH = "QmZioGBjXkxnf7Tn7Qzy3WXmMtrcWvNV4oLbXdxmmAVwFN"
 
 type harness struct {
 	daemon *exec.Cmd
@@ -51,7 +51,7 @@ func (h *harness) StopDaemon() error {
 }
 
 func (h *harness) AddFile(path string) error {
-	add := exec.Command("ipfs", "add", path)
+	add := exec.Command("ipfs", "block", "put", path)
 	add.Env = h.env
 	//add.Stdout = os.Stdout
 	//add.Stderr = os.Stderr
