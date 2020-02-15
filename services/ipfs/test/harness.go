@@ -1,7 +1,6 @@
 package test
 
 import (
-	"github.com/mr-tron/base58"
 	"github.com/orbs-network/orbs-network-go/config"
 	"os"
 	"os/exec"
@@ -9,7 +8,7 @@ import (
 	"time"
 )
 
-var EXAMPLE_JSON_HASH, _ = base58.Decode("QmZCibsKZbJtwUgfvJUQeyKor7i5XqKimCVHp5qpUmS26d")
+const EXAMPLE_JSON_HASH = "QmZCibsKZbJtwUgfvJUQeyKor7i5XqKimCVHp5qpUmS26d"
 
 type harness struct {
 	daemon *exec.Cmd

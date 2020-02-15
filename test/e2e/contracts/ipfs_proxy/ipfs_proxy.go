@@ -17,6 +17,6 @@ func _init() {
 
 }
 
-func read(hash []byte) []byte {
+func read(hash string) []byte {
 	return ipfs.Read(hash)
 }

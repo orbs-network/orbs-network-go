@@ -10,7 +10,6 @@ import (
 	"context"
 	ipfsClient "github.com/ipfs/go-ipfs-http-client"
 	"github.com/ipfs/interface-go-ipfs-core/path"
-	"github.com/mr-tron/base58"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/scribe/log"
@@ -28,7 +27,7 @@ type service struct {
 }
 
 type IPFSReadInput struct {
-	Hash []byte
+	Hash string
 }
 
 type IPFSReadOutput struct {
@@ -68,7 +67,7 @@ func (s *service) Read(ctx context.Context, input *IPFSReadInput) (*IPFSReadOutp
 	timeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	r, err := api.Object().Data(timeout, path.New(base58.Encode(input.Hash)))
+	r, err := api.Object().Data(timeout, path.New(input.Hash))
 	if err != nil {
 		return nil, errors.Errorf("could not retrieve data from IPFS: %s", err)
 	}

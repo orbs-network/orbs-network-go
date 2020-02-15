@@ -11,7 +11,7 @@ import (
 
 const SDK_OPERATION_NAME_IPFS = "Sdk.IPFS"
 
-func (s *service) SdkIPFSRead(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, hash []byte) []byte {
+func (s *service) SdkIPFSRead(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope, hash string) []byte {
 	args, err := protocol.ArgumentsFromNatives(builders.VarsToSlice(hash))
 	if err != nil {
 		panic(err)

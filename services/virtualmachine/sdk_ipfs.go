@@ -13,7 +13,7 @@ func (s *service) handleSdkIPFSCall(ctx context.Context, executionContext *execu
 
 	case "read":
 		value, err := s.ipfs.Read(ctx, &ipfs.IPFSReadInput{
-			Hash: args[0].BytesValue(),
+			Hash: args[0].StringValue(),
 		})
 		if err != nil {
 			return nil, err
