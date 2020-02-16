@@ -14,6 +14,8 @@ import (
 )
 
 func TestIPFSProxyContract(t *testing.T) {
+	t.Skip("experimental")
+
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")
 	}

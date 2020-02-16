@@ -11,6 +11,8 @@ import (
 )
 
 func TestIPFSWithLocalNode(t *testing.T) {
+	t.Skip("experimental")
+
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		t := harness.T
 		h := NewIPFSDaemonHarness()
