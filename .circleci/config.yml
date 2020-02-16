@@ -2,7 +2,7 @@ version: 2
 jobs:
   tests:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.13.8
     resource_class: large
     steps:
       - checkout
@@ -21,7 +21,7 @@ jobs:
 
   races:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.13.8
     resource_class: large
     steps:
       - checkout
@@ -40,7 +40,7 @@ jobs:
 
   memory_leaks:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.13.8
     resource_class: xlarge
     steps:
       - checkout
@@ -70,7 +70,7 @@ jobs:
 
   nightly:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.13.8
     parallelism: 6
     resource_class: xlarge
     steps:

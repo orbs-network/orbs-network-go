@@ -1,4 +1,4 @@
-FROM circleci/golang:1.12.9
+FROM circleci/golang:1.13.8
 
 # Install Node.js
 COPY setup.sh ./setup.sh
