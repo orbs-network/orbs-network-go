@@ -39,7 +39,7 @@ func convertKeyName(key string) string {
 	return strings.ToUpper(strings.Replace(key, "-", "_", -1))
 }
 
-func parseUint32(f64 float64) (uint32, error) {
+func parseUint32(f64 float64) (uint32, error) { // TODO posv2 this may be over kill can do direct casting from float
 	s := fmt.Sprintf("%.0f", f64)
 	if i, err := strconv.Atoi(s); err == nil {
 		return uint32(i), nil

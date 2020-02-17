@@ -16,7 +16,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	topologyProviderFileAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/file"
+	topologyProviderMemoryAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
@@ -58,7 +60,17 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
 	}
 
-	topologyProvider := topologyProviderAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
+	var topologyProvider topologyProviderAdapter.TopologyProvider
+	if len(nodeConfig.GossipTopologyFilePath()) == 0 {
+		topologyProvider = topologyProviderMemoryAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
+	} else {
+		topologyProviderFile := topologyProviderFileAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
+		err := topologyProviderFile.Update(ctx)
+		if err != nil {
+			panic(fmt.Sprintf("failed initializing topology from file, err=%s", err.Error()))
+		}
+		topologyProvider = topologyProviderFile
+	}
 	transport := tcp.NewDirectTransport(ctx, topologyProvider, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)

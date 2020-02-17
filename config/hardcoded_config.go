@@ -77,6 +77,7 @@ const (
 	TRANSACTION_POOL_NODE_SYNC_REJECT_TIME                 = "TRANSACTION_POOL_NODE_SYNC_REJECT_TIME"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
+	GOSSIP_TOPOLOGY_FILE_PATH             = "GOSSIP_TOPOLOGY_FILE_PATH"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 	GOSSIP_RECONNECT_INTERVAL             = "GOSSIP_RECONNECT_INTERVAL"
@@ -198,10 +199,6 @@ func (c *config) NetworkType() protocol.SignerNetworkType {
 
 func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
 	return c.genesisValidatorNodes
-}
-
-func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
-	return c.gossipPeers
 }
 
 func (c *config) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
@@ -330,6 +327,14 @@ func (c *config) ProcessorPerformWarmUpCompilation() bool {
 
 func (c *config) GossipListenPort() uint16 {
 	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
+}
+
+func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
+	return c.gossipPeers
+}
+
+func (c *config) GossipTopologyFilePath() string {
+	return c.kv[GOSSIP_TOPOLOGY_FILE_PATH].StringValue
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

@@ -21,8 +21,7 @@ type NodeConfig interface {
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	GenesisValidatorNodes() map[string]ValidatorNode
-	GossipPeers() topologyProviderAdapter.GossipPeers
+	GenesisValidatorNodes() map[string]ValidatorNode // TODO POSV2 remove this ?
 	TransactionExpirationWindow() time.Duration
 
 	// consensus
@@ -74,6 +73,8 @@ type NodeConfig interface {
 
 	// gossip
 	GossipListenPort() uint16
+	GossipPeers() topologyProviderAdapter.GossipPeers // TODO POSV2 remove this ?
+	GossipTopologyFilePath() string
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration

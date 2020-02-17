@@ -23,10 +23,6 @@ type TopologyProvider struct {
 	topology adapter.GossipPeers
 }
 
-func NewTopologyProviderWithPeers(peers adapter.GossipPeers, logger log.Logger) *TopologyProvider {
-	return  &TopologyProvider{topology: peers, logger :logger}
-}
-
 func NewTopologyProvider(config Config, logger log.Logger) *TopologyProvider {
 	return  &TopologyProvider{topology: config.GossipPeers(), logger :logger}
 }
