@@ -38,7 +38,7 @@ func TestCalculateNewBlockTimestampWithPrevBlockInTheFuture(t *testing.T) {
 
 func newHarnessWithConfigOnly(enableTriggers bool) *service {
 	return &service{
-		config: config.ForConsensusContextTests(nil, enableTriggers),
+		config: config.ForConsensusContextTests(enableTriggers),
 	}
 }
 

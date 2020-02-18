@@ -9,8 +9,10 @@ package consensuscontext
 import (
 	"context"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"strings"
 )
 
@@ -19,19 +21,12 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	var committee []primitives.NodeAddress
-	var err error
-	if s.config.ConsensusContextCommitteeUsingContract() {
-		committee, err = s.generateCommitteeUsingContract(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		committee, err = s.generateCommitteeUsingConsensus(ctx, input)
-		if err != nil {
-			return nil, err
-		}
+	committee, err := s.getOrderedCommittee(ctx, input.CurrentBlockHeight)
+	if err != nil {
+		return nil, err
 	}
+
+	s.logger.Info("committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("elected-validators-count", len(committee)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
 
 	s.metrics.committeeSize.Update(int64(len(committee)))
 	committeeStr := make([]string, len(committee))

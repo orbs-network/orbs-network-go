@@ -16,8 +16,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/testkit"
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
-	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
+	stateAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -34,16 +35,18 @@ func generateDeployTx() *protocol.SignedTransaction {
 }
 
 type harness struct {
-	vm         services.VirtualMachine
-	repository *testkit.ManualRepository
+	vm                services.VirtualMachine
+	repository        *testkit.ManualRepository
+	committeeProvider *committeeProviderAdapter.CommitteeProvider
 }
 
 func newVmHarness(logger log.Logger) *harness {
 	registry := metric.NewRegistry()
 
 	ssCfg := config.ForStateStorageTest(10, 5, 5000)
-	ssPersistence := memory.NewStatePersistence(registry)
+	ssPersistence := stateAdapter.NewStatePersistence(registry)
 	stateStorage := statestorage.NewStateStorage(ssCfg, ssPersistence, nil, logger, registry)
+	committeeProvider := committeeProviderAdapter.NewCommitteeProvider(config.ForCommitteeProviderTests(5), logger)
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 	psCfg := config.ForNativeProcessorTests(42)
@@ -55,9 +58,10 @@ func newVmHarness(logger log.Logger) *harness {
 	processorMap := map[protocol.ProcessorType]services.Processor{protocol.PROCESSOR_TYPE_NATIVE: processorService}
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = &services.MockCrosschainConnector{}
-	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, logger)
+	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, committeeProvider, logger)
 
 	return &harness{
+		committeeProvider: committeeProvider,
 		vm:         vm,
 		repository: repo,
 	}

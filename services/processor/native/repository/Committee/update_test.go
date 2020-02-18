@@ -8,7 +8,6 @@ package committee_systemcontract
 
 import (
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -24,7 +23,7 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{addrs[0]}, uint64(blockHeight))
+		m.MockEnvGetBlockCommittee(addrs)
 		m.MockEnvBlockProposerAddress(addrs[0])
 		m.MockEmitEvent(CommitteeMemberClosedBlock, addrs[0])
 
@@ -46,7 +45,7 @@ func TestOrbsCommitteeContract_updateMisses_EmptyCommittee(t *testing.T) {
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{[]byte{}}, uint64(blockHeight))
+		m.MockEnvGetBlockCommittee([][]byte{})
 		m.MockEnvBlockProposerAddress(blockProposer)
 		m.MockEmitEvent(CommitteeMemberClosedBlock, blockProposer)
 
@@ -86,7 +85,7 @@ func TestOrbsCommitteeContract_updateMisses_BlockProducerNotFoundPanics(t *testi
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{addrs[0]}, uint64(blockHeight))
+		m.MockEnvGetBlockCommittee(addrs)
 		m.MockEnvBlockProposerAddress(makeNodeAddress(77)) // non-committee address
 
 		// run & aassert

@@ -59,7 +59,6 @@ type NodeConfig interface {
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
-	ConsensusContextCommitteeUsingContract() bool
 
 	// transaction pool
 	TransactionPoolPendingPoolSizeInBytes() uint32
@@ -167,11 +166,13 @@ type ConsensusContextConfig interface {
 	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
-	GenesisValidatorNodes() map[string]ValidatorNode
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
-	ConsensusContextCommitteeUsingContract() bool
+}
+
+type CommitteeProviderConfig interface {
+	GenesisValidatorNodes() map[string]ValidatorNode
 }
 
 type PublicApiConfig interface {

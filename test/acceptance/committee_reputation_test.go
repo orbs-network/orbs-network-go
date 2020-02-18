@@ -4,16 +4,12 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-
-// +build unsafetests
-
 package acceptance
 
 import (
 	"bytes"
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -38,11 +34,6 @@ func TestCommitReputation_TransactionToElected(t *testing.T) {
 
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 0)
-
-			t.Log("elect 5 to the committee (5 is blocked)")
-
-			responseTx, _ := contract.UnsafeTests_SetElectedValidators(ctx, 0, []int{0, 1, 2, 3, 4})
-			test.RequireSuccess(t, responseTx, "elect successful")
 
 			i := 0
 			for ; i < maxruns; i++ {

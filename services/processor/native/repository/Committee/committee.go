@@ -13,28 +13,18 @@ import (
 )
 
 /**
- * This function is meant ot be used via the callsystemcontract func ... it will not give same result when used with RunQuery
+ * This function is meant ot be used via callSystemContract or sendTx ... it will not give same result when used with RunQuery
+ * This function is used with state as last committed block but with env (block height) of the block being closed.
  */
-func getOrderedCommittee() []byte {
-	return getOrderedCommitteeForAddresses(_getElectedValidators())
+func getOrderedCommittee() [][]byte {
+	return _orderList(env.GetBlockCommittee(), _generateSeed(env.GetBlockHeight()))
 }
 
-func getOrderedCommitteeForAddresses(addresses []byte) []byte {
-	return _concat(_getOrderedCommitteeForAddresses(addresses))
-}
-
-func _getOrderedCommitteeForAddresses(addresses []byte) [][]byte {
-	addressArray := _split(addresses)
-	return _getOrderedCommitteeArray(addressArray)
-}
-
+/**
+ * This function is meant ot be used via runQuery ... and gives the committee for the next block (compared with block height of the return value)
+ */
 func getNextOrderedCommittee() [][]byte {
-	addresses := _split(_getElectedValidators())
-	return _orderList(addresses, _generateSeed(env.GetBlockHeight()+1))
-}
-
-func _getOrderedCommitteeArray(addresses [][]byte) [][]byte {
-	return _orderList(addresses, _generateSeed(env.GetBlockHeight()))
+	return _orderList(env.GetBlockCommittee(), _generateSeed(env.GetBlockHeight()+1))
 }
 
 func _generateSeed(blockHeight uint64) []byte {
