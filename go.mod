@@ -29,7 +29,7 @@ require (
 	github.com/orbs-network/lean-helix-go v0.2.6
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
-	github.com/orbs-network/orbs-contract-sdk v1.4.0
+	github.com/orbs-network/orbs-contract-sdk v1.5.0
 	github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect

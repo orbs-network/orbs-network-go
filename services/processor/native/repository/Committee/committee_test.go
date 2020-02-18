@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
 	. "github.com/orbs-network/orbs-contract-sdk/go/testing/unit"
-	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -171,14 +170,13 @@ func TestOrbsCommitteeContract_getNextOrderedCommittee(t *testing.T) {
 
 		// prepare
 		m.MockEnvBlockHeight(blockHeight)
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight))
-		m.MockServiceCallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, []interface{}{_concat(addresses)}, uint64(blockHeight+1))
+		m.MockEnvGetBlockCommittee(addresses)
 
 		// run
-		currentCommittee := _split(getOrderedCommittee())
+		currentCommittee := getOrderedCommittee()
 		nextCommittee := getNextOrderedCommittee()
 		m.MockEnvBlockHeight(blockHeight+1)
-		nextCurrentCommittee := _split(getOrderedCommittee())
+		nextCurrentCommittee := getOrderedCommittee()
 
 		//assert
 		require.NotEqual(t, currentCommittee, nextCommittee)

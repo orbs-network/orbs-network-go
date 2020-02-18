@@ -58,7 +58,7 @@ func mockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) fun
 }
 
 func TestResultsBlockValidators(t *testing.T) {
-	cfg := config.ForConsensusContextTests(nil, false)
+	cfg := config.ForConsensusContextTests(false)
 	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
@@ -269,7 +269,7 @@ func MockProcessTransactionSetThatReturns(err error) func(ctx context.Context, i
 
 func TestConsensusContextValidateResultsBlock_TestInputBlockProposerNotSameAsResultsBlockProposer(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		vcrx := toRxValidatorContext(cfg)
 		if err := vcrx.input.ResultsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input")
@@ -281,7 +281,7 @@ func TestConsensusContextValidateResultsBlock_TestInputBlockProposerNotSameAsRes
 
 func TestConsensusContextValidateResultsBlock_TestTxAndRxBlockProposerNotSame(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		vcrx := toRxValidatorContext(cfg)
 		if err := vcrx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input of tx block")
@@ -293,7 +293,7 @@ func TestConsensusContextValidateResultsBlock_TestTxAndRxBlockProposerNotSame(t 
 
 func TestConsensusContextValidateResultssBlock_TestBlockProposerIgnoredIfBlockProposerIsZeroLength(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		vcrx := toRxValidatorContextWithBc(cfg, true)
 		err := validateRxBlockProposer(ctx, vcrx)
 		require.NoError(t, err, "Must not fail with rx block proposer is empty (bc)")

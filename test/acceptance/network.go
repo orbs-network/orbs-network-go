@@ -25,6 +25,7 @@ import (
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
+	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -41,6 +42,7 @@ type Network struct {
 	inmemory.Network
 
 	tamperingTransport                 testGossipAdapter.Tamperer
+	committeeProvider                  *committeeProviderAdapter.CommitteeProvider
 	ethereumConnection                 *ethereumAdapter.NopEthereumAdapter
 	fakeCompiler                       *fake.FakeCompiler
 	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
@@ -95,6 +97,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
+	sharedCommitteeProvider := committeeProviderAdapter.NewCommitteeProvider(cfgTemplate, testLogger)
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := &ethereumAdapter.NopEthereumAdapter{}
 
@@ -126,8 +129,9 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	harness := &Network{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, nil, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedCommitteeProvider, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
+		committeeProvider:                  sharedCommitteeProvider,
 		ethereumConnection:                 sharedEthereumSimulator,
 		fakeCompiler:                       sharedCompiler,
 		tamperingBlockPersistences:         tamperingBlockPersistences,

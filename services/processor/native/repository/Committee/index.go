@@ -8,43 +8,16 @@ package committee_systemcontract
 
 import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
-	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/service"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 )
 
 // helpers for avoiding reliance on strings throughout the system
 const CONTRACT_NAME = "_Committee"
 const METHOD_GET_ORDERED_COMMITTEE = "getOrderedCommittee" // used with election
-const METHOD_GET_ORDERED_COMMITTEE_FOR_ADDRESSES = "getOrderedCommitteeForAddresses" // used before election or for testing
 const METHOD_UPDATE_MISSES = "updateMisses"
 
-var PUBLIC = sdk.Export(getOrderedCommittee, getNextOrderedCommittee, getOrderedCommitteeForAddresses, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
+var PUBLIC = sdk.Export(getOrderedCommittee, getNextOrderedCommittee, getReputation, getAllCommitteeReputations, getMisses, getAllCommitteeMisses, updateMisses)
 var SYSTEM = sdk.Export(_init)
 var EVENTS = sdk.Export(CommitteeMemberMissed, CommitteeMemberClosedBlock)
 
 func _init() {
-}
-
-func _getElectedValidators() []byte {
-	outputArray := service.CallMethod(elections_systemcontract.CONTRACT_NAME, elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS_BY_BLOCK_HEIGHT, env.GetBlockHeight())
-	return outputArray[0].([]byte)
-}
-
-func _concat(addresses [][]byte) []byte {
-	oneArrayOfAddresses := make([]byte, 0, len(addresses)*digest.NODE_ADDRESS_SIZE_BYTES)
-	for _, addr := range addresses {
-		oneArrayOfAddresses = append(oneArrayOfAddresses, addr[:]...)
-	}
-	return oneArrayOfAddresses
-}
-
-func _split(oneArrayOfAddresses []byte) [][]byte {
-	numAddresses := len(oneArrayOfAddresses) / digest.NODE_ADDRESS_SIZE_BYTES
-	res := make([][]byte, numAddresses)
-	for i := 0; i < numAddresses; i++ {
-		res[i] = oneArrayOfAddresses[digest.NODE_ADDRESS_SIZE_BYTES*i : digest.NODE_ADDRESS_SIZE_BYTES*(i+1)]
-	}
-	return res
 }

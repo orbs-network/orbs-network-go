@@ -55,7 +55,7 @@ func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardCom
 }
 
 func TestTransactionsBlockValidators(t *testing.T) {
-	cfg := config.ForConsensusContextTests(nil, false)
+	cfg := config.ForConsensusContextTests(false)
 	hash2 := hash.CalcSha256([]byte{2})
 
 	t.Run("should return error for transaction block with incorrect protocol version", func(t *testing.T) {
@@ -104,7 +104,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 
 func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		vctx := toTxValidatorContext(cfg)
 		if err := vctx.input.TransactionsBlock.Header.MutateBlockProposerAddress(hash.Make32BytesWithFirstByte(3)); err != nil {
 			require.NoError(t, err, "Could not mutate input")
@@ -116,7 +116,7 @@ func TestConsensusContextValidateTransactionsBlock_TestBlockProposerNotSame(t *t
 
 func TestConsensusContextValidateTransactionsBlock_TestBlockProposerIgnoredIfBlockProposerIsEmpty(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		vctx := toTxValidatorContextWithBc(cfg, true)
 		err := validateTxBlockProposer(ctx, vctx)
 		require.NoError(t, err, "Must not fail with tx block proposer is empty (bc)")
@@ -126,7 +126,7 @@ func TestConsensusContextValidateTransactionsBlock_TestBlockProposerIgnoredIfBlo
 func TestConsensusContextValidateTransactionsBlockTriggerTransactionNotForwardedToPreOrder(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		block := builders.BlockPairBuilder().Build()
-		cfg := config.ForConsensusContextTests(nil, true)
+		cfg := config.ForConsensusContextTests(true)
 		txPool := &services.MockTransactionPool{}
 		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) {
 			require.Equal(t, len(block.TransactionsBlock.SignedTransactions)-1, len(input.SignedTransactions))
@@ -142,7 +142,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerTransactionNotForwarded
 
 func TestConsensusContextValidateTransactionsBlockTriggerDisabledTransactionNotRemovedForForwardedToPreOrder(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 		txPool := &services.MockTransactionPool{}
 		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) {
@@ -159,7 +159,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerDisabledTransactionNotR
 
 func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		block := builders.BlockPairBuilder().WithCfg(cfg).Build()
 		txPool := &services.MockTransactionPool{}
 		txPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, errors.New("random error"))
@@ -263,7 +263,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				cfg := config.ForConsensusContextTests(nil, tt.triggerEnabled)
+				cfg := config.ForConsensusContextTests(tt.triggerEnabled)
 				tb := &protocol.TransactionsBlockContainer{
 					Header: (&protocol.TransactionsBlockHeaderBuilder{
 						Timestamp: triggerTx.Transaction().Timestamp(),
@@ -283,7 +283,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 }
 func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(nil, false)
+		cfg := config.ForConsensusContextTests(false)
 		tests := []struct {
 			name           string
 			tx             *protocol.SignedTransaction

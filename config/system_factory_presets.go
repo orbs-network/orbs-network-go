@@ -44,9 +44,6 @@ func defaultProductionConfig() mutableNodeConfig {
 	// don't auto start triggers
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
 
-	// don't auto start committee using contract
-	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, false)
-
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 1*time.Second)
@@ -156,7 +153,6 @@ func ForE2E(
 
 	// have triggers and committee
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
-	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -223,7 +219,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
-	cfg.SetBool(CONSENSUS_CONTEXT_COMMITTEE_USING_CONTRACT, true)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)

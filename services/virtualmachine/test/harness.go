@@ -10,8 +10,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
+	"github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -51,12 +53,8 @@ func newHarness(logger log.Logger) *harness {
 		crosschainConnectorsForService[key] = value
 	}
 
-	service := virtualmachine.NewVirtualMachine(
-		stateStorage,
-		processorsForService,
-		crosschainConnectorsForService,
-		logger,
-	)
+	committeeProvider := memory.NewCommitteeProvider(config.ForCommitteeProviderTests(4), logger)
+	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, committeeProvider, logger)
 
 	return &harness{
 		blockStorage:         blockStorage,
