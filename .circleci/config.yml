@@ -114,8 +114,8 @@ jobs:
       - run: ./.circleci/release-gamma-to-ecr.sh
 
   release:
-    docker:
-      - image: itamararjuan/golang_with_node_aws
+    machine:
+      image: ubuntu-1604:201903-01
     steps:
       - checkout
       - run: ./.circleci/release.sh
