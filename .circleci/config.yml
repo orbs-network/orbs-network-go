@@ -198,6 +198,9 @@ workflows:
           requires:
             - node_e2e
             - gamma_e2e
+          filters:
+            branches:
+              only: master
 
   nightly:
     triggers:
