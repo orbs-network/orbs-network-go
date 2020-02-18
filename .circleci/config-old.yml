@@ -113,13 +113,6 @@ jobs:
       - run: ./docker/build/build-docker-gamma.sh
       - run: ./.circleci/release-gamma-to-ecr.sh
 
-  release:
-    machine:
-      image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run: ./.circleci/release.sh
-
   node_e2e:
     machine:
       image: ubuntu-1604:201903-01
@@ -162,6 +155,46 @@ jobs:
       - store_artifacts:
           path: _out
 
+  marvin_tests:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/marvin/marvin-endurance.sh # Its output is workspace/job_id file
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - job_id
+
+  marvin_analysis:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    environment:
+      MARVIN_ORCHESTRATOR_URL: "http://ec2-34-222-245-15.us-west-2.compute.amazonaws.com:4567"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/marvin/marvin-analyze.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - analysis_results.json
+            - pass_fail.txt
+
+  marvin_reporter:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: echo "report results to github if branch != master"
+      - run: echo "report results to slack"
+      - run: ./.circleci/marvin/marvin-reporter.sh workspace/analysis_results.json
+
   ganache_related_tests:
     machine:
       image: ubuntu-1604:201903-01
@@ -176,29 +209,148 @@ jobs:
       - store_test_results:
           path: _reports
 
+  e2e_testnet:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    environment:
+      BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
+      - run: ./.circleci/e2e-testnet.sh
+      - store_artifacts:
+          path: _out
+          destination: test-output
+      - store_test_results:
+          path: _reports
+      - store_artifacts:
+          path: _out
+
+  deploy_testnet:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    environment:
+      BOOTSTRAP_URL: "https://boyar-testnet-bootstrap.s3-us-west-2.amazonaws.com/boyar/config.json"
+      BOOTSTRAP_S3_URI: "s3://boyar-testnet-bootstrap/boyar/config.json"
+      TESTNET_NODE_IP: "35.161.123.97"
+      TESTNET_IGNORE_IPS: ""
+    steps:
+      - checkout
+      - run: ./.circleci/set-aws-credentials.sh
+      - run: ./.circleci/deploy-testnet.sh
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - app_chain_id
+            - testnet_ip
+
+  release_ga:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: ./.circleci/release.sh
+
+  deploy_audit_node:
+    docker:
+      - image: itamararjuan/golang_with_node_aws
+    steps:
+      - checkout
+      - run:
+          name: "Deploy Audit Node"
+          command: ./.circleci/deploy-audit-node.sh
+          no_output_timeout: 45m
+
 workflows:
   version: 2
-  build:
+  build: #TODO consider splitting into separate workflows: PR, merge to master, tagged release
     jobs:
-      - tests
-      - races
-      - memory_leaks
+      - tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - races:
+          filters:
+            tags:
+              only: /^v.*/
+      - memory_leaks:
+          filters:
+            tags:
+              only: /^v.*/
       - circleci_scripts
-      - flakiness
-      - ganache_related_tests
-      - node_docker_build
-      - gamma_docker_build
+      - node_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
+      - gamma_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
       - node_e2e:
           requires:
             - node_docker_build
+          filters:
+            tags:
+              only: /^v.*/
       - gamma_e2e:
           requires:
             - gamma_docker_build
-      - release:
-          requires:
-            - node_e2e
-            - gamma_e2e
           filters:
+            tags:
+              only: /^v.*/
+      - flakiness:
+          filters:
+            tags:
+              only: /^v.*/
+      - ganache_related_tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - deploy_testnet:
+          requires:
+            - node_docker_build
+            - tests # no point in deploying to testnet if one of the fast tests has failed
+          filters:
+            tags:
+              only: /^v.*/
+      - e2e_testnet:
+          requires:
+            - deploy_testnet
+          filters:
+            tags:
+              only: /^v.*/
+      - marvin_tests:
+          requires:
+            - e2e_testnet
+            - deploy_testnet
+      - marvin_analysis:
+          requires:
+            - marvin_tests
+      - marvin_reporter:
+          requires:
+            - marvin_analysis
+      - release_ga:
+          requires:
+            - gamma_e2e
+            - node_e2e
+            - marvin_analysis
+            - tests
+            - ganache_related_tests
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only: master
+      - deploy_audit_node:
+          requires:
+            - release_ga
+          filters:
+            tags:
+              only: /^v.*/
             branches:
               only: master
 
