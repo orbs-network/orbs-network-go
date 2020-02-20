@@ -180,20 +180,50 @@ workflows:
   version: 2
   build:
     jobs:
-      - tests
-      - races
-      - memory_leaks
-      - circleci_scripts
-      - flakiness
-      - ganache_related_tests
-      - node_docker_build
-      - gamma_docker_build
+      - tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - races:
+          filters:
+            tags:
+              only: /^v.*/
+      - memory_leaks:
+          filters:
+            tags:
+              only: /^v.*/
+      - circleci_scripts:
+          filters:
+            tags:
+              only: /^v.*/
+      - flakiness:
+          filters:
+            tags:
+              only: /^v.*/
+      - ganache_related_tests:
+          filters:
+            tags:
+              only: /^v.*/
+      - node_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
+      - gamma_docker_build:
+          filters:
+            tags:
+              only: /^v.*/
       - node_e2e:
           requires:
             - node_docker_build
+          filters:
+            tags:
+              only: /^v.*/
       - gamma_e2e:
           requires:
             - gamma_docker_build
+          filters:
+            tags:
+              only: /^v.*/
       - release:
           requires:
             - node_e2e
