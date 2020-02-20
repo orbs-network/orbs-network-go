@@ -199,6 +199,8 @@ workflows:
             - node_e2e
             - gamma_e2e
           filters:
+            tags:
+              only: /^v.*/
             branches:
               only: master
 
