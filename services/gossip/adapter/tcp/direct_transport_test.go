@@ -61,7 +61,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,
@@ -80,7 +80,7 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
 			node1, node2, node4)
 
 		waitForAllNodesToSatisfy(t,
@@ -120,7 +120,7 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
 			node1, node2, node3)
 
 		waitForAllNodesToSatisfy(t,
@@ -161,7 +161,7 @@ func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipien
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
 			node1, node2)
 
 		waitForAllNodesToSatisfy(t,
@@ -200,7 +200,7 @@ func TestDirectTransport_TestAutoUpdate(t *testing.T) {
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
 			node1, node2)
 
 		waitForAllNodesToSatisfy(t,
@@ -300,3 +300,10 @@ func superviseAll(s govnr.Supervisor, nodes ...*nodeHarness) {
 		s.Supervise(node.transport)
 	}
 }
+
+func (t *DirectTransport) numActiveConnections() int {
+	t.outgoingConnections.RLock()
+	defer t.outgoingConnections.RUnlock()
+	return len(t.outgoingConnections.activeConnections)
+}
+

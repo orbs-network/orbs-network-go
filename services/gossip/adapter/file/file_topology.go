@@ -99,7 +99,7 @@ type topologyNode struct {
 }
 
 type vc struct {
-	TopologyNodes []topologyNode `json:"topology-nodes"`
+	TopologyNodes []topologyNode
 }
 
 func (tp *TopologyProvider) parseFile(contents []byte) (adapter.GossipPeers, error) {

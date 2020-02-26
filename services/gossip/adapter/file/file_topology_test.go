@@ -32,7 +32,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 func TestFileTopology_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			const url = "https://gist.githubusercontent.com/noambergIL/c4dd1472af977c7378459cf98f06e0fa/raw/6fd5ab45c319951c03c4524e69ea292f774b783c/topology.json"
+			const url = "https://gist.githubusercontent.com/noambergIL/c4dd1472af977c7378459cf98f06e0fa/raw/8488ea8f6125bdeb49f786ebcf8c448af8f473ed/topology.json"
 			cfg := newTopologyConfig(42, url)
 			topologyProvider := NewTopologyProvider(cfg, parent.Logger)
 			err := topologyProvider.UpdateTopology(ctx)
