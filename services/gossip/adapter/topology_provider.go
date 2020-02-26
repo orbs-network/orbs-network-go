@@ -44,4 +44,5 @@ func (c *gossipPeer) HexOrbsAddress() string {
 
 type TopologyProvider interface {
 	GetTopology(ctx context.Context) GossipPeers
+	UpdateTopology(ctx context.Context) error
 }

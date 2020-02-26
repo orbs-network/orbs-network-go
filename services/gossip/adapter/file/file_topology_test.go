@@ -22,7 +22,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 			topologyFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "good-topology.json")
 			cfg := newTopologyConfig(42, topologyFilePath)
 			topologyProvider := NewTopologyProvider(cfg, parent.Logger)
-			err := topologyProvider.Update(ctx)
+			err := topologyProvider.UpdateTopology(ctx)
 			require.NoError(t, err)
 			require.Len(t, topologyProvider.GetTopology(ctx), 4)
 		})
@@ -35,7 +35,7 @@ func TestFileTopology_ReadUrl(t *testing.T) {
 			const url = "https://gist.githubusercontent.com/noambergIL/c4dd1472af977c7378459cf98f06e0fa/raw/6fd5ab45c319951c03c4524e69ea292f774b783c/topology.json"
 			cfg := newTopologyConfig(42, url)
 			topologyProvider := NewTopologyProvider(cfg, parent.Logger)
-			err := topologyProvider.Update(ctx)
+			err := topologyProvider.UpdateTopology(ctx)
 			require.NoError(t, err)
 			require.Len(t, topologyProvider.GetTopology(ctx), 3)
 		})

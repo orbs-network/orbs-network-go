@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"reflect"
@@ -41,8 +40,10 @@ func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
 	}
 }
 
-func (v *validator) ValidateMainNode(cfg NodeConfig) {
-	v.requireNonEmptyPeerMap(cfg.GossipPeers(), "gossip peer list must not be empty")
+func (v *validator) ValidateInMemoryTopology(cfg NodeConfig) {
+	if len(cfg.GossipPeers()) == 0 {
+		panic("gossip peer list must not be empty")
+	}
 }
 
 func (v *validator) requireGT(d1 func() time.Duration, d2 func() time.Duration, msg string) {
@@ -59,12 +60,6 @@ func (v *validator) requireNonEmpty(bytes []byte, msg string) {
 
 func (v *validator) requireNonEmptyValidatorMap(nodes map[string]ValidatorNode, msg string) {
 	if len(nodes) == 0 {
-		panic(msg)
-	}
-}
-
-func (v *validator) requireNonEmptyPeerMap(gossipPeers topologyProviderAdapter.GossipPeers, msg string) {
-	if len(gossipPeers) == 0 {
 		panic(msg)
 	}
 }

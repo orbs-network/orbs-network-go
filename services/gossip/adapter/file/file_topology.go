@@ -44,7 +44,7 @@ func (tp *TopologyProvider) GetTopology(ctx context.Context) adapter.GossipPeers
 	return tp.topology
 }
 
-func (tp *TopologyProvider) Update(ctx context.Context) error {
+func (tp *TopologyProvider) UpdateTopology(ctx context.Context) error {
 	path := tp.config.GossipTopologyFilePath()
 	var contents []byte
 	var err error

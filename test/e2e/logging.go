@@ -8,18 +8,9 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/orbs-network/govnr"
-	"github.com/orbs-network/orbs-network-go/bootstrap"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"os"
 )
-
-type inProcessE2ENetwork struct {
-	govnr.TreeSupervisor
-	nodes          []*bootstrap.Node
-	virtualChainId primitives.VirtualChainId
-}
 
 func NewLoggerRandomer() *loggerRandomer {
 	console := log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter())

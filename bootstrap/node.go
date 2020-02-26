@@ -46,7 +46,6 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
 	nodeLogger := logger.WithTags(
 		log.Node(nodeConfig.NodeAddress().String()),
@@ -63,14 +62,10 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 
 	var topologyProvider topologyProviderAdapter.TopologyProvider
 	if len(nodeConfig.GossipTopologyFilePath()) == 0 {
+		config.NewValidator(logger).ValidateInMemoryTopology(nodeConfig) // this will panic if config has no peers
 		topologyProvider = topologyProviderMemoryAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
 	} else {
-		topologyProviderFile := topologyProviderFileAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
-		err := topologyProviderFile.Update(ctx)
-		if err != nil {
-			panic(fmt.Sprintf("failed initializing topology from file, err=%s", err.Error()))
-		}
-		topologyProvider = topologyProviderFile
+		topologyProvider = topologyProviderFileAdapter.NewTopologyProvider(nodeConfig, nodeLogger)
 	}
 	transport := tcp.NewDirectTransport(ctx, topologyProvider, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)

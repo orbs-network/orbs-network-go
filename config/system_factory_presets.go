@@ -41,8 +41,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
 
-	// don't auto start triggers
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
+	// have triggers
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -82,6 +82,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
+	cfg.SetDuration(GOSSIP_TOPOLOGY_UPDATE_INTERVAL, 1*time.Minute)
 
 	// 10 minutes + 60 blocks is about 25 minutes
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Minute)
@@ -151,9 +152,6 @@ func ForE2E(
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
 
-	// have triggers and committee
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
-
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 1*time.Second)
@@ -218,7 +216,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 24*time.Hour) // ridiculously long timeout to reflect "forever"
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
@@ -251,6 +248,7 @@ func TemplateForGamma(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 24*time.Hour)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 10)
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false) // currently no reputation is needed in gamma
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 10*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 24*time.Hour)

@@ -55,9 +55,9 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3, node4)
 
 		firstTopology := aTopologyContaining(node1, node2, node3)
-		node1.transport.UpdateTopology(ctx, firstTopology)
-		node2.transport.UpdateTopology(ctx, firstTopology)
-		node3.transport.UpdateTopology(ctx, firstTopology)
+		node1.updateTopology(ctx, firstTopology)
+		node2.updateTopology(ctx, firstTopology)
+		node3.updateTopology(ctx, firstTopology)
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
@@ -74,9 +74,9 @@ func TestDirectTransport_SupportsTopologyChangeInRuntime(t *testing.T) {
 		node2.requireSendsSuccessfullyTo(t, ctx, node3)
 
 		secondTopology := aTopologyContaining(node1, node2, node4)
-		node1.transport.UpdateTopology(ctx, secondTopology)
-		node2.transport.UpdateTopology(ctx, secondTopology)
-		node4.transport.UpdateTopology(ctx, secondTopology)
+		node1.updateTopology(ctx, secondTopology)
+		node2.updateTopology(ctx, secondTopology)
+		node4.updateTopology(ctx, secondTopology)
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
@@ -114,9 +114,9 @@ func TestDirectTransport_SupportsBroadcastTransmissions(t *testing.T) {
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2, node3)
 
 		firstTopology := aTopologyContaining(node1, node2, node3)
-		node1.transport.UpdateTopology(ctx, firstTopology)
-		node2.transport.UpdateTopology(ctx, firstTopology)
-		node3.transport.UpdateTopology(ctx, firstTopology)
+		node1.updateTopology(ctx, firstTopology)
+		node2.updateTopology(ctx, firstTopology)
+		node3.updateTopology(ctx, firstTopology)
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
@@ -156,8 +156,8 @@ func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipien
 		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
 
 		firstTopology := aTopologyContaining(node1, node2)
-		node1.transport.UpdateTopology(ctx, firstTopology)
-		node2.transport.UpdateTopology(ctx, firstTopology)
+		node1.updateTopology(ctx, firstTopology)
+		node2.updateTopology(ctx, firstTopology)
 
 		waitForAllNodesToSatisfy(t,
 			"expected all nodes to have peers added",
@@ -183,10 +183,38 @@ func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipien
 	})
 }
 
+func TestDirectTransport_TestAutoUpdate(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("failed sending gossip message") // because the test will send to an arbitrary recipient which is not in topology
+
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
+		superviseAll(harness, node1, node2)
+		defer shutdownAll(ctx, node1, node2)
+
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
+
+		firstTopology := aTopologyContaining(node1, node2)
+		node1.topologyProvider.UpdateTopologyFromPeers(firstTopology) // update only the internal topology provider
+		node2.topologyProvider.UpdateTopologyFromPeers(firstTopology) // update only the internal topology provider
+
+		waitForAllNodesToSatisfy(t,
+			"expected all nodes to have peers added",
+			func(node *nodeHarness) bool { return len(node.transport.outgoingConnections.activeConnections) > 0 },
+			node1, node2)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all outgoing queues to become enabled after topology change",
+			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
+			node1, node2)
+	})
+}
+
 type nodeHarness struct {
-	transport *DirectTransport
-	address   primitives.NodeAddress
-	listener  *testkit.MockTransportListener
+	topologyProvider *memory.TopologyProvider
+	transport        *DirectTransport
+	address          primitives.NodeAddress
+	listener         *testkit.MockTransportListener
 }
 
 func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Context, other *nodeHarness) {
@@ -205,6 +233,11 @@ func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Conte
 
 func (n *nodeHarness) toGossipPeer() adapter.GossipPeer {
 	return adapter.NewGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
+}
+
+func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.GossipPeers)  {
+	n.topologyProvider.UpdateTopologyFromPeers(peers)
+	n.transport.UpdateTopology(ctx)
 }
 
 func waitForAllNodesToSatisfy(t *testing.T, message string, predicate func(node *nodeHarness) bool, nodes ...*nodeHarness) {
@@ -237,7 +270,7 @@ func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	transport := NewDirectTransport(ctx, topology, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
-	return &nodeHarness{transport, address, listener}
+	return &nodeHarness{topology, transport, address, listener}
 }
 
 var currentNodeIndex = 1

@@ -32,3 +32,16 @@ func (tp *TopologyProvider) GetTopology(ctx context.Context) adapter.GossipPeers
 	defer tp.RUnlock()
 	return tp.topology
 }
+
+func (tp *TopologyProvider) UpdateTopology(ctx context.Context) error { // Does nothing on purpose
+	return nil
+}
+
+func (tp *TopologyProvider) UpdateTopologyFromPeers(peers adapter.GossipPeers) {
+	tp.Lock()
+	defer tp.Unlock()
+	tp.topology = make(adapter.GossipPeers)
+	for key, peer := range peers {
+		tp.topology[key] = peer //copy input
+	}
+}

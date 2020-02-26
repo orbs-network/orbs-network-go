@@ -91,8 +91,9 @@ func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddr
 }
 
 func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
-	oldPeers := c.readOldPeerConfig()
-	peersToRemove, peersToAdd := peerDiff(oldPeers, newPeers)
+	c.RLock()
+	peersToRemove, peersToAdd := peerDiff(c.peerTopology, newPeers)
+	c.RUnlock()
 
 	c.disconnectAll(bgCtx, peersToRemove)
 
@@ -124,12 +125,6 @@ func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconne
 		}
 
 	}
-}
-
-func (c *outgoingConnections) readOldPeerConfig() adapter.GossipPeers {
-	c.RLock()
-	defer c.RUnlock()
-	return c.peerTopology
 }
 
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)

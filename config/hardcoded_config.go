@@ -77,6 +77,7 @@ const (
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
 	GOSSIP_TOPOLOGY_FILE_PATH             = "GOSSIP_TOPOLOGY_FILE_PATH"
+	GOSSIP_TOPOLOGY_UPDATE_INTERVAL       = "GOSSIP_TOPOLOGY_UPDATE_INTERVAL"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 	GOSSIP_RECONNECT_INTERVAL             = "GOSSIP_RECONNECT_INTERVAL"
@@ -330,6 +331,10 @@ func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
 
 func (c *config) GossipTopologyFilePath() string {
 	return c.kv[GOSSIP_TOPOLOGY_FILE_PATH].StringValue
+}
+
+func (c *config) GossipTopologyUpdateInterval() time.Duration  {
+	return c.kv[GOSSIP_TOPOLOGY_UPDATE_INTERVAL].DurationValue
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

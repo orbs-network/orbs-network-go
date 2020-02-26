@@ -74,6 +74,7 @@ type NodeConfig interface {
 	GossipListenPort() uint16
 	GossipPeers() topologyProviderAdapter.GossipPeers // TODO POSV2 remove this ?
 	GossipTopologyFilePath() string
+	GossipTopologyUpdateInterval() time.Duration
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
@@ -161,6 +162,8 @@ type GossipTransportConfig interface {
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
+	GossipTopologyUpdateInterval() time.Duration
+
 }
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context

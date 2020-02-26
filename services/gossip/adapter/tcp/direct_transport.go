@@ -8,12 +8,15 @@ package tcp
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 const MAX_PAYLOADS_IN_MESSAGE = 100000
@@ -26,31 +29,57 @@ var LogTag = log.String("adapter", "gossip")
 type DirectTransport struct {
 	govnr.TreeSupervisor
 
-	logger log.Logger
-
+	logger              log.Logger
+	config              config.GossipTransportConfig
 	outgoingConnections *outgoingConnections
 	server              *transportServer
+	topologyProvider    adapter.TopologyProvider
 }
 
 func NewDirectTransport(parentCtx context.Context, topologyProvider adapter.TopologyProvider, config config.GossipTransportConfig, parentLogger log.Logger, registry metric.Registry) *DirectTransport {
 	logger := parentLogger.WithTags(LogTag)
 	t := &DirectTransport{
 		logger:              logger,
+		config:              config,
 		outgoingConnections: newOutgoingConnections(logger, registry, config),
 		server:              newServer(config, parentLogger.WithTags(log.String("component", "tcp-transport-server")), registry),
+		topologyProvider:    topologyProvider,
 	}
 
+	err := t.topologyProvider.UpdateTopology(parentCtx)
+	if err != nil {
+		panic(fmt.Sprintf("failed initializing topology from file, err=%s", err.Error()))
+	}
 	t.Supervise(t.server)
 	t.Supervise(t.outgoingConnections)
 
 	t.outgoingConnections.connectAll(parentCtx, topologyProvider.GetTopology(parentCtx)) // client goroutines
 	t.server.startSupervisedMainLoop(parentCtx)                                          // server goroutine
 
+	t.Supervise(t.startUpdating(parentCtx))
+
 	return t
 }
 
-func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
-	t.outgoingConnections.updateTopology(bgCtx, newPeers)
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context) {
+	err := t.topologyProvider.UpdateTopology(bgCtx)
+	if err != nil {
+		t.logger.Info("topology provider failed to update the topology", log.Error(err))
+	}
+	t.outgoingConnections.updateTopology(bgCtx, t.topologyProvider.GetTopology(bgCtx))
+}
+
+func (t *DirectTransport) startUpdating(bgCtx context.Context) govnr.ShutdownWaiter {
+	return govnr.Forever(bgCtx, "topology-updater", logfields.GovnrErrorer(t.logger), func() {
+		for {
+			select {
+			case <-bgCtx.Done():
+				return
+			case <-time.After(t.config.GossipTopologyUpdateInterval()):
+				t.UpdateTopology(bgCtx)
+			}
+		}
+	})
 }
 
 func (t *DirectTransport) RegisterListener(listener adapter.TransportListener, listenerNodeAddress primitives.NodeAddress) {
