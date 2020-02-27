@@ -16,10 +16,11 @@ If you only want to build the Docker images containing the node binaries, you do
 
   > Verify with `docker version`
 
-* Run `./docker/build/build.sh` to create the images:
+* Run `./docker/build/build-docker-node.sh` to create node images:
 
-  * `orbs:export` contains `orbs-node` and `gamma-cli` binaries in the `/opt/orbs` directory.
-  * `orbs:gamma-server` contains self-sufficient development binary (similar to Ethereum's Ganache) and `gamma-cli` to communicate with it's server counterpart.
+  * `orbs:export` for the main node and `orbs:signer` for the signer service.
+* Run `./docker/build/build-gamma.sh` to create gamma image:
+  * `orbs:gamma-server` contains self-sufficient development binary (similar to Ethereum's Ganache) and [gamma-cli](https://github.com/orbs-network/gamma-cli) to communicate with its server counterpart.
 
 ## Building from source
 
