@@ -175,7 +175,7 @@ func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Netwo
 	}
 
 	network.committeeProvider.AddCommittee(uint64(lastBlock+5), committee)
-	network.WaitForBlock(ctx, lastBlock+7)
+	network.WaitForBlock(ctx, lastBlock+10)
 }
 
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
