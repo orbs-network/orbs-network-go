@@ -24,6 +24,10 @@ type NodeConfig interface {
 	GenesisValidatorNodes() map[string]ValidatorNode // TODO POSV2 remove this ?
 	TransactionExpirationWindow() time.Duration
 
+	// Management
+	ManagementFilePath() string
+	ManagementUpdateInterval() time.Duration
+
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 
@@ -73,8 +77,6 @@ type NodeConfig interface {
 	// gossip
 	GossipListenPort() uint16
 	GossipPeers() topologyProviderAdapter.GossipPeers // TODO POSV2 remove this ?
-	GossipTopologyFilePath() string
-	GossipTopologyUpdateInterval() time.Duration
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
@@ -162,8 +164,6 @@ type GossipTransportConfig interface {
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
-	GossipTopologyUpdateInterval() time.Duration
-
 }
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context

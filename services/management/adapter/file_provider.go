@@ -38,7 +38,7 @@ func NewFileProvider(config FileConfig, logger log.Logger) *FileProvider {
 	return &FileProvider{config: config, logger :logger}
 }
 
-func (mp *FileProvider) Update(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
+func (mp *FileProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
 	path := mp.config.ManagementFilePath()
 	var contents []byte
 	var err error

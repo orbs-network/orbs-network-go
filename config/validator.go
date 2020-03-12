@@ -9,62 +9,53 @@ package config
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/scribe/log"
-	"reflect"
-	"runtime"
-	"strings"
-	"time"
+	"github.com/pkg/errors"
 )
 
-type validator struct {
-	logger log.Logger
-}
 
-func NewValidator(logger log.Logger) *validator {
-	return &validator{logger: logger}
-}
 
-func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
-	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.BenchmarkConsensusRetryInterval, "node sync timeout must be greater than benchmark consensus timeout")
-	v.requireGT(cfg.BlockSyncNoCommitInterval, cfg.LeanHelixConsensusRoundTimeoutInterval, "node sync timeout must be greater than lean helix round timeout")
-	v.requireNonEmpty(cfg.NodeAddress(), "node address must not be empty")
-	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
+func ValidateNodeLogic(cfg NodeConfig) error {
+	if cfg.BlockSyncNoCommitInterval() < cfg.BenchmarkConsensusRetryInterval() {
+		return errors.Errorf("node sync timeout must be greater than benchmark consensus timeout (BlockSyncNoCommitInterval = %s, is greater than BenchmarkConsensusRetryInterval %s)",
+			cfg.BlockSyncNoCommitInterval(), cfg.BenchmarkConsensusRetryInterval())
+	}
+	if cfg.BlockSyncNoCommitInterval() < cfg.LeanHelixConsensusRoundTimeoutInterval() {
+		return errors.Errorf("node sync timeout must be greater than lean helix round timeout (BlockSyncNoCommitInterval = %s, is greater than LeanHelixConsensusRoundTimeoutInterval %s)",
+			cfg.BlockSyncNoCommitInterval(), cfg.LeanHelixConsensusRoundTimeoutInterval())
+	}
+	if len(cfg.NodeAddress()) == 0 {
+		return errors.New("node address must not be empty")
+	}
+	if len(cfg.GenesisValidatorNodes()) == 0 { // TODO POSV2 this should be removed
+		return errors.New("genesis validator list must not be empty")
+	}
 
 	if cfg.SignerEndpoint() == "" {
-		v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
-		v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
+		if len(cfg.NodePrivateKey()) == 0 {
+			return errors.New("node private key must not be empty")
+		}
+		err := requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (v *validator) ValidateInMemoryTopology(cfg NodeConfig) {
+func ValidateInMemoryManagement(cfg NodeConfig) error {
 	if len(cfg.GossipPeers()) == 0 {
-		panic("gossip peer list must not be empty")
+		return errors.New("gossip peer list must not be empty")
 	}
+	if len(cfg.GenesisValidatorNodes()) == 0 {
+		return errors.New("genesis validator list must not be empty")
+	}
+	return nil
 }
 
-func (v *validator) requireGT(d1 func() time.Duration, d2 func() time.Duration, msg string) {
-	if d1() < d2() {
-		panic(fmt.Sprintf("%s; %s=%s is greater than %s=%s", msg, funcName(d1), d1(), funcName(d2), d2()))
-	}
-}
-
-func (v *validator) requireNonEmpty(bytes []byte, msg string) {
-	if len(bytes) == 0 {
-		panic(msg)
-	}
-}
-
-func (v *validator) requireNonEmptyValidatorMap(nodes map[string]ValidatorNode, msg string) {
-	if len(nodes) == 0 {
-		panic(msg)
-	}
-}
-
-func (v *validator) requireCorrectNodeAddressAndPrivateKey(address primitives.NodeAddress, key primitives.EcdsaSecp256K1PrivateKey) {
+func requireCorrectNodeAddressAndPrivateKey(address primitives.NodeAddress, key primitives.EcdsaSecp256K1PrivateKey) error {
 	msg := []byte{
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -74,23 +65,18 @@ func (v *validator) requireCorrectNodeAddressAndPrivateKey(address primitives.No
 
 	sign, err := signature.SignEcdsaSecp256K1(key, msg)
 	if err != nil {
-		panic(fmt.Sprintf("could not create test sign: %s", err))
+		return errors.Wrap(err, "could not create test sign")
 	}
 
 	recoveredPublicKey, err := signature.RecoverEcdsaSecp256K1(msg, sign)
 	if err != nil {
-		panic(fmt.Sprintf("could not recover public key from test sign: %s", err))
+		return errors.Wrap(err, "could not recover public key from test sign")
 	}
 
 	recoveredNodeAddress := digest.CalcNodeAddressFromPublicKey(recoveredPublicKey)
 	if bytes.Compare(address, recoveredNodeAddress) != 0 {
-		panic(fmt.Sprintf("node address %s derived from secret key does not match provided node address %s",
-			hex.EncodeToString(recoveredNodeAddress), hex.EncodeToString(address)))
+		return errors.Errorf("node address %s derived from secret key does not match provided node address %s",
+			hex.EncodeToString(recoveredNodeAddress), hex.EncodeToString(address))
 	}
-}
-
-func funcName(i interface{}) string {
-	fullName := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-	lastDot := strings.LastIndex(fullName, ".")
-	return fullName[lastDot+1:]
+	return nil
 }

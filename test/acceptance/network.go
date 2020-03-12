@@ -21,11 +21,12 @@ import (
 	memoryGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/management"
+	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	harnessStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
 	testStateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/testkit"
-	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -42,7 +43,7 @@ type Network struct {
 	inmemory.Network
 
 	tamperingTransport                 testGossipAdapter.Tamperer
-	committeeProvider                  *committeeProviderAdapter.CommitteeProvider
+	committeeProvider                  *managementAdapter.MemoryProvider
 	ethereumConnection                 *ethereumAdapter.NopEthereumAdapter
 	fakeCompiler                       *fake.FakeCompiler
 	tamperingBlockPersistences         []blockStorageAdapter.TamperingInMemoryBlockPersistence
@@ -97,7 +98,8 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
-	sharedCommitteeProvider := committeeProviderAdapter.NewCommitteeProvider(cfgTemplate, testLogger)
+	sharedManagementProvider := managementAdapter.NewMemoryProvider(cfgTemplate, testLogger)
+	sharedManagement := management.NewManagement(ctx, cfgTemplate, sharedManagementProvider, sharedTamperingTransport, testLogger)
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := &ethereumAdapter.NopEthereumAdapter{}
 
@@ -129,9 +131,9 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	harness := &Network{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedCommitteeProvider, nil, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedManagement, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
-		committeeProvider:                  sharedCommitteeProvider,
+		committeeProvider:                  sharedManagementProvider,
 		ethereumConnection:                 sharedEthereumSimulator,
 		fakeCompiler:                       sharedCompiler,
 		tamperingBlockPersistences:         tamperingBlockPersistences,

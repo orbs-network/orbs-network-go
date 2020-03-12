@@ -10,11 +10,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -53,7 +52,7 @@ func newHarness(logger log.Logger) *harness {
 		crosschainConnectorsForService[key] = value
 	}
 
-	committeeProvider := memory.NewCommitteeProvider(config.ForCommitteeProviderTests(4), logger)
+	committeeProvider := NewTestCommitteeProvider(4)
 	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, committeeProvider, logger)
 
 	return &harness{
@@ -198,4 +197,16 @@ func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions
 		CurrentBlockTimestamp: 0x777,
 	})
 	return output.PreOrderResults, err
+}
+
+type committeeProvider struct {
+	nodes []primitives.NodeAddress
+}
+
+func NewTestCommitteeProvider(numOfNodes int) *committeeProvider {
+	return  &committeeProvider{testKeys.NodeAddressesForTests()[:numOfNodes]}
+}
+
+func (cp *committeeProvider) GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress {
+	return cp.nodes
 }

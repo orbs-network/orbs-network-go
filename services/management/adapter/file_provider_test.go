@@ -22,9 +22,9 @@ func TestFileTopology_ReadFile(t *testing.T) {
 			topologyFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "good.json")
 			cfg := newConfig(42, topologyFilePath)
 			fileProvider := NewFileProvider(cfg, parent.Logger)
-			ref, topology, committees, err := fileProvider.Update(ctx)
+			ref, topology, committees, err := fileProvider.Get(ctx)
 			require.NoError(t, err)
-			require.Equal(t, ref, 1582616070)
+			require.EqualValues(t, ref, 1582616070)
 			require.Len(t, topology, 4)
 			require.Len(t, committees, 2)
 		})
@@ -34,14 +34,14 @@ func TestFileTopology_ReadFile(t *testing.T) {
 func TestFileTopology_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			const url = "https://gist.githubusercontent.com/noambergIL/c4dd1472af977c7378459cf98f06e0fa/raw/8488ea8f6125bdeb49f786ebcf8c448af8f473ed/topology.json"
+			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw/edb958635c0ff2783c0447cb0322988ba71b0214/management.json"
 			cfg := newConfig(42, url)
 			fileProvider := NewFileProvider(cfg, parent.Logger)
-			ref, topology, committees, err := fileProvider.Update(ctx)
+			ref, topology, committees, err := fileProvider.Get(ctx)
 			require.NoError(t, err)
-			require.Equal(t, ref, 1582616070)
+			require.EqualValues(t, ref, 1582616070)
 			require.Len(t, topology, 4)
-			require.Len(t, committees, 4)
+			require.Len(t, committees, 3)
 		})
 	})
 }

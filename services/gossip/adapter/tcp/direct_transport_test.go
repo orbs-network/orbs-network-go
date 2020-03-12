@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -30,8 +29,7 @@ func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
 	cfg := config.ForDirectTransportTests(address, make(adapter.GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
-		topology := memory.NewTopologyProvider(cfg, harness.Logger)
-		transport := NewDirectTransport(ctx, topology, cfg, harness.Logger, metric.NewRegistry())
+		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
 		defer transport.GracefulShutdown(ctx)
 
@@ -183,35 +181,7 @@ func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipien
 	})
 }
 
-func TestDirectTransport_TestAutoUpdate(t *testing.T) {
-	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
-		harness.AllowErrorsMatching("failed sending gossip message") // because the test will send to an arbitrary recipient which is not in topology
-
-		node1 := aNode(ctx, harness.Logger)
-		node2 := aNode(ctx, harness.Logger)
-		superviseAll(harness, node1, node2)
-		defer shutdownAll(ctx, node1, node2)
-
-		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
-
-		firstTopology := aTopologyContaining(node1, node2)
-		node1.topologyProvider.UpdateTopologyFromPeers(firstTopology) // update only the internal topology provider
-		node2.topologyProvider.UpdateTopologyFromPeers(firstTopology) // update only the internal topology provider
-
-		waitForAllNodesToSatisfy(t,
-			"expected all nodes to have peers added",
-			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
-			node1, node2)
-
-		waitForAllNodesToSatisfy(t,
-			"expected all outgoing queues to become enabled after topology change",
-			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
-			node1, node2)
-	})
-}
-
 type nodeHarness struct {
-	topologyProvider *memory.TopologyProvider
 	transport        *DirectTransport
 	address          primitives.NodeAddress
 	listener         *testkit.MockTransportListener
@@ -236,8 +206,7 @@ func (n *nodeHarness) toGossipPeer() adapter.GossipPeer {
 }
 
 func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.GossipPeers)  {
-	n.topologyProvider.UpdateTopologyFromPeers(peers)
-	n.transport.UpdateTopology(ctx)
+	n.transport.UpdateTopology(ctx, peers)
 }
 
 func waitForAllNodesToSatisfy(t *testing.T, message string, predicate func(node *nodeHarness) bool, nodes ...*nodeHarness) {
@@ -264,13 +233,11 @@ func aMessage() [][]byte {
 
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	address := aKey()
-	peers := aTopologyContaining()
-	cfg := config.ForDirectTransportTests(address, peers, 20*time.Hour /*disable keep alive*/, 1*time.Second)
-	topology := memory.NewTopologyProvider(cfg, logger)
-	transport := NewDirectTransport(ctx, topology, cfg, logger, metric.NewRegistry())
+	cfg := config.ForDirectTransportTests(address, make(adapter.GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
-	return &nodeHarness{topology, transport, address, listener}
+	return &nodeHarness{transport, address, listener}
 }
 
 var currentNodeIndex = 1

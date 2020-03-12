@@ -40,6 +40,9 @@ const (
 	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
 	NETWORK_TYPE     = "NETWORK_TYPE"
 
+	MANAGEMENT_FILE_PATH             = "MANAGEMENT_FILE_PATH"
+	MANAGEMENT_UPDATE_INTERVAL       = "MANAGEMENT_UPDATE_INTERVAL"
+
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
 
@@ -76,8 +79,6 @@ const (
 	TRANSACTION_POOL_NODE_SYNC_REJECT_TIME                 = "TRANSACTION_POOL_NODE_SYNC_REJECT_TIME"
 
 	GOSSIP_LISTEN_PORT                    = "GOSSIP_LISTEN_PORT"
-	GOSSIP_TOPOLOGY_FILE_PATH             = "GOSSIP_TOPOLOGY_FILE_PATH"
-	GOSSIP_TOPOLOGY_UPDATE_INTERVAL       = "GOSSIP_TOPOLOGY_UPDATE_INTERVAL"
 	GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL = "GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL"
 	GOSSIP_NETWORK_TIMEOUT                = "GOSSIP_NETWORK_TIMEOUT"
 	GOSSIP_RECONNECT_INTERVAL             = "GOSSIP_RECONNECT_INTERVAL"
@@ -195,6 +196,14 @@ func (c *config) VirtualChainId() primitives.VirtualChainId {
 
 func (c *config) NetworkType() protocol.SignerNetworkType {
 	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
+}
+
+func (c *config) ManagementFilePath() string {
+	return c.kv[MANAGEMENT_FILE_PATH].StringValue
+}
+
+func (c *config) ManagementUpdateInterval() time.Duration  {
+	return c.kv[MANAGEMENT_UPDATE_INTERVAL].DurationValue
 }
 
 func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
@@ -327,14 +336,6 @@ func (c *config) GossipListenPort() uint16 {
 
 func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
 	return c.gossipPeers
-}
-
-func (c *config) GossipTopologyFilePath() string {
-	return c.kv[GOSSIP_TOPOLOGY_FILE_PATH].StringValue
-}
-
-func (c *config) GossipTopologyUpdateInterval() time.Duration  {
-	return c.kv[GOSSIP_TOPOLOGY_UPDATE_INTERVAL].DurationValue
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

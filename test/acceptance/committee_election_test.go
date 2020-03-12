@@ -164,11 +164,17 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 		})
 }
 
+
 func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Network, nodeIndices ...int) {
 	lastBlock, err := network.BlockPersistence(0).GetLastBlockHeight()
-		require.NoError(t, err)
-	// TODO POSV2 need to get timing better.
-	network.committeeProvider.SetCommitteeToTestKeysWithIndices(uint64(lastBlock+5), nodeIndices...)
+	require.NoError(t, err)
+
+	var committee []primitives.NodeAddress
+	for _, committeeIndex := range nodeIndices {
+		committee = append(committee, testKeys.EcdsaSecp256K1KeyPairForTests(committeeIndex).NodeAddress())
+	}
+
+	network.committeeProvider.AddCommittee(uint64(lastBlock+5), committee)
 	network.WaitForBlock(ctx, lastBlock+7)
 }
 

@@ -23,7 +23,7 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers top
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, keepAliveInterval)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, networkTimeout)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(GOSSIP_TOPOLOGY_UPDATE_INTERVAL, 100*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 100*time.Millisecond)
 
 	return cfg
 }
@@ -37,7 +37,7 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(GOSSIP_TOPOLOGY_UPDATE_INTERVAL, 10*time.Second)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 10*time.Second)
 
 	return cfg
 }

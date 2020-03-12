@@ -132,18 +132,12 @@ func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 
 	logger := harness.Logger.WithTags(log.String("adapter", "transport"))
 
-	topologies := []*memory.TopologyProvider{
-		memory.NewTopologyProvider(configs[0], logger),
-		memory.NewTopologyProvider(configs[1], logger),
-		memory.NewTopologyProvider(configs[2], logger),
-		memory.NewTopologyProvider(configs[3], logger),
-	}
 
 	transports := []*tcp.DirectTransport{
-		tcp.NewDirectTransport(ctx, topologies[0], configs[0], logger, metric.NewRegistry()),
-		tcp.NewDirectTransport(ctx, topologies[1], configs[1], logger, metric.NewRegistry()),
-		tcp.NewDirectTransport(ctx, topologies[2], configs[2], logger, metric.NewRegistry()),
-		tcp.NewDirectTransport(ctx, topologies[3], configs[3], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[0], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[1], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[2], logger, metric.NewRegistry()),
+		tcp.NewDirectTransport(ctx, configs[3], logger, metric.NewRegistry()),
 	}
 
 	test.Eventually(1*time.Second, func() bool {
@@ -166,9 +160,8 @@ func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 		peers[res.nodeAddresses[i].KeyForMap()] = adapter.NewGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
 	}
 
-	for i := 0; i < 4;i++ {
-		topologies[i].UpdateTopologyFromPeers(peers)
-		transports[i].UpdateTopology(ctx)
+	for _, t1 := range transports {
+		t1.UpdateTopology(ctx, peers)
 	}
 
 	for _, t := range transports {

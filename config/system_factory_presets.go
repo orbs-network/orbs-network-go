@@ -22,6 +22,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 1*time.Minute)
+
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 450ms
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 4*time.Second)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
@@ -82,7 +84,6 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
-	cfg.SetDuration(GOSSIP_TOPOLOGY_UPDATE_INTERVAL, 1*time.Minute)
 
 	// 10 minutes + 60 blocks is about 25 minutes
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Minute)
@@ -207,6 +208,7 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)

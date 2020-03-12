@@ -32,7 +32,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -51,11 +50,15 @@ type nodeLogic struct {
 	consensusAlgos []services.ConsensusAlgo
 }
 
-func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Transport, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter, transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter, maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler, committeeProvider committeeProviderAdapter.CommitteeProvider, logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig, ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
+func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Transport, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter, transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter, maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler, committeeProvider virtualmachine.CommitteeProvider, logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig, ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
 
 	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
-	config.NewValidator(logger).ValidateNodeLogic(nodeConfig)
+	err := config.ValidateNodeLogic(nodeConfig)
+	if err != nil {
+		logger.Error("Node logic error cannot start" , log.Error(err))
+		panic(err)
+	}
 
 	processors := make(map[protocol.ProcessorType]services.Processor)
 	processors[protocol.PROCESSOR_TYPE_NATIVE] = native.NewNativeProcessor(nativeCompiler, nodeConfig, logger, metricRegistry)
@@ -66,7 +69,8 @@ func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Trans
 
 	signer, err := signer.New(nodeConfig)
 	if err != nil {
-		panic(fmt.Sprintf("could not instantiate NodeLogic: %s", err))
+		logger.Error("Node logic signer error cannot start" , log.Error(err))
+		panic(fmt.Sprintf("Node logic signer error cannot start: %s", err))
 	}
 
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)

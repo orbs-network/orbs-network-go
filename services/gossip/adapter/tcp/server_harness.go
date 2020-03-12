@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -63,8 +62,7 @@ func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, paren
 func makeTransport(ctx context.Context, logger log.Logger, cfg config.GossipTransportConfig) *DirectTransport {
 	registry := metric.NewRegistry()
 
-	topology := memory.NewTopologyProvider(cfg, logger)
-	transport := NewDirectTransport(ctx, topology, cfg, logger, registry)
+	transport := NewDirectTransport(ctx, cfg, logger, registry)
 	// to synchronize tests, wait until server is ready
 	test.Eventually(test.EVENTUALLY_ADAPTER_TIMEOUT, func() bool {
 		return transport.IsServerListening()

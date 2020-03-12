@@ -24,8 +24,7 @@ type MemoryConfig interface {
 	GenesisValidatorNodes() map[string]config.ValidatorNode
 }
 
-type ManagementProvider struct {
-//	config MemoryConfig
+type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
@@ -34,20 +33,20 @@ type ManagementProvider struct {
 	committees []*management.CommitteeTerm
 }
 
-func NewManagementProvider(config MemoryConfig, logger log.Logger) *ManagementProvider {
+func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(config)
-	return  &ManagementProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{0, committee}}, logger :logger}
+	return  &MemoryProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{0, committee}}, logger :logger}
 }
 
-
-func (mp *ManagementProvider) Update(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
+func (mp *MemoryProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
 	mp.RLock()
 	defer mp.RUnlock()
 
 	return mp.currentReference, mp.topology, mp.committees, nil
 }
 
-func (mp *ManagementProvider) UpdateFromConfig(referenceNumber uint64, config MemoryConfig) error {
+// for acceptance tests
+func (mp *MemoryProvider) AddCommittee(referenceNumber uint64, committee []primitives.NodeAddress) error {
 	mp.Lock()
 	defer mp.Unlock()
 
@@ -55,16 +54,7 @@ func (mp *ManagementProvider) UpdateFromConfig(referenceNumber uint64, config Me
 		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, referenceNumber)
 	}
 
-	mp.currentReference = referenceNumber
-	mp.topology = make(adapter.GossipPeers)
-	for key, peer := range config.GossipPeers() {
-		mp.topology[key] = peer //copy input
-	}
-	mp.committees = append(mp.committees, &management.CommitteeTerm{ AsOfReference: referenceNumber, Committee: getCommitteeFromConfig(config)})
-
-	// TODO NOAM log ?
-	//mp.logger.Info("changing committee as Of block", log.Uint64("asOfReference", referenceNumber), log.StringableSlice("committee", committee))
-
+	mp.committees = append(mp.committees, &management.CommitteeTerm{ AsOfReference: referenceNumber, Committee: committee})
 	return nil
 }
 
@@ -81,7 +71,3 @@ func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
 	})
 	return committee
 }
-
-
-// TOOD NOAM find way to do testkeys
-// TODO NOAM copy tests.

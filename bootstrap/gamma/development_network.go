@@ -11,8 +11,9 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	"github.com/orbs-network/orbs-network-go/services/management"
+	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
@@ -47,9 +48,10 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock ad
 		panic(err)
 	}
 
-	committeeProvider := memory.NewCommitteeProvider(configWithOverrides, logger)
+	managementProvider := managementAdapter.NewMemoryProvider(configWithOverrides, logger)
+	management := management.NewManagement(ctx, configWithOverrides, managementProvider, sharedTransport, logger)
 
-	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, committeeProvider, maybeClock, nil)
+	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, management, maybeClock, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }
