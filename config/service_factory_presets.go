@@ -56,19 +56,6 @@ func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	return cfg
 }
 
-func ForCommitteeProviderTests(numOfNodes int) CommitteeProviderConfig {
-	cfg := emptyConfig()
-
-	nodes := make(map[string]ValidatorNode)
-	for i := 0; i < numOfNodes;i++ {
-		nodeAddr := testKeys.NodeAddressesForTests()[i]
-		nodes[nodeAddr.KeyForMap()] = &hardCodedValidatorNode{nodeAddress: nodeAddr}
-	}
-	cfg.SetGenesisValidatorNodes(nodes)
-
-	return cfg
-}
-
 func ForPublicApiTests(virtualChain uint32, txTimeout time.Duration, outOfSyncWarningTime time.Duration) PublicApiConfig {
 	cfg := emptyConfig()
 

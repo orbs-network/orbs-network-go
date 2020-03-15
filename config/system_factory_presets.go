@@ -23,6 +23,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
 	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 1*time.Minute)
+	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 450ms
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 4*time.Second)
@@ -43,7 +44,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
 
-	// have triggers
+	// have triggers transactions by default
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 
 	// scheduling hick-ups inside the node
@@ -208,7 +209,7 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 50*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 3*time.Millisecond)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)

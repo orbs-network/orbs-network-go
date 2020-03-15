@@ -18,6 +18,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -27,6 +28,7 @@ import (
 type FileConfig interface {
 	VirtualChainId() primitives.VirtualChainId
 	ManagementFilePath() string
+	ManagementMaxFileSize() uint32
 }
 
 type FileProvider struct {
@@ -44,38 +46,43 @@ func (mp *FileProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, [
 	var err error
 
 	if strings.HasPrefix(path, "http") {
-		if contents, err = readUrl(path); err != nil {
+		if contents, err = mp.readUrl(path); err != nil {
 			mp.logger.Error("Provider url reading error", log.Error(err))
 			return 0, nil, nil, err
 		}
 	} else {
-		if contents, err = readFile(path); err != nil {
+		if contents, err = mp.readFile(path); err != nil {
 			mp.logger.Error("Provider path file reading error", log.Error(err))
 			return 0, nil, nil, err
 		}
 	}
 
-	reference, peers, committees, err := mp.parseFile(contents)
-	if err != nil {
-		mp.logger.Error("Provider file parsing error", log.Error(err))
-		return 0, nil, nil, err
+	reference, peers, committees, parseErr := mp.parseFile(contents)
+	if parseErr != nil {
+		mp.logger.Error("Provider file parsing error", log.Error(parseErr))
+		return 0, nil, nil, parseErr
 	}
 
 	return reference, peers, committees, nil
 }
 
-func readUrl(path string) ([]byte, error) {
+func (mp *FileProvider) readUrl(path string) ([]byte, error) {
 	res, err := http.Get(path)
 
 	if err != nil || res == nil {
-		return nil, errors.Errorf("")
+		return nil, errors.Wrapf(err, "Failed http get of url %s", path)
+	} else if uint32(res.ContentLength) > mp.config.ManagementMaxFileSize() {
+		return nil, errors.Wrapf(err, "Failed http get response too big %d", res.ContentLength)
 	}
+
 	return ioutil.ReadAll(res.Body)
 }
 
-func readFile(filePath string) ([]byte, error) {
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+func (mp *FileProvider) readFile(filePath string) ([]byte, error) {
+	if fi, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, errors.Errorf("could not open file: %s", err)
+	} else if uint32(fi.Size()) > mp.config.ManagementMaxFileSize() {
+		return nil, errors.Errorf("file too big (%d)", fi.Size())
 	}
 
 	contents, err := ioutil.ReadFile(filePath)
@@ -133,6 +140,10 @@ func (mp *FileProvider) parseFile(contents []byte) (uint64, adapter.GossipPeers,
 		hexAddress := item.Address
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
 			return 0, nil, nil, errors.Wrapf(err, "cannot decode topology node address hex %s", hexAddress)
+		} else if net.ParseIP(item.Ip) == nil {
+			return 0, nil, nil, errors.Wrapf(err, "cannot topology node ip %s is not valid", item.Ip)
+		} else if item.Port < 1024 || item.Port > 65535 {
+			return 0, nil, nil, errors.Wrapf(err, "cannot topology node port %d needs to be 1024-65535 range", item.Port)
 		} else {
 			nodeAddress := primitives.NodeAddress(nodeAddress)
 			peers[nodeAddress.KeyForMap()] = adapter.NewGossipPeer(item.Port, item.Ip, hexAddress)

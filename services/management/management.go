@@ -54,9 +54,8 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 
 	s.update(parentCtx, true)
 
-	/// TODO POSV2 NOAM check duration and don't start on 0 ?
 	if config.ManagementUpdateInterval() > 0 {
-		s.Supervise(s.startUpdating(parentCtx))
+		s.Supervise(s.startPollingForUpdates(parentCtx))
 	}
 
 	return s
@@ -103,7 +102,7 @@ func (s *Service) update(ctx context.Context, shouldPanic bool) {
 	s.topologyConsumer.UpdateTopology(ctx, peers)
 }
 
-func (s *Service) startUpdating(bgCtx context.Context) govnr.ShutdownWaiter {
+func (s *Service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWaiter {
 	return govnr.Forever(bgCtx, "management-service-updater", logfields.GovnrErrorer(s.logger), func() {
 		for {
 			select {

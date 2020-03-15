@@ -26,6 +26,7 @@ type NodeConfig interface {
 
 	// Management
 	ManagementFilePath() string
+	ManagementMaxFileSize() uint32
 	ManagementUpdateInterval() time.Duration
 
 	// consensus

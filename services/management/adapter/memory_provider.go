@@ -55,6 +55,7 @@ func (mp *MemoryProvider) AddCommittee(referenceNumber uint64, committee []primi
 	}
 
 	mp.committees = append(mp.committees, &management.CommitteeTerm{ AsOfReference: referenceNumber, Committee: committee})
+	mp.currentReference = referenceNumber
 	return nil
 }
 

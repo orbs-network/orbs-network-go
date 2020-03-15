@@ -41,6 +41,7 @@ const (
 	NETWORK_TYPE     = "NETWORK_TYPE"
 
 	MANAGEMENT_FILE_PATH             = "MANAGEMENT_FILE_PATH"
+	MANAGEMENT_MAX_FILE_SIZE         = "MANAGEMENT_MAX_FILE_SIZE"
 	MANAGEMENT_UPDATE_INTERVAL       = "MANAGEMENT_UPDATE_INTERVAL"
 
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
@@ -200,6 +201,10 @@ func (c *config) NetworkType() protocol.SignerNetworkType {
 
 func (c *config) ManagementFilePath() string {
 	return c.kv[MANAGEMENT_FILE_PATH].StringValue
+}
+
+func (c *config) ManagementMaxFileSize() uint32 {
+	return c.kv[MANAGEMENT_MAX_FILE_SIZE].Uint32Value
 }
 
 func (c *config) ManagementUpdateInterval() time.Duration  {
