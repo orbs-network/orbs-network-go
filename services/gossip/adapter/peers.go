@@ -6,8 +6,6 @@
 
 package adapter
 
-import "context"
-
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
@@ -42,7 +40,25 @@ func (c *gossipPeer) HexOrbsAddress() string {
 	return c.hexOrbsAddress
 }
 
-type TopologyProvider interface {
-	GetTopology(ctx context.Context) GossipPeers
-	UpdateTopology(ctx context.Context) error
+func PeerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipPeers, peersToAdd GossipPeers) {
+	peersToRemove = make(GossipPeers)
+	peersToAdd = make(GossipPeers)
+
+	for a, n := range newPeers {
+		if o, peerExistsInOldList := oldPeers[a]; !peerExistsInOldList || peerHasChangedPortOrIPAddress(n, o) {
+			peersToAdd[a] = n
+		}
+	}
+
+	for a, o := range oldPeers {
+		if n, peerExistsInNewList := newPeers[a]; !peerExistsInNewList || peerHasChangedPortOrIPAddress(n, o) {
+			peersToRemove[a] = o
+		}
+	}
+
+	return
+}
+
+func peerHasChangedPortOrIPAddress(p1 GossipPeer, p2 GossipPeer) bool {
+	return p1.GossipEndpoint() != p2.GossipEndpoint() || p1.GossipPort() != p2.GossipPort()
 }

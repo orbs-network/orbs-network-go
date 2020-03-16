@@ -70,6 +70,10 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 	return s
 }
 
+func (s *Service) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+	s.transport.UpdateTopology(bgCtx, newPeers)
+}
+
 func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
 	if ctx.Err() != nil {
 		return

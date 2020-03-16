@@ -24,6 +24,7 @@ import (
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	"github.com/orbs-network/orbs-network-go/services/publicapi"
@@ -50,7 +51,16 @@ type nodeLogic struct {
 	consensusAlgos []services.ConsensusAlgo
 }
 
-func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Transport, blockPersistence blockStorageAdapter.BlockPersistence, statePersistence stateStorageAdapter.StatePersistence, stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter, transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter, maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler, committeeProvider virtualmachine.CommitteeProvider, logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig, ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
+func NewNodeLogic(parentCtx context.Context,
+	gossipTransport gossipAdapter.Transport,
+	blockPersistence blockStorageAdapter.BlockPersistence,
+	statePersistence stateStorageAdapter.StatePersistence,
+	stateBlockHeightReporter stateStorageAdapter.BlockHeightReporter,
+	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
+	maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler,
+	managementProvider management.Provider,
+	logger log.Logger, 	metricRegistry metric.Registry, nodeConfig config.NodeConfig,
+	ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
 
 	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
@@ -74,8 +84,9 @@ func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Trans
 	}
 
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
+	management := management.NewManagement(ctx, nodeConfig, managementProvider, gossipService, logger)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
-	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, committeeProvider, logger)
+	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, management, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, maybeClock, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
@@ -93,6 +104,7 @@ func NewNodeLogic(parentCtx context.Context, gossipTransport gossipAdapter.Trans
 		consensusAlgos: []services.ConsensusAlgo{consensusAlgo},
 	}
 
+	node.Supervise(management)
 	node.Supervise(gossipService)
 	node.Supervise(blockStorageService)
 	node.Supervise(consensusAlgo)

@@ -71,7 +71,7 @@ func (mp *FileProvider) readUrl(path string) ([]byte, error) {
 
 	if err != nil || res == nil {
 		return nil, errors.Wrapf(err, "Failed http get of url %s", path)
-	} else if uint32(res.ContentLength) > mp.config.ManagementMaxFileSize() {
+	} else if res.ContentLength > 0 && uint32(res.ContentLength) > mp.config.ManagementMaxFileSize() { // TODO when no length given find other way ?
 		return nil, errors.Wrapf(err, "Failed http get response too big %d", res.ContentLength)
 	}
 
@@ -79,7 +79,7 @@ func (mp *FileProvider) readUrl(path string) ([]byte, error) {
 }
 
 func (mp *FileProvider) readFile(filePath string) ([]byte, error) {
-	if fi, err := os.Stat(filePath); os.IsNotExist(err) {
+	if fi, err := os.Stat(filePath); err != nil {
 		return nil, errors.Errorf("could not open file: %s", err)
 	} else if uint32(fi.Size()) > mp.config.ManagementMaxFileSize() {
 		return nil, errors.Errorf("file too big (%d)", fi.Size())
@@ -139,11 +139,11 @@ func (mp *FileProvider) parseFile(contents []byte) (uint64, adapter.GossipPeers,
 	for _, item := range vcData.CurrentTopology {
 		hexAddress := item.Address
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
-			return 0, nil, nil, errors.Wrapf(err, "cannot decode topology node address hex %s", hexAddress)
+			return 0, nil, nil, errors.Wrapf(err, "cannot translate topology node address from hex %s", hexAddress)
 		} else if net.ParseIP(item.Ip) == nil {
-			return 0, nil, nil, errors.Wrapf(err, "cannot topology node ip %s is not valid", item.Ip)
+			return 0, nil, nil, errors.Wrapf(err, "topology node ip %s is not valid", item.Ip)
 		} else if item.Port < 1024 || item.Port > 65535 {
-			return 0, nil, nil, errors.Wrapf(err, "cannot topology node port %d needs to be 1024-65535 range", item.Port)
+			return 0, nil, nil, errors.Wrapf(err, "topology node port %d needs to be 1024-65535 range", item.Port)
 		} else {
 			nodeAddress := primitives.NodeAddress(nodeAddress)
 			peers[nodeAddress.KeyForMap()] = adapter.NewGossipPeer(item.Port, item.Ip, hexAddress)

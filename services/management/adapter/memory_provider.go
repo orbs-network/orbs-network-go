@@ -35,7 +35,7 @@ type MemoryProvider struct {
 
 func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(config)
-	return  &MemoryProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{0, committee}}, logger :logger}
+	return  &MemoryProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{AsOfReference: 0, Committee: committee}}, logger :logger}
 }
 
 func (mp *MemoryProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {

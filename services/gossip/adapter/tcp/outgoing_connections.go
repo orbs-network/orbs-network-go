@@ -92,7 +92,7 @@ func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddr
 
 func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
 	c.RLock()
-	peersToRemove, peersToAdd := peerDiff(c.peerTopology, newPeers)
+	peersToRemove, peersToAdd := adapter.PeerDiff(c.peerTopology, newPeers)
 	c.RUnlock()
 
 	c.disconnectAll(bgCtx, peersToRemove)

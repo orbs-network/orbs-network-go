@@ -27,6 +27,7 @@ type Transport interface {
 	govnr.ShutdownWaiter
 	RegisterListener(listener TransportListener, listenerNodeAddress primitives.NodeAddress)
 	Send(ctx context.Context, data *TransportData) error // TODO don't return error. misleading meaning. use panics instead
+	UpdateTopology(bgCtx context.Context, newPeers GossipPeers)
 }
 
 type TransportListener interface {

@@ -76,10 +76,10 @@ func (s *Service) GetTopology(ctx context.Context) adapterGossip.GossipPeers {
 func (s *Service) GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress {
 	s.RLock()
 	defer s.RUnlock()
-	termIndex := len(s.committees) - 1
-	for ; termIndex > 0 && referenceNumber < s.committees[termIndex].AsOfReference; termIndex-- {
+	i := len(s.committees) - 1
+	for ; i > 0 && referenceNumber < s.committees[i].AsOfReference; i-- {
 	}
-	return s.committees[termIndex].Committee
+	return s.committees[i].Committee
 }
 
 func (s *Service) write(referenceNumber uint64, peers adapterGossip.GossipPeers, committees []*CommitteeTerm) {
@@ -97,6 +97,7 @@ func (s *Service) update(ctx context.Context, shouldPanic bool) {
 		if shouldPanic {
 			panic(fmt.Sprintf("failed initializing management provider, err=%s", err.Error()))
 		}
+		return
 	}
 	s.write(reference, peers, committees)
 	s.topologyConsumer.UpdateTopology(ctx, peers)

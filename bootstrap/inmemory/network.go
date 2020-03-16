@@ -18,11 +18,11 @@ import (
 	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/management"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -38,12 +38,12 @@ import (
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
 	govnr.TreeSupervisor
-	Nodes             []*Node
-	Logger            log.Logger
-	Transport         adapter.Transport
-	CommitteeProvider virtualmachine.CommitteeProvider
-	VirtualChainId    primitives.VirtualChainId
-	MaybeClock        txPoolAdapter.Clock
+	Nodes              []*Node
+	Logger             log.Logger
+	Transport          adapter.Transport
+	ManagementProvider management.Provider
+	VirtualChainId     primitives.VirtualChainId
+	MaybeClock         txPoolAdapter.Clock
 }
 
 type NodeDependencies struct {
@@ -56,14 +56,14 @@ type NodeDependencies struct {
 }
 type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.Logger, metricRegistry metric.Registry) *NodeDependencies
 
-func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.Logger, cfgTemplate config.OverridableConfig, transport adapter.Transport, committeeProvider virtualmachine.CommitteeProvider, maybeClock txPoolAdapter.Clock, provider nodeDependencyProvider) *Network {
+func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.Logger, cfgTemplate config.OverridableConfig, transport adapter.Transport, managementProvider management.Provider, maybeClock txPoolAdapter.Clock, provider nodeDependencyProvider) *Network {
 
 	network := &Network{
-		Logger:            parent,
-		Transport:         transport,
-		CommitteeProvider: committeeProvider,
-		MaybeClock:        maybeClock,
-		VirtualChainId:    cfgTemplate.VirtualChainId(),
+		Logger:             parent,
+		Transport:          transport,
+		ManagementProvider: managementProvider,
+		MaybeClock:         maybeClock,
+		VirtualChainId:     cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 	parent.Info(configToStr(cfgTemplate))
@@ -145,7 +145,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.transactionPoolBlockTracker,
 			n.MaybeClock,
 			node.nativeCompiler,
-			n.CommitteeProvider,
+			n.ManagementProvider,
 			nodeLogger,
 			node.metricRegistry,
 			node.config,

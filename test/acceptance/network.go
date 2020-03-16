@@ -21,7 +21,6 @@ import (
 	memoryGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	gossipTestAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	testGossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
-	"github.com/orbs-network/orbs-network-go/services/management"
 	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter/fake"
@@ -99,7 +98,6 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 
 	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
 	sharedManagementProvider := managementAdapter.NewMemoryProvider(cfgTemplate, testLogger)
-	sharedManagement := management.NewManagement(ctx, cfgTemplate, sharedManagementProvider, sharedTamperingTransport, testLogger)
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := &ethereumAdapter.NopEthereumAdapter{}
 
@@ -131,7 +129,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 	}
 
 	harness := &Network{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedManagement, nil, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedManagementProvider, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
 		committeeProvider:                  sharedManagementProvider,
 		ethereumConnection:                 sharedEthereumSimulator,

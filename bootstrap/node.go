@@ -66,7 +66,6 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	} else {
 		managementProvider = managementAdapter.NewFileProvider(nodeConfig, nodeLogger)
 	}
-	management := management.NewManagement(ctx, nodeConfig, managementProvider, transport, nodeLogger)
 
 	blockPersistence, err := filesystem.NewBlockPersistence(nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
@@ -76,7 +75,9 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
-	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, management, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
+	nodeLogic := NewNodeLogic(ctx,
+		transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, managementProvider,
+		nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 
 	httpServer.RegisterPublicApi(nodeLogic.PublicApi())
 
@@ -94,7 +95,6 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	n.Supervise(ethereumConnection)
 	n.Supervise(nodeLogic)
 	n.Supervise(transport)
-	n.Supervise(management)
 	n.Supervise(httpServer)
 	return n
 }
