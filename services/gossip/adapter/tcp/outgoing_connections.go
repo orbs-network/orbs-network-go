@@ -102,12 +102,6 @@ func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers ada
 	}
 }
 
-func (c *outgoingConnections) connectAll(parent context.Context, peers adapter.GossipPeers) {
-	for peerNodeAddress, peer := range peers {
-		c.connectForever(parent, peerNodeAddress, peer)
-	}
-}
-
 func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect adapter.GossipPeers) {
 	c.Lock()
 	defer c.Unlock()
