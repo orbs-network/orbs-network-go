@@ -52,7 +52,11 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 		topologyConsumer: topologyConsumer,
 	}
 
-	s.update(parentCtx, true)
+	err := s.update(parentCtx)
+	if err != nil {
+		s.logger.Error("management provider failed to initializing the topology", log.Error(err))
+		panic(fmt.Sprintf("failed initializing management provider, err=%s", err.Error())) // can't continue if no management
+	}
 
 	if config.ManagementUpdateInterval() > 0 {
 		s.Supervise(s.startPollingForUpdates(parentCtx))
@@ -90,17 +94,14 @@ func (s *Service) write(referenceNumber uint64, peers adapterGossip.GossipPeers,
 	s.committees = committees
 }
 
-func (s *Service) update(ctx context.Context, shouldPanic bool) {
+func (s *Service) update(ctx context.Context) error {
 	reference, peers, committees, err := s.provider.Get(ctx)
 	if err != nil {
-		s.logger.Info("management provider failed to update the topology", log.Error(err))
-		if shouldPanic {
-			panic(fmt.Sprintf("failed initializing management provider, err=%s", err.Error()))
-		}
-		return
+		return err
 	}
 	s.write(reference, peers, committees)
 	s.topologyConsumer.UpdateTopology(ctx, peers)
+	return nil
 }
 
 func (s *Service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWaiter {
@@ -110,7 +111,10 @@ func (s *Service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWa
 			case <-bgCtx.Done():
 				return
 			case <-time.After(s.config.ManagementUpdateInterval()):
-				s.update(bgCtx, false)
+				err := s.update(bgCtx)
+				if err != nil {
+					s.logger.Info("management provider failed to update the topology", log.Error(err))
+				}
 			}
 		}
 	})

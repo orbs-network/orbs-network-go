@@ -123,13 +123,14 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 			StatePersistence:                   dumpingStateStorage,
 			EtherConnection:                    sharedEthereumSimulator,
 			Compiler:                           sharedCompiler,
+			ManagementProvider:                 sharedManagementProvider,
 			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
 			StateBlockHeightReporter:           stateHeightTracker,
 		}
 	}
 
 	harness := &Network{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, sharedManagementProvider, nil, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
 		committeeProvider:                  sharedManagementProvider,
 		ethereumConnection:                 sharedEthereumSimulator,

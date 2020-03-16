@@ -116,7 +116,8 @@ func TestManagement_InternalDataOnlyChangesAfterUpdateWhenAutoUpdateDisabled(t *
 			committee = cp.GetCommittee(ctx, 5)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
-			cp.update(ctx, false)
+			err := cp.update(ctx)
+			require.NoError(t, err)
 			committee = cp.GetCommittee(ctx, 5)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 		})

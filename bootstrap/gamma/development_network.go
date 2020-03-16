@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
-	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -47,9 +46,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock ad
 		panic(err)
 	}
 
-	managementProvider := managementAdapter.NewMemoryProvider(configWithOverrides, logger)
-
-	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, managementProvider, maybeClock, nil)
+	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, maybeClock, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
 	return network
 }
