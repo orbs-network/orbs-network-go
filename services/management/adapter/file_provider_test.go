@@ -33,7 +33,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 func TestFileTopology_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw/edb958635c0ff2783c0447cb0322988ba71b0214/management.json"
+			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw/ad51339db324aa53f52973a76f6da943157c14d8/management.json"
 			cfg := newConfig(42, url)
 			fileProvider := NewFileProvider(cfg, parent.Logger)
 			expectFileProviderToReadCorrectly(t, ctx, fileProvider)
@@ -63,11 +63,12 @@ func requireTopologyToBeSameAsStatic(t *testing.T, peers adapter.GossipPeers) {
 
 func requireCommitteeToBeSameAsStatic(t *testing.T, c []*management.CommitteeTerm) {
 	committee := []primitives.NodeAddress{testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()}
-	require.EqualValues(t, 1582616000, c[0].AsOfReference)
+	// notice order of ref from small to big.
+	require.EqualValues(t, 1582613000, c[0].AsOfReference)
 	require.ElementsMatch(t, committee, c[0].Committee)
 	require.EqualValues(t, 1582614000, c[1].AsOfReference)
 	require.ElementsMatch(t, committee, c[1].Committee)
-	require.EqualValues(t, 1582613000, c[2].AsOfReference)
+	require.EqualValues(t, 1582616000, c[2].AsOfReference)
 	require.ElementsMatch(t, committee, c[2].Committee)
 }
 

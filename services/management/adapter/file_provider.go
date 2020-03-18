@@ -167,6 +167,10 @@ func (mp *FileProvider) parseFile(contents []byte) (uint64, adapter.GossipPeers,
 		})
 
 		committeeTerms = append(committeeTerms, &management.CommitteeTerm{AsOfReference:committeeEvent.RefTime, Committee: committee})
+
+		sort.SliceStable(committeeTerms, func(i, j int) bool {
+			return committeeTerms[i].AsOfReference < committeeTerms[j].AsOfReference
+		})
 	}
 
 
