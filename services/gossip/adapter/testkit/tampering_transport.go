@@ -79,6 +79,10 @@ func NewTamperingTransport(logger log.Logger, nested adapter.InterceptableTransp
 	return t
 }
 
+func (t *TamperingTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+	//	currently does nothing on purpose
+}
+
 func (t *TamperingTransport) GracefulShutdown(shutdownContext context.Context) {
 	t.nested.GracefulShutdown(shutdownContext)
 }

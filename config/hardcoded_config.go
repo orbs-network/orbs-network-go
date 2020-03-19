@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -15,12 +16,6 @@ import (
 
 type hardCodedValidatorNode struct {
 	nodeAddress primitives.NodeAddress
-}
-
-type hardCodedGossipPeer struct {
-	gossipPort     int
-	gossipEndpoint string
-	hexOrbsAddress string
 }
 
 type NodeConfigValue struct {
@@ -33,7 +28,7 @@ type NodeConfigValue struct {
 type config struct {
 	kv                      map[string]NodeConfigValue
 	genesisValidatorNodes   map[string]ValidatorNode
-	gossipPeers             map[string]GossipPeer
+	gossipPeers             topologyProviderAdapter.GossipPeers
 	nodeAddress             primitives.NodeAddress
 	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
 	constantConsensusLeader primitives.NodeAddress
@@ -44,6 +39,10 @@ const (
 	PROTOCOL_VERSION = "PROTOCOL_VERSION"
 	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
 	NETWORK_TYPE     = "NETWORK_TYPE"
+
+	MANAGEMENT_FILE_PATH             = "MANAGEMENT_FILE_PATH"
+	MANAGEMENT_MAX_FILE_SIZE         = "MANAGEMENT_MAX_FILE_SIZE"
+	MANAGEMENT_UPDATE_INTERVAL       = "MANAGEMENT_UPDATE_INTERVAL"
 
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
@@ -121,14 +120,6 @@ func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode
 	}
 }
 
-func NewHardCodedGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) GossipPeer {
-	return &hardCodedGossipPeer{
-		gossipPort:     gossipPort,
-		gossipEndpoint: gossipEndpoint,
-		hexOrbsAddress: hexAddress,
-	}
-}
-
 func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
 	c.kv[key] = value
 	return c
@@ -179,25 +170,13 @@ func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutabl
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers map[string]GossipPeer) mutableNodeConfig {
+func (c *config) SetGossipPeers(gossipPeers topologyProviderAdapter.GossipPeers) mutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
 
 func (c *hardCodedValidatorNode) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
-}
-
-func (c *hardCodedGossipPeer) GossipPort() int {
-	return c.gossipPort
-}
-
-func (c *hardCodedGossipPeer) GossipEndpoint() string {
-	return c.gossipEndpoint
-}
-
-func (c *hardCodedGossipPeer) HexOrbsAddress() string {
-	return c.hexOrbsAddress
 }
 
 func (c *config) NodeAddress() primitives.NodeAddress {
@@ -220,12 +199,20 @@ func (c *config) NetworkType() protocol.SignerNetworkType {
 	return protocol.SignerNetworkType(c.kv[NETWORK_TYPE].Uint32Value)
 }
 
-func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
-	return c.genesisValidatorNodes
+func (c *config) ManagementFilePath() string {
+	return c.kv[MANAGEMENT_FILE_PATH].StringValue
 }
 
-func (c *config) GossipPeers() map[string]GossipPeer {
-	return c.gossipPeers
+func (c *config) ManagementMaxFileSize() uint32 {
+	return c.kv[MANAGEMENT_MAX_FILE_SIZE].Uint32Value
+}
+
+func (c *config) ManagementUpdateInterval() time.Duration  {
+	return c.kv[MANAGEMENT_UPDATE_INTERVAL].DurationValue
+}
+
+func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
+	return c.genesisValidatorNodes
 }
 
 func (c *config) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
@@ -350,6 +337,10 @@ func (c *config) ProcessorPerformWarmUpCompilation() bool {
 
 func (c *config) GossipListenPort() uint16 {
 	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
+}
+
+func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
+	return c.gossipPeers
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

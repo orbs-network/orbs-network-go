@@ -13,6 +13,7 @@ import (
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -89,6 +90,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	NewHarness().
 		WithNumNodes(8).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -164,12 +166,17 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 		})
 }
 
+
 func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Network, nodeIndices ...int) {
+	var committee []primitives.NodeAddress
+	for _, committeeIndex := range nodeIndices {
+		committee = append(committee, testKeys.EcdsaSecp256K1KeyPairForTests(committeeIndex).NodeAddress())
+	}
+
 	lastBlock, err := network.BlockPersistence(0).GetLastBlockHeight()
-		require.NoError(t, err)
-	// TODO POSV2 need to get timing better.
-	network.committeeProvider.SetCommitteeToTestKeysWithIndices(uint64(lastBlock+5), nodeIndices...)
-	network.WaitForBlock(ctx, lastBlock+7)
+	require.NoError(t, err)
+	network.committeeProvider.AddCommittee(uint64(lastBlock+3), committee)
+	network.WaitForBlock(ctx, lastBlock+4)
 }
 
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
