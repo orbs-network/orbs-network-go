@@ -42,6 +42,7 @@ func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
 		panic(err)
 	}
 
+	httpServer.Router().HandleFunc("/", api.IndexHandler)
 	httpServer.Router().HandleFunc("/sign", api.SignHandler)
 
 	s := &Server{

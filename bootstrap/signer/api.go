@@ -7,11 +7,15 @@
 package signer
 
 import (
+	"context"
+	"encoding/json"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type api struct {
@@ -37,6 +41,36 @@ func (a *api) SignHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		return
+	}
+
+	writer.WriteHeader(http.StatusInternalServerError)
+}
+
+func (a *api) IndexHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Add("Content-Type", "application/json")
+
+	input := (&services.NodeSignInputBuilder{
+		Data: []byte(time.Now().String()),
+	}).Build()
+
+	if _, err := a.vault.NodeSign(context.Background(), input); err == nil {
+		rawJSON, _ := json.Marshal(map[string]interface{}{
+			"status":      "OK",
+			"description": "ORBS blockchain signer service",
+			"version":     config.GetVersion(),
+		})
+
+		writer.Write(rawJSON)
+		return
+	} else {
+		a.logger.Error("failed healthcheck", log.Error(err))
+		rawJSON, _ := json.Marshal(map[string]interface{}{
+			"status":      "Configuration Error",
+			"description": "ORBS blockchain signer service",
+			"version":     config.GetVersion(),
+			"error":       err.Error(),
+		})
+		writer.Write(rawJSON)
 	}
 
 	writer.WriteHeader(http.StatusInternalServerError)
