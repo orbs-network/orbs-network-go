@@ -35,13 +35,17 @@ func (v *validator) ValidateNodeLogic(cfg NodeConfig) {
 	v.requireNonEmptyValidatorMap(cfg.GenesisValidatorNodes(), "genesis validator list must not be empty")
 
 	if cfg.SignerEndpoint() == "" {
-		v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
-		v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
+		v.ValidateSigner(cfg)
 	}
 }
 
 func (v *validator) ValidateMainNode(cfg NodeConfig) {
 	v.requireNonEmptyPeerMap(cfg.GossipPeers(), "gossip peer list must not be empty")
+}
+
+func (v *validator) ValidateSigner(cfg SignerServiceConfig) {
+	v.requireNonEmpty(cfg.NodePrivateKey(), "node private key must not be empty")
+	v.requireCorrectNodeAddressAndPrivateKey(cfg.NodeAddress(), cfg.NodePrivateKey())
 }
 
 func (v *validator) requireGT(d1 func() time.Duration, d2 func() time.Duration, msg string) {

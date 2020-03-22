@@ -254,3 +254,9 @@ type SignerConfig interface {
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
 	SignerEndpoint() string
 }
+
+type SignerServiceConfig interface {
+	NodeAddress() primitives.NodeAddress
+	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
+	HttpAddress() string
+}

@@ -21,8 +21,9 @@ import (
 )
 
 type signerServerConfig struct {
-	privateKey primitives.EcdsaSecp256K1PrivateKey
-	address    string
+	privateKey  primitives.EcdsaSecp256K1PrivateKey
+	nodeAddress primitives.NodeAddress
+	address     string
 }
 
 func (s *signerServerConfig) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
@@ -33,15 +34,20 @@ func (s *signerServerConfig) HttpAddress() string {
 	return s.address
 }
 
+func (s *signerServerConfig) NodeAddress() primitives.NodeAddress {
+	return s.nodeAddress
+}
+
 func TestSignerServer(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		address := "localhost:9999"
 		pk := keys.EcdsaSecp256K1KeyPairForTests(0).PrivateKey()
+		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
 
 		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 		testLogger := log.GetLogger().WithOutput(testOutput)
 
-		server := signer.StartSignerServer(&signerServerConfig{pk, address}, testLogger)
+		server := signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
 		defer server.GracefulShutdown(ctx)
 
 		c := crypto.NewSignerClient("http://" + address)
@@ -57,5 +63,20 @@ func TestSignerServer(t *testing.T) {
 		require.NoError(t, err)
 
 		require.EqualValues(t, signed, clientSignature)
+	})
+}
+
+func TestSignerServerWithWrongConfiguration(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		address := "localhost:9999"
+		pk := keys.EcdsaSecp256K1KeyPairForTests(0).PrivateKey()
+		nodeAddress := primitives.NodeAddress([]byte("hello"))
+
+		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
+		testLogger := log.GetLogger().WithOutput(testOutput)
+
+		require.PanicsWithValue(t, "node address a328846cd5b4979d68a8c58a9bdfeee657b34de7 derived from secret key does not match provided node address 68656c6c6f", func() {
+			signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
+		})
 	})
 }

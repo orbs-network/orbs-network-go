@@ -9,9 +9,9 @@ package signer
 import (
 	"context"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/signer"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 )
@@ -23,13 +23,10 @@ type Server struct {
 	httpServer *httpServer
 }
 
-type ServerConfig interface {
-	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	HttpAddress() string
-}
-
-func StartSignerServer(cfg ServerConfig, logger log.Logger) *Server {
+func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) *Server {
 	_, cancel := context.WithCancel(context.Background())
+
+	config.NewValidator(logger).ValidateSigner(cfg)
 
 	service := signer.NewService(cfg, logger)
 	api := &api{
