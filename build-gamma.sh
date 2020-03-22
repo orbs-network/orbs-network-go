@@ -1,7 +1,5 @@
 #!/bin/bash -x
 
-export GOOS=linux
-
 rm -rf _bin
 export CONFIG_PKG="github.com/orbs-network/orbs-network-go/config"
 
