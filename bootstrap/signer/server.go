@@ -24,8 +24,6 @@ type Server struct {
 }
 
 func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) (*Server, error) {
-	_, cancel := context.WithCancel(context.Background())
-
 	if err := config.ValidateSigner(cfg); err != nil {
 		return nil, err
 	}
@@ -43,6 +41,7 @@ func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) (*Serv
 	httpServer.Router().HandleFunc("/", api.IndexHandler)
 	httpServer.Router().HandleFunc("/sign", api.SignHandler)
 
+	_, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		service:    service,
 		cancelFunc: cancel,
