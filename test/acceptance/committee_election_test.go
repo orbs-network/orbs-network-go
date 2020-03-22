@@ -21,6 +21,7 @@ import (
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -61,6 +62,7 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 func TestLeanHelix_MultipleReElections(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -134,6 +136,7 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	NewHarness().
 		WithNumNodes(7).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -175,7 +178,7 @@ func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Netwo
 
 	lastBlock, err := network.BlockPersistence(0).GetLastBlockHeight()
 	require.NoError(t, err)
-	network.committeeProvider.AddCommittee(uint64(lastBlock+4), committee)
+	network.committeeProvider.AddCommittee(uint64(lastBlock+3), committee)
 	network.WaitForBlock(ctx, lastBlock+6)
 }
 
