@@ -8,6 +8,6 @@ ADD ./_bin/healthcheck /opt/orbs/
 
 VOLUME /opt/orbs/status
 
-HEALTHCHECK CMD /opt/orbs/healthcheck --url http://localhost:7777 --output /opt/orbs/status.json
+HEALTHCHECK CMD /opt/orbs/healthcheck --url http://localhost:7777 --output /opt/orbs/status/status.json
 
 CMD /opt/orbs/orbs-signer

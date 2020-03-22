@@ -19,6 +19,6 @@ VOLUME /opt/orbs/status
 
 WORKDIR /opt/orbs
 
-HEALTHCHECK CMD /opt/orbs/healthcheck --url http://localhost:8080 --output /opt/orbs/status.json
+HEALTHCHECK CMD /opt/orbs/healthcheck --url http://localhost:8080 --output /opt/orbs/status/status.json
 
 CMD ./orbs-node
