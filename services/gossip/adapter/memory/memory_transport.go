@@ -62,6 +62,10 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	return transport
 }
 
+func (p *memoryTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+//	currently does nothing on purpose
+}
+
 func (p *memoryTransport) GracefulShutdown(shutdownContext context.Context) {
 	p.Lock()
 	defer p.Unlock()

@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -32,6 +33,7 @@ type Node struct {
 	statePersistence            stateStorageAdapter.StatePersistence
 	stateBlockHeightReporter    stateStorageAdapter.BlockHeightReporter
 	transactionPoolBlockTracker *synchronization.BlockTracker // Wait() used in Network.CreateAndStartNodes()
+	managementProvider          management.Provider
 	nativeCompiler              nativeProcessorAdapter.Compiler
 	ethereumConnection          ethereumAdapter.EthereumConnection
 	nodeLogic                   bootstrap.NodeLogic

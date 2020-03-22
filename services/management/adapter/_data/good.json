@@ -1,0 +1,75 @@
+{
+  "CurrentRefTime": 1582616070,
+
+  "PageStartRefTime": 1582612000,
+  "PageEndRefTime": 1582616070,
+
+  "VirtualChains":
+  {
+    "42":
+    {
+      "VirtualChainId": 42,
+
+      "CurrentTopology":
+      [
+        {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
+        {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.3","port":4400},
+        {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.4","port":4400},
+        {"address":"c056dfc0d1fbc7479db11e61d1b0b57612bf7f17","ip":"192.168.199.5","port":4400}
+      ],
+
+      "CommitteeEvents":
+      [
+        {
+          "RefTime": 1582616000,
+          "Committee":
+          [
+            { "EthAddress": "034320222c534e8be4cd3bf8d70cb66ddda59e32", "OrbsAddress": "a328846cd5b4979d68a8c58a9bdfeee657b34de7", "EffectiveStake": 16578435, "IdentityType": 0 },
+            { "EthAddress": "e79489c84518abe2f9b91607734e81fa13c28826", "OrbsAddress": "d27e2e7398e2582f63d0800330010b3e58952ff6", "EffectiveStake": 828363, "IdentityType": 1 }
+          ]
+        },
+        {
+          "RefTime": 1582614000,
+          "Committee":
+          [
+            { "EthAddress": "034320222c534e8be4cd3bf8d70cb66ddda59e32", "OrbsAddress": "a328846cd5b4979d68a8c58a9bdfeee657b34de7", "EffectiveStake": 16578000, "IdentityType": 0 },
+            { "EthAddress": "e79489c84518abe2f9b91607734e81fa13c28826", "OrbsAddress": "d27e2e7398e2582f63d0800330010b3e58952ff6", "EffectiveStake": 828363, "IdentityType": 1 }
+          ]
+        },
+        {
+          "RefTime": 1582613000,
+          "Committee":
+          [
+            { "EthAddress": "034320222c534e8be4cd3bf8d70cb66ddda59e32", "OrbsAddress": "a328846cd5b4979d68a8c58a9bdfeee657b34de7", "EffectiveStake": 16578000, "IdentityType": 0 },
+            { "EthAddress": "e79489c84518abe2f9b91607734e81fa13c28826", "OrbsAddress": "d27e2e7398e2582f63d0800330010b3e58952ff6", "EffectiveStake": 828363, "IdentityType": 1 }
+          ]
+        }
+      ],
+
+      "SubscriptionEvents":
+      [
+        {
+          "RefTime": 1582615003,
+          "Data": { "Status": "active", "Tier": "B0", "RolloutGroup": "ga", "IdentityType": 0, "Params": {} }
+        },
+        {
+          "RefTime": 1582613011,
+          "Data": { "Status": "active", "Tier": "B0", "RolloutGroup": "canary", "IdentityType": 1, "Params": {} }
+        }
+      ],
+
+      "ProtocolVersionEvents":
+      [
+        {
+          "RefTime": 1582615000,
+          "Data": { "RolloutGroup": "ga", "Version": 8 }
+        },
+        {
+          "RefTime": 1582612050,
+          "Data": { "RolloutGroup": "canary", "Version": 9 }
+        }
+      ]
+
+    }
+  }
+}

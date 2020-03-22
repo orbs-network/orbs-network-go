@@ -26,7 +26,7 @@ var LogTag = log.String("adapter", "gossip")
 type DirectTransport struct {
 	govnr.TreeSupervisor
 
-	logger log.Logger
+	logger              log.Logger
 
 	outgoingConnections *outgoingConnections
 	server              *transportServer
@@ -43,13 +43,13 @@ func NewDirectTransport(parentCtx context.Context, config config.GossipTransport
 	t.Supervise(t.server)
 	t.Supervise(t.outgoingConnections)
 
-	t.outgoingConnections.connectAll(parentCtx, config.GossipPeers()) // client goroutines
-	t.server.startSupervisedMainLoop(parentCtx)                       // server goroutine
+	// no client goroutines open by default
+	t.server.startSupervisedMainLoop(parentCtx)                                          // server goroutine
 
 	return t
 }
 
-func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers GossipPeers) {
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
 	t.outgoingConnections.updateTopology(bgCtx, newPeers)
 }
 

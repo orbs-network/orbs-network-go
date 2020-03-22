@@ -26,7 +26,9 @@ type Server struct {
 func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) *Server {
 	_, cancel := context.WithCancel(context.Background())
 
-	config.NewValidator(logger).ValidateSigner(cfg)
+	if err := config.ValidateSigner(cfg); err != nil {
+		panic(err)
+	}
 
 	service := signer.NewService(cfg, logger)
 	api := &api{

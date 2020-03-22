@@ -18,7 +18,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	stateAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
+	testCommitteeProvider "github.com/orbs-network/orbs-network-go/services/virtualmachine/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -37,7 +37,7 @@ func generateDeployTx() *protocol.SignedTransaction {
 type harness struct {
 	vm                services.VirtualMachine
 	repository        *testkit.ManualRepository
-	committeeProvider *committeeProviderAdapter.CommitteeProvider
+	committeeProvider virtualmachine.CommitteeProvider
 }
 
 func newVmHarness(logger log.Logger) *harness {
@@ -46,7 +46,7 @@ func newVmHarness(logger log.Logger) *harness {
 	ssCfg := config.ForStateStorageTest(10, 5, 5000)
 	ssPersistence := stateAdapter.NewStatePersistence(registry)
 	stateStorage := statestorage.NewStateStorage(ssCfg, ssPersistence, nil, logger, registry)
-	committeeProvider := committeeProviderAdapter.NewCommitteeProvider(config.ForCommitteeProviderTests(5), logger)
+	committeeProvider := testCommitteeProvider.NewTestCommitteeProvider(5)
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 	psCfg := config.ForNativeProcessorTests(42)

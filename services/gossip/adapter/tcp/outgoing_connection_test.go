@@ -8,8 +8,8 @@ package tcp
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/scribe/log"
@@ -112,7 +112,7 @@ func (s *serverStub) readSomeBytes() int {
 
 func (s *serverStub) createClientAndConnect(ctx context.Context, t testing.TB, logger log.Logger, keepAliveInterval time.Duration) *outgoingConnection {
 	registry := metric.NewRegistry()
-	peer := config.NewHardCodedGossipPeer(s.port, "127.0.0.1", "012345")
+	peer := adapter.NewGossipPeer(s.port, "127.0.0.1", "012345")
 	client := newOutgoingConnection(peer, logger, registry, createOutgoingConnectionMetrics(registry), &timeouts{keepAliveInterval: keepAliveInterval})
 	client.connect(ctx)
 	s.acceptClientConnection(t)

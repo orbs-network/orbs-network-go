@@ -17,10 +17,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/filesystem"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
+	"github.com/orbs-network/orbs-network-go/services/management"
+	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
 )
@@ -43,7 +44,6 @@ func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	ctx, ctxCancel := context.WithCancel(context.Background())
-	config.NewValidator(logger).ValidateMainNode(nodeConfig) // this will panic if config does not pass validation
 
 	nodeLogger := logger.WithTags(
 		log.Node(nodeConfig.NodeAddress().String()),
@@ -53,17 +53,31 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
 
+	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
+
+	var managementProvider management.Provider
+	if len(nodeConfig.ManagementFilePath()) == 0 {
+		err := config.ValidateInMemoryManagement(nodeConfig)
+		if err != nil {
+			nodeLogger.Error("InMemory parmerters error cannot start" , log.Error(err))
+			panic(err)
+		}
+		managementProvider = managementAdapter.NewMemoryProvider(nodeConfig, nodeLogger)
+	} else {
+		managementProvider = managementAdapter.NewFileProvider(nodeConfig, nodeLogger)
+	}
+
 	blockPersistence, err := filesystem.NewBlockPersistence(nodeConfig, nodeLogger, metricRegistry)
 	if err != nil {
 		panic(fmt.Sprintf("failed initializing blocks database, err=%s", err.Error()))
 	}
 
-	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 	statePersistence := stateStorageAdapter.NewStatePersistence(metricRegistry)
 	ethereumConnection := ethereumAdapter.NewEthereumRpcConnection(nodeConfig, logger, metricRegistry)
 	nativeCompiler := nativeProcessorAdapter.NewNativeCompiler(nodeConfig, nodeLogger, metricRegistry)
-	committeeProvider := committeeProviderAdapter.NewCommitteeProvider(nodeConfig, nodeLogger)
-	nodeLogic := NewNodeLogic(ctx, transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, committeeProvider, nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
+	nodeLogic := NewNodeLogic(ctx,
+		transport, blockPersistence, statePersistence, nil, nil, txPoolAdapter.NewSystemClock(), nativeCompiler, managementProvider,
+		nodeLogger, metricRegistry, nodeConfig, ethereumConnection)
 
 	httpServer.RegisterPublicApi(nodeLogic.PublicApi())
 

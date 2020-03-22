@@ -12,7 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -22,17 +22,21 @@ import (
 
 var LogTag = log.Service("virtual-machine")
 
+type CommitteeProvider interface {
+	GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress
+}
+
 type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	committeeProvider    adapter.CommitteeProvider
+	committeeProvider    CommitteeProvider
 	logger               log.Logger
 
 	contexts *executionContextProvider
 }
 
-func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, committeeProvider adapter.CommitteeProvider, logger log.Logger, ) services.VirtualMachine {
+func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, committeeProvider CommitteeProvider, logger log.Logger, ) services.VirtualMachine {
 
 	s := &service{
 		processors:           processors,

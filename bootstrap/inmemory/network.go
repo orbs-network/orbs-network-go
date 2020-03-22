@@ -18,11 +18,12 @@ import (
 	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	ethereumAdapter "github.com/orbs-network/orbs-network-go/services/crosschainconnector/ethereum/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
+	"github.com/orbs-network/orbs-network-go/services/management"
+	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	nativeProcessorAdapter "github.com/orbs-network/orbs-network-go/services/processor/native/adapter"
 	stateStorageAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	stateStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
-	committeeProviderAdapter "github.com/orbs-network/orbs-network-go/services/virtualmachine/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -38,32 +39,31 @@ import (
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
 	govnr.TreeSupervisor
-	Nodes             []*Node
-	Logger            log.Logger
-	Transport         adapter.Transport
-	CommitteeProvider committeeProviderAdapter.CommitteeProvider
-	VirtualChainId    primitives.VirtualChainId
-	MaybeClock        txPoolAdapter.Clock
+	Nodes              []*Node
+	Logger             log.Logger
+	Transport          adapter.Transport
+	VirtualChainId     primitives.VirtualChainId
+	MaybeClock         txPoolAdapter.Clock
 }
 
 type NodeDependencies struct {
 	Compiler                           nativeProcessorAdapter.Compiler
 	EtherConnection                    ethereumAdapter.EthereumConnection
 	BlockPersistence                   blockStorageAdapter.BlockPersistence
+	ManagementProvider                 management.Provider
 	StatePersistence                   stateStorageAdapter.StatePersistence
 	StateBlockHeightReporter           stateStorageAdapter.BlockHeightReporter
 	TransactionPoolBlockHeightReporter *synchronization.BlockTracker
 }
 type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger log.Logger, metricRegistry metric.Registry) *NodeDependencies
 
-func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.Logger, cfgTemplate config.OverridableConfig, transport adapter.Transport, committeeProvider committeeProviderAdapter.CommitteeProvider, maybeClock txPoolAdapter.Clock, provider nodeDependencyProvider) *Network {
+func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.Logger, cfgTemplate config.OverridableConfig, transport adapter.Transport, maybeClock txPoolAdapter.Clock, provider nodeDependencyProvider) *Network {
 
 	network := &Network{
-		Logger:            parent,
-		Transport:         transport,
-		CommitteeProvider: committeeProvider,
-		MaybeClock:        maybeClock,
-		VirtualChainId:    cfgTemplate.VirtualChainId(),
+		Logger:             parent,
+		Transport:          transport,
+		MaybeClock:         maybeClock,
+		VirtualChainId:     cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 	parent.Info(configToStr(cfgTemplate))
@@ -79,6 +79,7 @@ func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOr
 			dep.BlockPersistence = blockStorageMemoryAdapter.NewBlockPersistence(nodeLogger, metricRegistry)
 			dep.Compiler = nativeProcessorAdapter.NewNativeCompiler(cfgTemplate, nodeLogger, metricRegistry)
 			dep.EtherConnection = ethereumAdapter.NewEthereumRpcConnection(cfgTemplate, nodeLogger, metricRegistry)
+			dep.ManagementProvider = managementAdapter.NewMemoryProvider(cfgTemplate, nodeLogger)
 			dep.StatePersistence = stateStorageMemoryAdapter.NewStatePersistence(metricRegistry)
 			dep.StateBlockHeightReporter = synchronization.NopHeightReporter{}
 			dep.TransactionPoolBlockHeightReporter = synchronization.NewBlockTracker(nodeLogger, 0, math.MaxUint16)
@@ -121,6 +122,7 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *
 	node.stateBlockHeightReporter = nodeDependencies.StateBlockHeightReporter
 	node.transactionPoolBlockTracker = nodeDependencies.TransactionPoolBlockHeightReporter
 	node.blockPersistence = nodeDependencies.BlockPersistence
+	node.managementProvider = nodeDependencies.ManagementProvider
 	node.nativeCompiler = nodeDependencies.Compiler
 	node.ethereumConnection = nodeDependencies.EtherConnection
 	node.metricRegistry = metricRegistry
@@ -145,7 +147,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			node.transactionPoolBlockTracker,
 			n.MaybeClock,
 			node.nativeCompiler,
-			n.CommitteeProvider,
+			node.managementProvider,
 			nodeLogger,
 			node.metricRegistry,
 			node.config,

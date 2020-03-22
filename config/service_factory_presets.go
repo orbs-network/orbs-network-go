@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map[string]GossipPeer, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
+func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers topologyProviderAdapter.GossipPeers, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetGossipPeers(gossipPeers)
@@ -22,6 +23,7 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, keepAliveInterval)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, networkTimeout)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 100*time.Millisecond)
 
 	return cfg
 }
@@ -29,12 +31,13 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers map
 func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(make(map[string]GossipPeer))
+	cfg.SetGossipPeers(make(topologyProviderAdapter.GossipPeers))
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(0))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 10*time.Second)
 
 	return cfg
 }
@@ -49,19 +52,6 @@ func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, triggersEnabled)
-
-	return cfg
-}
-
-func ForCommitteeProviderTests(numOfNodes int) CommitteeProviderConfig {
-	cfg := emptyConfig()
-
-	nodes := make(map[string]ValidatorNode)
-	for i := 0; i < numOfNodes;i++ {
-		nodeAddr := testKeys.NodeAddressesForTests()[i]
-		nodes[nodeAddr.KeyForMap()] = &hardCodedValidatorNode{nodeAddress: nodeAddr}
-	}
-	cfg.SetGenesisValidatorNodes(nodes)
 
 	return cfg
 }
