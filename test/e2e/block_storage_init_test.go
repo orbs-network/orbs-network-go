@@ -20,7 +20,7 @@ func TestInitialBlockHeight(t *testing.T) {
 
 	h := NewAppHarness()
 
-	if h.envSupportsLoadingWithCannedBlocksFile() {
+	if h.envSupportsTestingFileAssets() {
 		t.Skip("Running against remote network - skipping")
 	}
 

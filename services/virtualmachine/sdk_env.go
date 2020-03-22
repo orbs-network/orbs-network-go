@@ -108,7 +108,7 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
-		committeeNodeAddresses, err = s.committeeProvider.GetCommittee(ctx, uint64(executionContext.currentBlockHeight))
+		committeeNodeAddresses = s.committeeProvider.GetCommittee(ctx, uint64(executionContext.currentBlockHeight))
 	}
 	var committee [][]byte
 	for _, c := range committeeNodeAddresses {

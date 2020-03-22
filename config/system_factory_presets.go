@@ -7,6 +7,7 @@
 package config
 
 import (
+	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -20,6 +21,9 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(PROTOCOL_VERSION, 1)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
+
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 1*time.Minute)
+	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 450ms
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 4*time.Second)
@@ -40,8 +44,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
 
-	// don't auto start triggers
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false)
+	// have triggers transactions by default
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -121,7 +125,7 @@ func ForE2E(
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
-	gossipPeers map[string]GossipPeer,
+	gossipPeers topologyProviderAdapter.GossipPeers,
 	genesisValidatorNodes map[string]ValidatorNode,
 	blockStorageDataDirPrefix string,
 	processorArtifactPath string,
@@ -149,9 +153,6 @@ func ForE2E(
 
 	// max execution time (time validators allow until they get the executed block)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
-
-	// have triggers and committee
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 
 	// scheduling hick-ups inside the node
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)
@@ -208,6 +209,7 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 3*time.Millisecond)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
@@ -217,7 +219,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 24*time.Hour) // ridiculously long timeout to reflect "forever"
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 3000*time.Millisecond)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, maxTxPerBlock)
-	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 3*time.Millisecond)
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 5)
@@ -250,6 +251,7 @@ func TemplateForGamma(
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 10*time.Second)
 	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 24*time.Hour)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 10)
+	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, false) // currently no reputation is needed in gamma
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 5)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 10*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 24*time.Hour)
