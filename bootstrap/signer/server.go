@@ -23,11 +23,11 @@ type Server struct {
 	httpServer *httpServer
 }
 
-func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) *Server {
+func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) (*Server, error) {
 	_, cancel := context.WithCancel(context.Background())
 
 	if err := config.ValidateSigner(cfg); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	service := signer.NewService(cfg, logger)
@@ -36,9 +36,8 @@ func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) *Serve
 	}
 
 	httpServer, err := NewHttpServer(cfg.HttpAddress(), logger)
-	// Must find a better way
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	httpServer.Router().HandleFunc("/", api.IndexHandler)
@@ -52,7 +51,7 @@ func StartSignerServer(cfg config.SignerServiceConfig, logger log.Logger) *Serve
 
 	s.Supervise(httpServer)
 
-	return s
+	return s, nil
 }
 
 func (s *Server) GracefulShutdown(shutdownContext context.Context) {

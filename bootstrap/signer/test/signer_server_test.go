@@ -47,7 +47,8 @@ func TestSignerServer(t *testing.T) {
 		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 		testLogger := log.GetLogger().WithOutput(testOutput)
 
-		server := signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
+		server, err := signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
+		require.NoError(t, err)
 		defer server.GracefulShutdown(ctx)
 
 		c := crypto.NewSignerClient("http://" + address)
@@ -75,8 +76,7 @@ func TestSignerServerWithWrongConfiguration(t *testing.T) {
 		testOutput := log.NewTestOutput(t, log.NewHumanReadableFormatter())
 		testLogger := log.GetLogger().WithOutput(testOutput)
 
-		require.PanicsWithValue(t, "node address a328846cd5b4979d68a8c58a9bdfeee657b34de7 derived from secret key does not match provided node address 68656c6c6f", func() {
-			signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
-		})
+		_, err := signer.StartSignerServer(&signerServerConfig{pk, nodeAddress, address}, testLogger)
+		require.EqualError(t, err, "node address a328846cd5b4979d68a8c58a9bdfeee657b34de7 derived from secret key does not match provided node address 68656c6c6f")
 	})
 }

@@ -34,11 +34,18 @@ func main() {
 		return
 	}
 
+	logger := getLogger()
 	cfg, err := config.GetNodeConfigFromFiles(configFiles, *httpAddress)
 	if err != nil {
-		fmt.Printf("%s \n", err)
+		logger.Error("failed to parse configuration", log.Error(err))
 		os.Exit(1)
 	}
 
-	signer.StartSignerServer(cfg, getLogger()).WaitUntilShutdown(context.Background())
+	server, err := signer.StartSignerServer(cfg, logger)
+	if err != nil {
+		logger.Error("failed to start signer service", log.Error(err))
+		os.Exit(1)
+	}
+
+	server.WaitUntilShutdown(context.Background())
 }
