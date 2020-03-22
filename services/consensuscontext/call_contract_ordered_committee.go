@@ -19,49 +19,18 @@ import (
 	"time"
 )
 
-const CALL_COMMITTEE_CONTRACT_INTERVAL = 200 * time.Millisecond
-
 func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// current block is used as seed and needs to be for the block being calculated Now.
-	logger.Info("system-call GetOrderedCommittee", logfields.BlockHeight(currentBlockHeight), log.Stringable("interval-between-attempts", CALL_COMMITTEE_CONTRACT_INTERVAL))
-	orderedCommittee, err := s.callGetOrderedCommitteeSystemContractUntilSuccess(ctx, currentBlockHeight)
+	logger.Info("system-call GetOrderedCommittee", logfields.BlockHeight(currentBlockHeight))
+	orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, currentBlockHeight)
 	if err != nil {
 		return nil, err
 	}
 	logger.Info("system-call elected validators", log.Int("num-results", len(orderedCommittee)), logfields.BlockHeight(currentBlockHeight))
 
 	return orderedCommittee, nil
-}
-
-func (s *service) callGetOrderedCommitteeSystemContractUntilSuccess(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
-	attempts := 1
-	for {
-		// exit on system shutdown
-		if ctx.Err() != nil {
-			return nil, errors.New("context terminated during callGetOrderedCommitteeSystemContractUntilSuccess")
-		}
-
-		orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, blockHeight)
-		if err == nil {
-			return orderedCommittee, nil
-		}
-
-		// log every 500 failures
-		if attempts%500 == 1 {
-			if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
-				s.logger.Info("cannot get ordered committee from system contract", log.Error(err), logfields.BlockHeight(blockHeight), log.Int("attempts", attempts))
-			}
-		}
-
-		// sleep or wait for ctx done, whichever comes first
-		sleepOrShutdown, cancel := context.WithTimeout(ctx, CALL_COMMITTEE_CONTRACT_INTERVAL)
-		<-sleepOrShutdown.Done()
-		cancel()
-
-		attempts++
-	}
 }
 
 func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {

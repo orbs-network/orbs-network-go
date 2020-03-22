@@ -8,50 +8,97 @@ package test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/consensuscontext"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
-	"github.com/stretchr/testify/require"
-	"math/rand"
 	"testing"
 	"time"
 )
 
-func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
+
+// Node Sync assumes consensus verifies block without blocking
+// Start syncing - in parallel to consensus service progressing
+// During HandleBlockConsensus and before block proof verification, commit blocks from consensus:
+// Example: during block execution check (audit mode) receive "numOfStateRevisionsToRetain" commits from consensus
+// Calling old state for committee fails - too far back (out of stateStorage cache reach)
+// Recover from "Old State" query (consensusContext does not poll forever)
+func TestSyncPetitioner_ConsensusVerify_NonBlocking(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
+			withSyncBroadcast(1).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
-			withSyncCollectChunksTimeout(50 * time.Millisecond)
+			withSyncCollectChunksTimeout(50 * time.Millisecond).
+			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch")
 
-		const NUM_BLOCKS = 50
+
+		blocks := []*protocol.BlockPairContainer{
+			builders.BlockPair().WithHeight(primitives.BlockHeight(1)).WithBlockCreated(time.Now()).Build(),
+			builders.BlockPair().WithHeight(primitives.BlockHeight(2)).WithBlockCreated(time.Now()).Build(),
+			builders.BlockPair().WithHeight(primitives.BlockHeight(3)).WithBlockCreated(time.Now()).Build(),
+			builders.BlockPair().WithHeight(primitives.BlockHeight(4)).WithBlockCreated(time.Now()).Build(),
+		}
+
+		numOfStateRevisionsToRetain := 2
+		virtualMachine := &services.MockVirtualMachine{}
+		consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, config.ForConsensusContextTests(false), harness.Logger, metric.NewRegistry())
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		committedBlockHeights := make(chan primitives.BlockHeight, 10)
 		done := make(chan struct{})
+		simulatedCommitsTarget := numOfStateRevisionsToRetain + 1
 
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
-			respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7)
+			respondToBroadcastAvailabilityRequest(ctx, harness, input, 4, 1)
 			return nil, nil
 		})
 
 		harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-			if input.Message.SignedChunkRange.LastBlockHeight() >= NUM_BLOCKS {
-				done <- struct{}{}
-			}
-			respondToBlockSyncRequestWithConcurrentCommit(t, ctx, harness, input, NUM_BLOCKS)
+			response := builders.BlockSyncResponseInput().
+				WithFirstBlockHeight(input.Message.SignedChunkRange.FirstBlockHeight()).
+				WithLastBlockHeight(input.Message.SignedChunkRange.LastBlockHeight()).
+				WithLastCommittedBlockHeight(primitives.BlockHeight(4)).
+				WithSenderNodeAddress(input.RecipientNodeAddress).Build()
+
+			go func() {
+				harness.blockStorage.HandleBlockSyncResponse(ctx, response)
+			}()
 			return nil, nil
 		})
 
+		harness.stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.GetLastCommittedBlockInfoInput) (*services.GetLastCommittedBlockInfoOutput, error) {
+			output := harness.getLastBlockHeight(ctx, t)
+			return &services.GetLastCommittedBlockInfoOutput{
+				LastCommittedBlockHeight: output.LastCommittedBlockHeight,
+			}, nil
+		})
+
+		virtualMachine.When("CallSystemContract", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
+			output, _ := harness.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
+			currentHeight := output.LastCommittedBlockHeight
+			if currentHeight >= input.BlockHeight + primitives.BlockHeight(numOfStateRevisionsToRetain) {
+				return nil, errors.New(fmt.Sprintf("unsupported block height: block %d too old. currently at %d. keeping %d back", input.BlockHeight, currentHeight, numOfStateRevisionsToRetain))
+			}
+			return &services.CallSystemContractOutput{
+				OutputArgumentArray: &protocol.ArgumentArray{},
+				CallResult:          protocol.EXECUTION_RESULT_SUCCESS,
+			}, nil
+		})
+
 		harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-			if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE && input.PrevCommittedBlockPair != nil {
-				currHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
-				prevHeight := input.PrevCommittedBlockPair.TransactionsBlock.Header.BlockHeight()
-				if currHeight != prevHeight+1 {
-					done <- struct{}{}
-					require.Failf(t, "HandleBlockConsensus given invalid args", "called with height %d and prev height %d", currHeight, prevHeight)
-				}
+			if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE  {
+				simulateConsensusCommits(ctx, harness, blocks, committedBlockHeights, simulatedCommitsTarget)
+				simulateVerifyBlockConsensus(ctx, t, consensusContext, input.BlockPair.TransactionsBlock.Header.BlockHeight(), done)
 			}
 			return nil, nil
 		})
@@ -59,39 +106,31 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 		harness.start(ctx)
 
 		select {
-		case <-done:
-			// test passed
-		case <-ctx.Done():
-			t.Fatalf("timed out waiting for sync flow to complete")
+			case <-done:
+				// test passed
+			case <-timeoutCtx.Done():
+				t.Fatalf("timed out waiting for sync flow to recover")
 		}
 	})
 }
 
-// this would attempt to commit the same blocks at the same time from the sync flow and directly (simulating blocks arriving from consensus)
-func respondToBlockSyncRequestWithConcurrentCommit(t testing.TB, ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, availableBlocks int) {
-	response := builders.BlockSyncResponseInput().
-		WithFirstBlockHeight(input.Message.SignedChunkRange.FirstBlockHeight()).
-		WithLastBlockHeight(input.Message.SignedChunkRange.LastBlockHeight()).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
-		WithSenderNodeAddress(input.RecipientNodeAddress).Build()
 
+func simulateConsensusCommits(ctx context.Context, harness *harness, blocks []*protocol.BlockPairContainer, committedBlockHeights chan primitives.BlockHeight, target int) {
+	for i := 0; i < target; i++ {
+		_, err := harness.commitBlock(ctx, blocks[i])
+		if err == nil {
+			committedBlockHeights <- blocks[i].ResultsBlock.Header.BlockHeight()
+		}
+	}
+}
+
+func simulateVerifyBlockConsensus(ctx context.Context, tb testing.TB, consensusContext services.ConsensusContext, currentBlockHeight primitives.BlockHeight, done chan struct{}) {
 	go func() {
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Nanosecond)
-		_, err := harness.blockStorage.HandleBlockSyncResponse(ctx, response)
-		require.NoError(t, err, "failed handling block sync response")
-
-	}()
-
-	go func() {
-		time.Sleep(time.Duration(rand.Intn(1000)) * time.Nanosecond)
-		_, err := harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
-			BlockPair: response.Message.BlockPairs[0],
+		consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
+			CurrentBlockHeight: currentBlockHeight,
+			RandomSeed:         0,
+			MaxCommitteeSize:   4,
 		})
-		require.NoError(t, err, "failed committing first block in parallel to sync")
-		_, err = harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
-			BlockPair: response.Message.BlockPairs[1],
-		})
-		require.NoError(t, err, "failed committing second block in parallel to sync")
-
+		done <- struct{}{}
 	}()
 }
