@@ -25,8 +25,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 1*time.Minute)
 	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
 
-	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 450ms
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 4*time.Second)
+	// 2*slow_network_latency + avg_network_latency + 2*execution_time \  + empty block time
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 14*time.Second)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 2*time.Second)
 
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
@@ -34,7 +34,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, false)
 
 	// if above round time, we'll have leader changes when no traffic
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 5*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 9*time.Second)
 
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 66)
 
@@ -42,7 +42,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 1000)
 
 	// max execution time (time validators allow until they get the executed block)
-	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 30*time.Second)
+	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 60*time.Second)
 
 	// have triggers transactions by default
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, true)
@@ -55,7 +55,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(BLOCK_SYNC_NUM_BLOCKS_IN_BATCH, 100)
 
 	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
-	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 6*time.Second)
+	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 18*time.Second)
 
 	// makes sync slower, 4*slow_network_latency
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Second)
@@ -209,7 +209,7 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 3*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 2*time.Millisecond)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)

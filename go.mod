@@ -27,7 +27,7 @@ require (
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/healthcheck v0.0.0-20200319121938-0c2880ec01cb // indirect
-	github.com/orbs-network/lean-helix-go v0.2.6
+	github.com/orbs-network/lean-helix-go v0.2.7
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
 	github.com/orbs-network/orbs-contract-sdk v1.5.0
