@@ -5,6 +5,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -34,7 +35,12 @@ func newMemoryConfig() *cfg {
 func (c *cfg) GossipPeers() adapter.GossipPeers {
 	return make(adapter.GossipPeers)
 }
+
 func (c *cfg) GenesisValidatorNodes() map[string]config.ValidatorNode {
 	return make(map[string]config.ValidatorNode)
+}
+
+func (c *cfg) ProtocolVersion() primitives.ProtocolVersion {
+	return 1
 }
 

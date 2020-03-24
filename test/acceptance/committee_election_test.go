@@ -16,11 +16,14 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithManagementUpdateInterval(2*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -61,6 +64,8 @@ func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
 func TestLeanHelix_MultipleReElections(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithManagementUpdateInterval(2*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -90,6 +95,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 	NewHarness().
 		WithNumNodes(8).
+		WithManagementUpdateInterval(2*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -134,6 +140,8 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 	NewHarness().
 		WithNumNodes(7).
+		WithManagementUpdateInterval(2*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -165,7 +173,6 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 
 		})
 }
-
 
 func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Network, nodeIndices ...int) {
 	var committee []primitives.NodeAddress

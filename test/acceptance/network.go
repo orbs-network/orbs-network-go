@@ -56,14 +56,14 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	ctx, cancel := context.WithCancel(context.Background())
 	govnr.Recover(logfields.GovnrErrorer(logger), func() {
 		defer cancel()
-		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, nil)
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, 0, nil)
 		network.CreateAndStartNodes(ctx, 2)
 		f(ctx, network)
 	})
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementUpdateTime time.Duration,
 	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *Network {
 
 	testLogger.Info("===========================================================================")
@@ -90,6 +90,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 		requiredQuorumPercentage,
 		vcid,
 		emptyBlockTime,
+		managementUpdateTime,
 	)
 
 	if configOverride != nil {

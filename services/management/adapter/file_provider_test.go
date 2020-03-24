@@ -42,13 +42,13 @@ func TestFileTopology_ReadUrl(t *testing.T) {
 }
 
 func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp management.Provider) {
-	ref, topology, committees, err := fp.Get(ctx)
+	data, err := fp.Get(ctx)
 	require.NoError(t, err)
-	require.EqualValues(t, ref, 1582616070)
-	require.Len(t, topology, 4)
-	requireTopologyToBeSameAsStatic(t, topology)
-	require.Len(t, committees, 3)
-	requireCommitteeToBeSameAsStatic(t, committees)
+	require.EqualValues(t, data.CurrentReference, 1582616070)
+	require.Len(t, data.Topology, 4)
+	requireTopologyToBeSameAsStatic(t, data.Topology)
+	require.Len(t, data.Committees, 3)
+	requireCommitteeToBeSameAsStatic(t, data.Committees)
 }
 
 func requireTopologyToBeSameAsStatic(t *testing.T, peers adapter.GossipPeers) {
@@ -61,7 +61,7 @@ func requireTopologyToBeSameAsStatic(t *testing.T, peers adapter.GossipPeers) {
 	require.EqualValues(t, staticTopology, peers)
 }
 
-func requireCommitteeToBeSameAsStatic(t *testing.T, c []*management.CommitteeTerm) {
+func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm) {
 	committee := []primitives.NodeAddress{testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()}
 	// notice order of ref from small to big.
 	require.EqualValues(t, 1582613000, c[0].AsOfReference)
