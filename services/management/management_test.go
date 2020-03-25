@@ -91,16 +91,21 @@ func TestManagement_GetCommitteeWhenTwoChangesClose(t *testing.T) {
 
 func newStaticCommitteeManagement(ref uint64, committee []primitives.NodeAddress) *Service{
 	return &Service{
-		committees:[]*CommitteeTerm{{ref, committee}},
+		data: &VirtualChainManagementData{
+			CurrentReference: ref,
+			Topology:         nil,
+			Committees:       []CommitteeTerm{{ref, committee}},
+			Subscriptions:    nil,
+			ProtocolVersions: nil,
+		},
 	}
 }
 
 func (s* Service) addCommittee(ref uint64, committee []primitives.NodeAddress) {
 	s.Lock()
 	defer s.Unlock()
-	s.committees = append (s.committees, &CommitteeTerm{ref, committee})
+	s.data.Committees = append (s.data.Committees, CommitteeTerm{ref, committee})
 }
-
 
 func TestManagement_InternalDataOnlyChangesAfterUpdateWhenAutoUpdateDisabled(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
@@ -134,10 +139,16 @@ func newStaticProvider(ref uint64, committee []primitives.NodeAddress) *staticPr
 	return &staticProvider{ ref:ref, committee:committee}
 }
 
-func (sp *staticProvider) Get(ctx context.Context) (uint64, adapterGossip.GossipPeers, []*CommitteeTerm, error) {
+func (sp *staticProvider) Get(ctx context.Context) (*VirtualChainManagementData, error) {
 	sp.RLock()
 	defer sp.RUnlock()
-	return sp.ref, make(adapterGossip.GossipPeers), []*CommitteeTerm{{sp.ref, sp.committee}}, nil
+	return &VirtualChainManagementData{
+		CurrentReference: sp.ref,
+		Topology:         make(adapterGossip.GossipPeers),
+		Committees:       []CommitteeTerm{{sp.ref, sp.committee}},
+		Subscriptions:    nil,
+		ProtocolVersions: nil,
+	}, nil
 }
 
 func (sp *staticProvider) UpdateTopology(bgCtx context.Context, newPeers adapterGossip.GossipPeers) {

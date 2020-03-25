@@ -22,40 +22,56 @@ import (
 type MemoryConfig interface {
 	GossipPeers() adapter.GossipPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
+	ProtocolVersion() primitives.ProtocolVersion
 }
 
 type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
-	currentReference uint64
-	topology adapter.GossipPeers
-	committees []*management.CommitteeTerm
+	currentReference      uint64
+	topology              adapter.GossipPeers
+	committees            []management.CommitteeTerm
+	protocolVersions      []management.ProtocolVersionTerm
+	isSubscriptionActives []management.SubscriptionTerm
 }
 
 func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(config)
-	return  &MemoryProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{AsOfReference: 0, Committee: committee}}, logger :logger}
+	return &MemoryProvider{
+		logger:                logger,
+		currentReference:      0,
+		topology:              config.GossipPeers(),
+		committees:            []management.CommitteeTerm{{AsOfReference: 0, Committee: committee}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.ProtocolVersion()}},
+		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
+	}
 }
 
-func (mp *MemoryProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
+func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
 	mp.RLock()
 	defer mp.RUnlock()
 
-	return mp.currentReference, mp.topology, mp.committees, nil
+	return &management.VirtualChainManagementData{
+		CurrentReference: mp.currentReference,
+		Topology:         mp.topology,
+		Committees:       mp.committees,
+		Subscriptions:    mp.isSubscriptionActives,
+        ProtocolVersions: mp.protocolVersions,
+	}, nil
 }
 
 // for acceptance tests
-func (mp *MemoryProvider) AddCommittee(referenceNumber uint64, committee []primitives.NodeAddress) error {
+func (mp *MemoryProvider) AddCommittee(reference uint64, committee []primitives.NodeAddress) error {
 	mp.Lock()
 	defer mp.Unlock()
 
-	if mp.committees[len(mp.committees)-1].AsOfReference >= referenceNumber {
-		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, referenceNumber)
+	if mp.committees[len(mp.committees)-1].AsOfReference >= reference {
+		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
 	}
 
-	mp.committees = append(mp.committees, &management.CommitteeTerm{ AsOfReference: referenceNumber, Committee: committee})
-	mp.currentReference = referenceNumber
+	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Committee: committee})
+	mp.currentReference = reference
 	return nil
 }
 

@@ -17,7 +17,7 @@ type Config interface {
 }
 
 type Provider interface { // update of data provider
-	Get(ctx context.Context) (uint64, adapterGossip.GossipPeers, []*CommitteeTerm, error)
+	Get(ctx context.Context) (*VirtualChainManagementData, error)
 }
 
 type TopologyConsumer interface { // consumer that needs to get topology update message
@@ -29,6 +29,24 @@ type CommitteeTerm struct {
 	Committee     []primitives.NodeAddress
 }
 
+type SubscriptionTerm struct {
+	AsOfReference uint64
+	IsActive bool
+}
+
+type ProtocolVersionTerm struct {
+	AsOfReference uint64
+	Version      primitives.ProtocolVersion
+}
+
+type VirtualChainManagementData struct {
+	CurrentReference uint64
+	Topology         adapterGossip.GossipPeers
+	Committees       []CommitteeTerm
+	Subscriptions    []SubscriptionTerm
+	ProtocolVersions []ProtocolVersionTerm
+}
+
 type Service struct {
 	govnr.TreeSupervisor
 
@@ -38,9 +56,7 @@ type Service struct {
 	topologyConsumer TopologyConsumer
 
 	sync.RWMutex
-	currentReference uint64
-	topology         adapterGossip.GossipPeers
-	committees       []*CommitteeTerm
+	data *VirtualChainManagementData
 }
 
 func NewManagement(parentCtx context.Context, config Config, provider Provider, topologyConsumer TopologyConsumer, parentLogger log.Logger) *Service {
@@ -68,39 +84,55 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 func (s *Service) GetCurrentReference(ctx context.Context) uint64 {
 	s.RLock()
 	defer s.RUnlock()
-	return s.currentReference
+	return s.data.CurrentReference
 }
 
 func (s *Service) GetTopology(ctx context.Context) adapterGossip.GossipPeers {
 	s.RLock()
 	defer s.RUnlock()
-	return s.topology
+	return s.data.Topology
 }
 
-func (s *Service) GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress {
+func (s *Service) GetCommittee(ctx context.Context, reference uint64) []primitives.NodeAddress {
 	s.RLock()
 	defer s.RUnlock()
-	i := len(s.committees) - 1
-	for ; i > 0 && referenceNumber < s.committees[i].AsOfReference; i-- {
+	i := len(s.data.Committees) - 1
+	for ; i > 0 && reference < s.data.Committees[i].AsOfReference; i-- {
 	}
-	return s.committees[i].Committee
+	return s.data.Committees[i].Committee
 }
 
-func (s *Service) write(referenceNumber uint64, peers adapterGossip.GossipPeers, committees []*CommitteeTerm) {
+func (s *Service) GetSubscriptionStatus(ctx context.Context, reference uint64) bool {
+	s.RLock()
+	defer s.RUnlock()
+	i := len(s.data.Subscriptions) - 1
+	for ; i > 0 && reference < s.data.Subscriptions[i].AsOfReference; i-- {
+	}
+	return s.data.Subscriptions[i].IsActive
+}
+
+func (s *Service) GetProtocolVersion(ctx context.Context, reference uint64) primitives.ProtocolVersion {
+	s.RLock()
+	defer s.RUnlock()
+	i := len(s.data.ProtocolVersions) - 1
+	for ; i > 0 && reference < s.data.ProtocolVersions[i].AsOfReference; i-- {
+	}
+	return s.data.ProtocolVersions[i].Version
+}
+
+func (s *Service) write(newData *VirtualChainManagementData) {
 	s.Lock()
 	defer s.Unlock()
-	s.currentReference = referenceNumber
-	s.topology = peers
-	s.committees = committees
+	s.data = newData
 }
 
 func (s *Service) update(ctx context.Context) error {
-	reference, peers, committees, err := s.provider.Get(ctx)
+	data, err := s.provider.Get(ctx)
 	if err != nil {
 		return err
 	}
-	s.write(reference, peers, committees)
-	s.topologyConsumer.UpdateTopology(ctx, peers)
+	s.write(data)
+	s.topologyConsumer.UpdateTopology(ctx, s.data.Topology)
 	return nil
 }
 
