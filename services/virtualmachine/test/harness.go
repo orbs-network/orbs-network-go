@@ -9,8 +9,8 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -204,7 +204,7 @@ type committeeProvider struct {
 }
 
 func NewTestCommitteeProvider(numOfNodes int) *committeeProvider {
-	return  &committeeProvider{testKeys.NodeAddressesForTests()[:numOfNodes]}
+	return &committeeProvider{testKeys.NodeAddressesForTests()[:numOfNodes]}
 }
 
 func (cp *committeeProvider) GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress {

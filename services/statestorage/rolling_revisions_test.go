@@ -8,8 +8,8 @@ package statestorage
 
 import (
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -98,7 +98,7 @@ func TestMergeToPersistence(t *testing.T) {
 				require.EqualValues(t, writeCallCount, height)
 				require.EqualValues(t, writeCallCount, ts)
 				require.EqualValues(t, []byte{0x01}, proposer)
-			require.EqualValues(t, primitives.Sha256{writeCallCount}, root)
+				require.EqualValues(t, primitives.Sha256{writeCallCount}, root)
 				writeCallCount++
 				return nil
 			}).

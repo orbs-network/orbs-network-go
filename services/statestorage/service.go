@@ -9,8 +9,8 @@ package statestorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"

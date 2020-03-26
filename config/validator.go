@@ -9,13 +9,11 @@ package config
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 )
-
-
 
 func ValidateNodeLogic(cfg NodeConfig) error {
 	if cfg.BlockSyncNoCommitInterval() < cfg.BenchmarkConsensusRetryInterval() {

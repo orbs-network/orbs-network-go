@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 )
 
 func main() {

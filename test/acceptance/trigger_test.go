@@ -2,7 +2,7 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-client-sdk-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"

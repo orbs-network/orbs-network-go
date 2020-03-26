@@ -7,8 +7,8 @@
 package virtualmachine
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 )
 

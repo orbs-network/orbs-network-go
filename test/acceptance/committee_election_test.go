@@ -8,7 +8,7 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -72,7 +72,7 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
 
 			t.Log("elect 1,2,3,4")
-			waitUntilCommitteeApplies(t, ctx, network,1, 2, 3, 4)
+			waitUntilCommitteeApplies(t, ctx, network, 1, 2, 3, 4)
 
 			t.Log("elect 2,3,4,5")
 			waitUntilCommitteeApplies(t, ctx, network, 2, 3, 4, 5)
@@ -168,7 +168,6 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 
 		})
 }
-
 
 func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Network, nodeIndices ...int) {
 	var committee []primitives.NodeAddress

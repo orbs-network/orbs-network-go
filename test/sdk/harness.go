@@ -10,8 +10,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/testkit"
@@ -62,8 +62,8 @@ func newVmHarness(logger log.Logger) *harness {
 
 	return &harness{
 		committeeProvider: committeeProvider,
-		vm:         vm,
-		repository: repo,
+		vm:                vm,
+		repository:        repo,
 	}
 }
 

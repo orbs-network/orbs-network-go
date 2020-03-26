@@ -8,9 +8,9 @@ package leanhelixconsensus
 
 import (
 	"context"
+	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"

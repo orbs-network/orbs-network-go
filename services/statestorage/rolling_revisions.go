@@ -9,8 +9,8 @@ package statestorage
 import (
 	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -40,7 +40,7 @@ type rollingRevisions struct {
 	currentHeight      primitives.BlockHeight
 	currentTs          primitives.TimestampNano
 	currentMerkleRoot  primitives.Sha256
-	currentProposer	   primitives.NodeAddress
+	currentProposer    primitives.NodeAddress
 	persistedHeight    primitives.BlockHeight
 	persistedRoot      primitives.Sha256
 	persistedTs        primitives.TimestampNano

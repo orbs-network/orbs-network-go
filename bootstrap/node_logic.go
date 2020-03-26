@@ -9,9 +9,9 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
@@ -59,14 +59,14 @@ func NewNodeLogic(parentCtx context.Context,
 	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
 	maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler,
 	managementProvider management.Provider,
-	logger log.Logger, 	metricRegistry metric.Registry, nodeConfig config.NodeConfig,
-	ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
+	logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig,
+	ethereumConnection ethereumAdapter.EthereumConnection) NodeLogic {
 
 	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
 	err := config.ValidateNodeLogic(nodeConfig)
 	if err != nil {
-		logger.Error("Node logic error cannot start" , log.Error(err))
+		logger.Error("Node logic error cannot start", log.Error(err))
 		panic(err)
 	}
 
@@ -79,7 +79,7 @@ func NewNodeLogic(parentCtx context.Context,
 
 	signer, err := signer.New(nodeConfig)
 	if err != nil {
-		logger.Error("Node logic signer error cannot start" , log.Error(err))
+		logger.Error("Node logic signer error cannot start", log.Error(err))
 		panic(fmt.Sprintf("Node logic signer error cannot start: %s", err))
 	}
 

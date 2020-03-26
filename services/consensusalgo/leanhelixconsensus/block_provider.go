@@ -9,9 +9,9 @@ package leanhelixconsensus
 import (
 	"bytes"
 	"context"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -104,11 +104,11 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 	// get rx
 	rxOutput, err := p.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		CurrentBlockHeight: currentBlockHeight,
-		PrevBlockHash:      prevRxBlockHash,
-		TransactionsBlock:  txOutput.TransactionsBlock,
-		PrevBlockTimestamp: prevBlockTimestamp,
-		BlockProposerAddress:    blockProposerAddress,
+		CurrentBlockHeight:   currentBlockHeight,
+		PrevBlockHash:        prevRxBlockHash,
+		TransactionsBlock:    txOutput.TransactionsBlock,
+		PrevBlockTimestamp:   prevBlockTimestamp,
+		BlockProposerAddress: blockProposerAddress,
 	})
 	if err != nil {
 		return nil, nil

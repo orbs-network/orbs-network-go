@@ -9,8 +9,8 @@ package consensuscontext
 import (
 	"bytes"
 	"context"
+	"github.com/orbs-network/crypto-lib-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/validators"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"

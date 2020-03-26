@@ -8,7 +8,7 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"

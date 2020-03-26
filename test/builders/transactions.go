@@ -7,9 +7,9 @@
 package builders
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/keys"
+	"github.com/orbs-network/crypto-lib-go/crypto/signature"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"

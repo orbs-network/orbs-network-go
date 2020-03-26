@@ -8,7 +8,7 @@ package virtualmachine
 
 import (
 	"crypto/rand"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"math/big"

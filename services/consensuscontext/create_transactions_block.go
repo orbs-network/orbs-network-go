@@ -8,7 +8,7 @@ package consensuscontext
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -51,7 +51,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 			TransactionsMerkleRootHash: merkleTransactionsRoot,
 			MetadataHash:               digest.CalcTransactionMetaDataHash(metaData),
 			NumSignedTransactions:      uint32(txCount),
-			BlockProposerAddress:	    input.BlockProposerAddress,
+			BlockProposerAddress:       input.BlockProposerAddress,
 		}).Build(),
 		Metadata:           metaData,
 		SignedTransactions: transactionsForBlock,

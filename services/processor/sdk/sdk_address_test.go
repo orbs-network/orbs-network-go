@@ -9,8 +9,8 @@ package sdk
 import (
 	"context"
 	"encoding/hex"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"

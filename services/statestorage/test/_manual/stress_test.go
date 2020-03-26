@@ -9,8 +9,8 @@ package _manual
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	. "github.com/orbs-network/orbs-network-go/services/statestorage/test"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"

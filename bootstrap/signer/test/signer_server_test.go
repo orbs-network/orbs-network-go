@@ -8,9 +8,9 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	crypto "github.com/orbs-network/crypto-lib-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/bootstrap/signer"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	crypto "github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"

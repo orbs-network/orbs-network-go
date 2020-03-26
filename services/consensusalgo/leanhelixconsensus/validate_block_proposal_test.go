@@ -8,7 +8,7 @@ package leanhelixconsensus
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"

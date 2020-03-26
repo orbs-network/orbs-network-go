@@ -8,7 +8,7 @@ package keys
 
 import (
 	"encoding/hex"
-	"github.com/orbs-network/orbs-network-go/crypto/keys"
+	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 )
 
 type ed25519KeyPairHex struct {

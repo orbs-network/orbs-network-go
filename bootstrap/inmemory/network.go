@@ -9,10 +9,10 @@ package inmemory
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
@@ -39,11 +39,11 @@ import (
 // Represents an in-process network connecting a group of in-memory Nodes together using the provided Transport
 type Network struct {
 	govnr.TreeSupervisor
-	Nodes              []*Node
-	Logger             log.Logger
-	Transport          adapter.Transport
-	VirtualChainId     primitives.VirtualChainId
-	MaybeClock         txPoolAdapter.Clock
+	Nodes          []*Node
+	Logger         log.Logger
+	Transport      adapter.Transport
+	VirtualChainId primitives.VirtualChainId
+	MaybeClock     txPoolAdapter.Clock
 }
 
 type NodeDependencies struct {
@@ -60,10 +60,10 @@ type nodeDependencyProvider func(idx int, nodeConfig config.NodeConfig, logger l
 func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOrder []primitives.NodeAddress, privateKeys map[string]primitives.EcdsaSecp256K1PrivateKey, parent log.Logger, cfgTemplate config.OverridableConfig, transport adapter.Transport, maybeClock txPoolAdapter.Clock, provider nodeDependencyProvider) *Network {
 
 	network := &Network{
-		Logger:             parent,
-		Transport:          transport,
-		MaybeClock:         maybeClock,
-		VirtualChainId:     cfgTemplate.VirtualChainId(),
+		Logger:         parent,
+		Transport:      transport,
+		MaybeClock:     maybeClock,
+		VirtualChainId: cfgTemplate.VirtualChainId(),
 	}
 	parent.Info("acceptance network node order", log.StringableSlice("addresses", nodeOrder))
 	parent.Info(configToStr(cfgTemplate))
