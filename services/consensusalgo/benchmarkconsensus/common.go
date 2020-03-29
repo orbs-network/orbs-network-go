@@ -9,6 +9,7 @@ package benchmarkconsensus
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	ethereumDigest "github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -101,7 +102,7 @@ func (s *Service) validateBlockConsensus(blockPair *protocol.BlockPairContainer,
 		return errors.Errorf("BenchmarkConsensus: block proof not from leader: %s", signer.SenderNodeAddress())
 	}
 	signedData := s.signedDataForBlockProof(blockPair)
-	if err := digest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()); err != nil {
+	if err := ethereumDigest.VerifyNodeSignature(signer.SenderNodeAddress(), signedData, signer.Signature()); err != nil {
 		return errors.Wrapf(err, "BenchmarkConsensus: block proof signature is invalid: %s", signer.Signature())
 	}
 

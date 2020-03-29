@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 	"github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
 )
 

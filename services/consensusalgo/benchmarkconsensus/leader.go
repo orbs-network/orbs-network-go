@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	ethereumDigest "github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -257,7 +258,7 @@ func (s *Service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// signature
-	if err := digest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()); err != nil {
+	if err := ethereumDigest.VerifyNodeSignature(sender.SenderNodeAddress(), status.Raw(), sender.Signature()); err != nil {
 		return errors.Wrapf(err, "sender signature is invalid: %s, signed data: %s", sender.Signature(), status.Raw())
 	}
 

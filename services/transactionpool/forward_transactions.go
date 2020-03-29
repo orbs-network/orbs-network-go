@@ -9,6 +9,7 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	ethereumDigest "github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
@@ -47,7 +48,7 @@ func (s *Service) HandleForwardedTransactions(ctx context.Context, input *gossip
 		return nil, errors.Wrapf(err, "could not create one hash, invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 
-	if err := digest.VerifyNodeSignature(sender.SenderNodeAddress(), oneBigHash, sender.Signature()); err != nil {
+	if err := ethereumDigest.VerifyNodeSignature(sender.SenderNodeAddress(), oneBigHash, sender.Signature()); err != nil {
 		return nil, errors.Wrapf(err, "invalid signature in relay message from sender %s", sender.SenderNodeAddress())
 	}
 

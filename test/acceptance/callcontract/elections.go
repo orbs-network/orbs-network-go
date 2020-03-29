@@ -8,7 +8,7 @@ package callcontract
 
 import (
 	"context"
-	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"

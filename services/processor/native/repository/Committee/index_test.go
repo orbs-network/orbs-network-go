@@ -7,7 +7,7 @@
 package committee_systemcontract
 
 import (
-	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
 )
 
 func makeNodeAddress(a int) []byte {
