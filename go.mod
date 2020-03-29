@@ -29,7 +29,7 @@ require (
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/lean-helix-go v0.2.7
 	github.com/orbs-network/membuffers v0.4.0
-	github.com/orbs-network/orbs-client-sdk-go v0.17.0
+	github.com/orbs-network/orbs-client-sdk-go v0.18.0
 	github.com/orbs-network/orbs-contract-sdk v1.6.0
 	github.com/orbs-network/orbs-spec v0.0.0-20200312223140-a78d945bab99
 	github.com/orbs-network/scribe v0.2.3

@@ -211,6 +211,8 @@ github.com/orbs-network/orbs-client-sdk-go v0.15.0 h1:8xbbVECgupYpS+Qbrcm8FmfrAH
 github.com/orbs-network/orbs-client-sdk-go v0.15.0/go.mod h1:1KsIoX5oZrLRwi96bF6k0Dy9dZaym2H88hCDi92R2YM=
 github.com/orbs-network/orbs-client-sdk-go v0.17.0 h1:33/An2Gpb4FmWDi3j7ROhMxXSukJLJH0UD6rIpH97jI=
 github.com/orbs-network/orbs-client-sdk-go v0.17.0/go.mod h1:MGkvdt4HGTz7FZH4cYn4qxEao2Hg1pFg+JfoX3392Uc=
+github.com/orbs-network/orbs-client-sdk-go v0.18.0 h1:xR/cais6t7SEU7D7GVmGv5rOMQozB0WkUQlKHTcn0Jg=
+github.com/orbs-network/orbs-client-sdk-go v0.18.0/go.mod h1:t7iiF0hkB3Grnbsu4yJ05SRsoEmO/fRfqCJK2egNvQ4=
 github.com/orbs-network/orbs-contract-sdk v1.4.0 h1:lbpo83A4cIQPzvyloVmNk/cVP6MO5BEn+zw0/Vg+OeI=
 github.com/orbs-network/orbs-contract-sdk v1.4.0/go.mod h1:N+caPmVwyn3p+kgPwfb43bo4qAcRDoiaq/gw/ag1mHo=
 github.com/orbs-network/orbs-contract-sdk v1.5.0 h1:aToFZbAVMzEX4oCINRhe7exT0DkGIfC5LVT7b/+v42k=
