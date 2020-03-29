@@ -5,4 +5,3 @@
 BUILD_CMD="./build-node.sh" ./docker/build/build-binaries-in-superfluous-container.sh
 
 docker build -f ./docker/build/Dockerfile.export -t orbs:export .
-docker build -f ./docker/build/Dockerfile.signer -t orbs:signer .
