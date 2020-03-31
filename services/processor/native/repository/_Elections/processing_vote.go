@@ -117,10 +117,11 @@ func _collectOneValidatorDataFromEthereum(i int) {
 	var orbsAddress [20]byte
 	ethereum.CallMethodAtBlock(_getProcessCurrentElectionBlockNumber(), getValidatorsRegistryEthereumContractAddress(), getValidatorsRegistryAbi(), "getOrbsAddress", &orbsAddress, validator)
 	stake := _getStakeAtElection(validator)
+	lockedStake := _getLockedStakeAtElection(validator)
 
-	_setValidatorStake(validator[:], stake)
+	_setValidatorStake(validator[:], safeuint64.Add(stake, lockedStake))
 	_setValidatorOrbsAddress(validator[:], orbsAddress[:])
-	fmt.Printf("elections %10d: from ethereum validator %x, stake %d orbsAddress %x\n", _getProcessCurrentElectionBlockNumber(), validator, stake, orbsAddress)
+	fmt.Printf("elections %10d: from ethereum validator %x, unlocked-stake %d, locked-stake %d, orbsAddress %x\n", _getProcessCurrentElectionBlockNumber(), validator, stake, lockedStake, orbsAddress)
 }
 
 func _collectNextGuardiansDataFromEthereum() bool {
@@ -139,6 +140,7 @@ type Vote struct {
 func _collectOneGuardianDataFromEthereum(i int) {
 	guardian := _getGuardianAtIndex(i)
 	stake := uint64(0)
+	lockedStake := uint64(0)
 	candidates := [][20]byte{{}}
 
 	out := Vote{}
@@ -146,15 +148,16 @@ func _collectOneGuardianDataFromEthereum(i int) {
 	voteBlockNumber := out.BlockNumber.Uint64()
 	if voteBlockNumber != 0 && voteBlockNumber >= _getProcessCurrentElectionEarliestValidVoteBlockNumber() {
 		stake = _getStakeAtElection(guardian)
+		lockedStake = _getLockedStakeAtElection(guardian)
 		candidates = out.ValidatorsBytes20
 		voteBlockNumber = out.BlockNumber.Uint64()
-		fmt.Printf("elections %10d: from ethereum guardian %x voted at %d, stake %d\n", _getProcessCurrentElectionBlockNumber(), guardian, voteBlockNumber, stake)
+		fmt.Printf("elections %10d: from ethereum guardian %x voted at %d, unlocked-stake %d, locked-stake %d\n", _getProcessCurrentElectionBlockNumber(), guardian, voteBlockNumber, stake, lockedStake)
 	} else {
 		voteBlockNumber = uint64(0)
 		fmt.Printf("elections %10d: from ethereum guardian %x vote is too old, will ignore\n", _getProcessCurrentElectionBlockNumber(), guardian)
 	}
 
-	_setGuardianStake(guardian[:], stake)
+	_setGuardianStake(guardian[:], safeuint64.Add(stake, lockedStake))
 	_setGuardianVoteBlockNumber(guardian[:], voteBlockNumber)
 	_setCandidates(guardian[:], candidates)
 }
@@ -170,19 +173,27 @@ func _collectNextDelegatorStakeFromEthereum() bool {
 func _collectOneDelegatorStakeFromEthereum(i int) {
 	delegator := _getDelegatorAtIndex(i)
 	stake := uint64(0)
+	lockedStake := uint64(0)
 	if !_isGuardian(delegator) {
 		stake = _getStakeAtElection(delegator)
+		lockedStake = _getLockedStakeAtElection(delegator)
 	} else {
 		fmt.Printf("elections %10d: from ethereum delegator %x is actually a guardian, will ignore\n", _getProcessCurrentElectionBlockNumber(), delegator)
 	}
-	state.WriteUint64(_formatDelegatorStakeKey(delegator[:]), stake)
-	fmt.Printf("elections %10d: from ethereum delegator %x , stake %d\n", _getProcessCurrentElectionBlockNumber(), delegator, stake)
+	state.WriteUint64(_formatDelegatorStakeKey(delegator[:]), safeuint64.Add(stake, lockedStake))
+	fmt.Printf("elections %10d: from ethereum delegator %x , unlocked-stake %d, locked stake %d\n", _getProcessCurrentElectionBlockNumber(), delegator, stake, lockedStake)
 }
 
 func _getStakeAtElection(ethAddr [20]byte) uint64 {
 	stake := new(*big.Int)
 	ethereum.CallMethodAtBlock(_getProcessCurrentElectionBlockNumber(), getTokenEthereumContractAddress(), getTokenAbi(), "balanceOf", stake, ethAddr)
 	return ((*stake).Div(*stake, ETHEREUM_STAKE_FACTOR)).Uint64()
+}
+
+func _getLockedStakeAtElection(ethAddr [20]byte) uint64 {
+	lockedStake := new(*big.Int)
+	ethereum.CallMethodAtBlock(_getProcessCurrentElectionBlockNumber(), getStakingEthereumContractAddress(), getStakingAbi(), "getStakeBalanceOf", lockedStake, ethAddr)
+	return ((*lockedStake).Div(*lockedStake, ETHEREUM_STAKE_FACTOR)).Uint64()
 }
 
 func _calculateVotes() (candidateVotes map[[20]byte]uint64, totalVotes uint64, participants [][20]byte, participantStakes map[[20]byte]uint64, guardianAccumulatedStakes map[[20]byte]uint64) {
@@ -218,7 +229,7 @@ func _collectDelegatorsStake(guardians map[[20]byte]bool) (delegators [][20]byte
 	for i := 0; i < numOfDelegators; i++ {
 		delegator := _getDelegatorAtIndex(i)
 		if !guardians[delegator] {
-			if _, ok := delegatorStakes[delegator]; !ok { //
+			if _, ok := delegatorStakes[delegator]; !ok {
 				stake := state.ReadUint64(_formatDelegatorStakeKey(delegator[:]))
 				delegatorStakes[delegator] = stake
 				delegators = append(delegators, delegator)

@@ -35,6 +35,27 @@ func TestOrbsVotingContract_getStakeFromEthereum(t *testing.T) {
 	})
 }
 
+func TestOrbsVotingContract_getLockedStakeFromEthereum(t *testing.T) {
+	addr := [20]byte{0x01}
+	blockNumber := uint64(100)
+	stakeSetup := 64
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+
+		// prepare
+		_setProcessCurrentElection(0, blockNumber, 0)
+		mockLockedStakeInEthereum(m, blockNumber, addr, stakeSetup)
+
+		// call
+		stake := _getLockedStakeAtElection(addr)
+
+		// assert
+		m.VerifyMocks()
+		require.EqualValues(t, stakeSetup, stake)
+	})
+}
+
 func TestOrbsVotingContract_processVote_processVoteMachine_CalulateStakes(t *testing.T) {
 	h := newHarnessBlockBased()
 	h.electionBlock = uint64(60000)
@@ -74,6 +95,46 @@ func TestOrbsVotingContract_processVote_processVoteMachine_CalulateStakes(t *tes
 		require.True(t, actualRuns <= expectedNumOfStateTransitions, "did not finish in correct amount of passes")
 		require.EqualValues(t, "", _getVotingProcessState())
 		require.ElementsMatch(t, [][20]byte{v1.address, v3.address, v4.address, v5.address}, elected)
+	})
+}
+
+func TestOrbsVotingContract_processVote_processVoteMachine_CalulateStakesWithLocked(t *testing.T) {
+	h := newHarnessBlockBased()
+	h.electionBlock = 60000
+	aRecentVoteBlock := h.electionBlock - 1
+
+	var v1, v2, v3, v4, v5 = h.addValidator(), h.addValidator(), h.addValidator(), h.addValidator(), h.addValidator()
+	var g1, g2, g3, g4 = h.addGuardian(100), h.addGuardian(200), h.addGuardian(400), h.addGuardian(1000)
+
+	g1.vote(aRecentVoteBlock, v2, v1)
+	g2.vote(aRecentVoteBlock, v2, v1)
+	g3.vote(aRecentVoteBlock, v2, v3)
+	g4.vote(aRecentVoteBlock, v2, v5)
+
+	for i := 0; i < 10; i++ {
+		h.addDelegator(500, g3.address)
+	}
+
+	d1 := h.addDelegator(500, g4.address).withLockedStake(100000)
+	d2 := h.addDelegator(500, d1.address)
+	h.addDelegator(500, d2.address)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+
+		// prepare
+		h.setupOrbsStateBeforeProcessMachine()
+		h.setupEthereumStateBeforeProcess(m)
+
+		// call
+		expectedNumOfStateTransitions := len(h.guardians) + len(h.delegators) + len(h.validators) + 2
+		elected, actualRuns := h.runProcessVoteMachineNtimes(expectedNumOfStateTransitions)
+
+		// assert
+		m.VerifyMocks()
+		require.True(t, actualRuns <= expectedNumOfStateTransitions, "did not finish in correct amount of passes")
+		require.EqualValues(t, "", _getVotingProcessState())
+		require.ElementsMatch(t, [][20]byte{v1.address, v3.address, v4.address}, elected)
 	})
 }
 
@@ -196,8 +257,8 @@ func TestOrbsVotingContract_processVote_processVoteMachine_CalulateStakes_Delega
 		h.setupEthereumValidatorsBeforeProcess(m)
 		mockGuardiansInEthereum(m, h.electionBlock, h.guardians)
 		h.setupEthereumGuardiansDataBeforeProcess(m)
-		mockStakeInEthereum(m, h.electionBlock, realD2.address, realD2.stake)
-		mockStakeInEthereum(m, h.electionBlock, realD3.address, realD3.stake)
+		mockStakedAndLockedInEthereum(m, h.electionBlock, realD2.address, realD2.stake, realD2.lockedStake)
+		mockStakedAndLockedInEthereum(m, h.electionBlock, realD3.address, realD3.stake, realD3.lockedStake)
 
 		// call
 		expectedNumOfStateTransitions := len(h.guardians) + len(h.delegators) + len(h.validators) + 3
@@ -261,9 +322,9 @@ func TestOrbsVotingContract_processVote_collectValidatorDataFromEthereum(t *test
 		// prepare
 		h.setupOrbsStateBeforeProcessMachine()
 		mockValidatorOrbsAddressInEthereum(m, h.electionBlock, v1.address, v1.orbsAddress)
-		mockStakeInEthereum(m, h.electionBlock, v1.address, 250)
+		mockStakedAndLockedInEthereum(m, h.electionBlock, v1.address, 250, 250)
 		mockValidatorOrbsAddressInEthereum(m, h.electionBlock, v2.address, v2.orbsAddress)
-		mockStakeInEthereum(m, h.electionBlock, v2.address, 450)
+		mockStakedAndLockedInEthereum(m, h.electionBlock, v2.address, 450, 450)
 		_setVotingProcessItem(0)
 
 		// call
@@ -275,9 +336,9 @@ func TestOrbsVotingContract_processVote_collectValidatorDataFromEthereum(t *test
 		// assert
 		m.VerifyMocks()
 		require.EqualValues(t, i, _getVotingProcessItem())
-		require.EqualValues(t, 250, state.ReadUint64(_formatValidatorStakeKey(v1.address[:])))
+		require.EqualValues(t, 500, state.ReadUint64(_formatValidatorStakeKey(v1.address[:])))
 		require.EqualValues(t, v1.orbsAddress[:], state.ReadBytes(_formatValidatorOrbsAddressKey(v1.address[:])))
-		require.EqualValues(t, 450, state.ReadUint64(_formatValidatorStakeKey(v2.address[:])))
+		require.EqualValues(t, 900, state.ReadUint64(_formatValidatorStakeKey(v2.address[:])))
 		require.EqualValues(t, v2.orbsAddress[:], state.ReadBytes(_formatValidatorOrbsAddressKey(v2.address[:])))
 	})
 }
@@ -361,6 +422,7 @@ func TestOrbsVotingContract_processVote_collectGuardiansStakeFromEthereum(t *tes
 
 	var v1 = h.addValidator()
 	var g1, g2 = h.addGuardian(400), h.addGuardian(600)
+	g1.lockedStake = 500
 
 	g1.vote(aRecentVoteBlock, v1)
 	g2.vote(aRecentVoteBlock, v1)
@@ -382,7 +444,7 @@ func TestOrbsVotingContract_processVote_collectGuardiansStakeFromEthereum(t *tes
 		// assert
 		m.VerifyMocks()
 		require.EqualValues(t, i, _getVotingProcessItem())
-		require.EqualValues(t, 400, state.ReadUint64(_formatGuardianStakeKey(g1.address[:])))
+		require.EqualValues(t, 900, state.ReadUint64(_formatGuardianStakeKey(g1.address[:])))
 		require.ElementsMatch(t, [][20]byte{v1.address}, _getCandidates(g1.address[:]))
 		require.EqualValues(t, 600, state.ReadUint64(_formatGuardianStakeKey(g2.address[:])))
 		require.ElementsMatch(t, [][20]byte{v1.address}, _getCandidates(g2.address[:]))
@@ -435,7 +497,7 @@ func TestOrbsVotingContract_processVote_collectOneDelegatorStakeFromEthereum_NoS
 
 		// prepare
 		h.setupOrbsStateBeforeProcessMachine()
-		mockStakeInEthereum(m, h.electionBlock, [20]byte{}, 0)
+		mockStakedAndLockedInEthereum(m, h.electionBlock, [20]byte{}, 0, 0)
 
 		// call
 		_collectOneDelegatorStakeFromEthereum(0)

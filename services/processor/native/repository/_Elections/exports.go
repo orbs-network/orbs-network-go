@@ -12,24 +12,22 @@ import (
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1"
 )
 
-var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getGuardiansEthereumContractAddress, getVotingEthereumContractAddress, getValidatorsEthereumContractAddress, getValidatorsRegistryEthereumContractAddress,
+var PUBLIC = sdk.Export(getTokenEthereumContractAddress, getStakingEthereumContractAddress, getGuardiansEthereumContractAddress, getVotingEthereumContractAddress, getValidatorsEthereumContractAddress, getValidatorsRegistryEthereumContractAddress,
 	mirrorDelegationByTransfer, mirrorDelegation,
 	processVoting, isProcessingPeriod, hasProcessingStarted, processTrigger,
 	getNumberOfElections, isElectionOverdue,
-	getElectionPeriodInNanos, getEffectiveElectionTimeInNanos, getCurrentElectionTimeInNanos, getNextElectionTimeInNanos,
 	getElectedValidatorsOrbsAddress, getElectedValidatorsEthereumAddress, getElectedValidatorsEthereumAddressByBlockNumber, getElectedValidatorsOrbsAddressByBlockHeight,
 	getElectedValidatorsOrbsAddressByIndex, getElectedValidatorsEthereumAddressByIndex, getElectedValidatorsBlockNumberByIndex, getElectedValidatorsBlockHeightByIndex,
 	getCumulativeParticipationReward, getCumulativeGuardianExcellenceReward, getCumulativeValidatorReward,
 	getGuardianStake, getGuardianVotingWeight, getTotalStake, getValidatorStake, getValidatorVote, getExcellenceProgramGuardians,
 	getCurrentEthereumBlockNumber,
 
-	_fixRewardsDrift9108900,
-
-	// feature flag
-	switchToTimeBasedElections,
-
 	// block based
 	getElectionPeriod, getCurrentElectionBlockNumber, getNextElectionBlockNumber, getEffectiveElectionBlockNumber,
 	getProcessingStartBlockNumber, getMirroringEndBlockNumber,
+
+	// time base
+	//switchToTimeBasedElections,
+	//getElectionPeriodInNanos, getEffectiveElectionTimeInNanos, getCurrentElectionTimeInNanos, getNextElectionTimeInNanos,
 )
 var SYSTEM = sdk.Export(_init)
