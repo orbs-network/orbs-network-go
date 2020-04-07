@@ -26,7 +26,7 @@ type BlockPairCommitter interface {
 
 type blockSource interface {
 	GetBlockTracker() *synchronization.BlockTracker
-	ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error
+	ScanBlocks(from primitives.BlockHeight, pageSize uint64, f adapter.CursorFunc) error
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 }
 

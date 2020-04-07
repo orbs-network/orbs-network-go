@@ -161,7 +161,7 @@ func (bp *InMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 	return blockPair.ResultsBlock, nil
 }
 
-func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
+func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint64, f adapter.CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 

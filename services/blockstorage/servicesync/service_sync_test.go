@@ -121,7 +121,7 @@ func (bsf *blockSourceMock) setLastBlockHeight(height primitives.BlockHeight) {
 }
 
 // TODO V1 - this duplicates logic form inMemoryBlockPersistence. Do we really need a mock object here?
-func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
+func (bsf *blockSourceMock) ScanBlocks(from primitives.BlockHeight, pageSize uint64, f adapter.CursorFunc) error {
 	bsf.Called(from, pageSize, f)
 
 	topBlockHeight := bsf.lastBlock.ResultsBlock.Header.BlockHeight()

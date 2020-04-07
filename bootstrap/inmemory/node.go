@@ -59,7 +59,7 @@ func (n *Node) ExtractBlocks() ([]*protocol.BlockPairContainer, error) {
 		return nil, errors.Wrapf(err, "failed reading block height")
 	}
 	var blockPairs []*protocol.BlockPairContainer
-	pageSize := uint8(lastBlock.ResultsBlock.Header.BlockHeight())
+	pageSize := uint64(lastBlock.ResultsBlock.Header.BlockHeight())
 	err = n.blockPersistence.ScanBlocks(1, pageSize, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 		blockPairs = page // TODO should we copy the slice here to make sure both networks are isolated?
 		return false
