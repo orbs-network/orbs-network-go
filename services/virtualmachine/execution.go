@@ -31,13 +31,15 @@ func (s *service) runMethod(
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
 	currentBlockProposerAddress primitives.NodeAddress,
+	currentBlockReferenceTime primitives.TimestampSeconds,
+	lastBlockReferenceTime primitives.TimestampSeconds,
 	transactionOrQuery TransactionOrQuery,
 	accessScope protocol.ExecutionAccessScope,
 	batchTransientState *transientState,
 ) (protocol.ExecutionResult, *protocol.ArgumentArray, *protocol.EventsArray, error) {
 
 	// create execution context
-	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, accessScope, transactionOrQuery)
+	executionContextId, executionContext := s.contexts.allocateExecutionContext(lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, currentBlockReferenceTime, lastBlockReferenceTime, accessScope, transactionOrQuery)
 	defer s.contexts.destroyExecutionContext(executionContextId)
 	executionContext.batchTransientState = batchTransientState
 
@@ -82,6 +84,8 @@ func (s *service) processTransactionSet(
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
 	currentBlockProposerAddress primitives.NodeAddress,
+	currentBlockReferenceTime primitives.TimestampSeconds,
+	lastBlockReferenceTime primitives.TimestampSeconds,
 	signedTransactions []*protocol.SignedTransaction,
 ) ([]*protocol.TransactionReceipt, []*protocol.ContractStateDiff) {
 
@@ -95,9 +99,8 @@ func (s *service) processTransactionSet(
 	receipts := make([]*protocol.TransactionReceipt, 0, len(signedTransactions))
 
 	for _, signedTransaction := range signedTransactions {
-
 		logger.Info("processing transaction", log.Stringable("contract", signedTransaction.Transaction().ContractName()), log.Stringable("method", signedTransaction.Transaction().MethodName()), logfields.BlockHeight(currentBlockHeight))
-		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
+		callResult, outputArgs, outputEvents, _ := s.runMethod(ctx, lastCommittedBlockHeight, currentBlockHeight, currentBlockTimestamp, currentBlockProposerAddress, currentBlockReferenceTime, lastBlockReferenceTime, signedTransaction.Transaction(), protocol.ACCESS_SCOPE_READ_WRITE, batchTransientState)
 		if outputArgs == nil {
 			outputArgs = protocol.ArgumentsArrayEmpty()
 		}

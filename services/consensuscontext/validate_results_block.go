@@ -21,7 +21,6 @@ import (
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
 type rxValidatorContext struct {
-	protocolVersion        primitives.ProtocolVersion
 	virtualChainId         primitives.VirtualChainId
 	input                  *services.ValidateResultsBlockInput
 	getStateHash           func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
@@ -31,10 +30,10 @@ type rxValidatorContext struct {
 }
 
 func validateRxProtocolVersion(ctx context.Context, vcrx *rxValidatorContext) error {
-	expectedProtocolVersion := vcrx.protocolVersion
-	checkedProtocolVersion := vcrx.input.ResultsBlock.Header.ProtocolVersion()
-	if checkedProtocolVersion != expectedProtocolVersion {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "expected %v actual %v", expectedProtocolVersion, checkedProtocolVersion)
+	txPv := vcrx.input.TransactionsBlock.Header.ProtocolVersion()
+	rxPv := vcrx.input.ResultsBlock.Header.ProtocolVersion()
+	if rxPv != txPv {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "mismatched protocol version between transactions and results tx %v rx %v", txPv, rxPv)
 	}
 	return nil
 }
@@ -94,6 +93,15 @@ func validateIdenticalTxRxTimestamp(ctx context.Context, vcrx *rxValidatorContex
 	return nil
 }
 
+func validateIdenticalTxRxBlockReferenceTimes(ctx context.Context, vcrx *rxValidatorContext) error {
+	txRefTime := vcrx.input.TransactionsBlock.Header.ReferenceTime()
+	rxRefTime := vcrx.input.ResultsBlock.Header.ReferenceTime()
+	if rxRefTime != txRefTime {
+		return errors.Wrapf(ErrMismatchedTxRxBlockRefTimes, "txRefTime %v rxRefTime %v", txRefTime, rxRefTime)
+	}
+	return nil
+}
+
 func validateRxPrevBlockHashPtr(ctx context.Context, vcrx *rxValidatorContext) error {
 	prevBlockHashPtr := vcrx.input.ResultsBlock.Header.PrevBlockHashPtr()
 	expectedPrevBlockHashPtr := vcrx.input.PrevBlockHash
@@ -134,13 +142,15 @@ func validatePreExecutionStateMerkleRoot(ctx context.Context, vcrx *rxValidatorC
 }
 
 func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
-	//Validate transaction execution
+	// Validate transaction execution
 	// Execute the ordered transactions set by calling VirtualMachine.ProcessTransactionSet creating receipts and state diff. Using the provided header timestamp as a reference timestamp.
 	processTxsOut, err := vcrx.processTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		CurrentBlockHeight:    vcrx.input.TransactionsBlock.Header.BlockHeight(),
-		CurrentBlockTimestamp: vcrx.input.TransactionsBlock.Header.Timestamp(),
-		SignedTransactions:    vcrx.input.TransactionsBlock.SignedTransactions,
-		BlockProposerAddress:  vcrx.input.BlockProposerAddress,
+		CurrentBlockHeight:        vcrx.input.TransactionsBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp:     vcrx.input.TransactionsBlock.Header.Timestamp(),
+		SignedTransactions:        vcrx.input.TransactionsBlock.SignedTransactions,
+		BlockProposerAddress:      vcrx.input.BlockProposerAddress,
+		CurrentBlockReferenceTime: vcrx.input.TransactionsBlock.Header.ReferenceTime(),
+		PrevBlockReferenceTime:    vcrx.input.PrevBlockReferenceTime,
 	})
 	if err != nil {
 		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error from ProcessTransactionSet(): %v", err)
@@ -206,9 +216,7 @@ func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*pro
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
-
 	vcrx := &rxValidatorContext{
-		protocolVersion:        s.config.ProtocolVersion(),
 		virtualChainId:         s.config.VirtualChainId(),
 		input:                  input,
 		getStateHash:           s.stateStorage.GetStateHash,
@@ -223,6 +231,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 		validateRxBlockHeight,
 		validateRxTxBlockPtrMatchesActualTxBlock,
 		validateIdenticalTxRxTimestamp,
+		validateIdenticalTxRxBlockReferenceTimes,
 		validateRxPrevBlockHashPtr,
 		validateRxBlockProposer,
 		validateReceiptsMerkleRoot,

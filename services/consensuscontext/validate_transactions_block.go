@@ -22,17 +22,20 @@ import (
 type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
 type txValidatorContext struct {
-	protocolVersion        primitives.ProtocolVersion
+	maximalProtocolVersion primitives.ProtocolVersion
+	minimalProtocolVersion primitives.ProtocolVersion
 	virtualChainId         primitives.VirtualChainId
 	allowedTimestampJitter time.Duration
 	input                  *services.ValidateTransactionsBlockInput
 }
 
 func validateTxProtocolVersion(ctx context.Context, vctx *txValidatorContext) error {
-	expectedProtocolVersion := vctx.protocolVersion
 	checkedProtocolVersion := vctx.input.TransactionsBlock.Header.ProtocolVersion()
-	if checkedProtocolVersion != expectedProtocolVersion {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "expected %v actual %v", expectedProtocolVersion, checkedProtocolVersion)
+	if checkedProtocolVersion > vctx.maximalProtocolVersion {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "maximal %v actual %v", vctx.maximalProtocolVersion, checkedProtocolVersion)
+	}
+	if checkedProtocolVersion < vctx.minimalProtocolVersion {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "minimal %v actual %v", vctx.minimalProtocolVersion, checkedProtocolVersion)
 	}
 	return nil
 }
@@ -133,14 +136,37 @@ func validateTxTransactionOrdering(ctx context.Context, cfg config.ConsensusCont
 	}
 
 	validationInput := &services.ValidateTransactionsForOrderingInput{
-		CurrentBlockHeight:    transactionBlock.Header.BlockHeight(),
-		CurrentBlockTimestamp: transactionBlock.Header.Timestamp(),
-		SignedTransactions:    txs,
+		BlockProtocolVersion:       transactionBlock.Header.ProtocolVersion(),
+		CurrentBlockHeight:         transactionBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp:      transactionBlock.Header.Timestamp(),
+		CurrentBlockReferenceTime:  transactionBlock.Header.ReferenceTime(),
+		SignedTransactions:         txs,
 	}
 	_, err := validateForOrderingFunc(ctx, validationInput)
 	if err != nil {
 		return errors.Wrapf(ErrFailedTransactionOrdering, "%v", err)
 	}
+	return nil
+}
+
+func validateProposeBlockReferenceTime(prevBlockReferenceTime primitives.TimestampSeconds, proposedBlockReferenceTime primitives.TimestampSeconds,
+	validatorCurrentReferenceTime primitives.TimestampSeconds, consensusGrace time.Duration) error {
+	if proposedBlockReferenceTime < prevBlockReferenceTime {
+		return errors.Errorf("proposed block time reference %d cannot be smaller than previous block %d", proposedBlockReferenceTime, prevBlockReferenceTime)
+	}
+
+	if validatorCurrentReferenceTime + primitives.TimestampSeconds(consensusGrace / time.Second) < proposedBlockReferenceTime {
+		return errors.Errorf("proposed block time reference %d is too far in the future compared to validator current time reference %d", proposedBlockReferenceTime, validatorCurrentReferenceTime)
+	}
+
+	return nil
+}
+
+func validateProposeBlockProtocolVersionWithManagement(blockProtocolVersion primitives.ProtocolVersion, managementProtocolVersion primitives.ProtocolVersion) error {
+	if blockProtocolVersion < managementProtocolVersion {
+		return errors.Errorf("proposed block protocol version %d mismatch manageemnt protocol version %d", blockProtocolVersion, managementProtocolVersion)
+	}
+
 	return nil
 }
 
@@ -155,7 +181,7 @@ func validateTransactionsBlockTriggerCompliance(ctx context.Context, cfg config.
 		if !validateTransactionsBlockTxTriggerIsValidTime(txs[txCount-1], transactionsBlock.Header.Timestamp()) {
 			return ErrTriggerEnabledAndTriggerInvalidTime
 		}
-		if !validateTransactionsBlockTxTriggerIsValid(txs[txCount-1], cfg) {
+		if !validateTransactionsBlockTxTriggerIsValid(txs[txCount-1], transactionsBlock.Header.ProtocolVersion(), cfg) {
 			return ErrTriggerEnabledAndTriggerInvalid
 		}
 
@@ -187,13 +213,13 @@ func validateTransactionsBlockTxTriggerIsValidTime(signedTransaction *protocol.S
 	return signedTransaction.Transaction().Timestamp() == blockTime
 }
 
-func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.SignedTransaction, cfg config.ConsensusContextConfig) bool {
+func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.SignedTransaction, blockProtocolVersion primitives.ProtocolVersion, cfg config.ConsensusContextConfig) bool {
 	if len(signedTransaction.Signature()) != 0 {
 		return false
 	}
 
 	transaction := signedTransaction.Transaction()
-	if transaction.ProtocolVersion() != cfg.ProtocolVersion() ||
+	if transaction.ProtocolVersion() != blockProtocolVersion ||
 		transaction.VirtualChainId() != cfg.VirtualChainId() ||
 		len(transaction.InputArgumentArray()) != 0 ||
 		len(transaction.Signer().Raw()) != 0 {
@@ -205,10 +231,21 @@ func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.Signe
 
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 	vctx := &txValidatorContext{
-		protocolVersion:        s.config.ProtocolVersion(),
+		maximalProtocolVersion: s.config.MaximalProtocolVersionSupported(),
+		minimalProtocolVersion: s.config.MinimalProtocolVersionSupported(),
 		virtualChainId:         s.config.VirtualChainId(),
 		allowedTimestampJitter: s.config.ConsensusContextSystemTimestampAllowedJitter(),
 		input:                  input,
+	}
+
+	if err := validateProposeBlockReferenceTime(input.PrevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
+		s.management.GetCurrentReference(ctx), s.config.ManagementConsensusGraceTimeout()); err != nil {
+		return nil, err
+	}
+
+	if err := validateProposeBlockProtocolVersionWithManagement(input.TransactionsBlock.Header.ProtocolVersion(),
+		s.management.GetProtocolVersion(ctx, input.TransactionsBlock.Header.ReferenceTime())); err != nil {
+		return nil, err
 	}
 
 	validators := []txValidator{

@@ -21,7 +21,7 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	committee, err := s.getOrderedCommittee(ctx, input.CurrentBlockHeight)
+	committee, err := s.getOrderedCommittee(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return nil, err
 	}

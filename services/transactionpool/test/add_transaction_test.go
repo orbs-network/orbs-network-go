@@ -156,8 +156,20 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	})
 }
 
-func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
+func TestDoesNotAddTransactionWithFutureProtocolVersion(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
+		tx := builders.TransferTransaction().WithProtocolVersion(h.config.MaximalProtocolVersionSupported()+1).Build()
+		h.ignoringForwardMessages()
+		h.ignoringTransactionResults()
+
+		_, err := h.addNewTransaction(ctx, tx)
+		require.Error(t, err)
+	})
+}
+
+func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithSizeLimit(parent, 1).start(ctx)
 		h.AllowErrorsMatching("error adding transaction to pending pool")

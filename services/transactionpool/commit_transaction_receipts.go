@@ -17,7 +17,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
+func (s *service) CommitTransactionReceipts(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
@@ -55,14 +55,14 @@ func (s *Service) CommitTransactionReceipts(ctx context.Context, input *services
 	}, nil
 }
 
-func (s *Service) notifyHandlers(ctx context.Context, c *committer) {
+func (s *service) notifyHandlers(ctx context.Context, c *committer) {
 	s.transactionResultsHandlers.RLock()
 	defer s.transactionResultsHandlers.RUnlock()
 
 	c.notify(ctx, s.transactionResultsHandlers.handlers...)
 }
 
-func (s *Service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	s.lastCommitted.Lock()

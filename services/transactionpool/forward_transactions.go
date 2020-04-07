@@ -32,13 +32,13 @@ type TransactionForwarderConfig interface {
 	TransactionPoolPropagationBatchingTimeout() time.Duration
 }
 
-func (s *Service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
+func (s *service) RegisterTransactionResultsHandler(handler handlers.TransactionResultsHandler) {
 	s.transactionResultsHandlers.Lock()
 	defer s.transactionResultsHandlers.Unlock()
 	s.transactionResultsHandlers.handlers = append(s.transactionResultsHandlers.handlers, handler)
 }
 
-func (s *Service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) HandleForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	sender := input.Message.Sender

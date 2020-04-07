@@ -11,6 +11,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -18,11 +19,20 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 	start := time.Now()
 	defer s.metrics.createResultsBlockTime.RecordSince(start)
 
+	txBlockHeader := input.TransactionsBlock.Header
+
+	prevBlockReferenceTime, err := s.fixPrevReferenceTimeIfGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "RequestNewResultsBlock")
+	}
+
 	output, err := s.virtualMachine.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		SignedTransactions:    input.TransactionsBlock.SignedTransactions,
-		CurrentBlockHeight:    input.CurrentBlockHeight,
-		CurrentBlockTimestamp: input.TransactionsBlock.Header.Timestamp(),
-		BlockProposerAddress:  input.BlockProposerAddress,
+		SignedTransactions:        input.TransactionsBlock.SignedTransactions,
+		CurrentBlockHeight:        input.CurrentBlockHeight,
+		CurrentBlockTimestamp:     txBlockHeader.Timestamp(),
+		CurrentBlockReferenceTime: txBlockHeader.ReferenceTime(),
+		PrevBlockReferenceTime:    prevBlockReferenceTime,
+		BlockProposerAddress:      input.BlockProposerAddress,
 	})
 	s.metrics.processTransactionsSeInCreateResultsBlock.RecordSince(start)
 	if err != nil {
@@ -54,11 +64,11 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 
 	rxBlock := &protocol.ResultsBlockContainer{
 		Header: (&protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:                 s.config.ProtocolVersion(),
+			ProtocolVersion:                 txBlockHeader.ProtocolVersion(),
 			VirtualChainId:                  s.config.VirtualChainId(),
 			BlockHeight:                     input.CurrentBlockHeight,
 			PrevBlockHashPtr:                input.PrevBlockHash,
-			Timestamp:                       input.TransactionsBlock.Header.Timestamp(),
+			Timestamp:                       txBlockHeader.Timestamp(),
 			ReceiptsMerkleRootHash:          merkleReceiptsRoot,
 			StateDiffHash:                   stateDiffHash,
 			TransactionsBlockHashPtr:        digest.CalcTransactionsBlockHash(input.TransactionsBlock),
@@ -66,6 +76,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 			NumTransactionReceipts:          uint32(len(output.TransactionReceipts)),
 			NumContractStateDiffs:           uint32(len(output.ContractStateDiffs)),
 			BlockProposerAddress:            input.BlockProposerAddress,
+			ReferenceTime:                   txBlockHeader.ReferenceTime(),
 		}).Build(),
 		TransactionReceipts: output.TransactionReceipts,
 		ContractStateDiffs:  output.ContractStateDiffs,

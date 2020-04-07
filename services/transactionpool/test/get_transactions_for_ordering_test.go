@@ -107,20 +107,37 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 	})
 }
 
-func TestGetTransactionsForOrderingOnGenesisBlockReturnsZeroTransactions(t *testing.T) {
+func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(builders.DEFAULT_TEST_PROTOCOL_VERSION+5).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			CurrentBlockHeight:      1,
+			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION,
+			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
 		})
 
 		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
 		require.Zero(t, len(out.SignedTransactions), "number of transactions should be zero")
-		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
+	})
+}
+
+func TestGetTransactionsForOrdering_SucceedsForSmallerProtocolVersion(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(builders.DEFAULT_TEST_PROTOCOL_VERSION).Build())
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION+1,
+			CurrentBlockHeight:      2,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.NotZero(t, len(out.SignedTransactions), "number of transactions should not be zero")
 	})
 }
 
@@ -130,6 +147,7 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -140,3 +158,40 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
 	})
 }
+
+func TestGetTransactionsForOrderingAfterGenesisBlock_DoesNotFiltersOutTxWithSmallerProtocolVersionThanBlock(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(h.config.MaximalProtocolVersionSupported()+1).Build())
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			BlockProtocolVersion:    h.config.MaximalProtocolVersionSupported()+2,
+			CurrentBlockHeight:      2,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.NotZero(t, len(out.SignedTransactions), "number of transactions should not be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
+	})
+}
+
+func TestGetTransactionsForOrderingAfterGenesisBlock_FiltersOutTxWithBiggerProtocolVersionThanBlock(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(h.config.MaximalProtocolVersionSupported()+2).Build())
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			BlockProtocolVersion:    h.config.MaximalProtocolVersionSupported()+1,
+			CurrentBlockHeight:      2,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.Zero(t, len(out.SignedTransactions), "number of transactions should not be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
+	})
+}
+

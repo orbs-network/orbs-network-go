@@ -48,11 +48,12 @@ func nodeAddressesToCommaSeparatedString(nodeAddresses []primitives.NodeAddress)
 	return strings.Join(addrs, ",")
 }
 
-func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64) ([]lhprimitives.MemberId, error) {
+func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lhprimitives.MemberId, error) {
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
 		CurrentBlockHeight: primitives.BlockHeight(blockHeight),
 		RandomSeed:         seed,
 		MaxCommitteeSize:   m.maxCommitteeSize,
+		PrevBlockReferenceTime: primitives.TimestampSeconds(prevBlockReferenceTime),
 	})
 	if err != nil {
 		m.logger.Info(" failed RequestOrderedCommittee()", log.Error(err))
@@ -62,7 +63,7 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 	nodeAddresses := toMemberIds(res.NodeAddresses)
 	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
 	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
-	m.logger.Info("Received committee members", logfields.BlockHeight(primitives.BlockHeight(blockHeight)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
+	m.logger.Info("Received committee members", logfields.BlockHeight(primitives.BlockHeight(blockHeight)), log.Uint32("prev-block-ref-time", uint32(prevBlockReferenceTime)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
 	return nodeAddresses, nil
 }

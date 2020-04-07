@@ -50,7 +50,6 @@ func TestCreateBlock_HappyFlow(t *testing.T) {
 			h.verifyTransactionsRequestedFromTransactionPool(t)
 		})
 	})
-
 }
 
 func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testing.T) {
@@ -67,6 +66,25 @@ func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testi
 			require.Len(t, txBlock.SignedTransactions, int(txCountWithTrigger), "wrong number of txs")
 
 			h.verifyTransactionsRequestedFromTransactionPool(t)
+		})
+	})
+}
+
+func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, false)
+			h.managementService.setGenesis(h.managementService.GetCurrentReference(ctx) + 1)
+			txCount := uint32(2)
+			h.expectTxPoolToReturnXTransactions(txCount)
+
+			txBlock, err := h.requestTransactionsBlock(ctx)
+			require.NoError(t, err, "request transactions block failed")
+
+			_, err = h.requestResultsBlock(ctx, txBlock)
+
+			require.Error(t, err, "request results block should fail")
+			require.Contains(t, err.Error(), "failed genesis time reference")
 		})
 	})
 }

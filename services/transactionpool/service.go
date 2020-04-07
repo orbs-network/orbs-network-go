@@ -26,7 +26,7 @@ type BlockHeightReporter interface {
 	IncrementTo(height primitives.BlockHeight)
 }
 
-type Service struct {
+type service struct {
 	govnr.TreeSupervisor
 
 	clock               adapter.Clock
@@ -65,17 +65,18 @@ type Service struct {
 	addCommitLock sync.RWMutex
 }
 
-func (s *Service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
 	s.lastCommitted.RLock()
 	defer s.lastCommitted.RUnlock()
 	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
 }
 
-func (s *Service) createValidationContext() *validationContext {
+func (s *service) createValidationContext() *validationContext {
 	return &validationContext{
 		expiryWindow:           s.config.TransactionExpirationWindow(),
 		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:   s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:         s.config.VirtualChainId(),
+		maximalProtocolVersion: s.config.MaximalProtocolVersionSupported(),
 	}
 }

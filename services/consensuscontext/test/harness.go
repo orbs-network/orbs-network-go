@@ -41,6 +41,7 @@ type harness struct {
 	transactionPool *services.MockTransactionPool
 	virtualMachine  *services.MockVirtualMachine
 	stateStorage    *services.MockStateStorage
+	managementService *managementMock
 	logger          log.Logger
 	service         services.ConsensusContext
 	config          config.ConsensusContextConfig
@@ -53,6 +54,7 @@ func (h *harness) requestTransactionsBlock(ctx context.Context) (*protocol.Trans
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           hash.CalcSha256([]byte{1}),
 		PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
+		PrevBlockReferenceTime:  primitives.TimestampSeconds(time.Now().Add(-10*time.Minute).Unix()),
 	})
 	if err != nil {
 		return nil, err
@@ -66,6 +68,7 @@ func (h *harness) requestResultsBlock(ctx context.Context, txBlockContainer *pro
 		PrevBlockHash:      hash.CalcSha256([]byte{1}),
 		TransactionsBlock:  txBlockContainer,
 		PrevBlockTimestamp: 0,
+		PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-10*time.Minute).Unix()),
 	})
 	if err != nil {
 		return nil, err
@@ -74,7 +77,6 @@ func (h *harness) requestResultsBlock(ctx context.Context, txBlockContainer *pro
 }
 
 func (h *harness) expectTxPoolToReturnXTransactions(numTransactionsToReturn uint32) {
-
 	output := &services.GetTransactionsForOrderingOutput{
 		SignedTransactions: nil,
 	}
@@ -93,7 +95,6 @@ func (h *harness) expectTransactionsNoLongerRequestedFromTransactionPool() {
 }
 
 func (h *harness) expectVirtualMachineToReturnXTransactionReceipts(receiptsCount int) {
-
 	receipts := make([]*protocol.TransactionReceipt, receiptsCount)
 	for i := 0; i < receiptsCount; i++ {
 		receipts[i] = (&protocol.TransactionReceiptBuilder{
@@ -125,7 +126,6 @@ func (h *harness) expectStateHashToReturn(hash []byte) {
 }
 
 func newHarness(logger log.Logger, enableTriggers bool) *harness {
-
 	txPool := &services.MockTransactionPool{}
 	machine := &services.MockVirtualMachine{}
 	state := &services.MockStateStorage{}
@@ -137,20 +137,46 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 
 	cfg := config.ForConsensusContextTests(enableTriggers)
 
+	mgmtMock := &managementMock{pv: cfg.MaximalProtocolVersionSupported(), gen: 0}
+
 	metricFactory := metric.NewRegistry()
 
 	service := consensuscontext.NewConsensusContext(
 		txPool,
 		machine,
 		state,
+		mgmtMock,
 		cfg, logger, metricFactory)
 
 	return &harness{
 		transactionPool: txPool,
 		virtualMachine:  machine,
 		stateStorage:    state,
+		managementService:  mgmtMock,
 		logger:          logger,
 		service:         service,
 		config:          cfg,
 	}
+}
+
+// TODO POSV2 REFTIME MGMT -> replace with mock from spec
+type managementMock struct {
+	gen primitives.TimestampSeconds
+	pv  primitives.ProtocolVersion
+}
+
+func (m *managementMock) GetCurrentReference(ctx context.Context) primitives.TimestampSeconds {
+	return primitives.TimestampSeconds(time.Now().Unix())
+}
+
+func (m *managementMock) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
+	return m.gen
+}
+
+func (m *managementMock) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
+	return m.pv
+}
+
+func (m *managementMock) setGenesis(gen primitives.TimestampSeconds) {
+	m.gen = gen
 }

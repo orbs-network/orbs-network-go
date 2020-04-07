@@ -33,7 +33,7 @@ func TestValidateConfig(t *testing.T) {
 	})
 }
 
-func TestValidateConfig_PanicsOnInvalidValue(t *testing.T) {
+func TestValidateConfig_ErrorOnInvalidValue(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())
@@ -43,7 +43,17 @@ func TestValidateConfig_PanicsOnInvalidValue(t *testing.T) {
 	})
 }
 
-func TestValidateConfig_DoesNotPanicOnProperKeys(t *testing.T) {
+func TestValidateConfig_ErrorBadProtocolVerions(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		cfg := defaultProductionConfig()
+		cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, 2)
+		cfg.SetUint32(MINIMAL_PROTOCOL_VERSION_SUPPORTED, 4)
+
+		require.Error(t, ValidateNodeLogic(cfg))
+	})
+}
+
+func TestValidateConfig_DoesNotErrorOnProperKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())
@@ -54,7 +64,7 @@ func TestValidateConfig_DoesNotPanicOnProperKeys(t *testing.T) {
 	})
 }
 
-func TestValidateConfig_PanicsOnInvalidKeys(t *testing.T) {
+func TestValidateConfig_ErrorOnInvalidKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())

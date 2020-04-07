@@ -18,6 +18,9 @@ import (
 
 
 func ValidateNodeLogic(cfg NodeConfig) error {
+	if cfg.MaximalProtocolVersionSupported() < cfg.MinimalProtocolVersionSupported() {
+		return errors.Errorf("Maximal Protocol version %d must be equal or higher than minimal Protocol Version %d", cfg.MaximalProtocolVersionSupported(), cfg.MinimalProtocolVersionSupported())
+	}
 	if cfg.BlockSyncNoCommitInterval() < cfg.BenchmarkConsensusRetryInterval() {
 		return errors.Errorf("node sync timeout must be greater than benchmark consensus timeout (BlockSyncNoCommitInterval = %s, is greater than BenchmarkConsensusRetryInterval %s)",
 			cfg.BlockSyncNoCommitInterval(), cfg.BenchmarkConsensusRetryInterval())

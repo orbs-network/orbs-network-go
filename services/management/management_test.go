@@ -31,7 +31,7 @@ func TestManagement_GetCommitteeAfterAnUpdateExists(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		test.WithContext(func(ctx context.Context) {
 			cp := newStaticCommitteeManagement(0, testKeys.NodeAddressesForTests()[:4])
-			termChangeHeight := uint64(10)
+			termChangeHeight := primitives.TimestampSeconds(10)
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 
 			committee := cp.GetCommittee(ctx, termChangeHeight-1)
@@ -50,7 +50,7 @@ func TestManagement_GetCommitteeWhenTwoChangesOneAfterOther(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		test.WithContext(func(ctx context.Context) {
 			cp := newStaticCommitteeManagement(0, testKeys.NodeAddressesForTests()[:4])
-			termChangeHeight := uint64(10)
+			termChangeHeight := primitives.TimestampSeconds(10)
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 			cp.addCommittee(termChangeHeight+1, testKeys.NodeAddressesForTests()[5:9])
 
@@ -70,7 +70,7 @@ func TestManagement_GetCommitteeWhenTwoChangesClose(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		test.WithContext(func(ctx context.Context) {
 			cp := newStaticCommitteeManagement(0, testKeys.NodeAddressesForTests()[:4])
-			termChangeHeight := uint64(10)
+			termChangeHeight := primitives.TimestampSeconds(10)
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 			cp.addCommittee(termChangeHeight+2, testKeys.NodeAddressesForTests()[5:9])
 
@@ -89,11 +89,11 @@ func TestManagement_GetCommitteeWhenTwoChangesClose(t *testing.T) {
 	})
 }
 
-func newStaticCommitteeManagement(ref uint64, committee []primitives.NodeAddress) *Service{
+func newStaticCommitteeManagement(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) *Service{
 	return &Service{
 		data: &VirtualChainManagementData{
 			CurrentReference: ref,
-			Topology:         nil,
+			CurrentTopology:  nil,
 			Committees:       []CommitteeTerm{{ref, committee}},
 			Subscriptions:    nil,
 			ProtocolVersions: nil,
@@ -101,7 +101,7 @@ func newStaticCommitteeManagement(ref uint64, committee []primitives.NodeAddress
 	}
 }
 
-func (s* Service) addCommittee(ref uint64, committee []primitives.NodeAddress) {
+func (s* Service) addCommittee(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) {
 	s.Lock()
 	defer s.Unlock()
 	s.data.Committees = append (s.data.Committees, CommitteeTerm{ref, committee})
@@ -131,11 +131,11 @@ func TestManagement_InternalDataOnlyChangesAfterUpdateWhenAutoUpdateDisabled(t *
 
 type staticProvider struct {
 	sync.RWMutex
-	ref uint64
+	ref primitives.TimestampSeconds
 	committee []primitives.NodeAddress
 }
 
-func newStaticProvider(ref uint64, committee []primitives.NodeAddress) *staticProvider{
+func newStaticProvider(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) *staticProvider{
 	return &staticProvider{ ref:ref, committee:committee}
 }
 
@@ -144,7 +144,7 @@ func (sp *staticProvider) Get(ctx context.Context) (*VirtualChainManagementData,
 	defer sp.RUnlock()
 	return &VirtualChainManagementData{
 		CurrentReference: sp.ref,
-		Topology:         make(adapterGossip.GossipPeers),
+		CurrentTopology:  make(adapterGossip.GossipPeers),
 		Committees:       []CommitteeTerm{{sp.ref, sp.committee}},
 		Subscriptions:    nil,
 		ProtocolVersions: nil,
@@ -155,7 +155,7 @@ func (sp *staticProvider) UpdateTopology(bgCtx context.Context, newPeers adapter
 	// does nothing just here for test to run
 }
 
-func (sp *staticProvider) changeCommittee(ref uint64, committee []primitives.NodeAddress) {
+func (sp *staticProvider) changeCommittee(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) {
 	sp.Lock()
 	defer sp.Unlock()
 	sp.ref = ref
@@ -169,6 +169,6 @@ func newConfig() *cfg {
 	return &cfg{}
 }
 
-func (tc *cfg) ManagementUpdateInterval() time.Duration { // no auto update
+func (tc *cfg) ManagementPollingInterval() time.Duration { // no auto update
 	return 0
 }

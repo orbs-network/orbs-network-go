@@ -23,7 +23,7 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers top
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, keepAliveInterval)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, networkTimeout)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 100*time.Millisecond)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 100*time.Millisecond)
 
 	return cfg
 }
@@ -37,7 +37,7 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 10*time.Second)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
 
 	return cfg
 }
@@ -45,13 +45,15 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	cfg := emptyConfig()
 
-	cfg.SetUint32(PROTOCOL_VERSION, 1)
+	cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE) // max >= min otherwise some tests are meaningless
+	cfg.SetUint32(MINIMAL_PROTOCOL_VERSION_SUPPORTED, MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
 	cfg.SetUint32(LEAN_HELIX_CONSENSUS_MINIMUM_COMMITTEE_SIZE, 4)
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, triggersEnabled)
+	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 1*time.Minute)
 
 	return cfg
 }
@@ -79,6 +81,7 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
+	cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)

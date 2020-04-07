@@ -8,14 +8,15 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/pkg/errors"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
@@ -46,8 +47,6 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 				with.Logging(t, func(parent *with.LoggingHarness) {
 					h := newHarness(parent.Logger)
 
-					h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, nil)
-
 					results, err := h.transactionSetPreOrder(ctx, []*protocol.SignedTransaction{tt.tx})
 					require.NoError(t, err, "transaction set pre order should not fail on signature problems")
 					require.Equal(t, []protocol.TransactionStatus{tt.status}, results, "transactionSetPreOrder returned statuses should match")
@@ -59,25 +58,47 @@ func TestPreOrder_DifferentSignerSchemes(t *testing.T) {
 	}
 }
 
-func TestPreOrder_GlobalSubscriptionContractNotApproved(t *testing.T) {
+func TestPreOrder_SubscriptionNotApproved(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
-
-			h.expectSystemContractCalled(globalpreorder_systemcontract.CONTRACT_NAME, globalpreorder_systemcontract.METHOD_APPROVE, errors.New("subscription problem"))
+			h.managementProvider.setSubscriptionStatus(false)
 
 			txs := []*protocol.SignedTransaction{}
 			txs = append(txs, builders.TransferTransaction().Build())
-			txs = append(txs, builders.Transaction().WithContract(globalpreorder_systemcontract.CONTRACT_NAME).Build())
 			txs = append(txs, builders.TransferTransaction().Build())
 
 			results, err := h.transactionSetPreOrder(ctx, txs)
 			require.NoError(t, err, "transaction set pre order should not fail")
 			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[0], "first tx should be rejected")
-			require.Equal(t, protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, results[1], "second tx should not be rejected since it is made to _GlobalPreOrder")
-			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[2], "third tx should be rejected")
-
-			h.verifySystemContractCalled(t)
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, results[1], "third tx should be rejected")
 		})
 	})
 }
+
+func TestPreOrder_NetworkTimeReferenceTooOld(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			parent.AllowErrorsMatching("Network has lost live connection to management")
+			h := newHarness(parent.Logger)
+
+			txs := []*protocol.SignedTransaction{}
+			txs = append(txs, builders.TransferTransaction().Build())
+			txs = append(txs, builders.TransferTransaction().Build())
+
+			output, err := h.service.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
+				SignedTransactions:        txs,
+				CurrentBlockHeight:        12,
+				CurrentBlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()),
+				CurrentBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-h.managementProvider.ManagementNetworkLivenessTimeout()).Add(- 1*time.Hour).Unix()),
+			})
+
+			require.NoError(t, err, "transaction set pre order should fail")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, output.PreOrderResults[0], "first tx should be rejected")
+			require.Equal(t, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, output.PreOrderResults[1], "third tx should be rejected")
+		})
+	})
+}
+
+
+// TODO POSV2 reftime happy flow ?

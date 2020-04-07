@@ -31,7 +31,7 @@ import (
 
 type harness struct {
 	*with.ConcurrencyHarness
-	txpool                  *transactionpool.Service
+	txpool                  services.TransactionPool
 	gossip                  *gossiptopics.MockTransactionRelay
 	vm                      *services.MockVirtualMachine
 	signer                  signer.Signer
@@ -161,9 +161,11 @@ func (h *harness) ignoringTransactionResults() {
 
 func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHeight primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		CurrentBlockHeight:      currentBlockHeight,
-		PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
-		MaxNumberOfTransactions: maxNumOfTransactions,
+		BlockProtocolVersion:      h.config.MaximalProtocolVersionSupported(),
+		CurrentBlockHeight:        currentBlockHeight,
+		PrevBlockTimestamp:        primitives.TimestampNano(time.Now().UnixNano() - 100),
+		CurrentBlockReferenceTime: 0,
+		MaxNumberOfTransactions:   maxNumOfTransactions,
 	})
 }
 
@@ -214,11 +216,12 @@ func (h *harness) assumeBlockStorageAtHeight(height primitives.BlockHeight) {
 	h.lastBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano())
 }
 
-func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, txs ...*protocol.SignedTransaction) error {
+func (h *harness) validateTransactionsForOrdering(ctx context.Context, blockHeight primitives.BlockHeight, blockProtocol primitives.ProtocolVersion, txs ...*protocol.SignedTransaction) error {
 	_, err := h.txpool.ValidateTransactionsForOrdering(ctx, &services.ValidateTransactionsForOrderingInput{
-		SignedTransactions:    txs,
+		BlockProtocolVersion:  blockProtocol,
 		CurrentBlockHeight:    blockHeight,
 		CurrentBlockTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
+		SignedTransactions:    txs,
 	})
 
 	return err

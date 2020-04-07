@@ -18,6 +18,7 @@ var ErrFailedTransactionOrdering = errors.New("ErrFailedTransactionOrdering")
 
 var ErrMismatchedTxRxBlockHeight = errors.New("ErrMismatchedTxRxBlockHeight mismatched block height between transactions and results")
 var ErrMismatchedTxRxTimestamps = errors.New("ErrMismatchedTxRxTimestamps mismatched timestamp between transactions and results")
+var ErrMismatchedTxRxBlockRefTimes = errors.New("ErrMismatchedTxRxBlockRefTimes mismatched block reference time between transactions and results")
 var ErrMismatchedTxHashPtrToActualTxBlock = errors.New("ErrMismatchedTxHashPtrToActualTxBlock mismatched tx block hash ptr to actual tx block hash")
 var ErrMismatchedTxRxBlockProposer = errors.New("ErrMismatchedTxRxBlockProposer")
 

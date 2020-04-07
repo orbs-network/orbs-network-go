@@ -13,7 +13,7 @@ import (
 )
 
 type Config interface {
-	ManagementUpdateInterval() time.Duration
+	ManagementPollingInterval() time.Duration
 }
 
 type Provider interface { // update of data provider
@@ -25,23 +25,24 @@ type TopologyConsumer interface { // consumer that needs to get topology update 
 }
 
 type CommitteeTerm struct {
-	AsOfReference uint64
+	AsOfReference primitives.TimestampSeconds
 	Committee     []primitives.NodeAddress
 }
 
 type SubscriptionTerm struct {
-	AsOfReference uint64
+	AsOfReference primitives.TimestampSeconds
 	IsActive bool
 }
 
 type ProtocolVersionTerm struct {
-	AsOfReference uint64
+	AsOfReference primitives.TimestampSeconds
 	Version      primitives.ProtocolVersion
 }
 
 type VirtualChainManagementData struct {
-	CurrentReference uint64
-	Topology         adapterGossip.GossipPeers
+	CurrentReference primitives.TimestampSeconds
+	GenesisReference primitives.TimestampSeconds
+	CurrentTopology  adapterGossip.GossipPeers
 	Committees       []CommitteeTerm
 	Subscriptions    []SubscriptionTerm
 	ProtocolVersions []ProtocolVersionTerm
@@ -74,26 +75,32 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 		panic(fmt.Sprintf("failed initializing management provider, err=%s", err.Error())) // can't continue if no management
 	}
 
-	if config.ManagementUpdateInterval() > 0 {
+	if config.ManagementPollingInterval() > 0 {
 		s.Supervise(s.startPollingForUpdates(parentCtx))
 	}
 
 	return s
 }
 
-func (s *Service) GetCurrentReference(ctx context.Context) uint64 {
+func (s *Service) GetCurrentReference(ctx context.Context) primitives.TimestampSeconds {
 	s.RLock()
 	defer s.RUnlock()
 	return s.data.CurrentReference
 }
 
+func (s *Service) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
+	s.RLock()
+	defer s.RUnlock()
+	return s.data.GenesisReference
+}
+
 func (s *Service) GetTopology(ctx context.Context) adapterGossip.GossipPeers {
 	s.RLock()
 	defer s.RUnlock()
-	return s.data.Topology
+	return s.data.CurrentTopology
 }
 
-func (s *Service) GetCommittee(ctx context.Context, reference uint64) []primitives.NodeAddress {
+func (s *Service) GetCommittee(ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.Committees) - 1
@@ -102,7 +109,7 @@ func (s *Service) GetCommittee(ctx context.Context, reference uint64) []primitiv
 	return s.data.Committees[i].Committee
 }
 
-func (s *Service) GetSubscriptionStatus(ctx context.Context, reference uint64) bool {
+func (s *Service) GetSubscriptionStatus(ctx context.Context, reference primitives.TimestampSeconds) bool {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.Subscriptions) - 1
@@ -111,7 +118,7 @@ func (s *Service) GetSubscriptionStatus(ctx context.Context, reference uint64) b
 	return s.data.Subscriptions[i].IsActive
 }
 
-func (s *Service) GetProtocolVersion(ctx context.Context, reference uint64) primitives.ProtocolVersion {
+func (s *Service) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.ProtocolVersions) - 1
@@ -132,7 +139,7 @@ func (s *Service) update(ctx context.Context) error {
 		return err
 	}
 	s.write(data)
-	s.topologyConsumer.UpdateTopology(ctx, s.data.Topology)
+	s.topologyConsumer.UpdateTopology(ctx, s.data.CurrentTopology)
 	return nil
 }
 
@@ -142,7 +149,7 @@ func (s *Service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWa
 			select {
 			case <-bgCtx.Done():
 				return
-			case <-time.After(s.config.ManagementUpdateInterval()):
+			case <-time.After(s.config.ManagementPollingInterval()):
 				err := s.update(bgCtx)
 				if err != nil {
 					s.logger.Info("management provider failed to update the topology", log.Error(err))

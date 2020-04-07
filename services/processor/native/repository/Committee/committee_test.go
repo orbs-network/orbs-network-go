@@ -159,28 +159,3 @@ func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
 func requireCountToBeInRange(t testing.TB, actual, expected int) {
 	require.InDelta(t, expected, actual, 0.05 * float64(expected), "expect (%d) to be five precent delta to (%d)", actual, expected)
 }
-
-func TestOrbsCommitteeContract_getNextOrderedCommittee(t *testing.T) {
-	committeeSize := 20
-	addresses := makeNodeAddressArray(committeeSize)
-
-	InServiceScope(nil, nil, func(m Mockery) {
-		_init()
-		blockHeight := 10
-
-		// prepare
-		m.MockEnvBlockHeight(blockHeight)
-		m.MockEnvGetBlockCommittee(addresses)
-
-		// run
-		currentCommittee := getOrderedCommittee()
-		nextCommittee := getNextOrderedCommittee()
-		m.MockEnvBlockHeight(blockHeight+1)
-		nextCurrentCommittee := getOrderedCommittee()
-
-		//assert
-		require.NotEqual(t, currentCommittee, nextCommittee)
-		require.ElementsMatch(t, currentCommittee, nextCommittee, "must actually be same list in diff order")
-		require.Equal(t, nextCommittee, nextCurrentCommittee)
-	})
-}

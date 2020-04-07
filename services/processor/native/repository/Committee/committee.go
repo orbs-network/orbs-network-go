@@ -13,18 +13,11 @@ import (
 )
 
 /**
- * This function is meant ot be used via callSystemContract or sendTx ... it will not give same result when used with RunQuery
+ * This function is meant ot be used via callSystemContract or sendTx ... it will not WORK when used with RunQuery (the ref time will be wrong)
  * This function is used with state as last committed block but with env (block height) of the block being closed.
  */
 func getOrderedCommittee() [][]byte {
 	return _orderList(env.GetBlockCommittee(), _generateSeed(env.GetBlockHeight()))
-}
-
-/**
- * This function is meant ot be used via runQuery ... and gives the committee for the next block (compared with block height of the return value)
- */
-func getNextOrderedCommittee() [][]byte {
-	return _orderList(env.GetBlockCommittee(), _generateSeed(env.GetBlockHeight()+1))
 }
 
 func _generateSeed(blockHeight uint64) []byte {

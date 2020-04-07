@@ -360,13 +360,13 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 }
 
 type blockPairBuilderConfig interface {
-	ProtocolVersion() primitives.ProtocolVersion
+	MaximalProtocolVersionSupported() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextTriggersEnabled() bool
 }
 
 func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder {
-	b.protocolVersion = cfg.ProtocolVersion()
+	b.protocolVersion = cfg.MaximalProtocolVersionSupported()
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
 	return b

@@ -63,7 +63,7 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementUpdateTime time.Duration,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementPollingInterval time.Duration,
 	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *Network {
 
 	testLogger.Info("===========================================================================")
@@ -90,7 +90,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 		requiredQuorumPercentage,
 		vcid,
 		emptyBlockTime,
-		managementUpdateTime,
+		managementPollingInterval,
 	)
 
 	if configOverride != nil {

@@ -13,7 +13,7 @@ import (
 func TestManagementMemory_PreventDoubleCommitteeOnSameBlock(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cp := NewMemoryProvider(newMemoryConfig(), harness.Logger)
-		termChangeHeight := uint64(10)
+		termChangeHeight := primitives.TimestampSeconds(10)
 		err := cp.AddCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 		require.NoError(t, err)
 
@@ -40,7 +40,7 @@ func (c *cfg) GenesisValidatorNodes() map[string]config.ValidatorNode {
 	return make(map[string]config.ValidatorNode)
 }
 
-func (c *cfg) ProtocolVersion() primitives.ProtocolVersion {
+func (c *cfg) MaximalProtocolVersionSupported() primitives.ProtocolVersion {
 	return 1
 }
 

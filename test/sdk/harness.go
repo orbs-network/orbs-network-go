@@ -24,6 +24,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 const ContractName = "TestContract"
@@ -37,7 +38,7 @@ func generateDeployTx() *protocol.SignedTransaction {
 type harness struct {
 	vm                services.VirtualMachine
 	repository        *testkit.ManualRepository
-	committeeProvider virtualmachine.CommitteeProvider
+	committeeProvider virtualmachine.ManagementProvider
 }
 
 func newVmHarness(logger log.Logger) *harness {
@@ -46,7 +47,7 @@ func newVmHarness(logger log.Logger) *harness {
 	ssCfg := config.ForStateStorageTest(10, 5, 5000)
 	ssPersistence := stateAdapter.NewStatePersistence(registry)
 	stateStorage := statestorage.NewStateStorage(ssCfg, ssPersistence, nil, logger, registry)
-	committeeProvider := testCommitteeProvider.NewTestCommitteeProvider(5)
+	committeeProvider := testCommitteeProvider.NewTestManagementProvider(5)
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 	psCfg := config.ForNativeProcessorTests(42)
@@ -58,7 +59,7 @@ func newVmHarness(logger log.Logger) *harness {
 	processorMap := map[protocol.ProcessorType]services.Processor{protocol.PROCESSOR_TYPE_NATIVE: processorService}
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = &services.MockCrosschainConnector{}
-	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, committeeProvider, logger)
+	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, committeeProvider, &vmCfg{}, logger)
 
 	return &harness{
 		committeeProvider: committeeProvider,
@@ -91,3 +92,10 @@ func (h *harness) process(ctx context.Context, txs ...*protocol.SignedTransactio
 		BlockProposerAddress:  hash.Make32BytesWithFirstByte(5),
 	})
 }
+
+type vmCfg struct {}
+
+func (c *vmCfg) ManagementNetworkLivenessTimeout() time.Duration {
+	return 10*time.Minute
+}
+

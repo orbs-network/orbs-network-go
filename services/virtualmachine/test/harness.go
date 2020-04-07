@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
+	"time"
 )
 
 type harness struct {
@@ -26,12 +27,12 @@ type harness struct {
 	stateStorage         *services.MockStateStorage
 	processors           map[protocol.ProcessorType]*services.MockProcessor
 	crosschainConnectors map[protocol.CrosschainConnectorType]*services.MockCrosschainConnector
+	managementProvider   *managementProvider
 	logger               log.Logger
 	service              services.VirtualMachine
 }
 
 func newHarness(logger log.Logger) *harness {
-
 	blockStorage := &services.MockBlockStorage{}
 	stateStorage := &services.MockStateStorage{}
 
@@ -52,14 +53,15 @@ func newHarness(logger log.Logger) *harness {
 		crosschainConnectorsForService[key] = value
 	}
 
-	committeeProvider := NewTestCommitteeProvider(4)
-	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, committeeProvider, logger)
+	managementProvider := NewTestManagementProvider(4)
+	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, managementProvider, managementProvider, logger)
 
 	return &harness{
 		blockStorage:         blockStorage,
 		stateStorage:         stateStorage,
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
+		managementProvider:   managementProvider,
 		logger:               logger,
 		service:              service,
 	}
@@ -199,14 +201,29 @@ func (h *harness) transactionSetPreOrder(ctx context.Context, signedTransactions
 	return output.PreOrderResults, err
 }
 
-type committeeProvider struct {
+// TODO POSV2 REFTIME - replace with mgmt service mock
+type managementProvider struct {
 	nodes []primitives.NodeAddress
+	isSubscription bool
+	liveTime time.Duration
 }
 
-func NewTestCommitteeProvider(numOfNodes int) *committeeProvider {
-	return  &committeeProvider{testKeys.NodeAddressesForTests()[:numOfNodes]}
+func NewTestManagementProvider(numOfNodes int) *managementProvider {
+	return  &managementProvider{nodes:testKeys.NodeAddressesForTests()[:numOfNodes], isSubscription:true, liveTime: 1*time.Minute}
 }
 
-func (cp *committeeProvider) GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress {
-	return cp.nodes
+func (mp *managementProvider) GetCommittee(ctx context.Context, referenceTime primitives.TimestampSeconds) []primitives.NodeAddress {
+	return mp.nodes
+}
+
+func (mp *managementProvider) GetSubscriptionStatus(ctx context.Context, reference primitives.TimestampSeconds) bool {
+	return mp.isSubscription
+}
+
+func (mp *managementProvider) setSubscriptionStatus(isSub bool) {
+	mp.isSubscription = isSub
+}
+
+func (mp *managementProvider) ManagementNetworkLivenessTimeout() time.Duration {
+	return mp.liveTime
 }

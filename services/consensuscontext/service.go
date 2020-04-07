@@ -9,11 +9,10 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"time"
@@ -41,10 +40,17 @@ func newMetrics(factory metric.Factory) *metrics {
 	}
 }
 
+type ManagementProvider interface {
+	GetCurrentReference(ctx context.Context) primitives.TimestampSeconds
+	GetGenesisReference(ctx context.Context) primitives.TimestampSeconds
+	GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion
+}
+
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
+	management      ManagementProvider
 	config          config.ConsensusContextConfig
 	logger          log.Logger
 
@@ -55,6 +61,7 @@ func NewConsensusContext(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
+	management ManagementProvider,
 	config config.ConsensusContextConfig,
 	logger log.Logger,
 	metricFactory metric.Factory,
@@ -64,6 +71,7 @@ func NewConsensusContext(
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
+		management:      management,
 		config:          config,
 		logger:          logger.WithTags(LogTag),
 		metrics:         newMetrics(metricFactory),
@@ -85,13 +93,6 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
-}
-
-func (s *service) printTxHash(logger log.Logger, txBlock *protocol.TransactionsBlockContainer) {
-	for _, tx := range txBlock.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), logfields.Transaction(txHash), logfields.BlockHeight(txBlock.Header.BlockHeight()))
-	}
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {

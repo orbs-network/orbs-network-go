@@ -18,12 +18,15 @@ import (
 func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
-	cfg.SetUint32(PROTOCOL_VERSION, 1)
+	cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+	cfg.SetUint32(MINIMAL_PROTOCOL_VERSION_SUPPORTED, MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, 1*time.Minute)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 1*time.Minute)
 	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
+	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
+	cfg.SetDuration(MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, 100*365*24*time.Hour) // TODO v2 POSV2 temp value that is private 2^62 nanos (100 years)
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time \  + empty block time
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 14*time.Second)
@@ -202,7 +205,7 @@ func ForAcceptanceTestNetwork(
 	requiredQuorumPercentage uint32,
 	virtualChainId primitives.VirtualChainId,
 	emptyBlockTime time.Duration,
-	managementUpdateTime time.Duration,
+	managementPollingInterval time.Duration,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
@@ -210,7 +213,7 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
-	cfg.SetDuration(MANAGEMENT_UPDATE_INTERVAL, managementUpdateTime)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, managementPollingInterval)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 200*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
@@ -243,6 +246,7 @@ func TemplateForGamma(
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
+	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, time.Hour) // needs to be >> from TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 100*time.Millisecond)
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 10*time.Minute)
 	cfg.SetUint32(BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE, 100)

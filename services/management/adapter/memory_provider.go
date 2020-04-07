@@ -19,17 +19,21 @@ import (
 	"sync"
 )
 
+const DEFAULT_REF_TIME = 1492983000
+const DEFAULT_GENESIS_REF_TIME = 1492982000
+
 type MemoryConfig interface {
 	GossipPeers() adapter.GossipPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
-	ProtocolVersion() primitives.ProtocolVersion
+	MaximalProtocolVersionSupported() primitives.ProtocolVersion
 }
 
 type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
-	currentReference      uint64
+	currentReference      primitives.TimestampSeconds
+	genesisReference      primitives.TimestampSeconds
 	topology              adapter.GossipPeers
 	committees            []management.CommitteeTerm
 	protocolVersions      []management.ProtocolVersionTerm
@@ -40,10 +44,11 @@ func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(config)
 	return &MemoryProvider{
 		logger:                logger,
-		currentReference:      0,
+		currentReference:      DEFAULT_REF_TIME,
+		genesisReference:      DEFAULT_GENESIS_REF_TIME,
 		topology:              config.GossipPeers(),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Committee: committee}},
-		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.ProtocolVersion()}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MaximalProtocolVersionSupported()}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
 }
@@ -54,7 +59,8 @@ func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainMana
 
 	return &management.VirtualChainManagementData{
 		CurrentReference: mp.currentReference,
-		Topology:         mp.topology,
+		GenesisReference: mp.genesisReference,
+		CurrentTopology:  mp.topology,
 		Committees:       mp.committees,
 		Subscriptions:    mp.isSubscriptionActives,
         ProtocolVersions: mp.protocolVersions,
@@ -62,7 +68,7 @@ func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainMana
 }
 
 // for acceptance tests
-func (mp *MemoryProvider) AddCommittee(reference uint64, committee []primitives.NodeAddress) error {
+func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, committee []primitives.NodeAddress) error {
 	mp.Lock()
 	defer mp.Unlock()
 
