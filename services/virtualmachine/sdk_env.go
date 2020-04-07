@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -106,7 +107,12 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
-		committeeNodeAddresses = s.managementProvider.GetCommittee(ctx, executionContext.lastBlockReferenceTime)
+		output, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
+		if err == nil {
+			committeeNodeAddresses = output.Members
+		} else {
+			s.logger.Error("management.GetCommittee should not return error", log.Error(err))
+		}
 	}
 	var committee [][]byte
 	for _, c := range committeeNodeAddresses {

@@ -47,7 +47,7 @@ func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
 		currentReference:      DEFAULT_REF_TIME,
 		genesisReference:      DEFAULT_GENESIS_REF_TIME,
 		topology:              config.GossipPeers(),
-		committees:            []management.CommitteeTerm{{AsOfReference: 0, Committee: committee}},
+		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MaximalProtocolVersionSupported()}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
@@ -76,7 +76,7 @@ func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, co
 		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
 	}
 
-	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Committee: committee})
+	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee})
 	mp.currentReference = reference
 	return nil
 }

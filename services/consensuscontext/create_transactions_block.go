@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -26,9 +27,13 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, err
 	}
 
-	proposedProtocolVersion := s.management.GetProtocolVersion(ctx, proposedReferenceTime)
+	proposedProtocolVersion, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:proposedReferenceTime})
+	if err != nil {
+		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
+		return nil, err
+	}
 
-	proposedTransactions, err := s.fetchTransactions(ctx, proposedProtocolVersion, input.CurrentBlockHeight, input.PrevBlockTimestamp, proposedReferenceTime, s.config.ConsensusContextMaximumTransactionsInBlock())
+	proposedTransactions, err := s.fetchTransactions(ctx, proposedProtocolVersion.ProtocolVersion, input.CurrentBlockHeight, input.PrevBlockTimestamp, proposedReferenceTime, s.config.ConsensusContextMaximumTransactionsInBlock())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch transactions for new block")
 	}
@@ -38,7 +43,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, errors.New("transactions pool GetTransactionsForOrdering returned proposed block timestamp of zero")
 	}
 
-	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedProtocolVersion, proposedBlockTimestamp)
+	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedProtocolVersion.ProtocolVersion, proposedBlockTimestamp)
 	txCount := len(transactionsForBlock)
 
 	merkleTransactionsRoot, err := digest.CalcTransactionsMerkleRoot(transactionsForBlock)
@@ -50,7 +55,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:            proposedProtocolVersion,
+			ProtocolVersion:            proposedProtocolVersion.ProtocolVersion,
 			VirtualChainId:             s.config.VirtualChainId(),
 			BlockHeight:                input.CurrentBlockHeight,
 			PrevBlockHashPtr:           input.PrevBlockHash,
@@ -71,14 +76,17 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 }
 
 func (s *service) proposeBlockReferenceTime(ctx context.Context, prevReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
-	proposedReferenceTime := s.management.GetCurrentReference(ctx)
-	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime,
-		s.management.GetCurrentReference(ctx), s.config.ManagementConsensusGraceTimeout()); err != nil {
+	proposedReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	if err != nil {
+		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
+	}
+	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime.CurrentReference,
+		proposedReferenceTime.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
 		return 0, err
 	}
 
 	// NOTE: network live and subscription is done in vm.pre-order to allow empty blocks to close.
-	return proposedReferenceTime, nil
+	return proposedReferenceTime.CurrentReference, nil
 }
 
 func (s *service) fetchTransactions(ctx context.Context, blockProtocolVersion primitives.ProtocolVersion, currentBlockHeight primitives.BlockHeight, prevBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds, maxNumberOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {

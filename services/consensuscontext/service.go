@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"time"
@@ -40,17 +39,11 @@ func newMetrics(factory metric.Factory) *metrics {
 	}
 }
 
-type ManagementProvider interface {
-	GetCurrentReference(ctx context.Context) primitives.TimestampSeconds
-	GetGenesisReference(ctx context.Context) primitives.TimestampSeconds
-	GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion
-}
-
 type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
-	management      ManagementProvider
+	management      services.Management
 	config          config.ConsensusContextConfig
 	logger          log.Logger
 
@@ -61,7 +54,7 @@ func NewConsensusContext(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
-	management ManagementProvider,
+	management services.Management,
 	config config.ConsensusContextConfig,
 	logger log.Logger,
 	metricFactory metric.Factory,

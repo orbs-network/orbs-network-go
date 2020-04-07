@@ -22,11 +22,6 @@ import (
 
 var LogTag = log.Service("virtual-machine")
 
-type ManagementProvider interface {
-	GetCommittee(ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress
-	GetSubscriptionStatus(ctx context.Context, reference primitives.TimestampSeconds) bool
-}
-
 type ManagementConfig interface {
 	ManagementNetworkLivenessTimeout() time.Duration
 }
@@ -35,19 +30,19 @@ type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	managementProvider   ManagementProvider
+	management           services.Management
 	cfg                  ManagementConfig
 	logger               log.Logger
 
 	contexts *executionContextProvider
 }
 
-func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, managementProvider ManagementProvider, cfg ManagementConfig, logger log.Logger, ) services.VirtualMachine {
+func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, management services.Management, cfg ManagementConfig, logger log.Logger, ) services.VirtualMachine {
 	s := &service{
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
-		managementProvider:   managementProvider,
+		management:           management,
 		cfg:                  cfg,
 		logger:               logger.WithTags(LogTag),
 

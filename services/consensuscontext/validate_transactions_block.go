@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -238,13 +239,22 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		input:                  input,
 	}
 
+	ref, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	if err != nil {
+		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
+		return nil, err
+	}
 	if err := validateProposeBlockReferenceTime(input.PrevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
-		s.management.GetCurrentReference(ctx), s.config.ManagementConsensusGraceTimeout()); err != nil {
+		ref.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
 		return nil, err
 	}
 
-	if err := validateProposeBlockProtocolVersionWithManagement(input.TransactionsBlock.Header.ProtocolVersion(),
-		s.management.GetProtocolVersion(ctx, input.TransactionsBlock.Header.ReferenceTime())); err != nil {
+	pvOutput, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:input.TransactionsBlock.Header.ReferenceTime()})
+	if err != nil {
+		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
+		return nil, err
+	}
+	if err := validateProposeBlockProtocolVersionWithManagement(input.TransactionsBlock.Header.ProtocolVersion(), pvOutput.ProtocolVersion); err != nil {
 		return nil, err
 	}
 

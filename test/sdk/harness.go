@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -18,8 +19,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/statestorage"
 	stateAdapter "github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
-	testCommitteeProvider "github.com/orbs-network/orbs-network-go/services/virtualmachine/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -38,7 +39,6 @@ func generateDeployTx() *protocol.SignedTransaction {
 type harness struct {
 	vm                services.VirtualMachine
 	repository        *testkit.ManualRepository
-	committeeProvider virtualmachine.ManagementProvider
 }
 
 func newVmHarness(logger log.Logger) *harness {
@@ -47,7 +47,9 @@ func newVmHarness(logger log.Logger) *harness {
 	ssCfg := config.ForStateStorageTest(10, 5, 5000)
 	ssPersistence := stateAdapter.NewStatePersistence(registry)
 	stateStorage := statestorage.NewStateStorage(ssCfg, ssPersistence, nil, logger, registry)
-	committeeProvider := testCommitteeProvider.NewTestManagementProvider(5)
+
+	management := &services.MockManagement{}
+	management.When("GetCommittee", mock.Any, mock.Any).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[:5]}, nil)
 
 	sdkCallHandler := &handlers.MockContractSdkCallHandler{}
 	psCfg := config.ForNativeProcessorTests(42)
@@ -59,10 +61,9 @@ func newVmHarness(logger log.Logger) *harness {
 	processorMap := map[protocol.ProcessorType]services.Processor{protocol.PROCESSOR_TYPE_NATIVE: processorService}
 	crosschainConnectors := make(map[protocol.CrosschainConnectorType]services.CrosschainConnector)
 	crosschainConnectors[protocol.CROSSCHAIN_CONNECTOR_TYPE_ETHEREUM] = &services.MockCrosschainConnector{}
-	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, committeeProvider, &vmCfg{}, logger)
+	vm := virtualmachine.NewVirtualMachine(stateStorage, processorMap, crosschainConnectors, management, &vmCfg{}, logger)
 
 	return &harness{
-		committeeProvider: committeeProvider,
 		vm:         vm,
 		repository: repo,
 	}

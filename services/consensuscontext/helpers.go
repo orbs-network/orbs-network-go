@@ -12,16 +12,22 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
 func (s *service) fixPrevReferenceTimeIfGenesis(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
 	if blockHeight == 1 { // genesis block
-		if s.management.GetGenesisReference(ctx) > s.management.GetCurrentReference(ctx) {
-			return 0, errors.Errorf("failed genesis time reference (%d) cannot be after current time reference (%d)", s.management.GetGenesisReference(ctx), s.management.GetCurrentReference(ctx))
+		reference, err := s.management.GetGenesisReference(ctx, &services.GetGenesisReferenceInput{})
+		if err != nil {
+			s.logger.Error("management.GetGenesisReference should not return error", log.Error(err))
+			return 0, err
 		}
-		prevBlockReferenceTime = s.management.GetGenesisReference(ctx)
+		if reference.GenesisReference > reference.CurrentReference {
+			return 0, errors.Errorf("failed genesis time reference (%d) cannot be after current time reference (%d)", reference.GenesisReference, reference.CurrentReference)
+		}
+		prevBlockReferenceTime = reference.GenesisReference
 	}
 	return prevBlockReferenceTime, nil
 }

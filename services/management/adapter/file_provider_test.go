@@ -66,11 +66,11 @@ func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm
 	committee := []primitives.NodeAddress{testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()}
 	// notice order of ref from small to big.
 	require.EqualValues(t, 1582613000, c[0].AsOfReference)
-	require.ElementsMatch(t, committee, c[0].Committee)
+	require.ElementsMatch(t, committee, c[0].Members)
 	require.EqualValues(t, 1582614000, c[1].AsOfReference)
-	require.ElementsMatch(t, committee, c[1].Committee)
+	require.ElementsMatch(t, committee, c[1].Members)
 	require.EqualValues(t, 1582616000, c[2].AsOfReference)
-	require.ElementsMatch(t, committee, c[2].Committee)
+	require.ElementsMatch(t, committee, c[2].Members)
 }
 
 type fconfig struct {

@@ -9,8 +9,10 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/with"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestReturnAllAvailableTransactionsFromTransactionPool(t *testing.T) {
@@ -74,7 +76,8 @@ func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
-			h.managementService.setGenesis(h.managementService.GetCurrentReference(ctx) + 1)
+			h.management.Reset()
+			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
 			txCount := uint32(2)
 			h.expectTxPoolToReturnXTransactions(txCount)
 

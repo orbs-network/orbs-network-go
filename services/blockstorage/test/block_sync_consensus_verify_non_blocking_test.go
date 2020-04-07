@@ -52,8 +52,10 @@ func TestSyncPetitioner_ConsensusVerify_NonBlocking(t *testing.T) {
 		numOfStateRevisionsToRetain := 2
 		virtualMachine := &services.MockVirtualMachine{}
 		cfg := config.ForConsensusContextTests(false)
-		mgmtMock := &managementMock{cfg.MaximalProtocolVersionSupported()}
-		consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, mgmtMock, cfg, harness.Logger, metric.NewRegistry())
+		mamagement := &services.MockManagement{}
+		mamagement.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: 5000, GenesisReference: 0,}, nil)
+		consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, mamagement, cfg, harness.Logger, metric.NewRegistry())
+
 		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		committedBlockHeights := make(chan primitives.BlockHeight, 10)
@@ -136,21 +138,3 @@ func simulateVerifyBlockConsensus(ctx context.Context, tb testing.TB, consensusC
 		done <- struct{}{}
 	}()
 }
-
-// TODO POSV2 REFTIME MGMT -> replace with mock from spec
-type managementMock struct {
-	pv  primitives.ProtocolVersion
-}
-
-func (m *managementMock) GetCurrentReference(ctx context.Context, input *services.GetCurrentReferenceInput) (primitives.TimestampSeconds, *services.GetCurrentReferenceOutput, error) {
-	return 5000, nil, nil
-}
-
-func (m *managementMock) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
-	return 1
-}
-
-func (m *managementMock) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
-	return m.pv
-}
-

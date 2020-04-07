@@ -51,7 +51,7 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 	var prevRxBlockHash primitives.Sha256
 	//var prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) - 1
 	var prevBlockTimestamp primitives.TimestampNano
-	var prevBlockReferenceTime primitives.TimestampSeconds // TODO POSV2 REFTIME what do i put here if there is no prev ?
+	var prevBlockReferenceTime primitives.TimestampSeconds
 
 	if prevBlock != nil {
 		prevBlockPair := FromLeanHelixBlock(prevBlock)

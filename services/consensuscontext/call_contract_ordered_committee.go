@@ -23,7 +23,6 @@ func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight pr
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// current block is used as seed and needs to be for the block being calculated Now.
-	// TODO POSV2 REFTIME remove log ?logger.Info("system-call GetOrderedCommittee", logfields.BlockHeight(currentBlockHeight))
 	orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, currentBlockHeight, prevBlockReferenceTime)
 	if err != nil {
 		return nil, err

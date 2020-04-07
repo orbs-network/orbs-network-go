@@ -223,7 +223,7 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 			return bytes.Compare(committee[i], committee[j]) > 0
 		})
 
-		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Committee: committee})
+		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Members: committee})
 	}
 
 	sort.SliceStable(committeeTerms, func(i, j int) bool {

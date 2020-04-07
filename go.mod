@@ -26,14 +26,14 @@ require (
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.7
+	github.com/orbs-network/lean-helix-go v0.3.0
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
 	github.com/orbs-network/orbs-contract-sdk v1.5.0
-	github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e
+	github.com/orbs-network/orbs-spec v0.0.0-20200407143159-7c7f9f344034
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.7.0 // indirect
@@ -51,7 +51,3 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 )
-
-replace github.com/orbs-network/orbs-spec => ../orbs-spec
-
-replace github.com/orbs-network/lean-helix-go => ../lean-helix-go

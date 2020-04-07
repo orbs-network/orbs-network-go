@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -62,7 +63,8 @@ func TestPreOrder_SubscriptionNotApproved(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
-			h.managementProvider.setSubscriptionStatus(false)
+			h.management.Reset()
+			h.management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive:false}, nil)
 
 			txs := []*protocol.SignedTransaction{}
 			txs = append(txs, builders.TransferTransaction().Build())
@@ -90,7 +92,7 @@ func TestPreOrder_NetworkTimeReferenceTooOld(t *testing.T) {
 				SignedTransactions:        txs,
 				CurrentBlockHeight:        12,
 				CurrentBlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()),
-				CurrentBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-h.managementProvider.ManagementNetworkLivenessTimeout()).Add(- 1*time.Hour).Unix()),
+				CurrentBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-h.cfg.ManagementNetworkLivenessTimeout()).Add(- 1*time.Hour).Unix()),
 			})
 
 			require.NoError(t, err, "transaction set pre order should fail")
@@ -99,6 +101,3 @@ func TestPreOrder_NetworkTimeReferenceTooOld(t *testing.T) {
 		})
 	})
 }
-
-
-// TODO POSV2 reftime happy flow ?

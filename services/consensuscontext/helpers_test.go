@@ -8,37 +8,23 @@ package consensuscontext
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
-// TODO POSV2 REFTIME MGMT -> replace with mock from spec
-type managementMock struct {
-	ref primitives.TimestampSeconds
-	gen primitives.TimestampSeconds
-}
-
-func (m *managementMock) GetCurrentReference(ctx context.Context) primitives.TimestampSeconds {
-	return m.ref
-}
-
-func (m *managementMock) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
-	return m.gen
-}
-
-func (m *managementMock) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
-	return 0
-}
-
-func (m *managementMock) setGenesis(gen primitives.TimestampSeconds) {
-	m.gen = gen
-}
-
 func newHarnessWithManagement(ref primitives.TimestampSeconds, gen primitives.TimestampSeconds) *service {
+	management := &services.MockManagement{}
+	management.When("GetGenesisReference", mock.Any, mock.Any).Return(
+		&services.GetGenesisReferenceOutput{
+			CurrentReference: ref,
+			GenesisReference: gen,
+		}, nil)
 	return &service{
-		management: &managementMock{ref: ref, gen: gen},
+		management: management,
 	}
 }
 

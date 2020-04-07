@@ -7,6 +7,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	adapterGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ type TopologyConsumer interface { // consumer that needs to get topology update 
 
 type CommitteeTerm struct {
 	AsOfReference primitives.TimestampSeconds
-	Committee     []primitives.NodeAddress
+	Members       []primitives.NodeAddress
 }
 
 type SubscriptionTerm struct {
@@ -48,7 +49,7 @@ type VirtualChainManagementData struct {
 	ProtocolVersions []ProtocolVersionTerm
 }
 
-type Service struct {
+type service struct {
 	govnr.TreeSupervisor
 
 	logger           log.Logger
@@ -60,9 +61,9 @@ type Service struct {
 	data *VirtualChainManagementData
 }
 
-func NewManagement(parentCtx context.Context, config Config, provider Provider, topologyConsumer TopologyConsumer, parentLogger log.Logger) *Service {
+func NewManagement(parentCtx context.Context, config Config, provider Provider, topologyConsumer TopologyConsumer, parentLogger log.Logger) *service {
 	logger := parentLogger.WithTags(log.String("service", "management"))
-	s := &Service{
+	s := &service{
 		logger:           logger,
 		config:           config,
 		provider:         provider,
@@ -82,58 +83,66 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 	return s
 }
 
-func (s *Service) GetCurrentReference(ctx context.Context) primitives.TimestampSeconds {
+func (s *service) GetCurrentReference(ctx context.Context, input *services.GetCurrentReferenceInput) (*services.GetCurrentReferenceOutput, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.data.CurrentReference
+	return &services.GetCurrentReferenceOutput{
+		CurrentReference: s.data.CurrentReference,
+	}, nil
 }
 
-func (s *Service) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
+func (s *service) GetGenesisReference(ctx context.Context, input *services.GetGenesisReferenceInput) (*services.GetGenesisReferenceOutput, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.data.GenesisReference
+	return &services.GetGenesisReferenceOutput{
+		CurrentReference: s.data.CurrentReference,
+		GenesisReference: s.data.GenesisReference,
+	}, nil
 }
 
-func (s *Service) GetTopology(ctx context.Context) adapterGossip.GossipPeers {
-	s.RLock()
-	defer s.RUnlock()
-	return s.data.CurrentTopology
-}
-
-func (s *Service) GetCommittee(ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
-	s.RLock()
-	defer s.RUnlock()
-	i := len(s.data.Committees) - 1
-	for ; i > 0 && reference < s.data.Committees[i].AsOfReference; i-- {
-	}
-	return s.data.Committees[i].Committee
-}
-
-func (s *Service) GetSubscriptionStatus(ctx context.Context, reference primitives.TimestampSeconds) bool {
-	s.RLock()
-	defer s.RUnlock()
-	i := len(s.data.Subscriptions) - 1
-	for ; i > 0 && reference < s.data.Subscriptions[i].AsOfReference; i-- {
-	}
-	return s.data.Subscriptions[i].IsActive
-}
-
-func (s *Service) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
+func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetProtocolVersionInput) (*services.GetProtocolVersionOutput, error) {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.ProtocolVersions) - 1
-	for ; i > 0 && reference < s.data.ProtocolVersions[i].AsOfReference; i-- {
+	for ; i > 0 && input.Reference < s.data.ProtocolVersions[i].AsOfReference; i-- {
 	}
-	return s.data.ProtocolVersions[i].Version
+
+	return &services.GetProtocolVersionOutput{
+		ProtocolVersion: s.data.ProtocolVersions[i].Version,
+	}, nil
 }
 
-func (s *Service) write(newData *VirtualChainManagementData) {
+func (s *service) GetCommittee(ctx context.Context, input *services.GetCommitteeInput) (*services.GetCommitteeOutput, error) {
+	s.RLock()
+	defer s.RUnlock()
+	i := len(s.data.Committees) - 1
+	for ; i > 0 && input.Reference < s.data.Committees[i].AsOfReference; i-- {
+	}
+
+	return &services.GetCommitteeOutput{
+		Members: s.data.Committees[i].Members,
+	}, nil
+}
+
+func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.GetSubscriptionStatusInput) (*services.GetSubscriptionStatusOutput, error) {
+	s.RLock()
+	defer s.RUnlock()
+	i := len(s.data.Subscriptions) - 1
+	for ; i > 0 && input.Reference < s.data.Subscriptions[i].AsOfReference; i-- {
+	}
+
+	return &services.GetSubscriptionStatusOutput{
+		SubscriptionStatusIsActive: s.data.Subscriptions[i].IsActive,
+	}, nil
+}
+
+func (s *service) write(newData *VirtualChainManagementData) {
 	s.Lock()
 	defer s.Unlock()
 	s.data = newData
 }
 
-func (s *Service) update(ctx context.Context) error {
+func (s *service) update(ctx context.Context) error {
 	data, err := s.provider.Get(ctx)
 	if err != nil {
 		return err
@@ -143,7 +152,7 @@ func (s *Service) update(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWaiter {
+func (s *service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWaiter {
 	return govnr.Forever(bgCtx, "management-service-updater", logfields.GovnrErrorer(s.logger), func() {
 		for {
 			select {

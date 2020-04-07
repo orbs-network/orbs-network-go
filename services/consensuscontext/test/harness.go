@@ -41,7 +41,7 @@ type harness struct {
 	transactionPool *services.MockTransactionPool
 	virtualMachine  *services.MockVirtualMachine
 	stateStorage    *services.MockStateStorage
-	managementService *managementMock
+	management      *services.MockManagement
 	logger          log.Logger
 	service         services.ConsensusContext
 	config          config.ConsensusContextConfig
@@ -122,7 +122,12 @@ func (h *harness) expectStateHashToReturn(hash []byte) {
 		StateMerkleRootHash: hash,
 	}
 	h.stateStorage.When("GetStateHash", mock.Any, mock.Any).Return(stateHashOutput, nil)
+}
 
+func setManagementValues(m *services.MockManagement, pv primitives.ProtocolVersion, ref primitives.TimestampSeconds, gen primitives.TimestampSeconds) {
+	m.When("GetProtocolVersion", mock.Any, mock.Any).Return(&services.GetProtocolVersionOutput{ProtocolVersion: pv}, nil)
+	m.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: ref}, nil)
+	m.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: ref, GenesisReference: gen,}, nil)
 }
 
 func newHarness(logger log.Logger, enableTriggers bool) *harness {
@@ -137,7 +142,8 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 
 	cfg := config.ForConsensusContextTests(enableTriggers)
 
-	mgmtMock := &managementMock{pv: cfg.MaximalProtocolVersionSupported(), gen: 0}
+	management := &services.MockManagement{}
+	setManagementValues(management, cfg.MaximalProtocolVersionSupported(), primitives.TimestampSeconds(time.Now().Unix()), 50)
 
 	metricFactory := metric.NewRegistry()
 
@@ -145,38 +151,16 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 		txPool,
 		machine,
 		state,
-		mgmtMock,
+		management,
 		cfg, logger, metricFactory)
 
 	return &harness{
 		transactionPool: txPool,
 		virtualMachine:  machine,
 		stateStorage:    state,
-		managementService:  mgmtMock,
+		management:      management,
 		logger:          logger,
 		service:         service,
 		config:          cfg,
 	}
-}
-
-// TODO POSV2 REFTIME MGMT -> replace with mock from spec
-type managementMock struct {
-	gen primitives.TimestampSeconds
-	pv  primitives.ProtocolVersion
-}
-
-func (m *managementMock) GetCurrentReference(ctx context.Context) primitives.TimestampSeconds {
-	return primitives.TimestampSeconds(time.Now().Unix())
-}
-
-func (m *managementMock) GetGenesisReference(ctx context.Context) primitives.TimestampSeconds {
-	return m.gen
-}
-
-func (m *managementMock) GetProtocolVersion(ctx context.Context, reference primitives.TimestampSeconds) primitives.ProtocolVersion {
-	return m.pv
-}
-
-func (m *managementMock) setGenesis(gen primitives.TimestampSeconds) {
-	m.gen = gen
 }
