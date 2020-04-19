@@ -50,6 +50,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		logfields.VirtualChainId(nodeConfig.VirtualChainId()),
 	)
 	metricRegistry := getMetricRegistry(nodeConfig)
+	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
 
@@ -59,7 +60,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	if len(nodeConfig.ManagementFilePath()) == 0 {
 		err := config.ValidateInMemoryManagement(nodeConfig)
 		if err != nil {
-			nodeLogger.Error("InMemory parmerters error cannot start" , log.Error(err))
+			nodeLogger.Error("InMemory parmerters error cannot start", log.Error(err))
 			panic(err)
 		}
 		managementProvider = managementAdapter.NewMemoryProvider(nodeConfig, nodeLogger)
