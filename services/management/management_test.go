@@ -3,6 +3,7 @@ package management
 import (
 	"context"
 	"github.com/orbs-network/lean-helix-go/test"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	adapterGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -120,7 +121,7 @@ func TestManagement_InternalDataOnlyChangesAfterUpdateWhenAutoUpdateDisabled(t *
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		test.WithContext(func(ctx context.Context) {
 			p := newStaticProvider(0, testKeys.NodeAddressesForTests()[:4])
-			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger )
+			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 
 			committee := getCommittee(cp, ctx, 5)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")

@@ -107,11 +107,11 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
-		output, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
-		if err == nil {
+		output, err2 := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
+		if err2 == nil {
 			committeeNodeAddresses = output.Members
 		} else {
-			s.logger.Error("management.GetCommittee should not return error", log.Error(err))
+			s.logger.Error("management.GetCommittee should not return error", log.Error(err2))
 		}
 	}
 	var committee [][]byte

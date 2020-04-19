@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-//const ProtocolVersion = primitives.ProtocolVersion(1)
-
 type validationContext struct {
 	nodeSyncRejectInterval time.Duration
 	expiryWindow           time.Duration

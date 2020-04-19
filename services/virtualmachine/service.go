@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -188,8 +187,4 @@ func (s *service) HandleSdkCall(ctx context.Context, input *handlers.HandleSdkCa
 	return &handlers.HandleSdkCallOutput{
 		OutputArguments: output,
 	}, nil
-}
-
-func (s *service) Get(ctx context.Context,) (primitives.TimestampSeconds, error) {
-	return 9, nil
 }

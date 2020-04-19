@@ -12,8 +12,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/crypto/merkle"
 	. "github.com/orbs-network/orbs-network-go/services/statestorage/test"
-	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -63,7 +63,7 @@ func TestSimulateMerkleInitForAllUsers(t *testing.T) {
 	t.Logf("Finished merkle build phase (%v keys) in %v. HeapAlloc is %dMB", len(userKeys), duration, ms.HeapAlloc/(1024*1024))
 
 	user500Proof, err := forest.GetProof(newRoot, userKeys[500])
-	t.Logf("user 500 value proof length is %v", len(user500Proof))
+	//t.Logf("user 500 value proof length is %v", len(user500Proof))
 	require.NoError(t, err)
 
 	valid, err := forest.Verify(newRoot, user500Proof, userKeys[500], hash.CalcSha256(userKeys[500]))
@@ -111,7 +111,7 @@ func TestSimulateStateInitFlowForSixMonthsAt100Tps(t *testing.T) {
 	})
 }
 
-func randomUsers(ctrlRand *test.ControlledRand) [][]byte {
+func randomUsers(ctrlRand *rand.ControlledRand) [][]byte {
 	userKeys := make([][]byte, USERS)
 	for i := range userKeys {
 		userKeys[i] = make([]byte, 32)
@@ -120,7 +120,7 @@ func randomUsers(ctrlRand *test.ControlledRand) [][]byte {
 	return userKeys
 }
 
-func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver, ctx context.Context, t *testing.T, ctrlRand *test.ControlledRand) (int, int, time.Duration) {
+func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver, ctx context.Context, t *testing.T, ctrlRand *rand.ControlledRand) (int, int, time.Duration) {
 	var txCount int
 	var blockCount int
 	var generatingInputDuration time.Duration
@@ -163,7 +163,7 @@ func loadTransactions(userKeys [][]byte, keysWritten map[string]bool, d *Driver,
 	return txCount, blockCount, commitDuration
 }
 
-func generateRandomBlockStateDiff(userKeys [][]byte, keysWritten map[string]bool, height primitives.BlockHeight, contract string, ctrlRand *test.ControlledRand) (int, *services.CommitStateDiffInput) {
+func generateRandomBlockStateDiff(userKeys [][]byte, keysWritten map[string]bool, height primitives.BlockHeight, contract string, ctrlRand *rand.ControlledRand) (int, *services.CommitStateDiffInput) {
 	blockSize := ctrlRand.Int() % MAX_BLOCK_SIZE
 	blockDiff := builders.ContractStateDiff().WithContractName(contract)
 	for i := 0; i < blockSize; i++ {

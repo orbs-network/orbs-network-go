@@ -84,7 +84,7 @@ func NewNodeLogic(parentCtx context.Context,
 	}
 
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
-	management := management.NewManagement(ctx, nodeConfig, managementProvider, gossipService, logger)
+	management := management.NewManagement(ctx, nodeConfig, managementProvider, gossipService, logger, metricRegistry)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
 	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, management, nodeConfig, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, maybeClock, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)

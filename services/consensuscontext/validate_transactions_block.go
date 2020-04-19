@@ -244,18 +244,18 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 		return nil, err
 	}
-	if err := validateProposeBlockReferenceTime(input.PrevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
-		ref.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
-		return nil, err
+	if err2 := validateProposeBlockReferenceTime(input.PrevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
+		ref.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err2 != nil {
+		return nil, err2
 	}
 
-	pvOutput, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:input.TransactionsBlock.Header.ReferenceTime()})
-	if err != nil {
+	pvOutput, err3 := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:input.TransactionsBlock.Header.ReferenceTime()})
+	if err3 != nil {
 		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
-		return nil, err
+		return nil, err3
 	}
-	if err := validateProposeBlockProtocolVersionWithManagement(input.TransactionsBlock.Header.ProtocolVersion(), pvOutput.ProtocolVersion); err != nil {
-		return nil, err
+	if err4 := validateProposeBlockProtocolVersionWithManagement(input.TransactionsBlock.Header.ProtocolVersion(), pvOutput.ProtocolVersion); err4 != nil {
+		return nil, err4
 	}
 
 	validators := []txValidator{
@@ -274,12 +274,12 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		}
 	}
 
-	if err := validateTransactionsBlockTriggerCompliance(ctx, s.config, input.TransactionsBlock); err != nil { // trigger validator must be before ordering validator
-		return nil, err
+	if err6 := validateTransactionsBlockTriggerCompliance(ctx, s.config, input.TransactionsBlock); err6 != nil { // trigger validator must be before ordering validator
+		return nil, err6
 	}
 
-	if err := validateTxTransactionOrdering(ctx, s.config, s.transactionPool.ValidateTransactionsForOrdering, input.TransactionsBlock); err != nil { // trigger validator must be before ordering validtaor
-		return nil, err
+	if err7 := validateTxTransactionOrdering(ctx, s.config, s.transactionPool.ValidateTransactionsForOrdering, input.TransactionsBlock); err7 != nil { // trigger validator must be before ordering validtaor
+		return nil, err7
 	}
 
 	return &services.ValidateTransactionsBlockOutput{}, nil

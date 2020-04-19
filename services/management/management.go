@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	adapterGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -57,11 +58,27 @@ type service struct {
 	provider         Provider
 	topologyConsumer TopologyConsumer
 
+	metrics struct {
+		currentRefTime *metric.Gauge
+		genesisRefTime *metric.Gauge
+		lasUpdateTime  *metric.Gauge
+		numCommitteeEvents *metric.Gauge
+		currentCommittee *metric.Text
+		currentCommitteeRefTime *metric.Gauge
+		numSubscriptionEvents *metric.Gauge
+		currentSubscription *metric.Text
+		currentSubscriptionRefTime *metric.Gauge
+		numProtocolEvents *metric.Gauge
+		currentProtocol *metric.Gauge
+		currentProtocolRefTime *metric.Gauge
+		currentTopology *metric.Text
+	}
+
 	sync.RWMutex
 	data *VirtualChainManagementData
 }
 
-func NewManagement(parentCtx context.Context, config Config, provider Provider, topologyConsumer TopologyConsumer, parentLogger log.Logger) *service {
+func NewManagement(parentCtx context.Context, config Config, provider Provider, topologyConsumer TopologyConsumer, parentLogger log.Logger, metricFactory metric.Factory) *service {
 	logger := parentLogger.WithTags(log.String("service", "management"))
 	s := &service{
 		logger:           logger,
@@ -75,6 +92,8 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 		s.logger.Error("management provider failed to initializing the topology", log.Error(err))
 		panic(fmt.Sprintf("failed initializing management provider, err=%s", err.Error())) // can't continue if no management
 	}
+
+	s.initMetrics(metricFactory)
 
 	if config.ManagementPollingInterval() > 0 {
 		s.Supervise(s.startPollingForUpdates(parentCtx))
@@ -163,7 +182,58 @@ func (s *service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWa
 				if err != nil {
 					s.logger.Info("management provider failed to update the topology", log.Error(err))
 				}
+				s.updateMetrics()
 			}
 		}
 	})
+}
+
+func (s *service) initMetrics(metricFactory metric.Factory) {
+	s.metrics.currentRefTime = metricFactory.NewGauge("Management.CurrentRefTime")
+	s.metrics.genesisRefTime = metricFactory.NewGauge("Management.GenesisRefTime")
+	s.metrics.lasUpdateTime = metricFactory.NewGauge("Management.LastUpdateTime")
+	s.metrics.numCommitteeEvents = metricFactory.NewGauge("Management.Committee.Count")
+	s.metrics.currentCommittee = metricFactory.NewText("Management.Committee.Current")
+	s.metrics.currentCommitteeRefTime = metricFactory.NewGauge("Management.Committee.CurrentRefTime")
+	s.metrics.numSubscriptionEvents = metricFactory.NewGauge("Management.Subscription.Count")
+	s.metrics.currentSubscription = metricFactory.NewText("Management.Subscription.Current")
+	s.metrics.currentSubscriptionRefTime = metricFactory.NewGauge("Management.Subscription.CurrentRefTime")
+	s.metrics.numProtocolEvents = metricFactory.NewGauge("Management.Protocol.Count")
+	s.metrics.currentProtocol = metricFactory.NewGauge("Management.Protocol.Current")
+	s.metrics.currentProtocolRefTime = metricFactory.NewGauge("Management.Protocol.CurrentRefTime")
+	s.metrics.currentTopology = metricFactory.NewText("Management.Topology.Current")
+}
+
+func (s *service) updateMetrics() {
+	s.RLock()
+	defer s.RUnlock()
+	s.metrics.currentRefTime.Update(int64(s.data.CurrentReference))
+	s.metrics.genesisRefTime.Update(int64(s.data.GenesisReference))
+	s.metrics.lasUpdateTime.Update(time.Now().Unix())
+	s.metrics.currentTopology.Update(fmt.Sprintf("%v", s.data.CurrentTopology))
+
+	s.metrics.numCommitteeEvents.Update(int64(len(s.data.Committees)))
+	i := len(s.data.Committees) - 1
+	for ; i > 0 && s.data.CurrentReference < s.data.Committees[i].AsOfReference; i-- {
+	}
+	s.metrics.currentCommitteeRefTime.Update(int64(s.data.Committees[i].AsOfReference))
+	s.metrics.currentCommittee.Update(fmt.Sprintf("%v", s.data.Committees[i].Members))
+
+	s.metrics.numSubscriptionEvents.Update(int64(len(s.data.Subscriptions)))
+	i = len(s.data.Subscriptions) - 1
+	for ; i > 0 && s.data.CurrentReference < s.data.Subscriptions[i].AsOfReference; i-- {
+	}
+	s.metrics.currentSubscriptionRefTime.Update(int64(s.data.Subscriptions[i].AsOfReference))
+	if s.data.Subscriptions[i].IsActive {
+		s.metrics.currentSubscription.Update("Active")
+	} else {
+		s.metrics.currentSubscription.Update("Non-Active")
+	}
+
+	s.metrics.numProtocolEvents.Update(int64(len(s.data.ProtocolVersions)))
+	i = len(s.data.ProtocolVersions) - 1
+	for ; i > 0 && s.data.CurrentReference < s.data.ProtocolVersions[i].AsOfReference; i-- {
+	}
+	s.metrics.currentProtocolRefTime.Update(int64(s.data.ProtocolVersions[i].AsOfReference))
+	s.metrics.currentProtocol.Update(int64(s.data.ProtocolVersions[i].Version))
 }
