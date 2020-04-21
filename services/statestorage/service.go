@@ -92,7 +92,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	// TODO(v1) assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
-	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, commitPorposerAddress, inflateChainState(input.ContractStateDiffs))
+	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, 0, 0, commitPorposerAddress, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}
@@ -153,11 +153,13 @@ func (s *service) GetLastCommittedBlockInfo(ctx context.Context, input *services
 	defer s.mutex.RUnlock()
 
 	result := &services.GetLastCommittedBlockInfoOutput{
-		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
-		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
-		BlockProposerAddress:        s.revisions.getCurrentProposerAddress(),
+		BlockHeight:          s.revisions.getCurrentHeight(),
+		BlockTimestamp:       s.revisions.getCurrentTimestamp(),
+		CurrentReferenceTime: s.revisions.getCurrentReferenceTime(),
+		PrevReferenceTime:    s.revisions.getPrevReferenceTime(),
+		BlockProposerAddress: s.revisions.getCurrentProposerAddress(),
 	}
-	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.LastCommittedBlockHeight))
+	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.BlockHeight))
 	return result, nil
 }
 

@@ -196,7 +196,7 @@ func (d *driver) write(h primitives.BlockHeight, contract primitives.ContractNam
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = []byte(kv[i+1])
 	}
-	return d.inner.addRevision(h, 0, []byte{}, diff)
+	return d.inner.addRevision(h, 0, 0, 0, []byte{}, diff)
 }
 
 func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, contract primitives.ContractName, kv ...string) error {
@@ -204,7 +204,7 @@ func (d *driver) writeFull(h primitives.BlockHeight, ts primitives.TimestampNano
 	for i := 0; i < len(kv); i += 2 {
 		diff[contract][kv[i]] = []byte(kv[i+1])
 	}
-	return d.inner.addRevision(h, ts, proposer, diff)
+	return d.inner.addRevision(h, ts, 0, 0, proposer, diff)
 }
 
 func (d *driver) read(h primitives.BlockHeight, contract primitives.ContractName, key string) (string, bool, error) {
@@ -233,15 +233,15 @@ func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceM
 	return persistenceMock
 }
 
-func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
+func (spm *StatePersistenceMock) Write(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, prevRefTime primitives.TimestampSeconds, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 	return spm.Mock.Called(height, ts, proposer, root, diff).Error(0)
 }
 func (spm *StatePersistenceMock) Read(contract primitives.ContractName, key string) ([]byte, bool, error) {
 	ret := spm.Mock.Called(contract, key)
 	return []byte(fmt.Sprintf("%v", ret.Get(0))), ret.Bool(1), ret.Error(2)
 }
-func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, primitives.Sha256, error) {
-	return 0, 0, []byte{}, primitives.Sha256{}, nil
+func (spm *StatePersistenceMock) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds, primitives.TimestampSeconds, primitives.NodeAddress, primitives.Sha256, error) {
+	return 0, 0, 0, 0, []byte{}, primitives.Sha256{}, nil
 }
 
 type MerkleMock struct {

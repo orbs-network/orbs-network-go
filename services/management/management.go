@@ -10,6 +10,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
+	"strings"
 	"sync"
 	"time"
 )
@@ -119,39 +120,48 @@ func (s *service) GetGenesisReference(ctx context.Context, input *services.GetGe
 	}, nil
 }
 
-func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetProtocolVersionInput) (*services.GetProtocolVersionOutput, error) {
+func (s *service) getProtocolVersion(refTime primitives.TimestampSeconds) *ProtocolVersionTerm {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.ProtocolVersions) - 1
-	for ; i > 0 && input.Reference < s.data.ProtocolVersions[i].AsOfReference; i-- {
+	for ; i > 0 && refTime < s.data.ProtocolVersions[i].AsOfReference; i-- {
 	}
+	return &s.data.ProtocolVersions[i]
+}
 
+func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetProtocolVersionInput) (*services.GetProtocolVersionOutput, error) {
 	return &services.GetProtocolVersionOutput{
-		ProtocolVersion: s.data.ProtocolVersions[i].Version,
+		ProtocolVersion: s.getProtocolVersion(input.Reference).Version,
 	}, nil
 }
 
-func (s *service) GetCommittee(ctx context.Context, input *services.GetCommitteeInput) (*services.GetCommitteeOutput, error) {
+func (s *service) getCommittee(refTime primitives.TimestampSeconds) *CommitteeTerm {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.Committees) - 1
-	for ; i > 0 && input.Reference < s.data.Committees[i].AsOfReference; i-- {
+	for ; i > 0 && refTime < s.data.Committees[i].AsOfReference; i-- {
 	}
+	return &s.data.Committees[i]
+}
 
+func (s *service) GetCommittee(ctx context.Context, input *services.GetCommitteeInput) (*services.GetCommitteeOutput, error) {
 	return &services.GetCommitteeOutput{
-		Members: s.data.Committees[i].Members,
+		Members: s.getCommittee(input.Reference).Members,
 	}, nil
 }
 
-func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.GetSubscriptionStatusInput) (*services.GetSubscriptionStatusOutput, error) {
+func (s *service) getSubscriptionStatus(refTime primitives.TimestampSeconds) *SubscriptionTerm {
 	s.RLock()
 	defer s.RUnlock()
 	i := len(s.data.Subscriptions) - 1
-	for ; i > 0 && input.Reference < s.data.Subscriptions[i].AsOfReference; i-- {
+	for ; i > 0 && refTime < s.data.Subscriptions[i].AsOfReference; i-- {
 	}
+	return &s.data.Subscriptions[i]
+}
 
+func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.GetSubscriptionStatusInput) (*services.GetSubscriptionStatusOutput, error) {
 	return &services.GetSubscriptionStatusOutput{
-		SubscriptionStatusIsActive: s.data.Subscriptions[i].IsActive,
+		SubscriptionStatusIsActive: s.getSubscriptionStatus(input.Reference).IsActive,
 	}, nil
 }
 
@@ -207,33 +217,38 @@ func (s *service) initMetrics(metricFactory metric.Factory) {
 func (s *service) updateMetrics() {
 	s.RLock()
 	defer s.RUnlock()
-	s.metrics.currentRefTime.Update(int64(s.data.CurrentReference))
+
+	currentRef := s.data.CurrentReference
+
+	s.metrics.currentRefTime.Update(int64(currentRef))
 	s.metrics.genesisRefTime.Update(int64(s.data.GenesisReference))
 	s.metrics.lasUpdateTime.Update(time.Now().Unix())
-	s.metrics.currentTopology.Update(fmt.Sprintf("%v", s.data.CurrentTopology))
+	topologyStringArray := make([]string, 0, len(s.data.CurrentTopology))
+	for _, peer := range s.data.CurrentTopology {
+		topologyStringArray = append(topologyStringArray, fmt.Sprintf("{\"address:\":\"%s\", \"ip\":\"%s\", \"port\":%d}", peer.HexOrbsAddress(), peer.GossipEndpoint(), peer.GossipPort()))
+	}
+	s.metrics.currentTopology.Update("[" + strings.Join(topologyStringArray, ", ") + "]")
 
 	s.metrics.numCommitteeEvents.Update(int64(len(s.data.Committees)))
-	i := len(s.data.Committees) - 1
-	for ; i > 0 && s.data.CurrentReference < s.data.Committees[i].AsOfReference; i-- {
+	committeeTerm := s.getCommittee(currentRef)
+	s.metrics.currentCommitteeRefTime.Update(int64(committeeTerm.AsOfReference))
+	committeeStringArray := make([]string, len(committeeTerm.Members))
+	for j, nodeAddress := range committeeTerm.Members {
+		committeeStringArray[j] = fmt.Sprintf("\"%x\"", nodeAddress)
 	}
-	s.metrics.currentCommitteeRefTime.Update(int64(s.data.Committees[i].AsOfReference))
-	s.metrics.currentCommittee.Update(fmt.Sprintf("%v", s.data.Committees[i].Members))
+	s.metrics.currentCommittee.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 
 	s.metrics.numSubscriptionEvents.Update(int64(len(s.data.Subscriptions)))
-	i = len(s.data.Subscriptions) - 1
-	for ; i > 0 && s.data.CurrentReference < s.data.Subscriptions[i].AsOfReference; i-- {
-	}
-	s.metrics.currentSubscriptionRefTime.Update(int64(s.data.Subscriptions[i].AsOfReference))
-	if s.data.Subscriptions[i].IsActive {
+	subscriptionTerm := s.getSubscriptionStatus(currentRef)
+	s.metrics.currentSubscriptionRefTime.Update(int64(subscriptionTerm.AsOfReference))
+	if subscriptionTerm.IsActive {
 		s.metrics.currentSubscription.Update("Active")
 	} else {
 		s.metrics.currentSubscription.Update("Non-Active")
 	}
 
 	s.metrics.numProtocolEvents.Update(int64(len(s.data.ProtocolVersions)))
-	i = len(s.data.ProtocolVersions) - 1
-	for ; i > 0 && s.data.CurrentReference < s.data.ProtocolVersions[i].AsOfReference; i-- {
-	}
-	s.metrics.currentProtocolRefTime.Update(int64(s.data.ProtocolVersions[i].AsOfReference))
-	s.metrics.currentProtocol.Update(int64(s.data.ProtocolVersions[i].Version))
+	pvTerm := s.getProtocolVersion(currentRef)
+	s.metrics.currentProtocolRefTime.Update(int64(pvTerm.AsOfReference))
+	s.metrics.currentProtocol.Update(int64(pvTerm.Version))
 }

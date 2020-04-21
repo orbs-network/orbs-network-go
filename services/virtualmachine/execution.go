@@ -116,13 +116,13 @@ func (s *service) processTransactionSet(
 	return receipts, stateDiffs
 }
 
-func (s *service) getRecentCommittedBlockInfo(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, error) {
+func (s *service) getRecentCommittedBlockInfo(ctx context.Context) (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds, primitives.TimestampSeconds,  primitives.NodeAddress, error) {
 	output, err := s.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
 	if err != nil {
-		return 0, 0, []byte{}, err
+		return 0, 0, 0, 0, []byte{}, err
 	}
 
-	return output.LastCommittedBlockHeight, output.LastCommittedBlockTimestamp, output.BlockProposerAddress, nil
+	return output.BlockHeight, output.BlockTimestamp, output.CurrentReferenceTime, output.PrevReferenceTime, output.BlockProposerAddress, nil
 }
 
 func encodeTransactionReceipt(transaction *protocol.Transaction, result protocol.ExecutionResult, outputArgs *protocol.ArgumentArray, outputEvents *protocol.EventsArray) *protocol.TransactionReceipt {

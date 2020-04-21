@@ -50,5 +50,5 @@ func newDriver() *driver {
 
 func (d *driver) writeSingleValueBlock(h primitives.BlockHeight, c, k, v string) error {
 	diff := adapter.ChainState{primitives.ContractName(c): {k: []byte(v)}}
-	return d.InMemoryStatePersistence.Write(h, 0, []byte{}, []byte{}, diff)
+	return d.InMemoryStatePersistence.Write(h, 0,  0, 0, []byte{}, []byte{}, diff)
 }

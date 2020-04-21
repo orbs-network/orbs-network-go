@@ -58,7 +58,7 @@ func NewVirtualMachine(stateStorage services.StateStorage, processors map[protoc
 func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQueryInput) (*services.ProcessQueryOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
+	committedBlockHeight, committedBlockTimestamp, committeeReferenceTime, committedPrevReferenceTime, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
 	if err != nil {
 		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
@@ -79,7 +79,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	}
 
 	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
-	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, 0, 0, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, committeeReferenceTime, committedPrevReferenceTime, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = protocol.ArgumentsArrayEmpty()
 	}

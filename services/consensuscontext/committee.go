@@ -8,7 +8,7 @@ package consensuscontext
 
 import (
 	"context"
-	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -29,11 +29,13 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	s.logger.Info("committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("elected-validators-count", len(committee)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
 
 	s.metrics.committeeSize.Update(int64(len(committee)))
-	committeeStr := make([]string, len(committee))
-	for i, nodeAddress := range committee {
-		committeeStr[i] = lhprimitives.MemberId(nodeAddress).String()
+	committeeStringArray := make([]string, len(committee))
+	for j, nodeAddress := range committee {
+		committeeStringArray[j] = fmt.Sprintf("\"%x\"", nodeAddress)
 	}
-	s.metrics.committeeMembers.Update(strings.Join(committeeStr, ","))
+	s.metrics.committeeMembers.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
+	s.metrics.committeeRefTime.Update(int64(input.PrevBlockReferenceTime))
+
 	res := &services.RequestCommitteeOutput{
 		NodeAddresses:            committee,
 		NodeRandomSeedPublicKeys: nil,

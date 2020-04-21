@@ -26,6 +26,7 @@ type metrics struct {
 	transactionsRate                          *metric.Rate
 	committeeSize                             *metric.Gauge
 	committeeMembers                          *metric.Text
+	committeeRefTime                          *metric.Gauge
 }
 
 func newMetrics(factory metric.Factory) *metrics {
@@ -34,8 +35,9 @@ func newMetrics(factory metric.Factory) *metrics {
 		createResultsBlockTime:                    factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
 		processTransactionsSeInCreateResultsBlock: factory.NewLatency("ConsensusContext.ProcessTransactionsSetInCreateResultsBlock.Millis", 10*time.Second),
 		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
-		committeeSize:                             factory.NewGauge("ConsensusContext.committeeSize.Number"),
-		committeeMembers:                          factory.NewText("ConsensusContext.committeeMemberIds.Numbers", ""),
+		committeeSize:                             factory.NewGauge("ConsensusContext.Committee.Size"),
+		committeeMembers:                          factory.NewText("ConsensusContext.Committee.Members", ""),
+		committeeRefTime:                          factory.NewGauge("ConsensusContext.Committee.PrevBlockReferenceTime"),
 	}
 }
 
