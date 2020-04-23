@@ -78,6 +78,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	commitBlockHeight := input.ResultsBlockHeader.BlockHeight()
 	commitTimestamp := input.ResultsBlockHeader.Timestamp()
+	commitRefTime := input.ResultsBlockHeader.ReferenceTime()
 	commitPorposerAddress := input.ResultsBlockHeader.BlockProposerAddress()
 
 	s.mutex.Lock()
@@ -92,7 +93,7 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 
 	// TODO(v1) assert input.ResultsBlockHeader.PreExecutionStateRootHash() == s.revisions.getRevisionHash(commitBlockHeight - 1)
 
-	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, 0, 0, commitPorposerAddress, inflateChainState(input.ContractStateDiffs))
+	err := s.revisions.addRevision(commitBlockHeight, commitTimestamp, commitRefTime, commitPorposerAddress, inflateChainState(input.ContractStateDiffs))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to write state for block height %d", commitBlockHeight)
 	}

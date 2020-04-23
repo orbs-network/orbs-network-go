@@ -234,7 +234,7 @@ func (s *service) updateMetrics() {
 	s.metrics.currentCommitteeRefTime.Update(int64(committeeTerm.AsOfReference))
 	committeeStringArray := make([]string, len(committeeTerm.Members))
 	for j, nodeAddress := range committeeTerm.Members {
-		committeeStringArray[j] = fmt.Sprintf("\"%x\"", nodeAddress)
+		committeeStringArray[j] = fmt.Sprintf("\"%v\"", nodeAddress)   // %v is because NodeAddress has .String()
 	}
 	s.metrics.currentCommittee.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 

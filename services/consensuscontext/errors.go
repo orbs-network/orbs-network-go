@@ -15,6 +15,7 @@ var ErrMismatchedPrevBlockHash = errors.New("ErrMismatchedPrevBlockHash")
 var ErrMismatchedBlockProposer = errors.New("ErrMismatchedBlockProposer")
 
 var ErrFailedTransactionOrdering = errors.New("ErrFailedTransactionOrdering")
+var ErrFailedGenesisRefTime = errors.New("ErrFailedGenesisRefTime")
 
 var ErrMismatchedTxRxBlockHeight = errors.New("ErrMismatchedTxRxBlockHeight mismatched block height between transactions and results")
 var ErrMismatchedTxRxTimestamps = errors.New("ErrMismatchedTxRxTimestamps mismatched timestamp between transactions and results")

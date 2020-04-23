@@ -101,7 +101,7 @@ func (ls *rollingRevisions) getCurrentProposerAddress() primitives.NodeAddress {
 	return ls.currentProposer
 }
 
-func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, prevRefTime primitives.TimestampSeconds, proposer primitives.NodeAddress, diff adapter.ChainState) error {
+func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, proposer primitives.NodeAddress, diff adapter.ChainState) error {
 	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, toMerkleInput(diff))
 	if err != nil {
 		return errors.Wrapf(err, "failed to updated merkle tree")
@@ -113,13 +113,13 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		height:     height,
 		ts:         ts,
 		ref:        refTime,
-		prevRef:    prevRefTime,
+		prevRef:    ls.currentRefTime, // one back
 		proposer:   proposer,
 	})
 	ls.currentHeight = height
 	ls.currentTs = ts
+	ls.prevRefTime = ls.currentRefTime // one back
 	ls.currentRefTime = refTime
-	ls.prevRefTime = prevRefTime
 	ls.currentProposer = proposer
 	ls.currentMerkleRoot = newRoot
 
@@ -155,7 +155,7 @@ func (ls *rollingRevisions) evictRevisions() error {
 
 		ls.persistedHeight = d.height
 		ls.persistedTs = d.ts
-		ls.prevRefTime = d.ref
+		ls.persistedRefTime = d.ref
 		ls.persistedPrevRefTime = d.prevRef
 		ls.persistedProposer = d.proposer
 		ls.persistedRoot = d.merkleRoot

@@ -31,7 +31,7 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	s.metrics.committeeSize.Update(int64(len(committee)))
 	committeeStringArray := make([]string, len(committee))
 	for j, nodeAddress := range committee {
-		committeeStringArray[j] = fmt.Sprintf("\"%x\"", nodeAddress)
+		committeeStringArray[j] = fmt.Sprintf("\"%v\"", nodeAddress)  // %v is because NodeAddress has .String()
 	}
 	s.metrics.committeeMembers.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 	s.metrics.committeeRefTime.Update(int64(input.PrevBlockReferenceTime))

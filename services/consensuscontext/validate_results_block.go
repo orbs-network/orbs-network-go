@@ -20,9 +20,11 @@ import (
 
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
+// TODO v3 get rid of this concept of validator contex. it just unflexible.
 type rxValidatorContext struct {
 	virtualChainId         primitives.VirtualChainId
 	input                  *services.ValidateResultsBlockInput
+	fixedPrevRefTime       primitives.TimestampSeconds
 	getStateHash           func(ctx context.Context, input *services.GetStateHashInput) (*services.GetStateHashOutput, error)
 	processTransactionSet  func(ctx context.Context, input *services.ProcessTransactionSetInput) (*services.ProcessTransactionSetOutput, error)
 	calcReceiptsMerkleRoot func(receipts []*protocol.TransactionReceipt) (primitives.Sha256, error)
@@ -150,7 +152,7 @@ func validateExecution(ctx context.Context, vcrx *rxValidatorContext) error {
 		SignedTransactions:        vcrx.input.TransactionsBlock.SignedTransactions,
 		BlockProposerAddress:      vcrx.input.BlockProposerAddress,
 		CurrentBlockReferenceTime: vcrx.input.TransactionsBlock.Header.ReferenceTime(),
-		PrevBlockReferenceTime:    vcrx.input.PrevBlockReferenceTime,
+		PrevBlockReferenceTime:    vcrx.fixedPrevRefTime,
 	})
 	if err != nil {
 		return errors.Wrapf(ErrProcessTransactionSet, "ValidateResultsBlock.validateExecution() error from ProcessTransactionSet(): %v", err)
@@ -216,6 +218,11 @@ func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*pro
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
+	prevBlockReferenceTime, err := s.fixPrevReferenceTimeIfGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	if err != nil {
+		return &services.ValidateResultsBlockOutput{}, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateResultsBlock failed genesis time %s", err)
+	}
+
 	vcrx := &rxValidatorContext{
 		virtualChainId:         s.config.VirtualChainId(),
 		input:                  input,
@@ -223,6 +230,7 @@ func (s *service) ValidateResultsBlock(ctx context.Context, input *services.Vali
 		processTransactionSet:  s.virtualMachine.ProcessTransactionSet,
 		calcReceiptsMerkleRoot: digest.CalcReceiptsMerkleRoot,
 		calcStateDiffHash:      digest.CalcStateDiffHash,
+		fixedPrevRefTime:       prevBlockReferenceTime,
 	}
 
 	validators := []rxValidator{
