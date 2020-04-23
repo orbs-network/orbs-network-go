@@ -36,8 +36,13 @@ type Node struct {
 	blockPersistence *filesystem.BlockPersistence
 }
 
-func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
+func GetMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	metricRegistry := metric.NewRegistry().WithVirtualChainId(nodeConfig.VirtualChainId()).WithNodeAddress(nodeConfig.NodeAddress())
+
+	version := config.GetVersion()
+
+	metricRegistry.NewText("Version.Semantic", version.Semantic)
+	metricRegistry.NewText("Version.Commit", version.Commit)
 
 	return metricRegistry
 }
@@ -49,8 +54,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		log.Node(nodeConfig.NodeAddress().String()),
 		logfields.VirtualChainId(nodeConfig.VirtualChainId()),
 	)
-	metricRegistry := getMetricRegistry(nodeConfig)
-	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
+	metricRegistry := GetMetricRegistry(nodeConfig)
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
 

@@ -71,8 +71,7 @@ func NewNetworkWithNumOfNodes(validators map[string]config.ValidatorNode, nodeOr
 	for _, address := range nodeOrder {
 		validatorNode := validators[address.KeyForMap()]
 		cfg := cfgTemplate.ForNode(address, privateKeys[address.KeyForMap()])
-		metricRegistry := metric.NewRegistry()
-		metric.RegisterConfigIndicators(metricRegistry, cfg)
+		metricRegistry := bootstrap.GetMetricRegistry(cfg)
 
 		nodeLogger := parent.WithTags(log.Node(cfg.NodeAddress().String()))
 		dep := &NodeDependencies{}
