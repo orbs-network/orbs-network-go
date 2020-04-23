@@ -143,7 +143,7 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 	cfg := config.ForConsensusContextTests(enableTriggers)
 
 	management := &services.MockManagement{}
-	setManagementValues(management, cfg.MaximalProtocolVersionSupported(), primitives.TimestampSeconds(time.Now().Unix()), 50)
+	setManagementValues(management, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, primitives.TimestampSeconds(time.Now().Unix()), 50)
 
 	metricFactory := metric.NewRegistry()
 

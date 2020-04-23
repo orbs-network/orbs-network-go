@@ -7,6 +7,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
@@ -30,7 +31,7 @@ func GetBalanceQuery() *QueryBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedQueryBuilder{
 			Query: &protocol.QueryBuilder{
-				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
+				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "getBalance",

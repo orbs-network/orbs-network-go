@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -110,10 +111,10 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(builders.DEFAULT_TEST_PROTOCOL_VERSION+5).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+5).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION,
+			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -127,10 +128,10 @@ func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T
 func TestGetTransactionsForOrdering_SucceedsForSmallerProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(builders.DEFAULT_TEST_PROTOCOL_VERSION).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION+1,
+			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -147,7 +148,7 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    builders.DEFAULT_TEST_PROTOCOL_VERSION,
+			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -162,10 +163,10 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 func TestGetTransactionsForOrderingAfterGenesisBlock_DoesNotFiltersOutTxWithSmallerProtocolVersionThanBlock(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(h.config.MaximalProtocolVersionSupported()+1).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    h.config.MaximalProtocolVersionSupported()+2,
+			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+2,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -180,10 +181,10 @@ func TestGetTransactionsForOrderingAfterGenesisBlock_DoesNotFiltersOutTxWithSmal
 func TestGetTransactionsForOrderingAfterGenesisBlock_FiltersOutTxWithBiggerProtocolVersionThanBlock(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(h.config.MaximalProtocolVersionSupported()+2).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+2).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    h.config.MaximalProtocolVersionSupported()+1,
+			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,

@@ -45,8 +45,6 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	cfg := emptyConfig()
 
-	cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE) // max >= min otherwise some tests are meaningless
-	cfg.SetUint32(MINIMAL_PROTOCOL_VERSION_SUPPORTED, MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(NETWORK_TYPE, uint32(protocol.NETWORK_TYPE_TEST_NET))
@@ -81,7 +79,6 @@ func ForTransactionPoolTests(sizeLimit uint32, keyPair *testKeys.TestEcdsaSecp25
 	cfg.SetNodeAddress(keyPair.NodeAddress())
 	cfg.SetNodePrivateKey(keyPair.PrivateKey())
 
-	cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetUint32(BLOCK_TRACKER_GRACE_DISTANCE, 5)

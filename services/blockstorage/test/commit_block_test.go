@@ -8,7 +8,9 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -80,9 +82,9 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 			allowingErrorsMatching("protocol version mismatch in transactions block header").
 			start(ctx)
 
-		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(99999).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build())
 
-		require.EqualError(t, err, "protocol version mismatch in transactions block header")
+		require.EqualError(t, err, fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE))
 	})
 }
 

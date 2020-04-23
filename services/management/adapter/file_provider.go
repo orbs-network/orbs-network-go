@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -257,7 +258,7 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []management.ProtocolVersionTerm {
 	var protocolVersionPeriods []management.ProtocolVersionTerm
 	for _, event := range protocolVersionEvents {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Version:primitives.ProtocolVersion(event.Data.Version)})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Version: primitives.ProtocolVersion(event.Data.Version)})
 	}
 
 	sort.SliceStable(protocolVersionPeriods, func(i, j int) bool {
@@ -265,7 +266,7 @@ func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []manage
 	})
 
 	if len(protocolVersionPeriods) == 0 {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:primitives.ProtocolVersion(1)})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
 	}
 
 	// TODO POSV2 consider if last PV is larger than config.maximalpv -> fail ?

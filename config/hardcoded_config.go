@@ -36,10 +36,8 @@ type config struct {
 }
 
 const (
-	MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = 1
-	MAXIMAL_PROTOCOL_VERSION_SUPPORTED = "MAXIMAL_PROTOCOL_VERSION_SUPPORTED"
-	MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = 1
-	MINIMAL_PROTOCOL_VERSION_SUPPORTED = "MINIMAL_PROTOCOL_VERSION_SUPPORTED"
+	MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests) cannot be smaller than min will fail
+	MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests)
 	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
 	NETWORK_TYPE                       = "NETWORK_TYPE"
 
@@ -190,14 +188,6 @@ func (c *config) NodeAddress() primitives.NodeAddress {
 
 func (c *config) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
 	return c.nodePrivateKey
-}
-
-func (c *config) MaximalProtocolVersionSupported() primitives.ProtocolVersion {
-	return primitives.ProtocolVersion(c.kv[MAXIMAL_PROTOCOL_VERSION_SUPPORTED].Uint32Value)
-}
-
-func (c *config) MinimalProtocolVersionSupported() primitives.ProtocolVersion {
-	return primitives.ProtocolVersion(c.kv[MINIMAL_PROTOCOL_VERSION_SUPPORTED].Uint32Value)
 }
 
 func (c *config) VirtualChainId() primitives.VirtualChainId {

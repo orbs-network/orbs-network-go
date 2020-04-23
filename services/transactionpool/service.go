@@ -77,6 +77,5 @@ func (s *service) createValidationContext() *validationContext {
 		nodeSyncRejectInterval: s.config.TransactionPoolNodeSyncRejectTime(),
 		futureTimestampGrace:   s.config.TransactionPoolFutureTimestampGraceTimeout(),
 		virtualChainId:         s.config.VirtualChainId(),
-		maximalProtocolVersion: s.config.MaximalProtocolVersionSupported(),
 	}
 }

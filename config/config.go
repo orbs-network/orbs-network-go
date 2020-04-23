@@ -16,8 +16,6 @@ import (
 
 type NodeConfig interface {
 	// shared
-	MaximalProtocolVersionSupported() primitives.ProtocolVersion
-	MinimalProtocolVersionSupported() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
@@ -172,8 +170,6 @@ type GossipTransportConfig interface {
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
-	MaximalProtocolVersionSupported() primitives.ProtocolVersion
-	MinimalProtocolVersionSupported() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	LeanHelixConsensusMinimumCommitteeSize() uint32
@@ -200,7 +196,6 @@ type StateStorageConfig interface {
 
 type TransactionPoolConfig interface {
 	NodeAddress() primitives.NodeAddress
-	MaximalProtocolVersionSupported() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	BlockTrackerGraceDistance() uint32
 	BlockTrackerGraceTimeout() time.Duration

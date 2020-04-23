@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -22,7 +23,7 @@ func TestValidateTransactionsForOrderingAcceptsOkTransactions(t *testing.T) {
 		h := newHarness(parent).start(ctx)
 
 		require.NoError(t,
-			h.validateTransactionsForOrdering(ctx, 2, builders.DEFAULT_TEST_PROTOCOL_VERSION, builders.Transaction().Build(), builders.Transaction().Build()),
+			h.validateTransactionsForOrdering(ctx, 2, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, builders.Transaction().Build(), builders.Transaction().Build()),
 			"rejected a set of valid transactions")
 	})
 }
@@ -41,7 +42,7 @@ func TestValidateTransactionsForOrderingRejectsCommittedTransactions(t *testing.
 		h.reportTransactionsAsCommitted(ctx, committedTx)
 
 		require.EqualErrorf(t,
-			h.validateTransactionsForOrdering(ctx, 2, builders.DEFAULT_TEST_PROTOCOL_VERSION, committedTx, builders.Transaction().Build()),
+			h.validateTransactionsForOrdering(ctx, 2, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, committedTx, builders.Transaction().Build()),
 			fmt.Sprintf("transaction with hash %s already committed", digest.CalcTxHash(committedTx.Transaction())),
 			"did not reject a committed transaction")
 	})
@@ -72,7 +73,7 @@ func TestValidateTransactionsForOrderingRejectsTransactionsFailingPreOrderChecks
 		}, protocol.TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER)
 
 		require.EqualErrorf(t,
-			h.validateTransactionsForOrdering(ctx, 2, builders.DEFAULT_TEST_PROTOCOL_VERSION, builders.Transaction().Build(), invalidTx),
+			h.validateTransactionsForOrdering(ctx, 2, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, builders.Transaction().Build(), invalidTx),
 			fmt.Sprintf("transaction with hash %s failed pre-order checks with status TRANSACTION_STATUS_REJECTED_SMART_CONTRACT_PRE_ORDER", digest.CalcTxHash(invalidTx.Transaction())),
 			"did not reject transaction that failed pre-order checks")
 	})
@@ -83,7 +84,7 @@ func TestValidateTransactionsForOrderingRejectsBlockHeightOutsideOfGrace(t *test
 		h := newHarness(parent).start(ctx)
 
 		require.EqualErrorf(t,
-			h.validateTransactionsForOrdering(ctx, 666, builders.DEFAULT_TEST_PROTOCOL_VERSION, builders.Transaction().Build()),
+			h.validateTransactionsForOrdering(ctx, 666, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, builders.Transaction().Build()),
 			"requested future block outside of grace range",
 			"did not reject block height too far in the future")
 	})
@@ -93,9 +94,9 @@ func TestValidateTransactionsForOrderingRejectsProtocolVersionLargerThanBlock(t 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
-		err := h.validateTransactionsForOrdering(ctx, 2, builders.DEFAULT_TEST_PROTOCOL_VERSION, builders.Transaction().WithProtocolVersion(builders.DEFAULT_TEST_PROTOCOL_VERSION+1).Build())
+		err := h.validateTransactionsForOrdering(ctx, 2, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, builders.Transaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build())
 		require.Contains(t, err.Error(),
-		fmt.Sprintf("transaction rejected: TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION (expected %d but got %d)", builders.DEFAULT_TEST_PROTOCOL_VERSION, builders.DEFAULT_TEST_PROTOCOL_VERSION+1),
+		fmt.Sprintf("transaction rejected: TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION (expected %d but got %d)", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1),
 		"did not reject tx protocol version larger than block")
 	})
 }

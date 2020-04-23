@@ -39,8 +39,3 @@ func (c *cfg) GossipPeers() adapter.GossipPeers {
 func (c *cfg) GenesisValidatorNodes() map[string]config.ValidatorNode {
 	return make(map[string]config.ValidatorNode)
 }
-
-func (c *cfg) MaximalProtocolVersionSupported() primitives.ProtocolVersion {
-	return 1
-}
-

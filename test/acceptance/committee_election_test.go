@@ -33,7 +33,7 @@ func TestCommitteeElections_OneElectionAndCheckReputationChanges(t *testing.T) {
 			require.Len(t, reputationCommitteeTerm0, 6, "number of addresses should equal original committee of 6")
 
 			t.Log("elect 0,1,2,3")
-			newRefTime := generateNewRefTime(0)
+			newRefTime := GenerateNewManagementReferenceTime(0)
 			blockOfChange := setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 			network.WaitForBlock(ctx, blockOfChange+1) // need to be able to run query on block closed AFTER change
 
@@ -60,7 +60,7 @@ func TestCommitteeElections_VerifyCommitteeSigns(t *testing.T) {
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5})
 
 			t.Log("elect 0,1,2,3")
-			newRefTime := generateNewRefTime(0)
+			newRefTime := GenerateNewManagementReferenceTime(0)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			_, txHash = token.Transfer(ctx, 4, 10, 5, 6)
@@ -83,15 +83,15 @@ func TestCommitteeElections_MultipleReElections(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			newRefTime := generateNewRefTime(0)
+			newRefTime := GenerateNewManagementReferenceTime(0)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			t.Log("elect 1,2,3,4")
-			newRefTime = generateNewRefTime(newRefTime)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 1, 2, 3, 4)
 
 			t.Log("elect 2,3,4,5")
-			newRefTime = generateNewRefTime(newRefTime)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
 			setElectCommitteeAtAndWait(t, ctx, network, 1, newRefTime, 2, 3, 4, 5)
 
 			_, txHash := token.Transfer(ctx, 3, 10, 5, 6)
@@ -114,11 +114,11 @@ func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			newRefTime := generateNewRefTime(0)
+			newRefTime := GenerateNewManagementReferenceTime(0)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			t.Log("elect 4,5,6,7 - entire first group loses")
-			newRefTime = generateNewRefTime(newRefTime)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 4, 5, 6, 7)
 
 			_, txHash := token.Transfer(ctx, 4, 10, 5, 6)
@@ -127,7 +127,7 @@ func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 4, []int{4, 5, 6, 7})
 
 			t.Log("elect 0,1,2,3 - first group returns")
-			newRefTime = generateNewRefTime(newRefTime)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
 			setElectCommitteeAtAndWait(t, ctx, network, 4, newRefTime, 0, 1, 2, 3)
 
 			_, txHash = token.Transfer(ctx, 3, 10, 5, 6)
@@ -150,7 +150,7 @@ func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			newRefTime := generateNewRefTime(0)
+			newRefTime := GenerateNewManagementReferenceTime(0)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
@@ -159,7 +159,7 @@ func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("elect 0,1,2,3,4,5,6")
-			newRefTime = generateNewRefTime(newRefTime)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
 			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3, 4, 5, 6)
 
 			_, txHash = token.Transfer(ctx, 4, 10, 5, 6)
@@ -169,14 +169,6 @@ func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
 
 			t.Log("test done, shutting down")
 		})
-}
-
-func generateNewRefTime(oldRefTime primitives.TimestampSeconds) primitives.TimestampSeconds {
-	now := primitives.TimestampSeconds(time.Now().Unix() + 1)
-	if oldRefTime < now  {
-		return now
-	}
-	return oldRefTime + 1
 }
 
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
@@ -193,21 +185,10 @@ func setElectCommitteeAtAndWait(t testing.TB, ctx context.Context, network *Netw
 		committee = append(committee, testKeys.EcdsaSecp256K1KeyPairForTests(committeeIndex).NodeAddress())
 	}
 
-	currentBlockHeight, err := network.BlockPersistence(currentCommitteeMemberId).GetLastBlockHeight()
+	err := network.committeeProvider.AddCommittee(refTime, committee)
 	require.NoError(t, err)
 
-	err = network.committeeProvider.AddCommittee(refTime, committee)
+	bh, err := network.WaitForManagementChange(ctx, currentCommitteeMemberId, refTime)
 	require.NoError(t, err)
-
-	waitingBlock := currentBlockHeight + 1
-	for waitingBlock < currentBlockHeight+50 {
-		network.WaitForBlock(ctx, waitingBlock)
-		bp, _ := network.BlockPersistence(currentCommitteeMemberId).GetLastBlock()
-		if bp.TransactionsBlock.Header.ReferenceTime() >= refTime {
-			return bp.TransactionsBlock.Header.BlockHeight()
-		}
-		waitingBlock = bp.TransactionsBlock.Header.BlockHeight()+1
-	}
-	require.False(t, true, "Error waited too much and failed")
-	return 0
+	return bh
 }

@@ -33,7 +33,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 func TestFileTopology_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw/30eec201954808b070adf5dc1f1ea459846997b6/management.json"
+			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw#"
 			cfg := newConfig(42, url)
 			fileProvider := NewFileProvider(cfg, parent.Logger)
 			expectFileProviderToReadCorrectly(t, ctx, fileProvider)

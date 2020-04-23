@@ -23,8 +23,6 @@ import (
 type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
 type txValidatorContext struct {
-	maximalProtocolVersion primitives.ProtocolVersion
-	minimalProtocolVersion primitives.ProtocolVersion
 	virtualChainId         primitives.VirtualChainId
 	allowedTimestampJitter time.Duration
 	input                  *services.ValidateTransactionsBlockInput
@@ -32,11 +30,11 @@ type txValidatorContext struct {
 
 func validateTxProtocolVersion(ctx context.Context, vctx *txValidatorContext) error {
 	checkedProtocolVersion := vctx.input.TransactionsBlock.Header.ProtocolVersion()
-	if checkedProtocolVersion > vctx.maximalProtocolVersion {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "maximal %v actual %v", vctx.maximalProtocolVersion, checkedProtocolVersion)
+	if checkedProtocolVersion > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "maximal %v actual %v", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, checkedProtocolVersion)
 	}
-	if checkedProtocolVersion < vctx.minimalProtocolVersion {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "minimal %v actual %v", vctx.minimalProtocolVersion, checkedProtocolVersion)
+	if checkedProtocolVersion < config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "minimal %v actual %v", config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, checkedProtocolVersion)
 	}
 	return nil
 }
@@ -232,8 +230,6 @@ func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.Signe
 
 func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services.ValidateTransactionsBlockInput) (*services.ValidateTransactionsBlockOutput, error) {
 	vctx := &txValidatorContext{
-		maximalProtocolVersion: s.config.MaximalProtocolVersionSupported(),
-		minimalProtocolVersion: s.config.MinimalProtocolVersionSupported(),
 		virtualChainId:         s.config.VirtualChainId(),
 		allowedTimestampJitter: s.config.ConsensusContextSystemTimestampAllowedJitter(),
 		input:                  input,

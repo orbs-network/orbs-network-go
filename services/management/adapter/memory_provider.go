@@ -25,7 +25,6 @@ const DEFAULT_GENESIS_REF_TIME = 1492982000
 type MemoryConfig interface {
 	GossipPeers() adapter.GossipPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
-	MaximalProtocolVersionSupported() primitives.ProtocolVersion
 }
 
 type MemoryProvider struct {
@@ -40,17 +39,31 @@ type MemoryProvider struct {
 	isSubscriptionActives []management.SubscriptionTerm
 }
 
-func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
-	committee := getCommitteeFromConfig(config)
+func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
+	committee := getCommitteeFromConfig(cfg)
 	return &MemoryProvider{
 		logger:                logger,
 		currentReference:      DEFAULT_REF_TIME,
 		genesisReference:      DEFAULT_GENESIS_REF_TIME,
-		topology:              config.GossipPeers(),
+		topology:              cfg.GossipPeers(),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
-		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MaximalProtocolVersionSupported()}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
+}
+
+func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
+	allNodes := config.GenesisValidatorNodes()
+	var committee []primitives.NodeAddress
+
+	for _, nodeAddress := range allNodes {
+		committee = append(committee, nodeAddress.NodeAddress())
+	}
+
+	sort.SliceStable(committee, func(i, j int) bool {
+		return bytes.Compare(committee[i], committee[j]) > 0
+	})
+	return committee
 }
 
 func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
@@ -81,16 +94,15 @@ func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, co
 	return nil
 }
 
-func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
-	allNodes := config.GenesisValidatorNodes()
-	var committee []primitives.NodeAddress
+func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds, isActive bool) error {
+	mp.Lock()
+	defer mp.Unlock()
 
-	for _, nodeAddress := range allNodes {
-		committee = append(committee, nodeAddress.NodeAddress())
+	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference >= reference {
+		return errors.Errorf("new subscription must have an 'asOf' reference bigger than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
 	}
 
-	sort.SliceStable(committee, func(i, j int) bool {
-		return bytes.Compare(committee[i], committee[j]) > 0
-	})
-	return committee
+	mp.isSubscriptionActives = append(mp.isSubscriptionActives, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive})
+	mp.currentReference = reference
+	return nil
 }

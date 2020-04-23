@@ -7,6 +7,7 @@
 package validators
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/builders"
@@ -107,7 +108,7 @@ func TestValidateBlockHash(t *testing.T) {
 		{name: "valid block", mutate: func(c *BlockValidatorContext) {}, expectSuccess: true},
 		{name: "nil transaction block", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock = nil }, expectSuccess: false},
 		{name: "nil results block", mutate: func(c *BlockValidatorContext) { c.ResultsBlock = nil }, expectSuccess: false},
-		{name: "tampered transactions block protocolVersion", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateProtocolVersion(1234) }, expectSuccess: false},
+		{name: "tampered transactions block protocolVersion", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+100) }, expectSuccess: false},
 		{name: "tampered transactions block virtual chain ID", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateVirtualChainId(3456) }, expectSuccess: false},
 		{name: "tampered transactions block height", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateBlockHeight(999) }, expectSuccess: false},
 		{name: "tampered transactions prev block hash", mutate: func(c *BlockValidatorContext) {
@@ -118,7 +119,7 @@ func TestValidateBlockHash(t *testing.T) {
 			c.TransactionsBlock.Header.MutateTransactionsMerkleRootHash(tamperedTxMerkleRoot)
 		}, expectSuccess: false},
 		{name: "tampered transactions block timestamp", mutate: func(c *BlockValidatorContext) { c.TransactionsBlock.Header.MutateTimestamp(tamperedTimestamp) }, expectSuccess: false},
-		{name: "tampered results block protocolVersion", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateProtocolVersion(1234) }, expectSuccess: false},
+		{name: "tampered results block protocolVersion", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+100) }, expectSuccess: false},
 		{name: "tampered results block virtual chain ID", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateVirtualChainId(4567) }, expectSuccess: false},
 		{name: "tampered results block height", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutateBlockHeight(998) }, expectSuccess: false},
 		{name: "tampered results prev block hash", mutate: func(c *BlockValidatorContext) { c.ResultsBlock.Header.MutatePrevBlockHashPtr(tamperedPrevBlockHash) }, expectSuccess: false},

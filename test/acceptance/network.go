@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/govnr"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
@@ -224,3 +225,31 @@ func (n *Network) WaitForBlock(ctx context.Context, height primitives.BlockHeigh
 		tracker.WaitForBlock(ctx, height)
 	}
 }
+
+func GenerateNewManagementReferenceTime(oldRefTime primitives.TimestampSeconds) primitives.TimestampSeconds {
+	now := primitives.TimestampSeconds(time.Now().Unix() + 1)
+	if oldRefTime < now  {
+		return now
+	}
+	return oldRefTime + 1
+}
+
+func  (n *Network) WaitForManagementChange(ctx context.Context, currentCommitteeMemberId int, refTime primitives.TimestampSeconds) (primitives.BlockHeight, error) {
+	currentBlockHeight, err := n.BlockPersistence(currentCommitteeMemberId).GetLastBlockHeight()
+	if err != nil {
+		return 0, err
+	}
+
+	waitingBlock := currentBlockHeight + 1
+	for waitingBlock < currentBlockHeight+50 {
+		n.WaitForBlock(ctx, waitingBlock)
+		bp, _ := n.BlockPersistence(currentCommitteeMemberId).GetLastBlock()
+		if bp.TransactionsBlock.Header.ReferenceTime() >= refTime {
+			return bp.TransactionsBlock.Header.BlockHeight(), nil
+		}
+		waitingBlock = bp.TransactionsBlock.Header.BlockHeight()+1
+	}
+	return 0, errors.New("error waited too much and failed")
+
+}
+

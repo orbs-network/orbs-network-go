@@ -7,6 +7,7 @@
 package transactionpool
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -20,7 +21,6 @@ type validationContext struct {
 	expiryWindow           time.Duration
 	futureTimestampGrace   time.Duration
 	virtualChainId         primitives.VirtualChainId
-	maximalProtocolVersion primitives.ProtocolVersion
 }
 
 func (c *validationContext) ValidateAddedTransaction(transaction *protocol.SignedTransaction, currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
@@ -67,8 +67,8 @@ func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol
 }
 
 func (c *validationContext) validateAddTransactionProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	if transaction.Transaction().ProtocolVersion() > c.maximalProtocolVersion {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maximal-protocol-version", c.maximalProtocolVersion), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maximal-protocol-version", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }

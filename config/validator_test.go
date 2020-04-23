@@ -29,7 +29,7 @@ func TestValidateConfig(t *testing.T) {
 		cfg.SetNodePrivateKey(defaultPrivateKey())
 		cfg.SetGenesisValidatorNodes(genesisValidators())
 
-		require.NoError(t, ValidateNodeLogic(cfg))
+		require.NoError(t, ValidateNodeLogic(cfg), "if this test fails check the min/max values of protocol version are defined correctly.")
 	})
 }
 
@@ -38,16 +38,6 @@ func TestValidateConfig_ErrorOnInvalidValue(t *testing.T) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())
 		cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Millisecond)
-
-		require.Error(t, ValidateNodeLogic(cfg))
-	})
-}
-
-func TestValidateConfig_ErrorBadProtocolVerions(t *testing.T) {
-	with.Logging(t, func(harness *with.LoggingHarness) {
-		cfg := defaultProductionConfig()
-		cfg.SetUint32(MAXIMAL_PROTOCOL_VERSION_SUPPORTED, 2)
-		cfg.SetUint32(MINIMAL_PROTOCOL_VERSION_SUPPORTED, 4)
 
 		require.Error(t, ValidateNodeLogic(cfg))
 	})

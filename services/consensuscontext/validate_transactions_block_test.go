@@ -48,8 +48,6 @@ func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardCom
 	}
 
 	return &txValidatorContext{
-		maximalProtocolVersion: cfg.MaximalProtocolVersionSupported(),
-		minimalProtocolVersion: cfg.MinimalProtocolVersionSupported(),
 		virtualChainId:         cfg.VirtualChainId(),
 		allowedTimestampJitter: cfg.ConsensusContextSystemTimestampAllowedJitter(),
 		input:                  input,
@@ -62,7 +60,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 
 	t.Run("should NOT return error for transaction block with minimal protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(cfg.MinimalProtocolVersionSupported()); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE); err != nil {
 			t.Error(err)
 		}
 		err := validateTxProtocolVersion(context.Background(), vctx)
@@ -71,7 +69,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 
 	t.Run("should NOT return error for transaction block with maximal protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(cfg.MaximalProtocolVersionSupported()); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE); err != nil {
 			t.Error(err)
 		}
 		err := validateTxProtocolVersion(context.Background(), vctx)
@@ -80,7 +78,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for transaction block with lower than minimal protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(cfg.MinimalProtocolVersionSupported() - 1); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE - 1); err != nil {
 			t.Error(err)
 		}
 		err := validateTxProtocolVersion(context.Background(), vctx)
@@ -89,7 +87,7 @@ func TestTransactionsBlockValidators(t *testing.T) {
 
 	t.Run("should return error for transaction block with higher than maximal protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(cfg.MaximalProtocolVersionSupported() + 1); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE + 1); err != nil {
 			t.Error(err)
 		}
 		err := validateTxProtocolVersion(context.Background(), vctx)
@@ -325,7 +323,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 				cfg := config.ForConsensusContextTests(tt.triggerEnabled)
 				tb := &protocol.TransactionsBlockContainer{
 					Header: (&protocol.TransactionsBlockHeaderBuilder{
-						ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+						ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 						Timestamp: triggerTx.Transaction().Timestamp(),
 					}).Build(),
 					SignedTransactions: tt.txs,
@@ -343,7 +341,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 }
 func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		pv := builders.DEFAULT_TEST_PROTOCOL_VERSION
+		pv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
 		cfg := config.ForConsensusContextTests(false)
 		tests := []struct {
 			name           string

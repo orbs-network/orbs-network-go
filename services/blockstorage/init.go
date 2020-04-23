@@ -25,10 +25,6 @@ import (
 	"time"
 )
 
-const (
-	ProtocolVersion = primitives.ProtocolVersion(1)
-)
-
 var LogTag = log.Service("block-storage")
 
 type Service struct {

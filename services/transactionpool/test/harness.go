@@ -161,7 +161,7 @@ func (h *harness) ignoringTransactionResults() {
 
 func (h *harness) getTransactionsForOrdering(ctx context.Context, currentBlockHeight primitives.BlockHeight, maxNumOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
 	return h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-		BlockProtocolVersion:      h.config.MaximalProtocolVersionSupported(),
+		BlockProtocolVersion:      config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 		CurrentBlockHeight:        currentBlockHeight,
 		PrevBlockTimestamp:        primitives.TimestampNano(time.Now().UnixNano() - 100),
 		CurrentBlockReferenceTime: 0,

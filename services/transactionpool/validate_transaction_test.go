@@ -8,6 +8,7 @@ package transactionpool
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,7 +20,6 @@ import (
 const expirationWindowInterval = 30 * time.Minute
 const futureTimestampGrace = 3 * time.Minute
 const nodeSyncRejectInterval = 2 * time.Minute
-const maximalProtocol = primitives.ProtocolVersion(55)
 
 func aValidationContextAsOf() *validationContext {
 	return &validationContext{
@@ -27,7 +27,6 @@ func aValidationContextAsOf() *validationContext {
 		nodeSyncRejectInterval: nodeSyncRejectInterval,
 		futureTimestampGrace:   futureTimestampGrace,
 		virtualChainId:         builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
-		maximalProtocolVersion: maximalProtocol,
 	}
 }
 
@@ -69,7 +68,7 @@ func TestValidateTransaction_Add_InvalidTransactions(t *testing.T) {
 		txBuilder      *builders.TransactionBuilder
 		expectedStatus protocol.TransactionStatus
 	}{
-		{"protocol version", aTransactionAtNodeTimestamp(lastCommittedBlockTime).WithProtocolVersion(maximalProtocol + 1), protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION},
+		{"protocol version", aTransactionAtNodeTimestamp(lastCommittedBlockTime).WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE + 1), protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION},
 		{"signer scheme", aTransactionAtNodeTimestamp(lastCommittedBlockTime).WithInvalidSignerScheme(), protocol.TRANSACTION_STATUS_REJECTED_UNKNOWN_SIGNER_SCHEME},
 		{"signer public key (wrong length)", aTransactionAtNodeTimestamp(lastCommittedBlockTime).WithInvalidPublicKey(), protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH},
 		{"timestamp (created prior to the expiry window)", builders.TransferTransaction().WithTimestamp(currentTime.Add(expirationWindowInterval * -2)), protocol.TRANSACTION_STATUS_REJECTED_TIMESTAMP_WINDOW_EXCEEDED},
@@ -90,7 +89,7 @@ func TestValidateTransaction_Add_InvalidTransactions(t *testing.T) {
 func TestValidateTransaction_Ordering_InvalidTransactions(t *testing.T) {
 	currentTime := time.Now()
 	proposedBlockTime := primitives.TimestampNano(currentTime.Add(nodeSyncRejectInterval / 2).UnixNano())
-	proposedProtocolVersion := builders.DEFAULT_TEST_PROTOCOL_VERSION
+	proposedProtocolVersion := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
 
 	tests := []struct {
 		name           string
