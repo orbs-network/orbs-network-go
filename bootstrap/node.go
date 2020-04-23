@@ -36,8 +36,13 @@ type Node struct {
 	blockPersistence *filesystem.BlockPersistence
 }
 
-func getMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
+func GetMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 	metricRegistry := metric.NewRegistry().WithVirtualChainId(nodeConfig.VirtualChainId()).WithNodeAddress(nodeConfig.NodeAddress())
+
+	version := config.GetVersion()
+
+	metricRegistry.NewText("Version.Semantic", version.Semantic)
+	metricRegistry.NewText("Version.Commit", version.Commit)
 
 	return metricRegistry
 }
@@ -49,7 +54,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		log.Node(nodeConfig.NodeAddress().String()),
 		logfields.VirtualChainId(nodeConfig.VirtualChainId()),
 	)
-	metricRegistry := getMetricRegistry(nodeConfig)
+	metricRegistry := GetMetricRegistry(nodeConfig)
 
 	httpServer := httpserver.NewHttpServer(nodeConfig, nodeLogger, metricRegistry)
 
@@ -59,7 +64,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	if len(nodeConfig.ManagementFilePath()) == 0 {
 		err := config.ValidateInMemoryManagement(nodeConfig)
 		if err != nil {
-			nodeLogger.Error("InMemory parmerters error cannot start" , log.Error(err))
+			nodeLogger.Error("InMemory parmerters error cannot start", log.Error(err))
 			panic(err)
 		}
 		managementProvider = managementAdapter.NewMemoryProvider(nodeConfig, nodeLogger)

@@ -59,14 +59,14 @@ func NewNodeLogic(parentCtx context.Context,
 	transactionPoolBlockHeightReporter transactionpool.BlockHeightReporter,
 	maybeClock txPoolAdapter.Clock, nativeCompiler nativeProcessorAdapter.Compiler,
 	managementProvider management.Provider,
-	logger log.Logger, 	metricRegistry metric.Registry, nodeConfig config.NodeConfig,
-	ethereumConnection ethereumAdapter.EthereumConnection, ) NodeLogic {
+	logger log.Logger, metricRegistry metric.Registry, nodeConfig config.NodeConfig,
+	ethereumConnection ethereumAdapter.EthereumConnection) NodeLogic {
 
 	ctx := trace.ContextWithNodeId(parentCtx, nodeConfig.NodeAddress().String())
 
 	err := config.ValidateNodeLogic(nodeConfig)
 	if err != nil {
-		logger.Error("Node logic error cannot start" , log.Error(err))
+		logger.Error("Node logic error cannot start", log.Error(err))
 		panic(err)
 	}
 
@@ -79,7 +79,7 @@ func NewNodeLogic(parentCtx context.Context,
 
 	signer, err := signer.New(nodeConfig)
 	if err != nil {
-		logger.Error("Node logic signer error cannot start" , log.Error(err))
+		logger.Error("Node logic signer error cannot start", log.Error(err))
 		panic(fmt.Sprintf("Node logic signer error cannot start: %s", err))
 	}
 
@@ -94,8 +94,6 @@ func NewNodeLogic(parentCtx context.Context,
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, nodeConfig, logger, metricRegistry)
 
 	consensusAlgo := createConsensusAlgo(nodeConfig)(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, metricRegistry)
-
-	metric.RegisterConfigIndicators(metricRegistry, nodeConfig)
 
 	logger.Info("Node started")
 
