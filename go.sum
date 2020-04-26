@@ -213,6 +213,15 @@ github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401 h1:Ys4loL0n
 github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401/go.mod h1:+/ayyqTUVcQeT2J4wNdDlcPXtt+lAQrWAR8vQLQ/Sac=
 github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e h1:2uhGT3x5lcuvdX7rkw1nKwPjzgA1bBQ3RzNkWSSPGP0=
 github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3 h1:jdCqdamZY/K9v9x4W9RLF46ufuDu53+pygi8Ook/Wvk=
+github.com/orbs-network/orbs-spec v0.0.0-20200423060522-ed88ec46bc9a h1:FBV4aAisgtgs75R3ctZjUdMQ0FDD5E7WBvjc2Wakjc4=
+github.com/orbs-network/orbs-spec v0.0.0-20200423060522-ed88ec46bc9a/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200423063705-de4ddac50eb3 h1:5ZXHlcfHBL6pgqXe/Z3USH3W9H4Uo1Q7IVaQP8O9e0Q=
+github.com/orbs-network/orbs-spec v0.0.0-20200423063705-de4ddac50eb3/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200423064755-91f2b2820536 h1:9vvOn8bTc1xr8urXDB9j+WilbBvEomyj6VmzwUaZYkA=
+github.com/orbs-network/orbs-spec v0.0.0-20200423064755-91f2b2820536/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200424142301-2bfc984cd8b3 h1:CkCB+Vd6Ydn0fp8+Q/UuNofMRRMnc+ne1ZsVqDkU9dg=
+github.com/orbs-network/orbs-spec v0.0.0-20200424142301-2bfc984cd8b3/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/pbparser v0.3.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=

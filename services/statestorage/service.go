@@ -153,11 +153,11 @@ func (s *service) GetLastCommittedBlockInfo(ctx context.Context, input *services
 	defer s.mutex.RUnlock()
 
 	result := &services.GetLastCommittedBlockInfoOutput{
-		LastCommittedBlockHeight:    s.revisions.getCurrentHeight(),
-		LastCommittedBlockTimestamp: s.revisions.getCurrentTimestamp(),
+		BlockHeight:    s.revisions.getCurrentHeight(),
+		BlockTimestamp: s.revisions.getCurrentTimestamp(),
 		BlockProposerAddress:        s.revisions.getCurrentProposerAddress(),
 	}
-	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.LastCommittedBlockHeight))
+	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.BlockHeight))
 	return result, nil
 }
 

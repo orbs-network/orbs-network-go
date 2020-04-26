@@ -33,6 +33,7 @@ type gossipListeners struct {
 	leanHelixHandlers          []gossiptopics.LeanHelixHandler
 	benchmarkConsensusHandlers []gossiptopics.BenchmarkConsensusHandler
 	blockSyncHandlers          []gossiptopics.BlockSyncHandler
+	headerSyncHandlers         []gossiptopics.HeaderSyncHandler
 }
 
 type Service struct {
@@ -64,6 +65,7 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 	transport.RegisterListener(s, s.config.NodeAddress())
 	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_TRANSACTION_RELAY, s.receivedTransactionRelayMessage))
 	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BLOCK_SYNC, s.receivedBlockSyncMessage))
+	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_HEADER_SYNC, s.receivedHeaderSyncMessage))
 	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_LEAN_HELIX, s.receivedLeanHelixMessage))
 	s.Supervise(dispatcher.runHandler(ctx, logger, gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS, s.receivedBenchmarkConsensusMessage))
 

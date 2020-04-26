@@ -97,6 +97,7 @@ func newMeteredTopicChannel(name string, registry metric.Registry, logger log.Lo
 type gossipMessageDispatcher struct {
 	transactionRelay   *meteredTopicChannel
 	blockSync          *meteredTopicChannel
+	headerSync         *meteredTopicChannel
 	leanHelix          *meteredTopicChannel
 	benchmarkConsensus *meteredTopicChannel
 }
@@ -109,6 +110,7 @@ func newMessageDispatcher(registry metric.Registry, logger log.Logger) (d *gossi
 	d = &gossipMessageDispatcher{
 		transactionRelay:   newMeteredTopicChannel("TransactionRelay", registry, logger, 200),   // transaction pool might block on adding new transactions, for instance while committing a block
 		blockSync:          newMeteredTopicChannel("BlockSync", registry, logger, 10),           // low value assuming that handling block sync messages doesn't block
+		headerSync:         newMeteredTopicChannel("HeaderSync", registry, logger, 10),           // low value assuming that handling header sync messages doesn't block
 		leanHelix:          newMeteredTopicChannel("LeanHelixConsensus", registry, logger, 100), // handlers performs I/O operations and require buffering of requests
 		benchmarkConsensus: newMeteredTopicChannel("BenchmarkConsensus", registry, logger, 20),  // under heavy load benchmark consensus has been observed to slow down, failing to pick messages up from the topic fast enough
 	}
@@ -136,6 +138,8 @@ func stringTopic(header *gossipmessages.Header) string {
 		return "lean-helix"
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
 		return "block-sync"
+	case gossipmessages.HEADER_TOPIC_HEADER_SYNC:
+		return "header-sync"
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
 		return "benchmark-consensus"
 	default:
@@ -159,6 +163,8 @@ func (d *gossipMessageDispatcher) get(topic gossipmessages.HeaderTopic) (*metere
 		return d.transactionRelay, nil
 	case gossipmessages.HEADER_TOPIC_BLOCK_SYNC:
 		return d.blockSync, nil
+	case gossipmessages.HEADER_TOPIC_HEADER_SYNC:
+		return d.headerSync, nil
 	case gossipmessages.HEADER_TOPIC_LEAN_HELIX:
 		return d.leanHelix, nil
 	case gossipmessages.HEADER_TOPIC_BENCHMARK_CONSENSUS:
