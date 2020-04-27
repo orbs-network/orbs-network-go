@@ -161,9 +161,6 @@ func (s *Service) receivedHeaderSyncRequest(ctx context.Context, header *gossipm
 	}
 }
 
-//func IsChunkTooBigError(err error) bool {
-//	return tcp.IsQueueFullError(err)
-//}
 
 func (s *Service) SendHeaderSyncResponse(ctx context.Context, input *gossiptopics.HeaderSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
