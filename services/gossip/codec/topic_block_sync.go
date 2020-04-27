@@ -22,7 +22,7 @@ func EncodeBlockAvailabilityRequest(header *gossipmessages.Header, message *goss
 }
 
 func DecodeBlockAvailabilityRequest(payloads [][]byte) (*gossipmessages.BlockAvailabilityRequestMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -52,7 +52,7 @@ func EncodeBlockAvailabilityResponse(header *gossipmessages.Header, message *gos
 }
 
 func DecodeBlockAvailabilityResponse(payloads [][]byte) (*gossipmessages.BlockAvailabilityResponseMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -82,7 +82,7 @@ func EncodeBlockSyncRequest(header *gossipmessages.Header, message *gossipmessag
 }
 
 func DecodeBlockSyncRequest(payloads [][]byte) (*gossipmessages.BlockSyncRequestMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -122,7 +122,7 @@ func EncodeBlockSyncResponse(header *gossipmessages.Header, message *gossipmessa
 }
 
 func DecodeBlockSyncResponse(payloads [][]byte) (*gossipmessages.BlockSyncResponseMessage, error) {
-	if len(payloads) < 2+NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
+	if len(payloads) < NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER + NUM_HARDCODED_PAYLOADS_FOR_BLOCK_PAIR {
 		return nil, errors.New("wrong num of payloads")
 	}
 	chunkRange := gossipmessages.BlockSyncRangeReader(payloads[0])

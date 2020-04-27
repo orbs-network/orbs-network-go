@@ -13,6 +13,7 @@ import (
 )
 
 const NUM_HARDCODED_PAYLOADS_FOR_HEADER_WITH_PROOF = 2 // ResultsHeader, BlockProof
+const NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER = 2 // SignedRange, SenderSignature
 
 func EncodeHeaderWithProof(headerProof *gossipmessages.ResultsBlockHeaderWithProof) ([][]byte, error) {
 	if headerProof == nil || headerProof.Header == nil || headerProof.BlockProof == nil {

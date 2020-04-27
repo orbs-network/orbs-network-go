@@ -22,7 +22,7 @@ func EncodeHeaderAvailabilityRequest(header *gossipmessages.Header, message *gos
 }
 
 func DecodeHeaderAvailabilityRequest(payloads [][]byte) (*gossipmessages.HeaderAvailabilityRequestMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -52,7 +52,7 @@ func EncodeHeaderAvailabilityResponse(header *gossipmessages.Header, message *go
 }
 
 func DecodeHeaderAvailabilityResponse(payloads [][]byte) (*gossipmessages.HeaderAvailabilityResponseMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -82,7 +82,7 @@ func EncodeHeaderSyncRequest(header *gossipmessages.Header, message *gossipmessa
 }
 
 func DecodeHeaderSyncRequest(payloads [][]byte) (*gossipmessages.HeaderSyncRequestMessage, error) {
-	if len(payloads) != 2 {
+	if len(payloads) != NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER {
 		return nil, errors.New("wrong num of payloads")
 	}
 
@@ -122,7 +122,7 @@ func EncodeHeaderSyncResponse(header *gossipmessages.Header, message *gossipmess
 }
 
 func DecodeHeaderSyncResponse(payloads [][]byte) (*gossipmessages.HeaderSyncResponseMessage, error) {
-	if len(payloads) < 2+NUM_HARDCODED_PAYLOADS_FOR_HEADER_WITH_PROOF {
+	if len(payloads) < NUM_HARDCODED_PAYLOADS_FOR_SIGNED_RANGE_AND_SENDER + NUM_HARDCODED_PAYLOADS_FOR_HEADER_WITH_PROOF {
 		return nil, errors.New("wrong num of payloads")
 	}
 	chunkRange := gossipmessages.HeaderSyncRangeReader(payloads[0])
