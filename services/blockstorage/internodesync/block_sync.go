@@ -29,7 +29,7 @@ type syncState interface {
 	processState(ctx context.Context) syncState
 }
 
-type blockSyncConfig interface {
+type nodeSyncConfig interface {
 	NodeAddress() primitives.NodeAddress
 	BlockSyncNumBlocksInBatch() uint32
 	BlockSyncNoCommitInterval() time.Duration
@@ -101,14 +101,14 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
 
-	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
+	bs.Supervise(govnr.Forever(ctx, "Block sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)
 	}))
 
 	return bs
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config nodeSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := make(blockSyncConduit)

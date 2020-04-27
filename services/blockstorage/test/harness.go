@@ -80,6 +80,7 @@ type harness struct {
 	blockStorage   *blockstorage.Service
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
+	headerGossip   *gossiptopics.MockHeaderSync
 	txPool         *services.MockTransactionPool
 	config         *configForBlockStorageTests
 }
@@ -250,6 +251,10 @@ func newBlockStorageHarness(parentHarness *with.ConcurrencyHarness) *harness {
 	d.gossip = &gossiptopics.MockBlockSync{}
 	d.gossip.When("RegisterBlockSyncHandler", mock.Any).Return().Times(1)
 
+	d.headerGossip = &gossiptopics.MockHeaderSync{}
+	d.headerGossip.When("RegisterHeaderSyncHandler", mock.Any).Return().Times(1)
+	d.headerGossip.When("BroadcastHeaderAvailabilityRequest",  mock.Any, mock.Any).Return(nil, nil) // TODO: Gad disabled for now
+
 	d.txPool = &services.MockTransactionPool{}
 	d.txPool.When("CommitTransactionReceipts", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitTransactionReceiptsInput) (*services.CommitTransactionReceiptsOutput, error) {
 		return &services.CommitTransactionReceiptsOutput{
@@ -270,7 +275,7 @@ func (d *harness) start(ctx context.Context) *harness {
 	defer d.Unlock()
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.Logger, registry, nil)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.headerGossip, d.Logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	d.Supervise(d.blockStorage)

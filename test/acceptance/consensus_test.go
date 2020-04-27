@@ -22,7 +22,7 @@ import (
 
 func TestBenchmarkConsensus_LeaderGetsVotesBeforeNextBlock(t *testing.T) {
 	NewHarness().
-		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("BlockSync")).
+		WithLogFilters(log.ExcludeField(internodesync.LogTag), log.ExcludeEntryPoint("HeaderSync")).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // override default consensus algo
 		WithMaxTxPerBlock(1).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {

@@ -36,6 +36,7 @@ type Service struct {
 	persistence  adapter.BlockPersistence
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
+	headerSyncGossip gossiptopics.HeaderSync
 	txPool       services.TransactionPool
 
 	config config.BlockStorageConfig
@@ -48,7 +49,8 @@ type Service struct {
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
 
-	nodeSync *internodesync.BlockSync
+	blockSync *internodesync.BlockSync
+	headerSync *internodesync.HeaderSync
 
 	metrics        *metrics
 	notifyNodeSync chan struct{}
@@ -66,26 +68,31 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
-	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) *Service {
+func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, blockSyncGossip gossiptopics.BlockSync,
+	headerSyncGossip gossiptopics.HeaderSync, parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) *Service {
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &Service{
 		persistence:    persistence,
-		gossip:         gossip,
+		gossip:         blockSyncGossip,
+		headerSyncGossip: headerSyncGossip,
 		logger:         logger,
 		config:         config,
 		metrics:        newMetrics(metricFactory),
 		notifyNodeSync: make(chan struct{}),
 	}
 
-	gossip.RegisterBlockSyncHandler(s)
-	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
+	blockSyncGossip.RegisterBlockSyncHandler(s)
+	s.blockSync = internodesync.NewBlockSync(ctx, config, blockSyncGossip, s, logger, metricFactory)
+
+	headerSyncGossip.RegisterHeaderSyncHandler(s)
+	s.headerSync = internodesync.NewHeaderSync(ctx, config, headerSyncGossip, s, logger, metricFactory)
+
 
 	for _, bpr := range blockPairReceivers {
 		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))
 	}
-	s.Supervise(s.nodeSync)
+	s.Supervise(s.blockSync)
 	s.Supervise(s.startNotifyNodeSync(ctx))
 
 	lastBlock, err := persistence.GetLastBlock()
@@ -148,6 +155,6 @@ func (s *Service) startNotifyNodeSync(ctx context.Context) govnr.ShutdownWaiter 
 func (s *Service) notifyNodeSyncOfCommittedBlock(ctx context.Context) {
 	shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
 	defer cancel()
-	s.nodeSync.HandleBlockCommitted(shortCtx)
+	s.blockSync.HandleBlockCommitted(shortCtx)
 
 }

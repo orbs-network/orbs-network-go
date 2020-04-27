@@ -46,15 +46,15 @@ func (s *Service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 }
 
 func (s *Service) HandleBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.nodeSync != nil {
-		s.nodeSync.HandleBlockAvailabilityResponse(ctx, input)
+	if s.blockSync != nil {
+		s.blockSync.HandleBlockAvailabilityResponse(ctx, input)
 	}
 	return nil, nil
 }
 
 func (s *Service) HandleBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
-	if s.nodeSync != nil {
-		s.nodeSync.HandleBlockSyncResponse(ctx, input)
+	if s.blockSync != nil {
+		s.blockSync.HandleBlockSyncResponse(ctx, input)
 	}
 	return nil, nil
 }
