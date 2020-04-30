@@ -74,7 +74,7 @@ func TestReturnAllAvailableTransactionsFromTransactionPool_WithTriggers(t *testi
 	})
 }
 
-func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
+func TestCreateBlock_CreateTxsBlockFailsWithBadGenesis(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
@@ -83,18 +83,13 @@ func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
 			txCount := uint32(2)
 			h.expectTxPoolToReturnXTransactions(txCount)
 
-			txBlock, err := h.requestTransactionsBlock(ctx)
-			require.NoError(t, err, "request transactions block failed")
-
-			_, err = h.requestResultsBlock(ctx, txBlock)
-
-			require.Error(t, err, "request results block should fail")
-			require.Contains(t, err.Error(), "failed genesis time reference")
+			_, err := h.requestTransactionsBlock(ctx)
+			require.Error(t, err, "request transactions block failed")
 		})
 	})
 }
 
-func TestCreateTx_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTimeRefAndPrevBlocTimeRef(t *testing.T) {
+func TestCreateBlock_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTimeRefAndPrevBlocTimeRef(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
@@ -119,3 +114,22 @@ func TestCreateTx_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTimeRef
 	})
 }
 
+func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, false)
+			txCount := uint32(2)
+			h.expectTxPoolToReturnXTransactions(txCount)
+
+			txBlock, err := h.requestTransactionsBlock(ctx)
+			require.NoError(t, err, "request transactions block failed")
+
+			h.management.Reset()
+			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+			_, err = h.requestResultsBlock(ctx, txBlock)
+
+			require.Error(t, err, "request results block should fail")
+			require.Contains(t, err.Error(), "failed genesis time reference")
+		})
+	})
+}
