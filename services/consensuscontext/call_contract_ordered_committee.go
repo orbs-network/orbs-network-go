@@ -36,7 +36,7 @@ func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blo
 	systemContractName := primitives.ContractName(committee_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(committee_systemcontract.METHOD_GET_ORDERED_COMMITTEE)
 
-	prevBlockReferenceTime, err := s.fixPrevReferenceTimeIfGenesis(ctx, blockHeight, proposedPrevBlockReferenceTime)
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, blockHeight, proposedPrevBlockReferenceTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetOrderedCommittee")
 	}

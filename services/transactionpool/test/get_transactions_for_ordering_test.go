@@ -125,13 +125,14 @@ func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T
 	})
 }
 
-func TestGetTransactionsForOrdering_SucceedsForSmallerProtocolVersion(t *testing.T) {
+func TestGetTransactionsForOrdering_ReturnsEarlierProtocolVersioTransactions(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE).Build())
+		currentPv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(currentPv-1).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1,
+			BlockProtocolVersion:    currentPv,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -160,13 +161,14 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 	})
 }
 
-func TestGetTransactionsForOrderingAfterGenesisBlock_DoesNotFiltersOutTxWithSmallerProtocolVersionThanBlock(t *testing.T) {
+func TestGetTransactionsForOrderingAfterGenesisBlock_ReturnsEarlierProtocolVersionThanBlock(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build())
+		currentPv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(currentPv-1).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+2,
+			BlockProtocolVersion:    currentPv,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,

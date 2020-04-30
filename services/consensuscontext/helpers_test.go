@@ -28,50 +28,50 @@ func newHarnessWithManagement(ref primitives.TimestampSeconds, gen primitives.Ti
 	}
 }
 
-func TestFixRefForGenesis_IsGenesisAndGoodValues(t *testing.T) {
+func TestFixRefForGenesis_IsGenesisAndCorrectGenesis(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		currRef := primitives.TimestampSeconds(5000)
 		prevRef := currRef - 10
 		genesis := currRef - 100
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.fixPrevReferenceTimeIfGenesis(ctx, 1, prevRef)
-		require.NoError(t, err, "should not error")
+		actualRef, err := s.prevReferenceOrGenesis(ctx, 1, prevRef)
+		require.NoError(t, err, "should not error, gensis correct")
 		require.Equal(t, genesis, actualRef, "should return the management genesis reference")
 	})
 }
 
-func TestFixRefForGenesis_IsGenesisAndBadValues(t *testing.T) {
+func TestFixRefForGenesis_IsGenesisAndGenesisInFuture(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		currRef := primitives.TimestampSeconds(5000)
 		prevRef := currRef - 10
 		genesis := currRef + 1
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.fixPrevReferenceTimeIfGenesis(ctx, 1, prevRef)
-		require.Error(t, err, "should not error")
+		actualRef, err := s.prevReferenceOrGenesis(ctx, 1, prevRef)
+		require.Error(t, err, "should error, genesis in future")
 		require.Equal(t, primitives.TimestampSeconds(0), actualRef, "should return 0")
 	})
 }
 
-func TestFixRefForGenesis_NotGenesisAndGoodValues(t *testing.T) {
+func TestFixRefForGenesis_NotGenesisAndGenInPast(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		currRef := primitives.TimestampSeconds(5000)
 		prevRef := currRef - 10
 		genesis := currRef - 100
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.fixPrevReferenceTimeIfGenesis(ctx, 2, prevRef)
-		require.NoError(t, err, "should not error")
+		actualRef, err := s.prevReferenceOrGenesis(ctx, 2, prevRef)
+		require.NoError(t, err, "should not error, block height not genesis")
 		require.Equal(t, prevRef, actualRef, "should return the management genesis reference")
 	})
 }
 
-func TestFixRefForGenesis_NotGenesisAndBadValues_Ignore(t *testing.T) {
+func TestFixRefForGenesis_NotGenesisAndGensisInFuture_Ignore(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		currRef := primitives.TimestampSeconds(5000)
 		prevRef := currRef - 10
 		genesis := currRef + 1
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.fixPrevReferenceTimeIfGenesis(ctx, 2, prevRef)
-		require.NoError(t, err, "should not error")
+		actualRef, err := s.prevReferenceOrGenesis(ctx, 2, prevRef)
+		require.NoError(t, err, "should not error, its not genesis block")
 		require.Equal(t, prevRef, actualRef, "should return the management genesis reference")
 	})
 }

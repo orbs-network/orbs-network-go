@@ -22,6 +22,7 @@ import (
 
 type txValidator func(ctx context.Context, vctx *txValidatorContext) error
 
+// TODO v3 consider changing the way the validator works not to have a "context" see issue https://github.com/orbs-network/orbs-network-go/issues/1555
 type txValidatorContext struct {
 	virtualChainId         primitives.VirtualChainId
 	allowedTimestampJitter time.Duration
@@ -162,8 +163,8 @@ func validateProposeBlockReferenceTime(prevBlockReferenceTime primitives.Timesta
 }
 
 func validateProposeBlockProtocolVersionWithManagement(blockProtocolVersion primitives.ProtocolVersion, managementProtocolVersion primitives.ProtocolVersion) error {
-	if blockProtocolVersion < managementProtocolVersion {
-		return errors.Errorf("proposed block protocol version %d mismatch manageemnt protocol version %d", blockProtocolVersion, managementProtocolVersion)
+	if blockProtocolVersion != managementProtocolVersion {
+		return errors.Errorf("proposed block protocol version %d mismatch management protocol version %d", blockProtocolVersion, managementProtocolVersion)
 	}
 
 	return nil
@@ -240,7 +241,13 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 		return nil, err
 	}
-	if err2 := validateProposeBlockReferenceTime(input.PrevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
+
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
+	if err != nil {
+		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateTransactionsBlock failed genesis time %s", err)
+	}
+
+	if err2 := validateProposeBlockReferenceTime(prevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
 		ref.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err2 != nil {
 		return nil, err2
 	}

@@ -37,7 +37,7 @@ func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportCo
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 1*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 20*time.Millisecond)
-	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 1*time.Second)
 
 	return cfg
 }

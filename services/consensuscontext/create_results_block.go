@@ -21,7 +21,7 @@ func (s *service) createResultsBlock(ctx context.Context, input *services.Reques
 
 	txBlockHeader := input.TransactionsBlock.Header
 
-	prevBlockReferenceTime, err := s.fixPrevReferenceTimeIfGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "RequestNewResultsBlock")
 	}

@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) fixPrevReferenceTimeIfGenesis(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
+func (s *service) prevReferenceOrGenesis(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
 	if blockHeight == 1 { // genesis block
 		reference, err := s.management.GetGenesisReference(ctx, &services.GetGenesisReferenceInput{})
 		if err != nil {

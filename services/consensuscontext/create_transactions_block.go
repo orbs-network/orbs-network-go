@@ -22,7 +22,12 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	proposedReferenceTime, err  := s.proposeBlockReferenceTime(ctx, input.PrevBlockReferenceTime)
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
+	if err != nil {
+		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "CreateTransactionsBlock failed genesis time %s", err)
+	}
+
+	proposedReferenceTime, err  := s.proposeBlockReferenceTime(ctx, prevBlockReferenceTime)
 	if err != nil {
 		return nil, err
 	}
@@ -76,17 +81,23 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 }
 
 func (s *service) proposeBlockReferenceTime(ctx context.Context, prevReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
-	proposedReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	leaderReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
 	if err != nil {
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 	}
-	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime.CurrentReference,
-		proposedReferenceTime.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
+
+	proposedReferenceTime := leaderReferenceTime.CurrentReference
+	if prevReferenceTime > proposedReferenceTime {
+		proposedReferenceTime = prevReferenceTime
+	}
+
+	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime,
+		leaderReferenceTime.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
 		return 0, err
 	}
 
 	// NOTE: network live and subscription is done in vm.pre-order to allow empty blocks to close.
-	return proposedReferenceTime.CurrentReference, nil
+	return proposedReferenceTime, nil
 }
 
 func (s *service) fetchTransactions(ctx context.Context, blockProtocolVersion primitives.ProtocolVersion, currentBlockHeight primitives.BlockHeight, prevBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds, maxNumberOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {

@@ -21,7 +21,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
-	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 1*time.Minute)
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
 	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
 	cfg.SetDuration(MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, 100*365*24*time.Hour) // TODO v2 POSV2 temp value that is private 2^62 nanos (100 years)

@@ -108,11 +108,11 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
 		output, err2 := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
-		if err2 == nil {
-			committeeNodeAddresses = output.Members
-		} else {
-			s.logger.Error("management.GetCommittee should not return error", log.Error(err2))
+		if err2 != nil {
+			s.logger.Error("management.GetCommittee failed", log.Error(err2))
+			return [][]byte{}, err
 		}
+		committeeNodeAddresses = output.Members
 	}
 	var committee [][]byte
 	for _, c := range committeeNodeAddresses {

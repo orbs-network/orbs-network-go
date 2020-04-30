@@ -8,8 +8,10 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -91,3 +93,29 @@ func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
 		})
 	})
 }
+
+func TestCreateTx_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTimeRefAndPrevBlocTimeRef(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newHarness(harness.Logger, false)
+			h.management.Reset()
+			leaderRef := primitives.TimestampSeconds(5000)
+			prevRef := primitives.TimestampSeconds(5005)
+
+			setManagementValues(h.management, 1, leaderRef, primitives.TimestampSeconds(1000))
+			txCount := uint32(2)
+			h.expectTxPoolToReturnXTransactions(txCount)
+
+			txBlock, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
+				CurrentBlockHeight:      2,
+				PrevBlockHash:           hash.CalcSha256([]byte{1}),
+				PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
+				PrevBlockReferenceTime:  prevRef,
+			})
+
+			require.NoError(t, err, "request transactions block failed")
+			require.EqualValues(t, prevRef, txBlock.TransactionsBlock.Header.ReferenceTime())
+		})
+	})
+}
+

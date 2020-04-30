@@ -170,6 +170,19 @@ func TestDoesNotAddTransactionWithFutureProtocolVersion(t *testing.T) {
 	})
 }
 
+func TestDoesAddTransactionWithOldProtocolVersion(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+
+		tx := builders.TransferTransaction().WithProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE-1).Build()
+		h.ignoringForwardMessages()
+		h.ignoringTransactionResults()
+
+		_, err := h.addNewTransaction(ctx, tx)
+		require.NoError(t, err)
+	})
+}
+
 func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithSizeLimit(parent, 1).start(ctx)

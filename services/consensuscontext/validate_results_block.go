@@ -20,7 +20,7 @@ import (
 
 type rxValidator func(ctx context.Context, vcrx *rxValidatorContext) error
 
-// TODO v3 get rid of this concept of validator contex. it just unflexible.
+// TODO v3 consider changing the way the validator works not to have a "context" see issue https://github.com/orbs-network/orbs-network-go/issues/1555
 type rxValidatorContext struct {
 	virtualChainId         primitives.VirtualChainId
 	input                  *services.ValidateResultsBlockInput
@@ -218,7 +218,7 @@ func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*pro
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
-	prevBlockReferenceTime, err := s.fixPrevReferenceTimeIfGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return &services.ValidateResultsBlockOutput{}, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateResultsBlock failed genesis time %s", err)
 	}
