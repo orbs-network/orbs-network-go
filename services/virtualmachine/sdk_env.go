@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
 
@@ -97,18 +98,21 @@ func (s *service) handleSdkEnvGetBlockProposerAddress(executionContext *executio
 
 // outputArg0: value array of (bytes)
 func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionContext *executionContext, args []*protocol.Argument) ([][]byte, error) {
-	// TODO POSV2 should get ref as input ?
 	if len(args) != 0 {
 		return [][]byte{}, errors.Errorf("invalid SDK env getBlockProposerAddress args: %v", args)
 	}
 
-	// TODO POSV2 should be seperate provider ?
 	var committeeNodeAddresses []primitives.NodeAddress
 	var err error
 	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
 
 	if err != nil || len(committeeNodeAddresses) == 0 {
-		committeeNodeAddresses = s.committeeProvider.GetCommittee(ctx, uint64(executionContext.currentBlockHeight))
+		output, err2 := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
+		if err2 != nil {
+			s.logger.Error("management.GetCommittee failed", log.Error(err2))
+			return [][]byte{}, err
+		}
+		committeeNodeAddresses = output.Members
 	}
 	var committee [][]byte
 	for _, c := range committeeNodeAddresses {
@@ -117,7 +121,7 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	return committee, err
 }
 
-// TODO POSv2
+// TODO POSV2 remove this with death of election
 func (s *service) callElectionsSystemContract(ctx context.Context, executionContext *executionContext) ([]primitives.NodeAddress, error) {
 	systemContractName := primitives.ContractName(elections_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)

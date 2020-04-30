@@ -19,60 +19,37 @@ import (
 	"sync"
 )
 
+const DEFAULT_REF_TIME = 1492983000
+const DEFAULT_GENESIS_REF_TIME = 1492982000
+
 type MemoryConfig interface {
 	GossipPeers() adapter.GossipPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
-	ProtocolVersion() primitives.ProtocolVersion
 }
 
 type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
-	currentReference      uint64
+	currentReference      primitives.TimestampSeconds
+	genesisReference      primitives.TimestampSeconds
 	topology              adapter.GossipPeers
 	committees            []management.CommitteeTerm
 	protocolVersions      []management.ProtocolVersionTerm
 	isSubscriptionActives []management.SubscriptionTerm
 }
 
-func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
-	committee := getCommitteeFromConfig(config)
+func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
+	committee := getCommitteeFromConfig(cfg)
 	return &MemoryProvider{
 		logger:                logger,
-		currentReference:      0,
-		topology:              config.GossipPeers(),
-		committees:            []management.CommitteeTerm{{AsOfReference: 0, Committee: committee}},
-		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.ProtocolVersion()}},
+		currentReference:      DEFAULT_REF_TIME,
+		genesisReference:      DEFAULT_GENESIS_REF_TIME,
+		topology:              cfg.GossipPeers(),
+		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
-}
-
-func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
-	mp.RLock()
-	defer mp.RUnlock()
-
-	return &management.VirtualChainManagementData{
-		CurrentReference: mp.currentReference,
-		Topology:         mp.topology,
-		Committees:       mp.committees,
-		Subscriptions:    mp.isSubscriptionActives,
-        ProtocolVersions: mp.protocolVersions,
-	}, nil
-}
-
-// for acceptance tests
-func (mp *MemoryProvider) AddCommittee(reference uint64, committee []primitives.NodeAddress) error {
-	mp.Lock()
-	defer mp.Unlock()
-
-	if mp.committees[len(mp.committees)-1].AsOfReference >= reference {
-		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
-	}
-
-	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Committee: committee})
-	mp.currentReference = reference
-	return nil
 }
 
 func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
@@ -87,4 +64,45 @@ func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
 		return bytes.Compare(committee[i], committee[j]) > 0
 	})
 	return committee
+}
+
+func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
+	mp.RLock()
+	defer mp.RUnlock()
+
+	return &management.VirtualChainManagementData{
+		CurrentReference: mp.currentReference,
+		GenesisReference: mp.genesisReference,
+		CurrentTopology:  mp.topology,
+		Committees:       mp.committees,
+		Subscriptions:    mp.isSubscriptionActives,
+        ProtocolVersions: mp.protocolVersions,
+	}, nil
+}
+
+// for acceptance tests
+func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, committee []primitives.NodeAddress) error {
+	mp.Lock()
+	defer mp.Unlock()
+
+	if mp.committees[len(mp.committees)-1].AsOfReference >= reference {
+		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
+	}
+
+	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee})
+	mp.currentReference = reference
+	return nil
+}
+
+func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds, isActive bool) error {
+	mp.Lock()
+	defer mp.Unlock()
+
+	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference >= reference {
+		return errors.Errorf("new subscription must have an 'asOf' reference bigger than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
+	}
+
+	mp.isSubscriptionActives = append(mp.isSubscriptionActives, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive})
+	mp.currentReference = reference
+	return nil
 }

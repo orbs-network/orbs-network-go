@@ -26,6 +26,8 @@ type executionContext struct {
 	currentBlockHeight          primitives.BlockHeight
 	currentBlockTimestamp       primitives.TimestampNano
 	currentBlockProposerAddress primitives.NodeAddress
+	currentBlockReferenceTime	primitives.TimestampSeconds
+	lastBlockReferenceTime	    primitives.TimestampSeconds
 	serviceStack                []primitives.ContractName
 	transientState              *transientState
 	accessScope                 protocol.ExecutionAccessScope
@@ -106,6 +108,8 @@ func (cp *executionContextProvider) allocateExecutionContext(
 	currentBlockHeight primitives.BlockHeight,
 	currentBlockTimestamp primitives.TimestampNano,
 	currentBlockProposerAddress primitives.NodeAddress,
+	currentBlockReferenceTime primitives.TimestampSeconds,
+	lastBlockReferenceTime primitives.TimestampSeconds,
 	accessScope protocol.ExecutionAccessScope,
 	transactionOrQuery TransactionOrQuery) (primitives.ExecutionContextId, *executionContext) {
 	cp.mutex.Lock()
@@ -116,6 +120,8 @@ func (cp *executionContextProvider) allocateExecutionContext(
 		currentBlockHeight:          currentBlockHeight,
 		currentBlockTimestamp:       currentBlockTimestamp,
 		currentBlockProposerAddress: currentBlockProposerAddress,
+		currentBlockReferenceTime:   currentBlockReferenceTime,
+		lastBlockReferenceTime:      lastBlockReferenceTime,
 		serviceStack:                []primitives.ContractName{},
 		transientState:              newTransientState(),
 		accessScope:                 accessScope,

@@ -36,13 +36,16 @@ type config struct {
 }
 
 const (
-	PROTOCOL_VERSION = "PROTOCOL_VERSION"
-	VIRTUAL_CHAIN_ID = "VIRTUAL_CHAIN_ID"
-	NETWORK_TYPE     = "NETWORK_TYPE"
+	MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests) cannot be smaller than min will fail
+	MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests)
+	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE                       = "NETWORK_TYPE"
 
-	MANAGEMENT_FILE_PATH             = "MANAGEMENT_FILE_PATH"
-	MANAGEMENT_MAX_FILE_SIZE         = "MANAGEMENT_MAX_FILE_SIZE"
-	MANAGEMENT_UPDATE_INTERVAL       = "MANAGEMENT_UPDATE_INTERVAL"
+	MANAGEMENT_FILE_PATH                = "MANAGEMENT_FILE_PATH"
+	MANAGEMENT_MAX_FILE_SIZE            = "MANAGEMENT_MAX_FILE_SIZE"
+	MANAGEMENT_POLLING_INTERVAL         = "MANAGEMENT_POLLING_INTERVAL"
+	MANAGEMENT_CONSENSUS_GRACE_TIMEOUT  = "MANAGEMENT_CONSENSUS_GRACE_TIMEOUT"
+	MANAGEMENT_NETWORK_LIVENESS_TIMEOUT = "MANAGEMENT_NETWORK_LIVENESS_TIMEOUT"
 
 	BENCHMARK_CONSENSUS_RETRY_INTERVAL             = "BENCHMARK_CONSENSUS_RETRY_INTERVAL"
 	BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE = "BENCHMARK_CONSENSUS_REQUIRED_QUORUM_PERCENTAGE"
@@ -187,10 +190,6 @@ func (c *config) NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey {
 	return c.nodePrivateKey
 }
 
-func (c *config) ProtocolVersion() primitives.ProtocolVersion {
-	return primitives.ProtocolVersion(c.kv[PROTOCOL_VERSION].Uint32Value)
-}
-
 func (c *config) VirtualChainId() primitives.VirtualChainId {
 	return primitives.VirtualChainId(c.kv[VIRTUAL_CHAIN_ID].Uint32Value)
 }
@@ -207,8 +206,16 @@ func (c *config) ManagementMaxFileSize() uint32 {
 	return c.kv[MANAGEMENT_MAX_FILE_SIZE].Uint32Value
 }
 
-func (c *config) ManagementUpdateInterval() time.Duration  {
-	return c.kv[MANAGEMENT_UPDATE_INTERVAL].DurationValue
+func (c *config) ManagementPollingInterval() time.Duration  {
+	return c.kv[MANAGEMENT_POLLING_INTERVAL].DurationValue
+}
+
+func (c *config) ManagementConsensusGraceTimeout() time.Duration  {
+	return c.kv[MANAGEMENT_CONSENSUS_GRACE_TIMEOUT].DurationValue
+}
+
+func (c *config) ManagementNetworkLivenessTimeout() time.Duration  {
+	return c.kv[MANAGEMENT_NETWORK_LIVENESS_TIMEOUT].DurationValue
 }
 
 func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {

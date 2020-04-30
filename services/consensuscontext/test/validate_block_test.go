@@ -12,9 +12,11 @@ import (
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsBlockInput {
@@ -96,3 +98,22 @@ func TestValidateResultsBlockOnValidBlock(t *testing.T) {
 		})
 	})
 }
+
+func TestValidateResultsBlockFailsOnBadGenesis(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			s := newHarness(harness.Logger, false)
+			s.management.Reset()
+			setManagementValues(s.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+
+			input := &services.ValidateResultsBlockInput{
+				CurrentBlockHeight:     1,
+				PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Unix() -1000),
+			}
+
+			_, err := s.service.ValidateResultsBlock(ctx, input)
+			require.Error(t, err, "validation should fail on bad genesis value for block height 1")
+		})
+	})
+}
+

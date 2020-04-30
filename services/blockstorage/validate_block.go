@@ -9,6 +9,7 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -107,17 +108,12 @@ func (s *Service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
-	// TODO(v1) we may be logging twice, this should be fixed when handling the logging structured errors in logger issue
-	if !txBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
-		errorMessage := "protocol version mismatch in transactions block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", txBlockHeader.ProtocolVersion()), logfields.BlockHeight(txBlockHeader.BlockHeight()))
-		return fmt.Errorf(errorMessage)
+	if txBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions block header",txBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	}
 
-	if !rsBlockHeader.ProtocolVersion().Equal(ProtocolVersion) {
-		errorMessage := "protocol version mismatch in results block header"
-		s.logger.Error(errorMessage, log.Stringable("expected", ProtocolVersion), log.Stringable("received", rsBlockHeader.ProtocolVersion()), logfields.BlockHeight(txBlockHeader.BlockHeight()))
-		return fmt.Errorf(errorMessage)
+	if rsBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in results block header", rsBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	}
 
 	return nil

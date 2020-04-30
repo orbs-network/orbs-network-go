@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -107,7 +108,7 @@ type committee struct {
 }
 
 type committeeEvent struct {
-	RefTime uint64
+	RefTime uint32
 	Committee []committee
 }
 
@@ -119,7 +120,7 @@ type subscription struct {
 }
 
 type subscriptionEvent struct {
-	RefTime uint64
+	RefTime uint32
 	Data subscription
 }
 
@@ -129,12 +130,13 @@ type protocolVersion struct {
 }
 
 type protocolVersionEvent struct {
-	RefTime uint64
+	RefTime uint32
 	Data protocolVersion
 }
 
 type vc struct {
 	VirtualChainId  	  uint64
+	GenesisRefTime        uint32
 	CurrentTopology 	  []topologyNode
 	CommitteeEvents 	  []committeeEvent
 	SubscriptionEvents 	  []subscriptionEvent
@@ -142,7 +144,7 @@ type vc struct {
 }
 
 type mgmt struct {
-	CurrentRefTime uint64
+	CurrentRefTime uint32
 	PageStartRefTime uint64
 	PageEndRefTime uint64
 	VirtualChains map[string]vc
@@ -178,8 +180,9 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	protocolVersions := parseProtocolVersion(vcData.ProtocolVersionEvents)
 
 	return &management.VirtualChainManagementData{
-		CurrentReference: data.CurrentRefTime,
-		Topology:         topology,
+		CurrentReference: primitives.TimestampSeconds(data.CurrentRefTime),
+		GenesisReference: primitives.TimestampSeconds(vcData.GenesisRefTime),
+		CurrentTopology:  topology,
 		Committees:       committeeTerms,
 		Subscriptions:    subscriptions,
 		ProtocolVersions: protocolVersions,
@@ -221,7 +224,7 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 			return bytes.Compare(committee[i], committee[j]) > 0
 		})
 
-		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: event.RefTime, Committee: committee})
+		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Members: committee})
 	}
 
 	sort.SliceStable(committeeTerms, func(i, j int) bool {
@@ -242,7 +245,7 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 		if event.Data.Status == "active" {
 			isActive = true
 		}
-		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference:event.RefTime, IsActive:isActive})
+		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive:isActive})
 	}
 
 	sort.SliceStable(subscriptionPeriods, func(i, j int) bool {
@@ -255,7 +258,7 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []management.ProtocolVersionTerm {
 	var protocolVersionPeriods []management.ProtocolVersionTerm
 	for _, event := range protocolVersionEvents {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference:event.RefTime, Version:primitives.ProtocolVersion(event.Data.Version)})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Version: primitives.ProtocolVersion(event.Data.Version)})
 	}
 
 	sort.SliceStable(protocolVersionPeriods, func(i, j int) bool {
@@ -263,8 +266,10 @@ func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []manage
 	})
 
 	if len(protocolVersionPeriods) == 0 {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:primitives.ProtocolVersion(1)})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
 	}
+
+	// TODO POSV2 consider if last PV is larger than config.maximalpv -> fail ?
 
 	return protocolVersionPeriods
 }

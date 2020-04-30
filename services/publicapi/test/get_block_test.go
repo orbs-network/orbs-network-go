@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -29,7 +30,7 @@ func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     8,
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -58,7 +59,7 @@ func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     8,
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -88,7 +89,7 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     1000,
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -115,7 +116,7 @@ func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     1000,
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -144,7 +145,7 @@ func TestGetBlock_RequestBlockZero(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     0,
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})

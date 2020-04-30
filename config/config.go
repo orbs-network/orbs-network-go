@@ -16,7 +16,6 @@ import (
 
 type NodeConfig interface {
 	// shared
-	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
@@ -27,7 +26,9 @@ type NodeConfig interface {
 	// Management
 	ManagementFilePath() string
 	ManagementMaxFileSize() uint32
-	ManagementUpdateInterval() time.Duration
+	ManagementPollingInterval() time.Duration
+	ManagementConsensusGraceTimeout() time.Duration
+	ManagementNetworkLivenessTimeout() time.Duration
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -169,12 +170,12 @@ type GossipTransportConfig interface {
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
-	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
+	ManagementConsensusGraceTimeout() time.Duration
 }
 
 type CommitteeProviderConfig interface {

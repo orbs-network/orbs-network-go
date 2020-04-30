@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/govnr"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
@@ -63,7 +64,7 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementUpdateTime time.Duration,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementPollingInterval time.Duration,
 	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *Network {
 
 	testLogger.Info("===========================================================================")
@@ -90,7 +91,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 		requiredQuorumPercentage,
 		vcid,
 		emptyBlockTime,
-		managementUpdateTime,
+		managementPollingInterval,
 	)
 
 	if configOverride != nil {
@@ -224,3 +225,31 @@ func (n *Network) WaitForBlock(ctx context.Context, height primitives.BlockHeigh
 		tracker.WaitForBlock(ctx, height)
 	}
 }
+
+func GenerateNewManagementReferenceTime(oldRefTime primitives.TimestampSeconds) primitives.TimestampSeconds {
+	now := primitives.TimestampSeconds(time.Now().Unix() + 1)
+	if oldRefTime < now  {
+		return now
+	}
+	return oldRefTime + 1
+}
+
+func  (n *Network) WaitForManagementChange(ctx context.Context, currentCommitteeMemberId int, refTime primitives.TimestampSeconds) (primitives.BlockHeight, error) {
+	currentBlockHeight, err := n.BlockPersistence(currentCommitteeMemberId).GetLastBlockHeight()
+	if err != nil {
+		return 0, err
+	}
+
+	waitingBlock := currentBlockHeight + 1
+	for waitingBlock < currentBlockHeight+50 {
+		n.WaitForBlock(ctx, waitingBlock)
+		bp, _ := n.BlockPersistence(currentCommitteeMemberId).GetLastBlock()
+		if bp.TransactionsBlock.Header.ReferenceTime() >= refTime {
+			return bp.TransactionsBlock.Header.BlockHeight(), nil
+		}
+		waitingBlock = bp.TransactionsBlock.Header.BlockHeight()+1
+	}
+	return 0, errors.New("error waited too much and failed")
+
+}
+

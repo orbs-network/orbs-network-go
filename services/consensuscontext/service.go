@@ -9,11 +9,9 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"time"
@@ -28,6 +26,7 @@ type metrics struct {
 	transactionsRate                          *metric.Rate
 	committeeSize                             *metric.Gauge
 	committeeMembers                          *metric.Text
+	committeeRefTime                          *metric.Gauge
 }
 
 func newMetrics(factory metric.Factory) *metrics {
@@ -36,8 +35,9 @@ func newMetrics(factory metric.Factory) *metrics {
 		createResultsBlockTime:                    factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
 		processTransactionsSeInCreateResultsBlock: factory.NewLatency("ConsensusContext.ProcessTransactionsSetInCreateResultsBlock.Millis", 10*time.Second),
 		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
-		committeeSize:                             factory.NewGauge("ConsensusContext.committeeSize.Number"),
-		committeeMembers:                          factory.NewText("ConsensusContext.committeeMemberIds.Numbers", ""),
+		committeeSize:                             factory.NewGauge("ConsensusContext.Committee.Size"),
+		committeeMembers:                          factory.NewText("ConsensusContext.Committee.Members", ""),
+		committeeRefTime:                          factory.NewGauge("ConsensusContext.Committee.PrevBlockReferenceTime"),
 	}
 }
 
@@ -45,6 +45,7 @@ type service struct {
 	transactionPool services.TransactionPool
 	virtualMachine  services.VirtualMachine
 	stateStorage    services.StateStorage
+	management      services.Management
 	config          config.ConsensusContextConfig
 	logger          log.Logger
 
@@ -55,6 +56,7 @@ func NewConsensusContext(
 	transactionPool services.TransactionPool,
 	virtualMachine services.VirtualMachine,
 	stateStorage services.StateStorage,
+	management services.Management,
 	config config.ConsensusContextConfig,
 	logger log.Logger,
 	metricFactory metric.Factory,
@@ -64,6 +66,7 @@ func NewConsensusContext(
 		transactionPool: transactionPool,
 		virtualMachine:  virtualMachine,
 		stateStorage:    stateStorage,
+		management:      management,
 		config:          config,
 		logger:          logger.WithTags(LogTag),
 		metrics:         newMetrics(metricFactory),
@@ -85,13 +88,6 @@ func (s *service) RequestNewTransactionsBlock(ctx context.Context, input *servic
 	return &services.RequestNewTransactionsBlockOutput{
 		TransactionsBlock: txBlock,
 	}, nil
-}
-
-func (s *service) printTxHash(logger log.Logger, txBlock *protocol.TransactionsBlockContainer) {
-	for _, tx := range txBlock.SignedTransactions {
-		txHash := digest.CalcTxHash(tx.Transaction())
-		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), logfields.Transaction(txHash), logfields.BlockHeight(txBlock.Header.BlockHeight()))
-	}
 }
 
 func (s *service) RequestNewResultsBlock(ctx context.Context, input *services.RequestNewResultsBlockInput) (*services.RequestNewResultsBlockOutput, error) {

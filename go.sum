@@ -194,6 +194,8 @@ github.com/orbs-network/lean-helix-go v0.2.6 h1:9b7eGChry3Z18xtlvYHO0wTaj5HBOEwL
 github.com/orbs-network/lean-helix-go v0.2.6/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/lean-helix-go v0.2.7 h1:d7k67YUIMqXihIl5x/S9p7VIpBGpBzI1D/xR1x2Y/Ro=
 github.com/orbs-network/lean-helix-go v0.2.7/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
+github.com/orbs-network/lean-helix-go v0.3.0 h1:lN46V8I5LV7eZF0sYf8/0BBte8J+i/fl8j/fempWEAM=
+github.com/orbs-network/lean-helix-go v0.3.0/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/membuffers v0.3.2/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
 github.com/orbs-network/membuffers v0.3.6 h1:SEfVtDhzi8YHR4qY8ouu8G57sKGsT4vfgdBC5bjG8TE=
 github.com/orbs-network/membuffers v0.3.6/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
@@ -213,6 +215,12 @@ github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401 h1:Ys4loL0n
 github.com/orbs-network/orbs-spec v0.0.0-20191106111111-a9a3678f9401/go.mod h1:+/ayyqTUVcQeT2J4wNdDlcPXtt+lAQrWAR8vQLQ/Sac=
 github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e h1:2uhGT3x5lcuvdX7rkw1nKwPjzgA1bBQ3RzNkWSSPGP0=
 github.com/orbs-network/orbs-spec v0.0.0-20191114152037-24b26e24030e/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200402103844-c2833cb96e37 h1:9g94J9isix6wFZy15tD+J3x5GatPCgeDFOo1H1pymvc=
+github.com/orbs-network/orbs-spec v0.0.0-20200402103844-c2833cb96e37/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200407143159-7c7f9f344034 h1:0WrRIBeaX0M6F5+AMDom+bb50C6co2IUGJh18ap4muI=
+github.com/orbs-network/orbs-spec v0.0.0-20200407143159-7c7f9f344034/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3 h1:jdCqdamZY/K9v9x4W9RLF46ufuDu53+pygi8Ook/Wvk=
+github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/pbparser v0.3.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=
@@ -227,6 +235,8 @@ github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUr
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=

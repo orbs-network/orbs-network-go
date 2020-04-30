@@ -218,8 +218,10 @@ func (h *harness) expectEthereumConnectorGetBlockTimeByNumber(returnError error,
 
 func (h *harness) expectStateStorageLastCommittedBlockInfoBlockHeightRequested(returnValue primitives.BlockHeight) {
 	outputToReturn := &services.GetLastCommittedBlockInfoOutput{
-		LastCommittedBlockHeight:    returnValue,
-		LastCommittedBlockTimestamp: 1234,
+		BlockHeight:    returnValue,
+		BlockTimestamp: 1234,
+		CurrentReferenceTime: 6000,
+		PrevReferenceTime: 5000,
 		BlockProposerAddress:        hash.Make32BytesWithFirstByte(1),
 	}
 
@@ -228,8 +230,10 @@ func (h *harness) expectStateStorageLastCommittedBlockInfoBlockHeightRequested(r
 
 func (h *harness) expectStateStorageLastCommittedBlockInfoRequested(returnHeight primitives.BlockHeight, returnTimestamp primitives.TimestampNano, returnAddress primitives.NodeAddress) {
 	outputToReturn := &services.GetLastCommittedBlockInfoOutput{
-		LastCommittedBlockHeight:    returnHeight,
-		LastCommittedBlockTimestamp: returnTimestamp,
+		BlockHeight:    returnHeight,
+		BlockTimestamp: returnTimestamp,
+		CurrentReferenceTime: 6000,
+		PrevReferenceTime: 5000,
 		BlockProposerAddress:        returnAddress,
 	}
 

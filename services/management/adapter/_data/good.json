@@ -9,7 +9,7 @@
     "42":
     {
       "VirtualChainId": 42,
-
+      "GenesisRefTime": 1582615603,
       "CurrentTopology":
       [
         {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},

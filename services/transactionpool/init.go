@@ -29,7 +29,7 @@ func NewTransactionPool(ctx context.Context,
 	blockHeightReporter BlockHeightReporter,
 	config config.TransactionPoolConfig,
 	parent log.Logger,
-	metricFactory metric.Factory) *Service {
+	metricFactory metric.Factory) *service {
 
 	if blockHeightReporter == nil {
 		blockHeightReporter = synchronization.NopHeightReporter{}
@@ -43,12 +43,12 @@ func NewTransactionPool(ctx context.Context,
 
 	txForwarder := NewTransactionForwarder(ctx, logger, signer, config, gossip)
 
-	s := &Service{
-		clock:          createClockIfNeeded(maybeClock),
-		gossip:         gossip,
-		virtualMachine: virtualMachine,
-		config:         config,
-		logger:         logger,
+	s := &service{
+		clock:           createClockIfNeeded(maybeClock),
+		gossip:          gossip,
+		virtualMachine:  virtualMachine,
+		config:          config,
+		logger:          logger,
 
 		pendingPool:                         pendingPool,
 		committedPool:                       committedPool,
@@ -84,7 +84,7 @@ func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
 	return maybeClock
 }
 
-func (s *Service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
+func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
 	bh, ts := s.lastCommittedBlockHeightAndTime()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		s.transactionResultsHandlers.RLock()

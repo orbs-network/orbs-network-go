@@ -8,6 +8,8 @@ package test
 
 import (
 	"context"
+	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -37,23 +39,27 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 			start(ctx)
 		block := builders.BlockPair().Build()
 
-		block.TransactionsBlock.Header.MutateProtocolVersion(998)
+		errorProtocolVersion := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+100
+		expectedTxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", errorProtocolVersion, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+		expectedRxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in results block header", errorProtocolVersion, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+
+		block.TransactionsBlock.Header.MutateProtocolVersion(errorProtocolVersion)
 
 		_, err := harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch in transactions block header", "tx protocol was mutated, should fail")
+		require.EqualError(t, err, expectedTxErrMsg, "tx protocol was mutated, should fail")
 
 		block = builders.BlockPair().Build()
-		block.ResultsBlock.Header.MutateProtocolVersion(999)
+		block.ResultsBlock.Header.MutateProtocolVersion(errorProtocolVersion)
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch in results block header", "rx protocol was mutated, should fail")
+		require.EqualError(t, err, expectedRxErrMsg, "rx protocol was mutated, should fail")
 
 		block = builders.BlockPair().Build()
-		block.TransactionsBlock.Header.MutateProtocolVersion(999)
-		block.ResultsBlock.Header.MutateProtocolVersion(999)
+		block.TransactionsBlock.Header.MutateProtocolVersion(errorProtocolVersion)
+		block.ResultsBlock.Header.MutateProtocolVersion(errorProtocolVersion)
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "protocol version mismatch in transactions block header", "tx and rx protocol was mutated, should fail")
+		require.EqualError(t, err, expectedTxErrMsg, "tx and rx protocol was mutated, should fail")
 	})
 }
 
@@ -100,10 +106,5 @@ func TestValidateBlockWithInvalidHeight(t *testing.T) {
 
 		_, err = harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
 		require.EqualError(t, err, "block height is 999, expected 2", "tx & rx block height was mutate, expected an error")
-
-		block.TransactionsBlock.Header.MutateProtocolVersion(1)
-
-		_, err = harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{block})
-		require.EqualError(t, err, "block height is 999, expected 2", "only rx block height was mutate, expected an error")
 	})
 }

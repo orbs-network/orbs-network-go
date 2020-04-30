@@ -84,14 +84,14 @@ func NewNodeLogic(parentCtx context.Context,
 	}
 
 	gossipService := gossip.NewGossip(ctx, gossipTransport, nodeConfig, logger, metricRegistry)
-	management := management.NewManagement(ctx, nodeConfig, managementProvider, gossipService, logger)
+	management := management.NewManagement(ctx, nodeConfig, managementProvider, gossipService, logger, metricRegistry)
 	stateStorageService := statestorage.NewStateStorage(nodeConfig, statePersistence, stateBlockHeightReporter, logger, metricRegistry)
-	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, management, logger)
+	virtualMachineService := virtualmachine.NewVirtualMachine(stateStorageService, processors, crosschainConnectors, management, nodeConfig, logger)
 	transactionPoolService := transactionpool.NewTransactionPool(ctx, maybeClock, gossipService, virtualMachineService, signer, transactionPoolBlockHeightReporter, nodeConfig, logger, metricRegistry)
 	serviceSyncCommitters := []servicesync.BlockPairCommitter{servicesync.NewStateStorageCommitter(stateStorageService), servicesync.NewTxPoolCommitter(transactionPoolService)}
 	blockStorageService := blockstorage.NewBlockStorage(ctx, nodeConfig, blockPersistence, gossipService, logger, metricRegistry, serviceSyncCommitters)
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
-	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, nodeConfig, logger, metricRegistry)
+	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, management, nodeConfig, logger, metricRegistry)
 
 	consensusAlgo := createConsensusAlgo(nodeConfig)(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, metricRegistry)
 

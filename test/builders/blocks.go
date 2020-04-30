@@ -8,6 +8,7 @@ package builders
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -41,7 +42,7 @@ func BlockPair() *blockPair {
 
 	b := &blockPair{
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:            DEFAULT_TEST_PROTOCOL_VERSION,
+			ProtocolVersion:            config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 			VirtualChainId:             DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                1,
 			PrevBlockHashPtr:           empty32ByteHash,
@@ -55,7 +56,7 @@ func BlockPair() *blockPair {
 		transactions: transactions,
 		txProof:      nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:                 DEFAULT_TEST_PROTOCOL_VERSION,
+			ProtocolVersion:                 config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 			VirtualChainId:                  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                     1,
 			PrevBlockHashPtr:                empty32ByteHash,
@@ -309,7 +310,7 @@ type blockPairBuilder struct {
 
 func BlockPairBuilder() *blockPairBuilder {
 	return &blockPairBuilder{
-		protocolVersion:    DEFAULT_TEST_PROTOCOL_VERSION,
+		protocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 		virtualChainId:     DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 		currentBlockHeight: 1000,
 		blockProposer:      hash.Make32EmptyBytes(),
@@ -360,13 +361,12 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 }
 
 type blockPairBuilderConfig interface {
-	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextTriggersEnabled() bool
 }
 
 func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder {
-	b.protocolVersion = cfg.ProtocolVersion()
+	b.protocolVersion = config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
 	return b

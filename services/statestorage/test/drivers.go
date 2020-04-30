@@ -93,7 +93,7 @@ func (d *Driver) ReadKeysFromRevision(ctx context.Context, revision int, contrac
 
 func (d *Driver) GetBlockHeightAndTimestamp(ctx context.Context) (int, int, error) {
 	output, err := d.service.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
-	return int(output.LastCommittedBlockHeight), int(output.LastCommittedBlockTimestamp), err
+	return int(output.BlockHeight), int(output.BlockTimestamp), err
 }
 
 func (d *Driver) CommitStateDiff(ctx context.Context, state *services.CommitStateDiffInput) (*services.CommitStateDiffOutput, error) {

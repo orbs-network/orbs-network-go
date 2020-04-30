@@ -36,15 +36,15 @@ func toRxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardsCo
 	block := blockBuilder.Build()
 
 	return &rxValidatorContext{
-		protocolVersion: cfg.ProtocolVersion(),
-		virtualChainId:  cfg.VirtualChainId(),
+		virtualChainId:         cfg.VirtualChainId(),
 		input: &services.ValidateResultsBlockInput{
-			CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
-			ResultsBlock:         block.ResultsBlock,
-			PrevBlockHash:        block.TransactionsBlock.Header.PrevBlockHashPtr(),
-			TransactionsBlock:    block.TransactionsBlock,
-			PrevBlockTimestamp:   block.TransactionsBlock.Header.Timestamp() - 1000,
-			BlockProposerAddress: blockProposer,
+			CurrentBlockHeight:     block.TransactionsBlock.Header.BlockHeight(),
+			ResultsBlock:           block.ResultsBlock,
+			PrevBlockHash:          block.TransactionsBlock.Header.PrevBlockHashPtr(),
+			TransactionsBlock:      block.TransactionsBlock,
+			PrevBlockTimestamp:     block.TransactionsBlock.Header.Timestamp() - 1000,
+			PrevBlockReferenceTime: block.TransactionsBlock.Header.ReferenceTime() - 15,
+			BlockProposerAddress:   blockProposer,
 		},
 	}
 }
@@ -59,15 +59,41 @@ func mockGetStateHashThatReturns(stateRootHash primitives.Sha256, err error) fun
 
 func TestResultsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(false)
-	t.Run("should return error for results block with incorrect protocol version", func(t *testing.T) {
+
+	t.Run("should NOT return error for results block and tx with same protocol version", func(t *testing.T) {
 		vcrx := toRxValidatorContext(cfg)
 		err := validateRxProtocolVersion(context.Background(), vcrx)
-		require.Nil(t, err)
-		if err := vcrx.input.ResultsBlock.Header.MutateProtocolVersion(999); err != nil {
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error for results block and tx block NOT the same protocol version", func(t *testing.T) {
+		vcrx := toRxValidatorContext(cfg)
+		if err := vcrx.input.ResultsBlock.Header.MutateProtocolVersion(vcrx.input.TransactionsBlock.Header.ProtocolVersion() + 1); err != nil {
+			t.Error(err)
+		}
+		err := validateRxProtocolVersion(context.Background(), vcrx)
+		require.Equal(t, ErrMismatchedProtocolVersion, errors.Cause(err), "validation should fail on incorrect protocol version in results block", err)
+
+		if err := vcrx.input.ResultsBlock.Header.MutateProtocolVersion(vcrx.input.TransactionsBlock.Header.ProtocolVersion() - 1); err != nil {
 			t.Error(err)
 		}
 		err = validateRxProtocolVersion(context.Background(), vcrx)
 		require.Equal(t, ErrMismatchedProtocolVersion, errors.Cause(err), "validation should fail on incorrect protocol version in results block", err)
+	})
+
+	t.Run("should NOT return error for results block and tx with same ref time", func(t *testing.T) {
+		vcrx := toRxValidatorContext(cfg)
+		err := validateIdenticalTxRxBlockReferenceTimes(context.Background(), vcrx)
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error for results block and tx block NOT the same ref time", func(t *testing.T) {
+		vcrx := toRxValidatorContext(cfg)
+		if err := vcrx.input.ResultsBlock.Header.MutateReferenceTime(vcrx.input.TransactionsBlock.Header.ReferenceTime() + 1); err != nil {
+			t.Error(err)
+		}
+		err := validateIdenticalTxRxBlockReferenceTimes(context.Background(), vcrx)
+		require.Equal(t, ErrMismatchedTxRxBlockRefTimes, errors.Cause(err), "validation should fail on incorrect ref time in results block", err)
 	})
 
 	t.Run("should return error for block with incorrect virtual chain", func(t *testing.T) {

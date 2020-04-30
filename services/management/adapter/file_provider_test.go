@@ -33,7 +33,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 func TestFileTopology_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
-			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw/ad51339db324aa53f52973a76f6da943157c14d8/management.json"
+			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw#"
 			cfg := newConfig(42, url)
 			fileProvider := NewFileProvider(cfg, parent.Logger)
 			expectFileProviderToReadCorrectly(t, ctx, fileProvider)
@@ -45,8 +45,9 @@ func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp man
 	data, err := fp.Get(ctx)
 	require.NoError(t, err)
 	require.EqualValues(t, data.CurrentReference, 1582616070)
-	require.Len(t, data.Topology, 4)
-	requireTopologyToBeSameAsStatic(t, data.Topology)
+	require.EqualValues(t, data.GenesisReference, 1582615603)
+	require.Len(t, data.CurrentTopology, 4)
+	requireTopologyToBeSameAsStatic(t, data.CurrentTopology)
 	require.Len(t, data.Committees, 3)
 	requireCommitteeToBeSameAsStatic(t, data.Committees)
 }
@@ -65,11 +66,11 @@ func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm
 	committee := []primitives.NodeAddress{testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()}
 	// notice order of ref from small to big.
 	require.EqualValues(t, 1582613000, c[0].AsOfReference)
-	require.ElementsMatch(t, committee, c[0].Committee)
+	require.ElementsMatch(t, committee, c[0].Members)
 	require.EqualValues(t, 1582614000, c[1].AsOfReference)
-	require.ElementsMatch(t, committee, c[1].Committee)
+	require.ElementsMatch(t, committee, c[1].Members)
 	require.EqualValues(t, 1582616000, c[2].AsOfReference)
-	require.ElementsMatch(t, committee, c[2].Committee)
+	require.ElementsMatch(t, committee, c[2].Members)
 }
 
 type fconfig struct {

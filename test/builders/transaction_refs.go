@@ -7,6 +7,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
@@ -22,7 +23,7 @@ type transactionRef struct {
 func TransactionRef() *transactionRef {
 	return &transactionRef{
 		builder: &client.TransactionRefBuilder{
-			ProtocolVersion:      DEFAULT_TEST_PROTOCOL_VERSION,
+			ProtocolVersion:      config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 			VirtualChainId:       DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			TransactionTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 			Txhash:               hash.CalcSha256([]byte("some-tx-hash")),

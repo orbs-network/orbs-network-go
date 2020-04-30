@@ -39,7 +39,7 @@ type batchFetcher interface {
 }
 
 type batchValidator interface {
-	ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected
+	ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected
 }
 
 type committedTransactionChecker interface {
@@ -47,7 +47,7 @@ type committedTransactionChecker interface {
 }
 
 type preOrderValidator interface {
-	preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error)
+	preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds) ([]protocol.TransactionStatus, error)
 }
 
 type vmPreOrderValidator struct {
@@ -58,11 +58,12 @@ type txRemover interface {
 	remove(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) *primitives.NodeAddress
 }
 
-func (v *vmPreOrderValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error) {
+func (v *vmPreOrderValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds) ([]protocol.TransactionStatus, error) {
 	output, err := v.vm.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions:    txs,
-		CurrentBlockHeight:    currentBlockHeight,
-		CurrentBlockTimestamp: currentBlockTimestamp,
+		SignedTransactions:        txs,
+		CurrentBlockHeight:        currentBlockHeight,
+		CurrentBlockTimestamp:     currentBlockTimestamp,
+		CurrentBlockReferenceTime: currentBlockReferenceTime,
 	})
 
 	if err != nil {
@@ -79,7 +80,7 @@ func newTransactionBatch(logger log.Logger, transactions Transactions) *transact
 	}
 }
 
-func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
+func (s *service) GetTransactionsForOrdering(ctx context.Context, input *services.GetTransactionsForOrderingInput) (*services.GetTransactionsForOrderingOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	//TODO(v1) fail if requested block height is in the past
 	logger.Info("GetTransactionsForOrdering start", trace.LogFieldFrom(ctx), logfields.BlockHeight(input.CurrentBlockHeight), log.Stringable("transaction-pool-time-between-empty-blocks", s.config.TransactionPoolTimeBetweenEmptyBlocks()))
@@ -87,8 +88,8 @@ func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *service
 	// close first  block immediately without waiting (important for gamma)
 	if input.CurrentBlockHeight == 1 {
 		return &services.GetTransactionsForOrderingOutput{
-			SignedTransactions:     nil,
-			ProposedBlockTimestamp: s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp),
+			SignedTransactions:         nil,
+			ProposedBlockTimestamp:     s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp),
 		}, nil
 	}
 
@@ -106,26 +107,26 @@ func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *service
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.config.TransactionPoolTimeBetweenEmptyBlocks())
 	defer cancel()
 
-	runBatch := func(proposedBlockTimestamp primitives.TimestampNano) (*transactionBatch, error) {
+	runBatch := func(proposedBlockTimestamp primitives.TimestampNano, proposedReferenceTime primitives.TimestampSeconds) (*transactionBatch, error) {
 		batch := &transactionBatch{
 			logger:               logger,
 			maxNumOfTransactions: input.MaxNumberOfTransactions,
 			sizeLimit:            input.MaxTransactionsSetSizeKb * 1024,
 		}
 		batch.fetchUsing(s.pendingPool)
-		batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, proposedBlockTimestamp)
-		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp)
+		batch.filterInvalidTransactions(ctx, s.validationContext, s.committedPool, input.BlockProtocolVersion, proposedBlockTimestamp)
+		return batch, batch.runPreOrderValidations(ctx, pov, input.CurrentBlockHeight, proposedBlockTimestamp, proposedReferenceTime)
 	}
 
 	proposedBlockTimestamp := s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
-	batch, err := runBatch(proposedBlockTimestamp)
+	batch, err := runBatch(proposedBlockTimestamp, input.CurrentBlockReferenceTime)
 	for !batch.hasEnoughTransactions(1) && timeoutCtx.Err() == nil {
 		logger.Info("not enough transactions in batch, waiting for more")
 		if s.transactionWaiter.waitForIncomingTransaction(timeoutCtx) {
 			logger.Info("got a new transaction, re-running batch")
 			// propose a new time since we've been waiting
 			proposedBlockTimestamp = s.proposeBlockTimestampWithCurrentTime(input.PrevBlockTimestamp)
-			batch, err = runBatch(proposedBlockTimestamp)
+			batch, err = runBatch(proposedBlockTimestamp, input.CurrentBlockReferenceTime)
 		}
 	}
 	logger.Info("returning a batch", log.Int("batch-size", batch.size()))
@@ -133,21 +134,25 @@ func (s *Service) GetTransactionsForOrdering(ctx context.Context, input *service
 	// even on error we want to reject transactions first to their senders before exiting
 	batch.notifyRejections(ctx, s.pendingPool)
 	out := &services.GetTransactionsForOrderingOutput{
-		SignedTransactions:     batch.validTransactions,
-		ProposedBlockTimestamp: proposedBlockTimestamp,
+		SignedTransactions:         batch.validTransactions,
+		ProposedBlockTimestamp:     proposedBlockTimestamp,
 	}
 
 	return out, err
 }
 
-func (s *Service) proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
-	return digest.CalcNewBlockTimestamp(prevBlockTimestamp, primitives.TimestampNano(s.clock.CurrentTime().UnixNano()))
+func (s *service) proposeBlockTimestampWithCurrentTime(prevBlockTimestamp primitives.TimestampNano) primitives.TimestampNano {
+	now := primitives.TimestampNano(s.clock.CurrentTime().UnixNano())
+	if now > prevBlockTimestamp {
+		return now
+	}
+	return prevBlockTimestamp + 1
 }
 
-func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker, proposedBlockTimestamp primitives.TimestampNano) {
+func (r *transactionBatch) filterInvalidTransactions(ctx context.Context, validator batchValidator, committedTransactions committedTransactionChecker, proposedProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) {
 	for _, tx := range r.incomingTransactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
-		if err := validator.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
+		if err := validator.ValidateTransactionForOrdering(tx, proposedProtocolVersion, proposedBlockTimestamp); err != nil {
 			r.logger.Info("dropping invalid transaction", log.Error(err), log.String("flow", "checkpoint"), logfields.Transaction(txHash))
 			r.reject(txHash, err.TransactionStatus)
 		} else if committedTransactions.has(txHash) {
@@ -182,8 +187,8 @@ func (r *transactionBatch) accept(transaction *protocol.SignedTransaction) {
 	r.validTransactions = append(r.validTransactions, transaction)
 }
 
-func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator preOrderValidator, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) error {
-	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp)
+func (r *transactionBatch) runPreOrderValidations(ctx context.Context, validator preOrderValidator, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockTimeReferent primitives.TimestampSeconds) error {
+	preOrderResults, err := validator.preOrderCheck(ctx, r.transactionsForPreOrder, currentBlockHeight, currentBlockTimestamp, currentBlockTimeReferent)
 
 	if len(preOrderResults) != len(r.transactionsForPreOrder) {
 		panic(errors.Errorf("BUG: sent %d transactions for pre-order check and got %d statuses", len(r.transactionsForPreOrder), len(preOrderResults)).Error())

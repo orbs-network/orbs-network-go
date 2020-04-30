@@ -51,11 +51,11 @@ type networkHarness struct {
 	virtualChainId           primitives.VirtualChainId
 	emptyBlockTime           time.Duration
 	testTimeout              time.Duration
-	mangementUpdateTime		 time.Duration
+	managementPollingInterval time.Duration
 }
 
 func NewHarness() *networkHarness {
-	n := &networkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, mangementUpdateTime: 0}
+	n := &networkHarness{maxTxPerBlock: DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, requiredQuorumPercentage: DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, managementPollingInterval: 0}
 
 	var algos []consensus.ConsensusAlgoType
 	if ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS {
@@ -119,8 +119,8 @@ func (b *networkHarness) WithMaxTxPerBlock(maxTxPerBlock uint32) *networkHarness
 	return b
 }
 
-func (b *networkHarness) WithManagementUpdateInterval(updateTime time.Duration) *networkHarness {
-	b.mangementUpdateTime = updateTime
+func (b *networkHarness) WithManagementPollingInterval(interval time.Duration) *networkHarness {
+	b.managementPollingInterval = interval
 	return b
 }
 
@@ -178,7 +178,7 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 			ctx, cancel := context.WithTimeout(context.Background(), b.testTimeout)
 			defer cancel()
 
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.mangementUpdateTime, b.configOverride)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.managementPollingInterval, b.configOverride)
 			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)
 			defer dumpStateOnFailure(tb, network)

@@ -7,6 +7,7 @@
 package builders
 
 import (
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/crypto/signature"
@@ -33,7 +34,7 @@ func TransferTransaction() *TransactionBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
+				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "transfer",
@@ -163,7 +164,7 @@ func TriggerTransaction() *TransactionBuilder {
 		dontSign: true,
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: DEFAULT_TEST_PROTOCOL_VERSION,
+				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
 				MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),

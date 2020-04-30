@@ -8,6 +8,7 @@ package test
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool"
@@ -156,8 +157,33 @@ func TestReturnsReceiptForTransactionThatHasAlreadyBeenCommitted(t *testing.T) {
 	})
 }
 
-func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
+func TestDoesNotAddTransactionWithFutureProtocolVersion(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
 
+		tx := builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build()
+		h.ignoringForwardMessages()
+		h.ignoringTransactionResults()
+
+		_, err := h.addNewTransaction(ctx, tx)
+		require.Error(t, err)
+	})
+}
+
+func TestDoesAddTransactionWithOldProtocolVersion(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+
+		tx := builders.TransferTransaction().WithProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE-1).Build()
+		h.ignoringForwardMessages()
+		h.ignoringTransactionResults()
+
+		_, err := h.addNewTransaction(ctx, tx)
+		require.NoError(t, err)
+	})
+}
+
+func TestDoesNotAddTransactionIfPoolIsFull(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithSizeLimit(parent, 1).start(ctx)
 		h.AllowErrorsMatching("error adding transaction to pending pool")
