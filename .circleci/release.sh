@@ -21,7 +21,3 @@ docker push orbsnetwork/node:$(./docker/hash.sh)
 docker pull $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh)
 docker tag $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh) orbsnetwork/gamma:$VERSION
 docker push orbsnetwork/gamma:$VERSION
-
-docker pull $SIGNER_DOCKER_IMAGE:$(./docker/hash.sh)
-docker tag $SIGNER_DOCKER_IMAGE:$(./docker/hash.sh) orbsnetwork/signer:$VERSION
-docker push orbsnetwork/signer:$VERSION
