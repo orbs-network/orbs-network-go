@@ -140,9 +140,6 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 	sdkVersion := getMainProjectSDKVersion(mainGoModPath)
 
 	goModTemplateFileName := "go.mod.template"
-	if GetConfig().IsExperimental {
-		goModTemplateFileName = "go.mod.template.experimental"
-	}
 
 	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", goModTemplateFileName)
 	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")

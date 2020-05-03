@@ -27,13 +27,12 @@ import (
 )
 
 type E2EConfig struct {
-	AppVcid primitives.VirtualChainId
+	AppVcid           primitives.VirtualChainId
 	RemoteEnvironment bool
 	Bootstrap         bool
 	AppChainUrl       string
 	StressTest        StressTestConfig
 	EthereumEndpoint  string
-	IsExperimental    bool
 }
 
 type StressTestConfig struct {
@@ -234,9 +233,6 @@ func (h *Harness) envSupportsTestingFileAssets() bool {
 func GetConfig() E2EConfig {
 	appVcid := primitives.VirtualChainId(42)
 
-	circleTag := os.Getenv("CIRCLE_TAG")
-	isExperimental := !strings.HasPrefix(circleTag, "v")
-
 	if vcId, err := strconv.ParseUint(os.Getenv("VCHAIN"), 10, 0); err == nil {
 		appVcid = primitives.VirtualChainId(vcId)
 	}
@@ -266,10 +262,9 @@ func GetConfig() E2EConfig {
 	}
 
 	return E2EConfig{
-		AppVcid: appVcid,
+		AppVcid:           appVcid,
 		Bootstrap:         shouldBootstrap,
 		RemoteEnvironment: isRemoteEnvironment,
-		IsExperimental:    isExperimental,
 		AppChainUrl:       appChainUrl,
 		StressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
