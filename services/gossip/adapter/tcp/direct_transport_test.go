@@ -27,7 +27,7 @@ import (
 
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(adapter.GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	cfg := config.ForDirectTransportTests(address, make(adapter.TransportPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
@@ -201,11 +201,11 @@ func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Conte
 	require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, other.listener), "message was not sent to target node")
 }
 
-func (n *nodeHarness) toGossipPeer() adapter.GossipPeer {
+func (n *nodeHarness) toGossipPeer() adapter.TransportPeer {
 	return adapter.NewGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
 }
 
-func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.GossipPeers)  {
+func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.TransportPeers)  {
 	n.transport.UpdateTopology(ctx, peers)
 }
 
@@ -233,7 +233,7 @@ func aMessage() [][]byte {
 
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	address := aKey()
-	cfg := config.ForDirectTransportTests(address, make(adapter.GossipPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	cfg := config.ForDirectTransportTests(address, make(adapter.TransportPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)
@@ -248,8 +248,8 @@ func aKey() primitives.NodeAddress {
 	return address
 }
 
-func aTopologyContaining(nodes ...*nodeHarness) adapter.GossipPeers {
-	peers := make(adapter.GossipPeers)
+func aTopologyContaining(nodes ...*nodeHarness) adapter.TransportPeers {
+	peers := make(adapter.TransportPeers)
 	for _, node := range nodes {
 		peers[node.address.KeyForMap()] = node.toGossipPeer()
 	}

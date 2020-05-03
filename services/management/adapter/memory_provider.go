@@ -25,7 +25,7 @@ const DEFAULT_REF_TIME = 1492983000
 const DEFAULT_GENESIS_REF_TIME = 1492982000
 
 type MemoryConfig interface {
-	GossipPeers() adapter.GossipPeers
+	GossipPeers() adapter.TransportPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
 }
 
@@ -47,7 +47,7 @@ func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
 		logger:                logger,
 		currentReference:      DEFAULT_REF_TIME,
 		genesisReference:      DEFAULT_GENESIS_REF_TIME,
-		topology:              getTopologyFromConfig(cfg),
+		topology:              getTopologyFromConfig(cfg, logger),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
@@ -68,14 +68,15 @@ func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
 	return committee
 }
 
-func getTopologyFromConfig(cfg MemoryConfig) []*services.GossipPeer {
+func getTopologyFromConfig(cfg MemoryConfig, logger log.Logger) []*services.GossipPeer {
 	peers := cfg.GossipPeers()
 	topology := make([]*services.GossipPeer, 0, len(peers))
 	for _, peer := range peers {
 		if nodeAddress, err := hex.DecodeString(peer.HexOrbsAddress()); err != nil {
-
+			// TODO post V2 moving all gossip out of config, there is nothing really to do here now
+			logger.Error("Bad address for a configured gossip peer, ignored.")
 		} else {
-			topology = append(topology, &services.GossipPeer{Address: nodeAddress, Endpoint: peer.GossipEndpoint(), Port: uint32(peer.GossipPort())})
+			topology = append(topology, &services.GossipPeer{Address: nodeAddress, Endpoint: peer.Endpoint(), Port: uint32(peer.Port())})
 		}
 
 	}

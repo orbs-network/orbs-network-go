@@ -32,8 +32,8 @@ func newMemoryConfig() *cfg {
 	return &cfg{}
 }
 
-func (c *cfg) GossipPeers() adapter.GossipPeers {
-	return make(adapter.GossipPeers)
+func (c *cfg) GossipPeers() adapter.TransportPeers {
+	return make(adapter.TransportPeers)
 }
 
 func (c *cfg) GenesisValidatorNodes() map[string]config.ValidatorNode {

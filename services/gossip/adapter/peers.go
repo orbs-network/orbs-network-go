@@ -11,51 +11,51 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
-type GossipPeer interface {
-	GossipPort() int
-	GossipEndpoint() string
+type TransportPeer interface {
+	Port() int
+	Endpoint() string
 	HexOrbsAddress() string
 }
 
-type GossipPeers map[string]GossipPeer
+type TransportPeers map[string]TransportPeer
 
-type gossipPeer struct {
-	gossipPort     int
-	gossipEndpoint string
+type peer struct {
+	port           int
+	endpoint       string
 	hexOrbsAddress string
 }
 
-func NewGossipPeers(servicePeers []*services.GossipPeer) GossipPeers {
-	peers := make(GossipPeers, len(servicePeers))
+func NewGossipPeers(servicePeers []*services.GossipPeer) TransportPeers {
+	peers := make(TransportPeers, len(servicePeers))
 	for _, peer := range servicePeers {
 		peers[peer.Address.KeyForMap()] = NewGossipPeer(int(peer.Port), peer.Endpoint, hex.EncodeToString(peer.Address))
 	}
 	return peers
 }
 
-func NewGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) GossipPeer {
-	return &gossipPeer{
-		gossipPort:     gossipPort,
-		gossipEndpoint: gossipEndpoint,
+func NewGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) TransportPeer {
+	return &peer{
+		port:           gossipPort,
+		endpoint:       gossipEndpoint,
 		hexOrbsAddress: hexAddress,
 	}
 }
 
-func (c *gossipPeer) GossipPort() int {
-	return c.gossipPort
+func (c *peer) Port() int {
+	return c.port
 }
 
-func (c *gossipPeer) GossipEndpoint() string {
-	return c.gossipEndpoint
+func (c *peer) Endpoint() string {
+	return c.endpoint
 }
 
-func (c *gossipPeer) HexOrbsAddress() string {
+func (c *peer) HexOrbsAddress() string {
 	return c.hexOrbsAddress
 }
 
-func PeerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipPeers, peersToAdd GossipPeers) {
-	peersToRemove = make(GossipPeers)
-	peersToAdd = make(GossipPeers)
+func PeerDiff(oldPeers TransportPeers, newPeers TransportPeers) (peersToRemove TransportPeers, peersToAdd TransportPeers) {
+	peersToRemove = make(TransportPeers)
+	peersToAdd = make(TransportPeers)
 
 	for a, n := range newPeers {
 		if o, peerExistsInOldList := oldPeers[a]; !peerExistsInOldList || peerHasChangedPortOrIPAddress(n, o) {
@@ -72,6 +72,6 @@ func PeerDiff(oldPeers GossipPeers, newPeers GossipPeers) (peersToRemove GossipP
 	return
 }
 
-func peerHasChangedPortOrIPAddress(p1 GossipPeer, p2 GossipPeer) bool {
-	return p1.GossipEndpoint() != p2.GossipEndpoint() || p1.GossipPort() != p2.GossipPort()
+func peerHasChangedPortOrIPAddress(p1 TransportPeer, p2 TransportPeer) bool {
+	return p1.Endpoint() != p2.Endpoint() || p1.Port() != p2.Port()
 }

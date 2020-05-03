@@ -6,14 +6,14 @@ import (
 )
 
 func TestPeerDiff_TwoEmptyPeerLists_ReturnEmptyResults(t *testing.T) {
-	toRemove, toAdd := PeerDiff(make(GossipPeers), make(GossipPeers))
+	toRemove, toAdd := PeerDiff(make(TransportPeers), make(TransportPeers))
 	require.Empty(t, toRemove)
 	require.Empty(t, toAdd)
 }
 
 func TestPeerDiff_OldIsEmpty_ReturnsEmptyToRemove_AndAPeerToAdd(t *testing.T) {
-	oldPeers := make(GossipPeers)
-	newPeers := make(GossipPeers)
+	oldPeers := make(TransportPeers)
+	newPeers := make(TransportPeers)
 
 	newPeers["1"] = NewGossipPeer(1, "10.0.0.1", "")
 
@@ -27,8 +27,8 @@ func TestPeerDiff_OldIsEmpty_ReturnsEmptyToRemove_AndAPeerToAdd(t *testing.T) {
 }
 
 func TestPeerDiff_OldHasAPeer_ReturnsPeerToRemove(t *testing.T) {
-	oldPeers := make(GossipPeers)
-	newPeers := make(GossipPeers)
+	oldPeers := make(TransportPeers)
+	newPeers := make(TransportPeers)
 
 	oldPeers["1"] = NewGossipPeer(1, "10.0.0.1", "")
 
@@ -42,7 +42,7 @@ func TestPeerDiff_OldHasAPeer_ReturnsPeerToRemove(t *testing.T) {
 }
 
 func TestPeerDiff_ReturnsEmptyToAddAndToRemoveLists_WhenConfigIsNotChanged(t *testing.T) {
-	peers := make(GossipPeers)
+	peers := make(TransportPeers)
 	peers["1"] = NewGossipPeer(1, "10.0.0.1", "")
 
 	toRemove, toAdd := PeerDiff(peers, peers)
@@ -52,8 +52,8 @@ func TestPeerDiff_ReturnsEmptyToAddAndToRemoveLists_WhenConfigIsNotChanged(t *te
 }
 
 func TestPeerDiff_Returns_CorrectLists_WhenAPeerWasAddedAndAnotherWasRemoved(t *testing.T) {
-	oldPeers := make(GossipPeers)
-	newPeers := make(GossipPeers)
+	oldPeers := make(TransportPeers)
+	newPeers := make(TransportPeers)
 
 	oldPeers["1"] = NewGossipPeer(1, "10.0.0.1", "")
 	oldPeers["2"] = NewGossipPeer(2, "10.0.0.2", "")
@@ -75,8 +75,8 @@ func TestPeerDiff_Returns_CorrectLists_WhenAPeerWasAddedAndAnotherWasRemoved(t *
 }
 
 func TestPeerDiff_Returns_PeersThatChangedAddress_InBothLists(t *testing.T) {
-	oldPeers := make(GossipPeers)
-	newPeers := make(GossipPeers)
+	oldPeers := make(TransportPeers)
+	newPeers := make(TransportPeers)
 
 	oldPeers["1"] = NewGossipPeer(1, "10.0.0.1", "")
 	newPeers["1"] = NewGossipPeer(3, "10.0.0.1", "")

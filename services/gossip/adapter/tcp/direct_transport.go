@@ -49,7 +49,7 @@ func NewDirectTransport(parentCtx context.Context, config config.GossipTransport
 	return t
 }
 
-func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+func (t *DirectTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.TransportPeers) {
 	t.outgoingConnections.updateTopology(bgCtx, newPeers)
 }
 

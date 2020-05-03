@@ -126,7 +126,7 @@ func ForE2E(
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
-	gossipPeers topologyProviderAdapter.GossipPeers,
+	gossipPeers topologyProviderAdapter.TransportPeers,
 	genesisValidatorNodes map[string]ValidatorNode,
 	blockStorageDataDirPrefix string,
 	processorArtifactPath string,
