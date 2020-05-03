@@ -20,7 +20,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *Service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
+func (s *service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
@@ -30,7 +30,7 @@ func (s *Service) RegisterBlockSyncHandler(handler gossiptopics.BlockSyncHandler
 // handles both client and server sides of block sync
 // server side (responding to requests) fires a new goroutine to handle each requests so as to not block the topic
 // client side will be handled in the block sync client main loop
-func (s *Service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.BlockSync() {
 	case gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST:
 		govnr.Once(logfields.GovnrErrorer(s.logger), func() {
@@ -51,7 +51,7 @@ func createBlockSyncServerChildContextFrom(ctx context.Context) context.Context 
 	return trace.NewContext(ctx, "BlockSyncServer")
 }
 
-func (s *Service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:          gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:      gossipmessages.BLOCK_SYNC_AVAILABILITY_REQUEST,
@@ -69,7 +69,7 @@ func (s *Service) BroadcastBlockAvailabilityRequest(ctx context.Context, input *
 	})
 }
 
-func (s *Service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockAvailabilityRequest(payloads)
 	if err != nil {
 		return
@@ -86,7 +86,7 @@ func (s *Service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 	}
 }
 
-func (s *Service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockAvailabilityResponse(ctx context.Context, input *gossiptopics.BlockAvailabilityResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_AVAILABILITY_RESPONSE,
@@ -107,7 +107,7 @@ func (s *Service) SendBlockAvailabilityResponse(ctx context.Context, input *goss
 	})
 }
 
-func (s *Service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncAvailabilityResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockAvailabilityResponse(payloads)
 	if err != nil {
 		return
@@ -124,7 +124,7 @@ func (s *Service) receivedBlockSyncAvailabilityResponse(ctx context.Context, hea
 	}
 }
 
-func (s *Service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_REQUEST,
@@ -145,7 +145,7 @@ func (s *Service) SendBlockSyncRequest(ctx context.Context, input *gossiptopics.
 	})
 }
 
-func (s *Service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockSyncRequest(payloads)
 	if err != nil {
 		return
@@ -166,7 +166,7 @@ func IsChunkTooBigError(err error) bool {
 	return tcp.IsQueueFullError(err)
 }
 
-func (s *Service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_BLOCK_SYNC,
 		BlockSync:              gossipmessages.BLOCK_SYNC_RESPONSE,
@@ -187,7 +187,7 @@ func (s *Service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics
 	})
 }
 
-func (s *Service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedBlockSyncResponse(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeBlockSyncResponse(payloads)
 	if err != nil {
 		return

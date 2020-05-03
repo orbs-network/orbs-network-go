@@ -6,6 +6,11 @@
 
 package adapter
 
+import (
+	"encoding/hex"
+	"github.com/orbs-network/orbs-spec/types/go/services"
+)
+
 type GossipPeer interface {
 	GossipPort() int
 	GossipEndpoint() string
@@ -18,6 +23,14 @@ type gossipPeer struct {
 	gossipPort     int
 	gossipEndpoint string
 	hexOrbsAddress string
+}
+
+func NewGossipPeers(servicePeers []*services.GossipPeer) GossipPeers {
+	peers := make(GossipPeers, len(servicePeers))
+	for _, peer := range servicePeers {
+		peers[peer.Address.KeyForMap()] = NewGossipPeer(int(peer.Port), peer.Endpoint, hex.EncodeToString(peer.Address))
+	}
+	return peers
 }
 
 func NewGossipPeer(gossipPort int, gossipEndpoint string, hexAddress string) GossipPeer {

@@ -13,9 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
@@ -189,8 +189,8 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	}, nil
 }
 
-func parseTopology(currentTopology []topologyNode) (adapter.GossipPeers, error) {
-	topology := make(adapter.GossipPeers)
+func parseTopology(currentTopology []topologyNode) ([]*services.GossipPeer, error) {
+	topology := make([]*services.GossipPeer, 0, len(currentTopology))
 	for _, item := range currentTopology {
 		hexAddress := item.Address
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
@@ -201,7 +201,7 @@ func parseTopology(currentTopology []topologyNode) (adapter.GossipPeers, error) 
 			return nil, errors.Wrapf(err, "topology node port %d needs to be 1024-65535 range", item.Port)
 		} else {
 			nodeAddress := primitives.NodeAddress(nodeAddress)
-			topology[nodeAddress.KeyForMap()] = adapter.NewGossipPeer(item.Port, item.Ip, hexAddress)
+			topology = append(topology, &services.GossipPeer{Address:nodeAddress, Endpoint:item.Ip, Port:uint32(item.Port)})
 		}
 	}
 	return topology, nil

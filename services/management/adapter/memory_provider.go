@@ -9,10 +9,12 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sort"
@@ -33,7 +35,7 @@ type MemoryProvider struct {
 	sync.RWMutex
 	currentReference      primitives.TimestampSeconds
 	genesisReference      primitives.TimestampSeconds
-	topology              adapter.GossipPeers
+	topology              []*services.GossipPeer
 	committees            []management.CommitteeTerm
 	protocolVersions      []management.ProtocolVersionTerm
 	isSubscriptionActives []management.SubscriptionTerm
@@ -45,7 +47,7 @@ func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
 		logger:                logger,
 		currentReference:      DEFAULT_REF_TIME,
 		genesisReference:      DEFAULT_GENESIS_REF_TIME,
-		topology:              cfg.GossipPeers(),
+		topology:              getTopologyFromConfig(cfg),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
@@ -64,6 +66,20 @@ func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
 		return bytes.Compare(committee[i], committee[j]) > 0
 	})
 	return committee
+}
+
+func getTopologyFromConfig(cfg MemoryConfig) []*services.GossipPeer {
+	peers := cfg.GossipPeers()
+	topology := make([]*services.GossipPeer, 0, len(peers))
+	for _, peer := range peers {
+		if nodeAddress, err := hex.DecodeString(peer.HexOrbsAddress()); err != nil {
+
+		} else {
+			topology = append(topology, &services.GossipPeer{Address: nodeAddress, Endpoint: peer.GossipEndpoint(), Port: uint32(peer.GossipPort())})
+		}
+
+	}
+	return topology
 }
 
 func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
