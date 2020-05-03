@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
@@ -94,35 +95,54 @@ func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 
 	The template doesn't contain the same version as in the main go.mod file to keep things DRY and avoid mismatches
 **/
-func getMainProjectSDKVersion(pathToMainGoMod string) string {
-	sdkVersion := ""
 
+type artifactsDependencyVersions struct {
+	SDK_VER      string
+	X_CRYPTO_VER string
+}
+
+func extractGoModVersion(input []byte, dependency string) (version string) {
+	goModLines := strings.Split(string(input), "\n")
+	for _, line := range goModLines {
+		if strings.Contains(line, dependency) {
+			parts := strings.Split(strings.Trim(line, "\t\n"), " ")
+			version = parts[1]
+		}
+	}
+
+	return
+}
+
+func getMainProjectDependencyVersions(pathToMainGoMod string) artifactsDependencyVersions {
 	input, err := ioutil.ReadFile(pathToMainGoMod)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read file: %s", err.Error()))
 	}
 
-	goModLines := strings.Split(string(input), "\n")
-	for _, line := range goModLines {
-		if strings.Contains(line, "orbs-contract-sdk") {
-			sdkParts := strings.Split(strings.Trim(line, "\t\n"), " ")
-			sdkVersion = sdkParts[1]
-		}
+	return artifactsDependencyVersions{
+		SDK_VER:      extractGoModVersion(input, "orbs-contract-sdk"),
+		X_CRYPTO_VER: extractGoModVersion(input, "golang.org/x/crypto"),
 	}
-
-	return sdkVersion
 }
 
-func replaceSDKVersion(targetFilePath string, sdkVersion string) {
+func updateArtifactsGoMod(targetFilePath string, versions artifactsDependencyVersions) {
 	input, err := ioutil.ReadFile(targetFilePath)
 
 	if err != nil {
 		panic(fmt.Sprintf("failed to open e2e go.mod file for reading: %s", err.Error()))
 	}
 
-	output := bytes.Replace(input, []byte("SDK_VER"), []byte(sdkVersion), -1)
+	t, err := template.New("go.mod.template").Parse(string(input))
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse go.mod.template file: %s", err.Error()))
+	}
 
-	if err = ioutil.WriteFile(targetFilePath, output, 0666); err != nil {
+	output := bytes.NewBufferString("")
+	if err := t.Execute(output, versions); err != nil {
+		panic(fmt.Sprintf("failed to execute go.mod.template file: %s", err.Error()))
+	}
+
+	if err = ioutil.WriteFile(targetFilePath, output.Bytes(), 0666); err != nil {
 		panic(fmt.Sprintf("failed to re-write e2e go.mod file: %s", err.Error()))
 	}
 }
@@ -137,7 +157,7 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 	}
 
 	mainGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "go.mod")
-	sdkVersion := getMainProjectSDKVersion(mainGoModPath)
+	versions := getMainProjectDependencyVersions(mainGoModPath)
 
 	goModTemplateFileName := "go.mod.template"
 
@@ -148,8 +168,8 @@ func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string
 		panic(fmt.Sprintf("failed to copy go.mod file: %s", err.Error()))
 	}
 
-	fmt.Println("the target go.mod is at:", targetGoModPath, sdkVersion)
-	replaceSDKVersion(targetGoModPath, sdkVersion)
+	fmt.Println("the target go.mod is at:", targetGoModPath, "sdk", versions.SDK_VER, "x/crypto", versions.X_CRYPTO_VER)
+	updateArtifactsGoMod(targetGoModPath, versions)
 
 	return processorArtifactPath
 }
