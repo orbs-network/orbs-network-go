@@ -62,7 +62,7 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 	return transport
 }
 
-func (p *memoryTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+func (p *memoryTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.TransportPeers) {
 //	currently does nothing on purpose
 }
 

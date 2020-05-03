@@ -9,11 +9,11 @@ package adapter
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
@@ -52,14 +52,13 @@ func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp man
 	requireCommitteeToBeSameAsStatic(t, data.Committees)
 }
 
-func requireTopologyToBeSameAsStatic(t *testing.T, peers adapter.GossipPeers) {
-	staticTopology := make(adapter.GossipPeers)
-	staticTopology[testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress().KeyForMap()] = adapter.NewGossipPeer(4400, "192.168.199.2", "a328846cd5b4979d68a8c58a9bdfeee657b34de7")
-	staticTopology[testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress().KeyForMap()] = adapter.NewGossipPeer(4400, "192.168.199.3", "d27e2e7398e2582f63d0800330010b3e58952ff6")
-	staticTopology[testKeys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress().KeyForMap()] = adapter.NewGossipPeer(4400, "192.168.199.4", "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9")
-	staticTopology[testKeys.EcdsaSecp256K1KeyPairForTests(3).NodeAddress().KeyForMap()] = adapter.NewGossipPeer(4400, "192.168.199.5", "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17")
-
-	require.EqualValues(t, staticTopology, peers)
+func requireTopologyToBeSameAsStatic(t *testing.T, peers []*services.GossipPeer) {
+	var staticTopology []*services.GossipPeer
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), Endpoint: "192.168.199.2", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(), Endpoint: "192.168.199.3", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress(), Endpoint: "192.168.199.4", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(3).NodeAddress(), Endpoint: "192.168.199.5", Port: 4400})
+	require.ElementsMatch(t, staticTopology, peers)
 }
 
 func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm) {

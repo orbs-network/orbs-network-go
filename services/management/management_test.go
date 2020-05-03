@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/orbs-network/lean-helix-go/test"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	adapterGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -154,15 +153,16 @@ func (sp *staticProvider) Get(ctx context.Context) (*VirtualChainManagementData,
 	defer sp.RUnlock()
 	return &VirtualChainManagementData{
 		CurrentReference: sp.ref,
-		CurrentTopology:  make(adapterGossip.GossipPeers),
+		CurrentTopology:  []*services.GossipPeer{},
 		Committees:       []CommitteeTerm{{sp.ref, sp.committee}},
 		Subscriptions:    nil,
 		ProtocolVersions: nil,
 	}, nil
 }
 
-func (sp *staticProvider) UpdateTopology(bgCtx context.Context, newPeers adapterGossip.GossipPeers) {
+func (sp *staticProvider) UpdateTopology(ctx context.Context, input *services.UpdateTopologyInput) (*services.UpdateTopologyOutput, error) {
 	// does nothing just here for test to run
+	return &services.UpdateTopologyOutput{}, nil
 }
 
 func (sp *staticProvider) changeCommittee(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) {

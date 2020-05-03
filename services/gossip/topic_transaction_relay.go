@@ -17,21 +17,21 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *Service) RegisterTransactionRelayHandler(handler gossiptopics.TransactionRelayHandler) {
+func (s *service) RegisterTransactionRelayHandler(handler gossiptopics.TransactionRelayHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
 	s.handlers.transactionHandlers = append(s.handlers.transactionHandlers, handler)
 }
 
-func (s *Service) receivedTransactionRelayMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedTransactionRelayMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	switch header.TransactionRelay() {
 	case gossipmessages.TRANSACTION_RELAY_FORWARDED_TRANSACTIONS:
 		s.receivedForwardedTransactions(ctx, header, payloads)
 	}
 }
 
-func (s *Service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) BroadcastForwardedTransactions(ctx context.Context, input *gossiptopics.ForwardedTransactionsInput) (*gossiptopics.EmptyOutput, error) {
 	s.logger.Info("broadcasting forwarded transactions",
 		trace.LogFieldFrom(ctx),
 		log.Stringable("sender", input.Message.Sender),
@@ -56,7 +56,7 @@ func (s *Service) BroadcastForwardedTransactions(ctx context.Context, input *gos
 	})
 }
 
-func (s *Service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedForwardedTransactions(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	message, err := codec.DecodeForwardedTransactions(payloads)
 	if err != nil {

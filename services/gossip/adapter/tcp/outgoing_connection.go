@@ -42,8 +42,8 @@ type outgoingConnection struct {
 	closed chan struct{}
 }
 
-func newOutgoingConnection(peer adapter.GossipPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *outgoingConnectionMetrics, transportConfig timingsConfig) *outgoingConnection {
-	networkAddress := fmt.Sprintf("%s:%d", peer.GossipEndpoint(), peer.GossipPort())
+func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *outgoingConnectionMetrics, transportConfig timingsConfig) *outgoingConnection {
+	networkAddress := fmt.Sprintf("%s:%d", peer.Endpoint(), peer.Port())
 	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
 
 	logger := parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress))

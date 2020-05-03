@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 	"sync"
@@ -35,7 +36,7 @@ type gossipListeners struct {
 	blockSyncHandlers          []gossiptopics.BlockSyncHandler
 }
 
-type Service struct {
+type service struct {
 	govnr.TreeSupervisor
 
 	config          Config
@@ -48,10 +49,10 @@ type Service struct {
 	forwarededTransactionFailures *metric.Gauge
 }
 
-func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *Service {
+func NewGossip(ctx context.Context, transport adapter.Transport, config Config, parent log.Logger, metricRegistry metric.Registry) *service {
 	logger := parent.WithTags(LogTag)
 	dispatcher := newMessageDispatcher(metricRegistry, logger)
-	s := &Service{
+	s := &service{
 		transport:       transport,
 		config:          config,
 		logger:          logger,
@@ -70,11 +71,12 @@ func NewGossip(ctx context.Context, transport adapter.Transport, config Config, 
 	return s
 }
 
-func (s *Service) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
-	s.transport.UpdateTopology(bgCtx, newPeers)
+func (s *service) UpdateTopology(bgCtx context.Context, input *services.UpdateTopologyInput) (*services.UpdateTopologyOutput, error)  {
+	s.transport.UpdateTopology(bgCtx, adapter.NewGossipPeers(input.Peers))
+	return &services.UpdateTopologyOutput{}, nil
 }
 
-func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
+func (s *service) OnTransportMessageReceived(ctx context.Context, payloads [][]byte) {
 	if ctx.Err() != nil {
 		return
 	}
@@ -98,6 +100,6 @@ func (s *Service) OnTransportMessageReceived(ctx context.Context, payloads [][]b
 	s.messageDispatcher.dispatch(ctx, logger, header, payloads[1:])
 }
 
-func (s *Service) String() string {
+func (s *service) String() string {
 	return fmt.Sprintf("Gossip service for node %s: %p", s.config.NodeAddress(), s)
 }

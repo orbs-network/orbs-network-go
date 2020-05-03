@@ -28,7 +28,7 @@ type NodeConfigValue struct {
 type config struct {
 	kv                      map[string]NodeConfigValue
 	genesisValidatorNodes   map[string]ValidatorNode
-	gossipPeers             topologyProviderAdapter.GossipPeers
+	gossipPeers             topologyProviderAdapter.TransportPeers
 	nodeAddress             primitives.NodeAddress
 	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
 	constantConsensusLeader primitives.NodeAddress
@@ -173,7 +173,7 @@ func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutabl
 	return c
 }
 
-func (c *config) SetGossipPeers(gossipPeers topologyProviderAdapter.GossipPeers) mutableNodeConfig {
+func (c *config) SetGossipPeers(gossipPeers topologyProviderAdapter.TransportPeers) mutableNodeConfig {
 	c.gossipPeers = gossipPeers
 	return c
 }
@@ -346,7 +346,7 @@ func (c *config) GossipListenPort() uint16 {
 	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
 }
 
-func (c *config) GossipPeers() topologyProviderAdapter.GossipPeers {
+func (c *config) GossipPeers() topologyProviderAdapter.TransportPeers {
 	return c.gossipPeers
 }
 

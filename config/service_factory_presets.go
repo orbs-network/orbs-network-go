@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers topologyProviderAdapter.GossipPeers, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
+func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers topologyProviderAdapter.TransportPeers, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
 	cfg.SetGossipPeers(gossipPeers)
@@ -31,7 +31,7 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers top
 func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(make(topologyProviderAdapter.GossipPeers))
+	cfg.SetGossipPeers(make(topologyProviderAdapter.TransportPeers))
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(0))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)

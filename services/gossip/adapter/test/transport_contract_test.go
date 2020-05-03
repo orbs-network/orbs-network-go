@@ -155,7 +155,7 @@ func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 		testkit.ListenTo(transports[3], res.nodeAddresses[3]),
 	}
 
-	peers := make(adapter.GossipPeers)
+	peers := make(adapter.TransportPeers)
 	for i, transport := range transports {
 		peers[res.nodeAddresses[i].KeyForMap()] = adapter.NewGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
 	}

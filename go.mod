@@ -30,7 +30,7 @@ require (
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
 	github.com/orbs-network/orbs-contract-sdk v1.5.0
-	github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3
+	github.com/orbs-network/orbs-spec v0.0.0-20200503073830-babdf6adc845
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1

@@ -6,7 +6,6 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	adapterGossip "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
@@ -24,7 +23,7 @@ type Provider interface { // update of data provider
 }
 
 type TopologyConsumer interface { // consumer that needs to get topology update message
-	UpdateTopology(bgCtx context.Context, newPeers adapterGossip.GossipPeers)
+	UpdateTopology(ctx context.Context, input *services.UpdateTopologyInput) (*services.UpdateTopologyOutput, error)
 }
 
 type CommitteeTerm struct {
@@ -45,7 +44,7 @@ type ProtocolVersionTerm struct {
 type VirtualChainManagementData struct {
 	CurrentReference primitives.TimestampSeconds
 	GenesisReference primitives.TimestampSeconds
-	CurrentTopology  adapterGossip.GossipPeers
+	CurrentTopology  []*services.GossipPeer
 	Committees       []CommitteeTerm
 	Subscriptions    []SubscriptionTerm
 	ProtocolVersions []ProtocolVersionTerm
@@ -177,7 +176,7 @@ func (s *service) update(ctx context.Context) error {
 		return err
 	}
 	s.write(data)
-	s.topologyConsumer.UpdateTopology(ctx, s.data.CurrentTopology)
+	s.topologyConsumer.UpdateTopology(ctx, &services.UpdateTopologyInput{Peers:s.data.CurrentTopology})
 	return nil
 }
 
@@ -223,9 +222,9 @@ func (s *service) updateMetrics() {
 	s.metrics.currentRefTime.Update(int64(currentRef))
 	s.metrics.genesisRefTime.Update(int64(s.data.GenesisReference))
 	s.metrics.lasUpdateTime.Update(time.Now().Unix())
-	topologyStringArray := make([]string, 0, len(s.data.CurrentTopology))
-	for _, peer := range s.data.CurrentTopology {
-		topologyStringArray = append(topologyStringArray, fmt.Sprintf("{\"address:\":\"%s\", \"ip\":\"%s\", \"port\":%d}", peer.HexOrbsAddress(), peer.GossipEndpoint(), peer.GossipPort()))
+	topologyStringArray := make([]string, len(s.data.CurrentTopology))
+	for j, peer := range s.data.CurrentTopology {
+		topologyStringArray[j] = fmt.Sprintf("{\"Address\":\"%s\",\"Endpoint\":\"%s\",\"Port\":%s,}",peer.StringAddress(), peer.StringEndpoint(), peer.StringPort())
 	}
 	s.metrics.currentTopology.Update("[" + strings.Join(topologyStringArray, ", ") + "]")
 
