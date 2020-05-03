@@ -2,8 +2,8 @@ package adapter
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"text/template"
 )
@@ -23,18 +23,20 @@ require (
 )
 `
 
-func UpdateArtifactsGoMod(targetFilePath string, versions config.ArtifactsDependencyVersions) {
+func writeArtifactsGoModToDisk(targetFilePath string, versions config.ArtifactsDependencyVersions) error {
 	t, err := template.New("go.mod.template").Parse(GO_MOD_TEMPLATE)
 	if err != nil {
-		panic(fmt.Sprintf("failed to parse go.mod.template file: %s", err.Error()))
+		return errors.Wrap(err, "failed to parse go.mod.template file")
 	}
 
 	output := bytes.NewBufferString("")
 	if err := t.Execute(output, versions); err != nil {
-		panic(fmt.Sprintf("failed to execute go.mod.template file: %s", err.Error()))
+		return errors.Wrap(err, "failed to execute go.mod.template file")
 	}
 
 	if err = ioutil.WriteFile(targetFilePath, output.Bytes(), 0666); err != nil {
-		panic(fmt.Sprintf("failed to re-write e2e go.mod file: %s", err.Error()))
+		return errors.Wrap(err, "failed to re-write e2e go.mod file")
 	}
+
+	return nil
 }
