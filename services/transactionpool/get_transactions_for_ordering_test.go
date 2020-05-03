@@ -9,13 +9,33 @@ package transactionpool
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
+
+func TestCalculateNewBlockTimestampWithPrevBlockInThePast(t *testing.T) {
+	h := &service{clock: adapter.NewSystemClock()}
+	now := primitives.TimestampNano(time.Now().UnixNano())
+	prevBlockTimestamp := now - 1000
+
+	res := h.proposeBlockTimestampWithCurrentTime(prevBlockTimestamp)
+	require.True(t, res > now, "return 1 nano later than max between now and prev block timestamp")
+}
+
+func TestCalculateNewBlockTimestampWithPrevBlockInTheFuture(t *testing.T) {
+	h := &service{clock: adapter.NewSystemClock()}
+	now := primitives.TimestampNano(time.Now().UnixNano())
+	prevBlockTimestamp := now + 5000000
+
+	res := h.proposeBlockTimestampWithCurrentTime(prevBlockTimestamp)
+	require.EqualValues(t, res, prevBlockTimestamp+1, "return 1 nano later than max between now and prev block timestamp")
+}
 
 func TestTransactionBatchFetchesUpToMaxNumOfTransactions(t *testing.T) {
 	with.Context(func(ctx context.Context) {
@@ -71,7 +91,7 @@ func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T
 			tx2 := builders.TransferTransaction().Build()
 
 			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
-			b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0)
+			b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0, 0)
 
 			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
@@ -91,7 +111,7 @@ func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
 			tx2 := builders.TransferTransaction().Build()
 
 			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
-			b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0)
+			b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0, 0)
 
 			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
@@ -112,7 +132,7 @@ func TestTransactionBatchRejectsTransactionsFailingPreOrderValidation(t *testing
 			tx3 := builders.TransferTransaction().Build()
 
 			b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2, tx3}, logger: parent.Logger}
-			err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}}, 0, 0)
+			err := b.runPreOrderValidations(ctx, &fakeValidator{statuses: []protocol.TransactionStatus{protocol.TRANSACTION_STATUS_PRE_ORDER_VALID, protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER, protocol.TRANSACTION_STATUS_REJECTED_SIGNATURE_MISMATCH}}, 0, 0, 0)
 
 			require.NoError(t, err, "this should really never happen")
 			require.Empty(t, b.transactionsForPreOrder, "did not empty transaction for preorder list")
@@ -137,7 +157,7 @@ func TestTransactionBatchPanicsIfPreOrderResultsHasDifferentLengthThanSent(t *te
 
 			b := &transactionBatch{transactionsForPreOrder: Transactions{tx1, tx2}, logger: parent.Logger}
 			require.Panics(t, func() {
-				b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0)
+				b.runPreOrderValidations(ctx, &fakeValidator{}, 0, 0, 0)
 			}, "pre order validation returning statuses with length that differs from number of txs sent did not panic")
 		})
 	})
@@ -168,7 +188,7 @@ type fakeValidator struct {
 	invalid  Transactions
 }
 
-func (v *fakeValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano) ([]protocol.TransactionStatus, error) {
+func (v *fakeValidator) preOrderCheck(ctx context.Context, txs Transactions, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds) ([]protocol.TransactionStatus, error) {
 	return v.statuses, nil
 }
 
@@ -186,7 +206,7 @@ func (c *fakeCommittedChecker) has(txHash primitives.Sha256) bool {
 	return false
 }
 
-func (v *fakeValidator) ValidateTransactionForOrdering(txToValidate *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+func (v *fakeValidator) ValidateTransactionForOrdering(txToValidate *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	for _, tx := range v.invalid {
 		if tx == txToValidate {
 			return &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_RESERVED}

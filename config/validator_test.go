@@ -29,11 +29,11 @@ func TestValidateConfig(t *testing.T) {
 		cfg.SetNodePrivateKey(defaultPrivateKey())
 		cfg.SetGenesisValidatorNodes(genesisValidators())
 
-		require.NoError(t, ValidateNodeLogic(cfg))
+		require.NoError(t, ValidateNodeLogic(cfg), "if this test fails check the min/max values of protocol version are defined correctly.")
 	})
 }
 
-func TestValidateConfig_PanicsOnInvalidValue(t *testing.T) {
+func TestValidateConfig_ErrorOnInvalidValue(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())
@@ -43,7 +43,7 @@ func TestValidateConfig_PanicsOnInvalidValue(t *testing.T) {
 	})
 }
 
-func TestValidateConfig_DoesNotPanicOnProperKeys(t *testing.T) {
+func TestValidateConfig_DoesNotErrorOnProperKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())
@@ -54,7 +54,7 @@ func TestValidateConfig_DoesNotPanicOnProperKeys(t *testing.T) {
 	})
 }
 
-func TestValidateConfig_PanicsOnInvalidKeys(t *testing.T) {
+func TestValidateConfig_ErrorOnInvalidKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetGenesisValidatorNodes(genesisValidators())

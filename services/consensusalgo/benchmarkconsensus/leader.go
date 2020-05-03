@@ -137,6 +137,7 @@ func (s *Service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 		MaxNumberOfTransactions: 0,
 		PrevBlockHash:           digest.CalcTransactionsBlockHash(lastCommittedBlock.TransactionsBlock),
 		PrevBlockTimestamp:      lastCommittedBlock.TransactionsBlock.Header.Timestamp(),
+		PrevBlockReferenceTime:  lastCommittedBlock.TransactionsBlock.Header.ReferenceTime(),
 		BlockProposerAddress:    s.config.BenchmarkConsensusConstantLeader(),
 	})
 	if err != nil {
@@ -145,11 +146,12 @@ func (s *Service) leaderGenerateNewProposedBlock(ctx context.Context, lastCommit
 
 	// get rx
 	rxOutput, err := s.consensusContext.RequestNewResultsBlock(ctx, &services.RequestNewResultsBlockInput{
-		CurrentBlockHeight:   lastCommittedBlockHeight + 1,
-		PrevBlockHash:        digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
-		TransactionsBlock:    txOutput.TransactionsBlock,
-		PrevBlockTimestamp:   lastCommittedBlock.ResultsBlock.Header.Timestamp(),
-		BlockProposerAddress: s.config.BenchmarkConsensusConstantLeader(),
+		CurrentBlockHeight:     lastCommittedBlockHeight + 1,
+		PrevBlockHash:          digest.CalcResultsBlockHash(lastCommittedBlock.ResultsBlock),
+		TransactionsBlock:      txOutput.TransactionsBlock,
+		PrevBlockTimestamp:     lastCommittedBlock.ResultsBlock.Header.Timestamp(),
+		PrevBlockReferenceTime: lastCommittedBlock.ResultsBlock.Header.ReferenceTime(),
+		BlockProposerAddress:   s.config.BenchmarkConsensusConstantLeader(),
 	})
 	if err != nil {
 		return nil, err

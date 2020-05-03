@@ -27,14 +27,14 @@ require (
 	github.com/orbs-network/crypto-lib-go v1.2.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/lean-helix-go v0.2.7
+	github.com/orbs-network/lean-helix-go v0.3.0
 	github.com/orbs-network/membuffers v0.4.0
-	github.com/orbs-network/orbs-client-sdk-go v0.18.0
-	github.com/orbs-network/orbs-contract-sdk v1.7.0
-	github.com/orbs-network/orbs-spec v0.0.0-20200312223140-a78d945bab99
+	github.com/orbs-network/orbs-client-sdk-go v0.15.0
+	github.com/orbs-network/orbs-contract-sdk v1.5.0
+	github.com/orbs-network/orbs-spec v0.0.0-20200503073830-babdf6adc845
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.7.0 // indirect

@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
+	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -21,17 +22,33 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	proposedTransactions, err := s.fetchTransactions(ctx, input.CurrentBlockHeight, input.PrevBlockTimestamp, s.config.ConsensusContextMaximumTransactionsInBlock())
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
+	if err != nil {
+		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "CreateTransactionsBlock failed genesis time %s", err)
+	}
+
+	proposedReferenceTime, err := s.proposeBlockReferenceTime(ctx, prevBlockReferenceTime)
+	if err != nil {
+		return nil, err
+	}
+
+	proposedProtocolVersion, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference: proposedReferenceTime})
+	if err != nil {
+		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
+		return nil, err
+	}
+
+	proposedTransactions, err := s.fetchTransactions(ctx, proposedProtocolVersion.ProtocolVersion, input.CurrentBlockHeight, input.PrevBlockTimestamp, proposedReferenceTime, s.config.ConsensusContextMaximumTransactionsInBlock())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch transactions for new block")
 	}
 
-	newBlockTimestamp := proposedTransactions.ProposedBlockTimestamp
-	if newBlockTimestamp == 0 {
+	proposedBlockTimestamp := proposedTransactions.ProposedBlockTimestamp
+	if proposedBlockTimestamp == 0 {
 		return nil, errors.New("transactions pool GetTransactionsForOrdering returned proposed block timestamp of zero")
 	}
 
-	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedTransactions.ProposedBlockTimestamp)
+	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedProtocolVersion.ProtocolVersion, proposedBlockTimestamp)
 	txCount := len(transactionsForBlock)
 
 	merkleTransactionsRoot, err := digest.CalcTransactionsMerkleRoot(transactionsForBlock)
@@ -43,15 +60,16 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 
 	txBlock := &protocol.TransactionsBlockContainer{
 		Header: (&protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:            s.config.ProtocolVersion(),
+			ProtocolVersion:            proposedProtocolVersion.ProtocolVersion,
 			VirtualChainId:             s.config.VirtualChainId(),
 			BlockHeight:                input.CurrentBlockHeight,
 			PrevBlockHashPtr:           input.PrevBlockHash,
-			Timestamp:                  newBlockTimestamp,
+			Timestamp:                  proposedBlockTimestamp,
 			TransactionsMerkleRootHash: merkleTransactionsRoot,
 			MetadataHash:               digest.CalcTransactionMetaDataHash(metaData),
 			NumSignedTransactions:      uint32(txCount),
 			BlockProposerAddress:       input.BlockProposerAddress,
+			ReferenceTime:              proposedReferenceTime,
 		}).Build(),
 		Metadata:           metaData,
 		SignedTransactions: transactionsForBlock,
@@ -62,10 +80,48 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	return txBlock, nil
 }
 
-func (s *service) createTriggerTransaction(blockTime primitives.TimestampNano) *protocol.SignedTransaction {
+func (s *service) proposeBlockReferenceTime(ctx context.Context, prevReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
+	leaderReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	if err != nil {
+		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
+	}
+
+	proposedReferenceTime := leaderReferenceTime.CurrentReference
+	if prevReferenceTime > proposedReferenceTime {
+		proposedReferenceTime = prevReferenceTime
+	}
+
+	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime,
+		leaderReferenceTime.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
+		return 0, err
+	}
+
+	// NOTE: network live and subscription is done in vm.pre-order to allow empty blocks to close.
+	return proposedReferenceTime, nil
+}
+
+func (s *service) fetchTransactions(ctx context.Context, blockProtocolVersion primitives.ProtocolVersion, currentBlockHeight primitives.BlockHeight, prevBlockTimestamp primitives.TimestampNano, currentBlockReferenceTime primitives.TimestampSeconds, maxNumberOfTransactions uint32) (*services.GetTransactionsForOrderingOutput, error) {
+	input := &services.GetTransactionsForOrderingInput{
+		BlockProtocolVersion:      blockProtocolVersion,
+		CurrentBlockHeight:        currentBlockHeight,
+		PrevBlockTimestamp:        prevBlockTimestamp,
+		CurrentBlockReferenceTime: currentBlockReferenceTime,
+		MaxTransactionsSetSizeKb:  0, // TODO(v1): either fill in or delete from spec
+		MaxNumberOfTransactions:   maxNumberOfTransactions,
+	}
+
+	proposedTransactions, err := s.transactionPool.GetTransactionsForOrdering(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return proposedTransactions, nil
+}
+
+func (s *service) createTriggerTransaction(protocolVersion primitives.ProtocolVersion, blockTime primitives.TimestampNano) *protocol.SignedTransaction {
 	return (&protocol.SignedTransactionBuilder{
 		Transaction: &protocol.TransactionBuilder{
-			ProtocolVersion: s.config.ProtocolVersion(),
+			ProtocolVersion: protocolVersion,
 			VirtualChainId:  s.config.VirtualChainId(),
 			Timestamp:       blockTime,
 			ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
@@ -74,9 +130,9 @@ func (s *service) createTriggerTransaction(blockTime primitives.TimestampNano) *
 	}).Build()
 }
 
-func (s *service) updateTransactions(txs []*protocol.SignedTransaction, blockTime primitives.TimestampNano) []*protocol.SignedTransaction {
+func (s *service) updateTransactions(txs []*protocol.SignedTransaction, protocolVersion primitives.ProtocolVersion, blockTime primitives.TimestampNano) []*protocol.SignedTransaction {
 	if s.config.ConsensusContextTriggersEnabled() {
-		txs = append(txs, s.createTriggerTransaction(blockTime))
+		txs = append(txs, s.createTriggerTransaction(protocolVersion, blockTime))
 	}
 	return txs
 }

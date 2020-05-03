@@ -39,15 +39,15 @@ func toTxValidatorContextWithBc(cfg config.ConsensusContextConfig, isBackwardCom
 	copy(prevBlockHashCopy, block.TransactionsBlock.Header.PrevBlockHashPtr())
 
 	input := &services.ValidateTransactionsBlockInput{
-		CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
-		TransactionsBlock:    block.TransactionsBlock,                                        // fill in each test
-		PrevBlockTimestamp:   primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano()), // this is intentionally set in the future to fail timestamp tests
-		PrevBlockHash:        prevBlockHashCopy,
-		BlockProposerAddress: blockProposer,
+		CurrentBlockHeight:     block.TransactionsBlock.Header.BlockHeight(),
+		TransactionsBlock:      block.TransactionsBlock,                                        // fill in each test
+		PrevBlockTimestamp:     primitives.TimestampNano(time.Now().Add(time.Hour).UnixNano()), // this is intentionally set in the future to fail timestamp tests
+		PrevBlockHash:          prevBlockHashCopy,
+		BlockProposerAddress:   blockProposer,
+		PrevBlockReferenceTime: primitives.TimestampSeconds(uint32(time.Now().Add(24 * time.Hour).Unix())), // this is intentionally set in the future to fail timestamp tests
 	}
 
 	return &txValidatorContext{
-		protocolVersion:        cfg.ProtocolVersion(),
 		virtualChainId:         cfg.VirtualChainId(),
 		allowedTimestampJitter: cfg.ConsensusContextSystemTimestampAllowedJitter(),
 		input:                  input,
@@ -58,9 +58,36 @@ func TestTransactionsBlockValidators(t *testing.T) {
 	cfg := config.ForConsensusContextTests(false)
 	hash2 := hash.CalcSha256([]byte{2})
 
-	t.Run("should return error for transaction block with incorrect protocol version", func(t *testing.T) {
+	t.Run("should NOT return error for transaction block with minimal protocol version", func(t *testing.T) {
 		vctx := toTxValidatorContext(cfg)
-		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(999); err != nil {
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE); err != nil {
+			t.Error(err)
+		}
+		err := validateTxProtocolVersion(context.Background(), vctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("should NOT return error for transaction block with maximal protocol version", func(t *testing.T) {
+		vctx := toTxValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE); err != nil {
+			t.Error(err)
+		}
+		err := validateTxProtocolVersion(context.Background(), vctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error for transaction block with lower than minimal protocol version", func(t *testing.T) {
+		vctx := toTxValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE - 1); err != nil {
+			t.Error(err)
+		}
+		err := validateTxProtocolVersion(context.Background(), vctx)
+		require.Equal(t, ErrMismatchedProtocolVersion, errors.Cause(err), "validation should fail on incorrect protocol version", err)
+	})
+
+	t.Run("should return error for transaction block with higher than maximal protocol version", func(t *testing.T) {
+		vctx := toTxValidatorContext(cfg)
+		if err := vctx.input.TransactionsBlock.Header.MutateProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE + 1); err != nil {
 			t.Error(err)
 		}
 		err := validateTxProtocolVersion(context.Background(), vctx)
@@ -172,6 +199,36 @@ func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(
 	})
 }
 
+func TestConsensusContextValidateTransactionsBlock_ValidateBlockRefTime(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		cfg := config.ForConsensusContextTests(false)
+
+		t.Run("should NOT return error for new ref is newer than ref and not smaller than grace allows", func(t *testing.T) {
+			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
+			prevRef := proposedRef - 500
+			validatorRef := proposedRef
+			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
+			require.NoError(t, err)
+		})
+
+		t.Run("should return error for new ref is NOT newer than prev", func(t *testing.T) {
+			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
+			prevRef := proposedRef + 500
+			validatorRef := proposedRef
+			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
+			require.Error(t, err)
+		})
+
+		t.Run("should return error for new ref is newer and not smaller than grace allows ", func(t *testing.T) {
+			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
+			prevRef := proposedRef - 500
+			validatorRef := proposedRef - 2 * primitives.TimestampSeconds(cfg.ManagementConsensusGraceTimeout() / time.Second)
+			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
+			require.Error(t, err)
+		})
+	})
+}
+
 func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		tx := builders.TransferTransaction().Build()
@@ -266,6 +323,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 				cfg := config.ForConsensusContextTests(tt.triggerEnabled)
 				tb := &protocol.TransactionsBlockContainer{
 					Header: (&protocol.TransactionsBlockHeaderBuilder{
+						ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 						Timestamp: triggerTx.Transaction().Timestamp(),
 					}).Build(),
 					SignedTransactions: tt.txs,
@@ -283,6 +341,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerCompliance(t *testing.T
 }
 func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 	with.Context(func(ctx context.Context) {
+		pv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
 		cfg := config.ForConsensusContextTests(false)
 		tests := []struct {
 			name           string
@@ -296,7 +355,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 			},
 			{
 				"bad protocol",
-				builders.TriggerTransaction().WithProtocolVersion(cfg.ProtocolVersion() + 1).Build(),
+				builders.TriggerTransaction().WithProtocolVersion(pv + 1).Build(),
 				false,
 			},
 			{
@@ -322,7 +381,7 @@ func TestConsensusContextValidateTransactionsBlockTriggerIsValid(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				isOk := validateTransactionsBlockTxTriggerIsValid(tt.tx, cfg)
+				isOk := validateTransactionsBlockTxTriggerIsValid(tt.tx, pv, cfg)
 				require.Equal(t, tt.expectedToPass, isOk, "validator and expected don't match")
 			})
 		}

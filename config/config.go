@@ -16,7 +16,6 @@ import (
 
 type NodeConfig interface {
 	// shared
-	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
@@ -27,7 +26,9 @@ type NodeConfig interface {
 	// Management
 	ManagementFilePath() string
 	ManagementMaxFileSize() uint32
-	ManagementUpdateInterval() time.Duration
+	ManagementPollingInterval() time.Duration
+	ManagementConsensusGraceTimeout() time.Duration
+	ManagementNetworkLivenessTimeout() time.Duration
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -77,7 +78,7 @@ type NodeConfig interface {
 
 	// gossip
 	GossipListenPort() uint16
-	GossipPeers() topologyProviderAdapter.GossipPeers // TODO POSV2 remove this ?
+	GossipPeers() topologyProviderAdapter.TransportPeers // TODO POSV2 remove this ?
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
@@ -132,7 +133,7 @@ type mutableNodeConfig interface {
 	SetString(key string, value string) mutableNodeConfig
 	SetBool(key string, value bool) mutableNodeConfig
 	SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig
-	SetGossipPeers(peers topologyProviderAdapter.GossipPeers) mutableNodeConfig
+	SetGossipPeers(peers topologyProviderAdapter.TransportPeers) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
 	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
@@ -160,7 +161,7 @@ type FilesystemBlockPersistenceConfig interface {
 
 type GossipTransportConfig interface {
 	NodeAddress() primitives.NodeAddress
-	GossipPeers() topologyProviderAdapter.GossipPeers
+	GossipPeers() topologyProviderAdapter.TransportPeers
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
@@ -169,12 +170,12 @@ type GossipTransportConfig interface {
 
 // Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
-	ProtocolVersion() primitives.ProtocolVersion
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
 	LeanHelixConsensusMinimumCommitteeSize() uint32
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
+	ManagementConsensusGraceTimeout() time.Duration
 }
 
 type CommitteeProviderConfig interface {

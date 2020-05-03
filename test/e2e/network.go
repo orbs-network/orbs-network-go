@@ -61,7 +61,7 @@ func bootstrapE2ENetwork(logFilePrefix string, virtualChainId primitives.Virtual
 
 	gossipPortByNodeIndex := []int{}
 	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	gossipPeers := make(topologyProviderAdapter.GossipPeers)
+	gossipPeers := make(topologyProviderAdapter.TransportPeers)
 	for i := 0; i < LOCAL_NETWORK_SIZE; i++ {
 		gossipPortByNodeIndex = append(gossipPortByNodeIndex, START_GOSSIP_PORT+i)
 		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()

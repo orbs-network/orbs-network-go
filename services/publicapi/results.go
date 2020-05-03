@@ -35,13 +35,14 @@ func isOutputPotentiallyOutOfSync(config config.PublicApiConfig, referenceBlockT
 	return threshold > referenceBlockTimestamp
 }
 
-func validateRequest(config config.PublicApiConfig, protocolVersion primitives.ProtocolVersion, vcId primitives.VirtualChainId) (protocol.TransactionStatus, error) {
-	if primitives.ProtocolVersion(1) != protocolVersion {
+func validateRequest(cfg config.PublicApiConfig, protocolVersion primitives.ProtocolVersion, vcId primitives.VirtualChainId) (protocol.TransactionStatus, error) {
+	// TODO V2 - revisit this logic once client PV is decided. (OdedW)
+	if protocolVersion > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE{
 		return protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, errors.Errorf("invalid protocol version %d", protocolVersion)
 	}
 
-	if config.VirtualChainId() != vcId {
-		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, errors.Errorf("virtual chain mismatch received %d but expected %d", vcId, config.VirtualChainId())
+	if cfg.VirtualChainId() != vcId {
+		return protocol.TRANSACTION_STATUS_REJECTED_VIRTUAL_CHAIN_MISMATCH, errors.Errorf("virtual chain mismatch received %d but expected %d", vcId, cfg.VirtualChainId())
 	}
 
 	return protocol.TRANSACTION_STATUS_RESERVED, nil

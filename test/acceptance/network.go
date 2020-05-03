@@ -8,6 +8,7 @@ package acceptance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/orbs-network/govnr"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
@@ -56,14 +57,14 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 	ctx, cancel := context.WithCancel(context.Background())
 	govnr.Recover(logfields.GovnrErrorer(logger), func() {
 		defer cancel()
-		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, nil)
+		network := newAcceptanceTestNetwork(ctx, logger, consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS, nil, 2, DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK, DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE, DEFAULT_ACCEPTANCE_VIRTUAL_CHAIN_ID, DEFAULT_ACCEPTANCE_EMPTY_BLOCK_TIME, 0, nil)
 		network.CreateAndStartNodes(ctx, 2)
 		f(ctx, network)
 	})
 }
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
-	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration,
+	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementPollingInterval time.Duration,
 	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *Network {
 
 	testLogger.Info("===========================================================================")
@@ -90,6 +91,7 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 		requiredQuorumPercentage,
 		vcid,
 		emptyBlockTime,
+		managementPollingInterval,
 	)
 
 	if configOverride != nil {
@@ -223,3 +225,31 @@ func (n *Network) WaitForBlock(ctx context.Context, height primitives.BlockHeigh
 		tracker.WaitForBlock(ctx, height)
 	}
 }
+
+func GenerateNewManagementReferenceTime(oldRefTime primitives.TimestampSeconds) primitives.TimestampSeconds {
+	now := primitives.TimestampSeconds(time.Now().Unix() + 1)
+	if oldRefTime < now  {
+		return now
+	}
+	return oldRefTime + 1
+}
+
+func  (n *Network) WaitForManagementChange(ctx context.Context, currentCommitteeMemberId int, refTime primitives.TimestampSeconds) (primitives.BlockHeight, error) {
+	currentBlockHeight, err := n.BlockPersistence(currentCommitteeMemberId).GetLastBlockHeight()
+	if err != nil {
+		return 0, err
+	}
+
+	waitingBlock := currentBlockHeight + 1
+	for waitingBlock < currentBlockHeight+50 {
+		n.WaitForBlock(ctx, waitingBlock)
+		bp, _ := n.BlockPersistence(currentCommitteeMemberId).GetLastBlock()
+		if bp.TransactionsBlock.Header.ReferenceTime() >= refTime {
+			return bp.TransactionsBlock.Header.BlockHeight(), nil
+		}
+		waitingBlock = bp.TransactionsBlock.Header.BlockHeight()+1
+	}
+	return 0, errors.New("error waited too much and failed")
+
+}
+

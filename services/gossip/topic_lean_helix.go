@@ -15,14 +15,14 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func (s *Service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
+func (s *service) RegisterLeanHelixHandler(handler gossiptopics.LeanHelixHandler) {
 	s.handlers.Lock()
 	defer s.handlers.Unlock()
 
 	s.handlers.leanHelixHandlers = append(s.handlers.leanHelixHandlers, handler)
 }
 
-func (s *Service) receivedLeanHelixMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
+func (s *service) receivedLeanHelixMessage(ctx context.Context, header *gossipmessages.Header, payloads [][]byte) {
 	message, err := codec.DecodeLeanHelixMessage(header, payloads)
 	if err != nil {
 		return
@@ -39,7 +39,7 @@ func (s *Service) receivedLeanHelixMessage(ctx context.Context, header *gossipme
 	}
 }
 
-func (s *Service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
+func (s *service) SendLeanHelixMessage(ctx context.Context, input *gossiptopics.LeanHelixInput) (*gossiptopics.EmptyOutput, error) {
 	header := (&gossipmessages.HeaderBuilder{
 		Topic:                  gossipmessages.HEADER_TOPIC_LEAN_HELIX,
 		RecipientMode:          input.RecipientsList.RecipientMode,

@@ -51,6 +51,7 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 	var prevRxBlockHash primitives.Sha256
 	//var prevBlockTimestamp = primitives.TimestampNano(time.Now().UnixNano()) - 1
 	var prevBlockTimestamp primitives.TimestampNano
+	var prevBlockReferenceTime primitives.TimestampSeconds
 
 	if prevBlock != nil {
 		prevBlockPair := FromLeanHelixBlock(prevBlock)
@@ -59,26 +60,29 @@ func validateBlockProposalInternal(ctx context.Context, block lh.Block, blockHas
 		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevTxBlock)
 		prevBlockTimestamp = prevTxBlock.Header.Timestamp()
 		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockPair.ResultsBlock)
+		prevBlockReferenceTime = prevTxBlock.Header.ReferenceTime()
 	}
 
 	_, err := vctx.validateTransactionsBlock(ctx, &services.ValidateTransactionsBlockInput{
-		CurrentBlockHeight:   newBlockHeight,
-		TransactionsBlock:    blockPair.TransactionsBlock,
-		PrevBlockHash:        prevTxBlockHash,
-		PrevBlockTimestamp:   prevBlockTimestamp,
-		BlockProposerAddress: blockProposerAddress,
+		CurrentBlockHeight:     newBlockHeight,
+		TransactionsBlock:      blockPair.TransactionsBlock,
+		PrevBlockHash:          prevTxBlockHash,
+		PrevBlockTimestamp:     prevBlockTimestamp,
+		PrevBlockReferenceTime: prevBlockReferenceTime,
+		BlockProposerAddress:   blockProposerAddress,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateTransactionsBlock, newBlockHeight=%d", newBlockHeight)
 	}
 
 	_, err = vctx.validateResultsBlock(ctx, &services.ValidateResultsBlockInput{
-		CurrentBlockHeight:   newBlockHeight,
-		ResultsBlock:         blockPair.ResultsBlock,
-		PrevBlockHash:        prevRxBlockHash,
-		TransactionsBlock:    blockPair.TransactionsBlock,
-		PrevBlockTimestamp:   prevBlockTimestamp,
-		BlockProposerAddress: blockProposerAddress,
+		CurrentBlockHeight:     newBlockHeight,
+		ResultsBlock:           blockPair.ResultsBlock,
+		PrevBlockHash:          prevRxBlockHash,
+		TransactionsBlock:      blockPair.TransactionsBlock,
+		PrevBlockTimestamp:     prevBlockTimestamp,
+		PrevBlockReferenceTime: prevBlockReferenceTime,
+		BlockProposerAddress:   blockProposerAddress,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "ValidateBlockProposal failed ValidateResultsBlock, newBlockHeight=%d", newBlockHeight)

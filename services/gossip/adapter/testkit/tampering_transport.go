@@ -79,7 +79,7 @@ func NewTamperingTransport(logger log.Logger, nested adapter.InterceptableTransp
 	return t
 }
 
-func (t *TamperingTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+func (t *TamperingTransport) UpdateTopology(bgCtx context.Context, newPeers adapter.TransportPeers) {
 	//	currently does nothing on purpose
 }
 

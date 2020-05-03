@@ -8,14 +8,13 @@ package transactionpool
 
 import (
 	"github.com/orbs-network/crypto-lib-go/crypto/keys"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"time"
 )
-
-const ProtocolVersion = primitives.ProtocolVersion(1)
 
 type validationContext struct {
 	nodeSyncRejectInterval time.Duration
@@ -27,7 +26,7 @@ type validationContext struct {
 func (c *validationContext) ValidateAddedTransaction(transaction *protocol.SignedTransaction, currentTime time.Time, lastCommittedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	proposedBlockTimestamp := primitives.TimestampNano(currentTime.UnixNano())
 
-	if err := c.validateProtocolVersion(transaction); err != nil {
+	if err := c.validateAddTransactionProtocolVersion(transaction); err != nil {
 		return err
 	}
 	if err := c.validateSignatureType(transaction); err != nil {
@@ -48,8 +47,8 @@ func (c *validationContext) ValidateAddedTransaction(transaction *protocol.Signe
 	return nil
 }
 
-func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
-	if err := c.validateProtocolVersion(transaction); err != nil {
+func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	if err := c.validateProtocolVersion(transaction, proposedBlockProtocolVersion); err != nil {
 		return err
 	}
 	if err := c.validateSignatureType(transaction); err != nil {
@@ -67,9 +66,16 @@ func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol
 	return nil
 }
 
-func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	if transaction.Transaction().ProtocolVersion() != ProtocolVersion {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("protocol-version", ProtocolVersion), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+func (c *validationContext) validateAddTransactionProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maximal-protocol-version", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+	}
+	return nil
+}
+
+func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion) *ErrTransactionRejected {
+	if transaction.Transaction().ProtocolVersion() > proposedBlockProtocolVersion {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("block-protocol-version", proposedBlockProtocolVersion), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }

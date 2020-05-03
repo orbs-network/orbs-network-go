@@ -28,6 +28,10 @@ func (b *BlockPairWrapper) Height() lhprimitives.BlockHeight {
 	return lhprimitives.BlockHeight(b.blockPair.TransactionsBlock.Header.BlockHeight())
 }
 
+func (b *BlockPairWrapper) ReferenceTime() lhprimitives.TimestampSeconds {
+	return lhprimitives.TimestampSeconds(b.blockPair.TransactionsBlock.Header.ReferenceTime())
+}
+
 func ToLeanHelixBlock(blockPair *protocol.BlockPairContainer) lh.Block {
 
 	if blockPair == nil {
@@ -74,6 +78,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 	var prevTxBlockHash primitives.Sha256
 	var prevRxBlockHash primitives.Sha256
 	var prevBlockTimestamp primitives.TimestampNano
+	var prevBlockReferenceTime primitives.TimestampSeconds
 
 	if prevBlock != nil {
 		prevBlockWrapper := prevBlock.(*BlockPairWrapper)
@@ -81,6 +86,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		prevTxBlockHash = digest.CalcTransactionsBlockHash(prevBlockWrapper.blockPair.TransactionsBlock)
 		prevRxBlockHash = digest.CalcResultsBlockHash(prevBlockWrapper.blockPair.ResultsBlock)
 		prevBlockTimestamp = prevBlockWrapper.blockPair.TransactionsBlock.Header.Timestamp()
+		prevBlockReferenceTime = prevBlockWrapper.blockPair.TransactionsBlock.Header.ReferenceTime()
 	}
 
 	// TODO https://tree.taiga.io/project/orbs-network/us/642 Add configurable maxNumTx and maxBlockSize
@@ -97,6 +103,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		MaxNumberOfTransactions: maxNumOfTransactions,
 		MaxBlockSizeKb:          maxBlockSize,
 		BlockProposerAddress:    blockProposerAddress,
+		PrevBlockReferenceTime:  prevBlockReferenceTime,
 	})
 	if err != nil {
 		return nil, nil
@@ -108,7 +115,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 		PrevBlockHash:        prevRxBlockHash,
 		TransactionsBlock:    txOutput.TransactionsBlock,
 		PrevBlockTimestamp:   prevBlockTimestamp,
-		BlockProposerAddress: blockProposerAddress,
+		BlockProposerAddress: blockProposerAddress, PrevBlockReferenceTime: prevBlockReferenceTime,
 	})
 	if err != nil {
 		return nil, nil
@@ -127,7 +134,6 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 }
 
 func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
-
 	if ctx.Err() != nil {
 		return errors.New("context canceled")
 	}
@@ -142,7 +148,7 @@ func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 		prevBlockProof = prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
 	}
 
-	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, prevBlockProof)
+	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, ToLeanHelixBlock(prevBlockPair), prevBlockProof)
 	if err != nil {
 		return errors.Wrapf(err, "validateBlockConsensus(): error when calling leanHelix.ValidateBlockConsensus()")
 	}

@@ -7,6 +7,7 @@ import (
 )
 
 func TestOrbsVotingContract_initCurrentElection(t *testing.T) {
+	t.Skip()
 	tests := []struct {
 		name              string
 		expectCurrentTime uint64

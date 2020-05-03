@@ -24,7 +24,7 @@ type outgoingConnectionMetrics struct {
 type outgoingConnections struct {
 	sync.RWMutex
 	activeConnections map[string]*outgoingConnection
-	peerTopology      adapter.GossipPeers // this is important - we use own copy of peer configuration, otherwise nodes in e2e tests that run in-process can mutate each other's peerTopology
+	peerTopology      adapter.TransportPeers // this is important - we use own copy of peer configuration, otherwise nodes in e2e tests that run in-process can mutate each other's peerTopology
 	logger            log.Logger
 	metrics           *outgoingConnectionMetrics
 	config            timingsConfig
@@ -36,7 +36,7 @@ func newOutgoingConnections(logger log.Logger, registry metric.Registry, config 
 	c := &outgoingConnections{
 		logger:            logger,
 		activeConnections: make(map[string]*outgoingConnection),
-		peerTopology:      make(adapter.GossipPeers),
+		peerTopology:      make(adapter.TransportPeers),
 		metrics:           createOutgoingConnectionMetrics(registry),
 		metricRegistry:    registry,
 		nodeAddress:       config.NodeAddress(),
@@ -78,7 +78,7 @@ func (c *outgoingConnections) WaitUntilShutdown(shutdownContext context.Context)
 
 // note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
 // the context is done
-func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddress string, peer adapter.GossipPeer) {
+func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddress string, peer adapter.TransportPeer) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -90,7 +90,7 @@ func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddr
 	}
 }
 
-func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.GossipPeers) {
+func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.TransportPeers) {
 	c.RLock()
 	peersToRemove, peersToAdd := adapter.PeerDiff(c.peerTopology, newPeers)
 	c.RUnlock()
@@ -102,7 +102,7 @@ func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers ada
 	}
 }
 
-func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect adapter.GossipPeers) {
+func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect adapter.TransportPeers) {
 	c.Lock()
 	defer c.Unlock()
 	for key, peer := range peersToDisconnect {

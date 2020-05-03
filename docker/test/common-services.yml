@@ -8,7 +8,7 @@ services:
       - 8545:8545
 
   signer-node:
-    image: orbs:signer
+    image: orbsnetwork/signer:v1.3.11 # latest stable signer
     volumes:
       - ../../_logs/:/opt/orbs/logs
       - ./$CONSENSUSALGO-config/:/opt/orbs/config
@@ -18,7 +18,7 @@ services:
     environment:
       ETHEREUM_ENDPOINT: http://ganache:8545/
     volumes:
-      - ../../_logs/:/opt/orbs/logs
+      - ../../_logs/:/opt/orbs/log
       - ./$CONSENSUSALGO-config/:/opt/orbs/config
     sysctls:
       net.core.somaxconn: 25000

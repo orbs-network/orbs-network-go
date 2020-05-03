@@ -9,18 +9,23 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"sort"
 	"sync"
 )
 
+const DEFAULT_REF_TIME = 1492983000
+const DEFAULT_GENESIS_REF_TIME = 1492982000
+
 type MemoryConfig interface {
-	GossipPeers() adapter.GossipPeers
+	GossipPeers() adapter.TransportPeers
 	GenesisValidatorNodes() map[string]config.ValidatorNode
 }
 
@@ -28,35 +33,25 @@ type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
-	currentReference uint64
-	topology adapter.GossipPeers
-	committees []*management.CommitteeTerm
+	currentReference      primitives.TimestampSeconds
+	genesisReference      primitives.TimestampSeconds
+	topology              []*services.GossipPeer
+	committees            []management.CommitteeTerm
+	protocolVersions      []management.ProtocolVersionTerm
+	isSubscriptionActives []management.SubscriptionTerm
 }
 
-func NewMemoryProvider(config MemoryConfig, logger log.Logger) *MemoryProvider {
-	committee := getCommitteeFromConfig(config)
-	return  &MemoryProvider{currentReference: 0, topology: config.GossipPeers(), committees: []*management.CommitteeTerm{{AsOfReference: 0, Committee: committee}}, logger :logger}
-}
-
-func (mp *MemoryProvider) Get(ctx context.Context) (uint64, adapter.GossipPeers, []*management.CommitteeTerm, error) {
-	mp.RLock()
-	defer mp.RUnlock()
-
-	return mp.currentReference, mp.topology, mp.committees, nil
-}
-
-// for acceptance tests
-func (mp *MemoryProvider) AddCommittee(referenceNumber uint64, committee []primitives.NodeAddress) error {
-	mp.Lock()
-	defer mp.Unlock()
-
-	if mp.committees[len(mp.committees)-1].AsOfReference >= referenceNumber {
-		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, referenceNumber)
+func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
+	committee := getCommitteeFromConfig(cfg)
+	return &MemoryProvider{
+		logger:                logger,
+		currentReference:      DEFAULT_REF_TIME,
+		genesisReference:      DEFAULT_GENESIS_REF_TIME,
+		topology:              getTopologyFromConfig(cfg, logger),
+		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
+		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
-
-	mp.committees = append(mp.committees, &management.CommitteeTerm{ AsOfReference: referenceNumber, Committee: committee})
-	mp.currentReference = referenceNumber
-	return nil
 }
 
 func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
@@ -71,4 +66,60 @@ func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
 		return bytes.Compare(committee[i], committee[j]) > 0
 	})
 	return committee
+}
+
+func getTopologyFromConfig(cfg MemoryConfig, logger log.Logger) []*services.GossipPeer {
+	peers := cfg.GossipPeers()
+	topology := make([]*services.GossipPeer, 0, len(peers))
+	for _, peer := range peers {
+		if nodeAddress, err := hex.DecodeString(peer.HexOrbsAddress()); err != nil {
+			// TODO post V2 moving all gossip out of config, there is nothing really to do here now
+			logger.Error("Bad address for a configured gossip peer, ignored.")
+		} else {
+			topology = append(topology, &services.GossipPeer{Address: nodeAddress, Endpoint: peer.Endpoint(), Port: uint32(peer.Port())})
+		}
+
+	}
+	return topology
+}
+
+func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
+	mp.RLock()
+	defer mp.RUnlock()
+
+	return &management.VirtualChainManagementData{
+		CurrentReference: mp.currentReference,
+		GenesisReference: mp.genesisReference,
+		CurrentTopology:  mp.topology,
+		Committees:       mp.committees,
+		Subscriptions:    mp.isSubscriptionActives,
+        ProtocolVersions: mp.protocolVersions,
+	}, nil
+}
+
+// for acceptance tests
+func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, committee []primitives.NodeAddress) error {
+	mp.Lock()
+	defer mp.Unlock()
+
+	if mp.committees[len(mp.committees)-1].AsOfReference >= reference {
+		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
+	}
+
+	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee})
+	mp.currentReference = reference
+	return nil
+}
+
+func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds, isActive bool) error {
+	mp.Lock()
+	defer mp.Unlock()
+
+	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference >= reference {
+		return errors.Errorf("new subscription must have an 'asOf' reference bigger than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
+	}
+
+	mp.isSubscriptionActives = append(mp.isSubscriptionActives, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive})
+	mp.currentReference = reference
+	return nil
 }

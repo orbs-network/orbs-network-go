@@ -31,13 +31,15 @@ func newMetrics(m metric.Factory) *metrics {
 }
 
 type InMemoryStatePersistence struct {
-	metrics    *metrics
-	mutex      sync.RWMutex
-	fullState  adapter.ChainState
-	height     primitives.BlockHeight
-	ts         primitives.TimestampNano
-	proposer   primitives.NodeAddress
-	merkleRoot primitives.Sha256
+	metrics     *metrics
+	mutex       sync.RWMutex
+	fullState   adapter.ChainState
+	height      primitives.BlockHeight
+	ts          primitives.TimestampNano
+	refTime     primitives.TimestampSeconds
+	prevRefTime primitives.TimestampSeconds
+	proposer    primitives.NodeAddress
+	merkleRoot  primitives.Sha256
 }
 
 func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence {
@@ -49,6 +51,8 @@ func NewStatePersistence(metricFactory metric.Factory) *InMemoryStatePersistence
 		fullState:  adapter.ChainState{},
 		height:     0,
 		ts:         0,
+		refTime:    0,
+		prevRefTime:0,
 		proposer:   []byte{},
 		merkleRoot: merkleRoot,
 	}
@@ -65,13 +69,15 @@ func (sp *InMemoryStatePersistence) reportSize() {
 	sp.metrics.numberOfContracts.Update(int64(nContracts))
 }
 
-func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
+func (sp *InMemoryStatePersistence) Write(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, prevRefTime primitives.TimestampSeconds, proposer primitives.NodeAddress, root primitives.Sha256, diff adapter.ChainState) error {
 	sp.mutex.Lock()
 	defer sp.mutex.Unlock()
 
 	sp.height = height
+    sp.refTime = refTime
+    sp.prevRefTime = prevRefTime
 	sp.proposer = proposer
-	// TOOD noam why not ts ?
+	sp.ts = ts
 	sp.merkleRoot = root
 
 	for contract, records := range diff {
@@ -104,11 +110,11 @@ func (sp *InMemoryStatePersistence) Read(contract primitives.ContractName, key s
 	return record, ok, nil
 }
 
-func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.NodeAddress, primitives.Sha256, error) {
+func (sp *InMemoryStatePersistence) ReadMetadata() (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds, primitives.TimestampSeconds, primitives.NodeAddress, primitives.Sha256, error) {
 	sp.mutex.RLock()
 	defer sp.mutex.RUnlock()
 
-	return sp.height, sp.ts, sp.proposer, sp.merkleRoot, nil
+	return sp.height, sp.ts, sp.refTime, sp.prevRefTime, sp.proposer, sp.merkleRoot, nil
 }
 
 func (sp *InMemoryStatePersistence) Dump() string {

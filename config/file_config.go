@@ -70,8 +70,8 @@ func parseNodes(value interface{}) (nodes map[string]ValidatorNode, err error) {
 	return nodes, nil
 }
 
-func parsePeers(value interface{}) (peers topologyProviderAdapter.GossipPeers, err error) {
-	peers = make(topologyProviderAdapter.GossipPeers)
+func parsePeers(value interface{}) (peers topologyProviderAdapter.TransportPeers, err error) {
+	peers = make(topologyProviderAdapter.TransportPeers)
 
 	if nodeList, ok := value.([]interface{}); ok {
 		for _, item := range nodeList {
@@ -172,7 +172,7 @@ func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 		}
 
 		if key == "federation-nodes" || key == "topology-nodes" { // note: "federation-nodes" is deprecated but kept for backwards-compatibility
-			var peers topologyProviderAdapter.GossipPeers
+			var peers topologyProviderAdapter.TransportPeers
 			peers, err = parsePeers(value)
 			cfg.SetGossipPeers(peers)
 			continue

@@ -3,6 +3,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,7 +22,7 @@ func TestTriggers_ABlockContainsATriggerTransaction(t *testing.T) {
 
 			block, err := network.PublicApi(0).GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
-					ProtocolVersion: builders.DEFAULT_TEST_PROTOCOL_VERSION,
+					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 					BlockHeight:     blockHeight,
 				}).Build(),

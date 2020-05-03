@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
+func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *services.ValidateTransactionsForOrderingInput) (*services.ValidateTransactionsForOrderingOutput, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
@@ -33,15 +33,16 @@ func (s *Service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 			return nil, errors.Errorf("transaction with hash %s already committed", txHash)
 		}
 
-		if err := s.validationContext.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
+		if err := s.validationContext.ValidateTransactionForOrdering(tx, input.BlockProtocolVersion, proposedBlockTimestamp); err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("transaction with hash %s is invalid", txHash))
 		}
 	}
 
 	output, err := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions:    input.SignedTransactions,
-		CurrentBlockHeight:    input.CurrentBlockHeight,
-		CurrentBlockTimestamp: input.CurrentBlockTimestamp,
+		SignedTransactions:        input.SignedTransactions,
+		CurrentBlockHeight:        input.CurrentBlockHeight,
+		CurrentBlockTimestamp: 	   input.CurrentBlockTimestamp,
+		CurrentBlockReferenceTime: input.CurrentBlockReferenceTime,
 	})
 
 	// go over the results first if we have them
@@ -55,3 +56,5 @@ func (s *Service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 
 	return &services.ValidateTransactionsForOrderingOutput{}, err
 }
+
+

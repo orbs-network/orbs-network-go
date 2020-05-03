@@ -10,39 +10,39 @@ import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/GlobalPreOrder"
 	"github.com/orbs-network/orbs-network-go/services/processor/sdk"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"time"
 )
 
 var LogTag = log.Service("virtual-machine")
 
-type CommitteeProvider interface {
-	GetCommittee(ctx context.Context, referenceNumber uint64) []primitives.NodeAddress
+type ManagementConfig interface {
+	ManagementNetworkLivenessTimeout() time.Duration
 }
 
 type service struct {
 	stateStorage         services.StateStorage
 	processors           map[protocol.ProcessorType]services.Processor
 	crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector
-	committeeProvider    CommitteeProvider
+	management           services.Management
+	cfg                  ManagementConfig
 	logger               log.Logger
 
 	contexts *executionContextProvider
 }
 
-func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, committeeProvider CommitteeProvider, logger log.Logger, ) services.VirtualMachine {
-
+func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, management services.Management, cfg ManagementConfig, logger log.Logger, ) services.VirtualMachine {
 	s := &service{
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
 		stateStorage:         stateStorage,
-		committeeProvider:    committeeProvider,
+		management:           management,
+		cfg:                  cfg,
 		logger:               logger.WithTags(LogTag),
 
 		contexts: newExecutionContextProvider(),
@@ -58,7 +58,7 @@ func NewVirtualMachine(stateStorage services.StateStorage, processors map[protoc
 func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQueryInput) (*services.ProcessQueryOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
+	committedBlockHeight, committedBlockTimestamp, committeeReferenceTime, committedPrevReferenceTime, committedBlockProposerAddress, err := s.getRecentCommittedBlockInfo(ctx)
 	if err != nil {
 		return &services.ProcessQueryOutput{
 			CallResult:              protocol.EXECUTION_RESULT_ERROR_UNEXPECTED,
@@ -79,7 +79,7 @@ func (s *service) ProcessQuery(ctx context.Context, input *services.ProcessQuery
 	}
 
 	logger.Info("running local method", log.Stringable("contract", input.SignedQuery.Query().ContractName()), log.Stringable("method", input.SignedQuery.Query().MethodName()), logfields.BlockHeight(committedBlockHeight))
-	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
+	callResult, outputArgs, outputEvents, err := s.runMethod(ctx, committedBlockHeight, committedBlockHeight, committedBlockTimestamp, committedBlockProposerAddress, committeeReferenceTime, committedPrevReferenceTime, input.SignedQuery.Query(), protocol.ACCESS_SCOPE_READ_ONLY, nil)
 	if outputArgs == nil {
 		outputArgs = protocol.ArgumentsArrayEmpty()
 	}
@@ -100,7 +100,7 @@ func (s *service) ProcessTransactionSet(ctx context.Context, input *services.Pro
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("processing transaction set", log.Int("num-transactions", len(input.SignedTransactions)), logfields.BlockHeight(input.CurrentBlockHeight))
-	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.BlockProposerAddress, input.SignedTransactions)
+	receipts, stateDiffs := s.processTransactionSet(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp, input.BlockProposerAddress, input.CurrentBlockReferenceTime, input.PrevBlockReferenceTime, input.SignedTransactions)
 
 	return &services.ProcessTransactionSetOutput{
 		TransactionReceipts: receipts,
@@ -114,23 +114,22 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	// all statuses start as protocol.TRANSACTION_STATUS_RESERVED (zero)
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 
-	// check subscription
-	err := s.callGlobalPreOrderSystemContract(ctx, input.CurrentBlockHeight, input.CurrentBlockTimestamp)
-	if err != nil {
+	// Check Subscription and Network Live during pre-order execution to allow empty (rejected status) yet "valid" blocks when either of them fail
+	isSubscriptionActive := s.verifySubscription(ctx, input.CurrentBlockReferenceTime)
+	isNetworkLive := s.verifyLiveness(input.CurrentBlockTimestamp, input.CurrentBlockReferenceTime)
+	if !isSubscriptionActive || !isNetworkLive {
 		for i := 0; i < len(input.SignedTransactions); i++ {
-			// always allow transactions to _GlobalPreOrder to go through
-			if input.SignedTransactions[i].Transaction().ContractName() != globalpreorder_systemcontract.CONTRACT_NAME {
-				// but reject all others
-				statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
-			}
+			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
 		}
+	} else {
+		// check signatures
+		s.verifyTransactionSignatures(input.SignedTransactions, statuses)
 	}
 
-	// check signatures
-	s.verifyTransactionSignatures(input.SignedTransactions, statuses)
-
-	if err != nil {
-		logger.Info("performed pre order checks", log.Error(err), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
+	if !isSubscriptionActive {
+		logger.Info("performed pre order checks", log.Error(errors.New("Subscription Expired")), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
+	} else if !isNetworkLive {
+		logger.Error("performed pre order checks", log.Error(errors.New("Network has lost live connection to management")), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
 		logger.Info("performed pre order checks", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	}
@@ -144,7 +143,7 @@ func (s *service) CallSystemContract(ctx context.Context, input *services.CallSy
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("calling system contract", log.Stringable("contract", input.ContractName), log.Stringable("method", input.MethodName), logfields.BlockHeight(input.BlockHeight))
-	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.ContractName, input.MethodName, input.InputArgumentArray)
+	callResult, outputArgs, err := s.callSystemContract(ctx, input.BlockHeight, input.BlockTimestamp, input.CurrentBlockReferenceTime, input.PrevBlockReferenceTime, input.ContractName, input.MethodName, input.InputArgumentArray)
 	if outputArgs == nil {
 		outputArgs = protocol.ArgumentsArrayEmpty()
 	}

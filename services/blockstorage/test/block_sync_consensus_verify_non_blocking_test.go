@@ -51,7 +51,11 @@ func TestSyncPetitioner_ConsensusVerify_NonBlocking(t *testing.T) {
 
 		numOfStateRevisionsToRetain := 2
 		virtualMachine := &services.MockVirtualMachine{}
-		consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, config.ForConsensusContextTests(false), harness.Logger, metric.NewRegistry())
+		cfg := config.ForConsensusContextTests(false)
+		mamagement := &services.MockManagement{}
+		mamagement.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: 5000, GenesisReference: 0,}, nil)
+		consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, mamagement, cfg, harness.Logger, metric.NewRegistry())
+
 		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		committedBlockHeights := make(chan primitives.BlockHeight, 10)
@@ -79,13 +83,13 @@ func TestSyncPetitioner_ConsensusVerify_NonBlocking(t *testing.T) {
 		harness.stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.GetLastCommittedBlockInfoInput) (*services.GetLastCommittedBlockInfoOutput, error) {
 			output := harness.getLastBlockHeight(ctx, t)
 			return &services.GetLastCommittedBlockInfoOutput{
-				LastCommittedBlockHeight: output.LastCommittedBlockHeight,
+				BlockHeight: output.LastCommittedBlockHeight,
 			}, nil
 		})
 
 		virtualMachine.When("CallSystemContract", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
 			output, _ := harness.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
-			currentHeight := output.LastCommittedBlockHeight
+			currentHeight := output.BlockHeight
 			if currentHeight >= input.BlockHeight + primitives.BlockHeight(numOfStateRevisionsToRetain) {
 				return nil, errors.New(fmt.Sprintf("unsupported block height: block %d too old. currently at %d. keeping %d back", input.BlockHeight, currentHeight, numOfStateRevisionsToRetain))
 			}

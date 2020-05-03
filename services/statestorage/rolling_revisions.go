@@ -28,44 +28,54 @@ type revisionDiff struct {
 	merkleRoot primitives.Sha256
 	height     primitives.BlockHeight
 	ts         primitives.TimestampNano
+	ref        primitives.TimestampSeconds
+	prevRef    primitives.TimestampSeconds
 	proposer   primitives.NodeAddress
 }
 
 type rollingRevisions struct {
-	logger             log.Logger
-	persist            adapter.StatePersistence
-	transientRevisions int
-	revisions          []*revisionDiff
-	merkle             merkleRevisions
-	currentHeight      primitives.BlockHeight
-	currentTs          primitives.TimestampNano
-	currentMerkleRoot  primitives.Sha256
-	currentProposer    primitives.NodeAddress
-	persistedHeight    primitives.BlockHeight
-	persistedRoot      primitives.Sha256
-	persistedTs        primitives.TimestampNano
-	persistedProposer  primitives.NodeAddress
+	logger               log.Logger
+	persist              adapter.StatePersistence
+	transientRevisions   int
+	revisions            []*revisionDiff
+	merkle               merkleRevisions
+	currentHeight        primitives.BlockHeight
+	currentTs            primitives.TimestampNano
+	currentMerkleRoot    primitives.Sha256
+	currentProposer      primitives.NodeAddress
+	currentRefTime       primitives.TimestampSeconds
+	prevRefTime          primitives.TimestampSeconds
+	persistedHeight      primitives.BlockHeight
+	persistedRoot        primitives.Sha256
+	persistedTs          primitives.TimestampNano
+	persistedProposer    primitives.NodeAddress
+	persistedRefTime     primitives.TimestampSeconds
+	persistedPrevRefTime primitives.TimestampSeconds
 }
 
 func newRollingRevisions(logger log.Logger, persist adapter.StatePersistence, transientRevisions int, merkle merkleRevisions) *rollingRevisions {
-	h, ts, pa, r, err := persist.ReadMetadata()
+	h, ts, ref, prevRef, pa, r, err := persist.ReadMetadata()
 	if err != nil {
 		panic(fmt.Sprintf("could not load state metadata, err=%s", err.Error()))
 	}
 
 	result := &rollingRevisions{
-		logger:             logger,
-		persist:            persist,
-		transientRevisions: transientRevisions,
-		merkle:             merkle,
-		currentHeight:      h,
-		currentTs:          ts,
-		currentProposer:    pa,
-		currentMerkleRoot:  r,
-		persistedHeight:    h,
-		persistedTs:        ts,
-		persistedProposer:  pa,
-		persistedRoot:      r,
+		logger:               logger,
+		persist:              persist,
+		transientRevisions:   transientRevisions,
+		merkle:               merkle,
+		currentHeight:        h,
+		currentTs:            ts,
+		currentProposer:      pa,
+		currentMerkleRoot:    r,
+		currentRefTime:       ref,
+		prevRefTime:          prevRef,
+		persistedHeight:      h,
+		persistedTs:          ts,
+		persistedProposer:    pa,
+		persistedRoot:        r,
+		persistedRefTime:     ref,
+		persistedPrevRefTime: prevRef,
 	}
 
 	return result
@@ -79,11 +89,19 @@ func (ls *rollingRevisions) getCurrentTimestamp() primitives.TimestampNano {
 	return ls.currentTs
 }
 
+func (ls *rollingRevisions) getCurrentReferenceTime() primitives.TimestampSeconds {
+	return ls.currentRefTime
+}
+
+func (ls *rollingRevisions) getPrevReferenceTime() primitives.TimestampSeconds {
+	return ls.prevRefTime
+}
+
 func (ls *rollingRevisions) getCurrentProposerAddress() primitives.NodeAddress {
 	return ls.currentProposer
 }
 
-func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, proposer primitives.NodeAddress, diff adapter.ChainState) error {
+func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, proposer primitives.NodeAddress, diff adapter.ChainState) error {
 	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, toMerkleInput(diff))
 	if err != nil {
 		return errors.Wrapf(err, "failed to updated merkle tree")
@@ -94,10 +112,15 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 		merkleRoot: newRoot,
 		height:     height,
 		ts:         ts,
+		ref:        refTime,
+		prevRef:    ls.currentRefTime, // one back
 		proposer:   proposer,
 	})
 	ls.currentHeight = height
 	ls.currentTs = ts
+	ls.prevRefTime = ls.currentRefTime // one back
+	ls.currentRefTime = refTime
+	ls.currentProposer = proposer
 	ls.currentMerkleRoot = newRoot
 
 	ls.logger.Info("rollingRevisions received revision", logfields.BlockHeight(height))
@@ -124,7 +147,7 @@ func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
 func (ls *rollingRevisions) evictRevisions() error {
 	for len(ls.revisions) > ls.transientRevisions {
 		d := ls.revisions[0]
-		err := ls.persist.Write(d.height, d.ts, d.proposer, d.merkleRoot, d.diff)
+		err := ls.persist.Write(d.height, d.ts, d.ref, d.prevRef, d.proposer, d.merkleRoot, d.diff)
 		if err != nil {
 			return err
 		}
@@ -132,6 +155,8 @@ func (ls *rollingRevisions) evictRevisions() error {
 
 		ls.persistedHeight = d.height
 		ls.persistedTs = d.ts
+		ls.persistedRefTime = d.ref
+		ls.persistedPrevRefTime = d.prevRef
 		ls.persistedProposer = d.proposer
 		ls.persistedRoot = d.merkleRoot
 		ls.revisions = ls.revisions[1:]

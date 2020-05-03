@@ -16,52 +16,66 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
-func TestLeanHelix_CommitTransactionToElected(t *testing.T) {
+func TestCommitteeElections_OneElectionAndCheckReputationChanges(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithManagementPollingInterval(20*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+			contract := callcontract.NewContractClient(network)
+			network.WaitForBlock(ctx, 2)
+
+			reputationCommitteeTerm0, _ := getCommitteeMisses(t, contract.GetAllCommitteeMisses(ctx, 0))
+			require.Len(t, reputationCommitteeTerm0, 6, "number of addresses should equal original committee of 6")
+
+			t.Log("elect 0,1,2,3")
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			blockOfChange := setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
+			network.WaitForBlock(ctx, blockOfChange+1) // need to be able to run query on block closed AFTER change
+
+			reputationCommitteeTerm1, _ := getCommitteeMisses(t, contract.GetAllCommitteeMisses(ctx, 0))
+			require.Len(t, reputationCommitteeTerm1, 4, "number of addresses should equal new partail committee of 4")
+
+			t.Log("test done, shutting down")
+		})
+}
+
+func TestCommitteeElections_VerifyCommitteeSigns(t *testing.T) {
+	NewHarness().
+		WithNumNodes(6).
+		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
-			t.Log("elect first 4 out of 6")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
-
-			t.Log("send transaction to one of the elected")
-
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5})
 
-			t.Log("make sure it arrived to non-elected")
-
-			network.WaitForTransactionInNodeState(ctx, txHash, 4)
-			require.EqualValues(t, 10, token.GetBalance(ctx, 4, 6))
-
-			t.Log("send transaction to one of the non-elected")
+			t.Log("elect 0,1,2,3")
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			_, txHash = token.Transfer(ctx, 4, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 4)
 			require.EqualValues(t, 20, token.GetBalance(ctx, 4, 6))
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 4, []int{0, 1, 2, 3})
 
-			t.Log("make sure it arrived to elected")
-
-			network.WaitForTransactionInNodeState(ctx, txHash, 2)
-			require.EqualValues(t, 20, token.GetBalance(ctx, 2, 6))
-
 			t.Log("test done, shutting down")
-
 		})
 }
 
-func TestLeanHelix_MultipleReElections(t *testing.T) {
+func TestCommitteeElections_MultipleReElections(t *testing.T) {
 	NewHarness().
 		WithNumNodes(6).
+		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -69,15 +83,16 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			t.Log("elect 1,2,3,4")
-			waitUntilCommitteeApplies(t, ctx, network, 1, 2, 3, 4)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 1, 2, 3, 4)
 
 			t.Log("elect 2,3,4,5")
-			waitUntilCommitteeApplies(t, ctx, network, 2, 3, 4, 5)
-
-			t.Log("send transaction to one of the elected")
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setElectCommitteeAtAndWait(t, ctx, network, 1, newRefTime, 2, 3, 4, 5)
 
 			_, txHash := token.Transfer(ctx, 3, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 3)
@@ -85,13 +100,13 @@ func TestLeanHelix_MultipleReElections(t *testing.T) {
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 3, []int{2, 3, 4, 5})
 
 			t.Log("test done, shutting down")
-
 		})
 }
 
-func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
+func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
 	NewHarness().
 		WithNumNodes(8).
+		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -99,43 +114,35 @@ func TestLeanHelix_AllNodesLoseElectionButReturn(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
-
-			t.Log("send transaction to the first group")
-
-			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
-			network.WaitForTransactionInNodeState(ctx, txHash, 0)
-			require.EqualValues(t, 10, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			t.Log("elect 4,5,6,7 - entire first group loses")
-			waitUntilCommitteeApplies(t, ctx, network, 4, 5, 6, 7)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 4, 5, 6, 7)
 
-			t.Log("send transaction to the first group after loss")
-
-			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
+			_, txHash := token.Transfer(ctx, 4, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
-			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{4, 5, 6, 7})
+			require.EqualValues(t, 10, token.GetBalance(ctx, 4, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 4, []int{4, 5, 6, 7})
 
 			t.Log("elect 0,1,2,3 - first group returns")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setElectCommitteeAtAndWait(t, ctx, network, 4, newRefTime, 0, 1, 2, 3)
 
-			t.Log("send transaction to the first node after return")
-
-			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
-			network.WaitForTransactionInNodeState(ctx, txHash, 0)
-			require.EqualValues(t, 30, token.GetBalance(ctx, 0, 6))
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
+			_, txHash = token.Transfer(ctx, 3, 10, 5, 6)
+			network.WaitForTransactionInNodeState(ctx, txHash, 3)
+			require.EqualValues(t, 20, token.GetBalance(ctx, 3, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 3, []int{0, 1, 2, 3})
 
 			t.Log("test done, shutting down")
-
 		})
 }
 
-func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
+func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
 	NewHarness().
 		WithNumNodes(7).
+		WithManagementPollingInterval(50*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -143,9 +150,8 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
 
 			t.Log("elect 0,1,2,3")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3)
-
-			t.Log("send transaction")
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
 
 			_, txHash := token.Transfer(ctx, 0, 10, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
@@ -153,32 +159,16 @@ func TestLeanHelix_GrowingElectedAmount(t *testing.T) {
 			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3})
 
 			t.Log("elect 0,1,2,3,4,5,6")
-			waitUntilCommitteeApplies(t, ctx, network, 0, 1, 2, 3, 4, 5, 6)
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3, 4, 5, 6)
 
-			t.Log("send transaction")
-
-			_, txHash = token.Transfer(ctx, 0, 10, 5, 6)
-			network.WaitForTransactionInNodeState(ctx, txHash, 0)
-			require.EqualValues(t, 20, token.GetBalance(ctx, 0, 6))
-
-			network.WaitForTransactionReceiptInTransactionPool(ctx, txHash, 0)
-			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 0, []int{0, 1, 2, 3, 4, 5, 6})
+			_, txHash = token.Transfer(ctx, 4, 10, 5, 6)
+			network.WaitForTransactionInNodeState(ctx, txHash, 4)
+			require.EqualValues(t, 20, token.GetBalance(ctx, 4, 6))
+			verifyTxSignersAreFromGroup(t, ctx, contract.API, txHash, 4, []int{0, 1, 2, 3, 4, 5, 6})
 
 			t.Log("test done, shutting down")
-
 		})
-}
-
-func waitUntilCommitteeApplies(t testing.TB, ctx context.Context, network *Network, nodeIndices ...int) {
-	var committee []primitives.NodeAddress
-	for _, committeeIndex := range nodeIndices {
-		committee = append(committee, testKeys.EcdsaSecp256K1KeyPairForTests(committeeIndex).NodeAddress())
-	}
-
-	lastBlock, err := network.BlockPersistence(0).GetLastBlockHeight()
-	require.NoError(t, err)
-	network.committeeProvider.AddCommittee(uint64(lastBlock+3), committee)
-	network.WaitForBlock(ctx, lastBlock+6)
 }
 
 func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcontract.CallContractAPI, txHash primitives.Sha256, nodeIndex int, allowedIndexes []int) {
@@ -186,6 +176,19 @@ func verifyTxSignersAreFromGroup(t testing.TB, ctx context.Context, api callcont
 	signers, err := digest.GetBlockSignersFromReceiptProof(response.PackedProof())
 	require.NoError(t, err, "failed getting signers from block proof")
 	signerIndexes := testKeys.NodeAddressesForTestsToIndexes(signers)
-	t.Logf("signers of txHash %s are %v", txHash, signerIndexes)
 	require.Subset(t, allowedIndexes, signerIndexes, "tx signers should be subset of allowed group")
+}
+
+func setElectCommitteeAtAndWait(t testing.TB, ctx context.Context, network *Network, currentCommitteeMemberId int, refTime primitives.TimestampSeconds, newCommitteeIds ...int) primitives.BlockHeight {
+	var committee []primitives.NodeAddress
+	for _, committeeIndex := range newCommitteeIds {
+		committee = append(committee, testKeys.EcdsaSecp256K1KeyPairForTests(committeeIndex).NodeAddress())
+	}
+
+	err := network.committeeProvider.AddCommittee(refTime, committee)
+	require.NoError(t, err)
+
+	bh, err := network.WaitForManagementChange(ctx, currentCommitteeMemberId, refTime)
+	require.NoError(t, err)
+	return bh
 }

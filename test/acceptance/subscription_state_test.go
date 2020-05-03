@@ -10,41 +10,61 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
-func TestSubscriptionProblemThanBecomesOkAgain(t *testing.T) {
+func TestSubscription_WhenSubscriptionNonActiveCreateEmptyBlocks(t *testing.T) {
 	NewHarness().
-		AllowingErrors("error validating transaction for preorder").
+		WithNumNodes(6).
+		WithManagementPollingInterval(20*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
-			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
-
-			t.Log("subscription problem")
-
-			response, _ := contract.UnsafeTests_SetSubscriptionProblem(ctx, 0)
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
-
-			t.Log("send transaction should fail")
-
-			response, _ = token.Transfer(ctx, 0, 17, 5, 6)
-			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER)
-			require.EqualValues(t, 0, token.GetBalance(ctx, 0, 6))
-
-			t.Log("subscription ok")
-
-			response, _ = contract.UnsafeTests_SetSubscriptionOk(ctx, 0)
-			require.Equal(t, response.TransactionReceipt().ExecutionResult(), protocol.EXECUTION_RESULT_SUCCESS)
-
-			t.Log("send transaction should succeed")
 
 			response, txHash := token.Transfer(ctx, 0, 17, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
 			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_COMMITTED)
 			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6))
+			txs, err := network.BlockPersistence(0).GetTransactionsBlock(response.RequestResult().BlockHeight())
+			require.NoError(t, err)
+			require.EqualValues(t, 2, txs.Header.NumSignedTransactions(), "should have 2 tx : transfer + trigger")
 
+			t.Log("stop subscription")
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			setSubscriptionAndWait(t, ctx, network,  newRefTime, false)
+
+			response, _ = token.Transfer(ctx, 0, 17, 5, 6)
+			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER)
+			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6))
+			txs, err = network.BlockPersistence(0).GetTransactionsBlock(response.RequestResult().BlockHeight())
+			require.NoError(t, err)
+			require.EqualValues(t, 1, txs.Header.NumSignedTransactions(), "should have 1 tx : trigger")
+
+			t.Log("start subscription")
+			newRefTime = GenerateNewManagementReferenceTime(newRefTime)
+			setSubscriptionAndWait(t, ctx, network,  newRefTime, false)
+
+			response, txHash = token.Transfer(ctx, 0, 17, 5, 6)
+			network.WaitForTransactionInNodeState(ctx, txHash, 0)
+			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_COMMITTED)
+			require.EqualValues(t, 34, token.GetBalance(ctx, 0, 6))
+
+			t.Log("test done, shutting down")
 		})
+}
+
+func setSubscriptionAndWait(t testing.TB, ctx context.Context, network *Network, refTime primitives.TimestampSeconds, isActive bool) primitives.BlockHeight {
+	err := network.committeeProvider.AddSubscription(refTime, isActive)
+	require.NoError(t, err)
+
+	bh, err := network.WaitForManagementChange(ctx, 0, refTime)
+	require.NoError(t, err)
+	return bh
 }

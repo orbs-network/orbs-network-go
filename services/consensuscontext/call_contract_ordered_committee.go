@@ -19,12 +19,11 @@ import (
 	"time"
 )
 
-func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) ([]primitives.NodeAddress, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	// current block is used as seed and needs to be for the block being calculated Now.
-	logger.Info("system-call GetOrderedCommittee", logfields.BlockHeight(currentBlockHeight))
-	orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, currentBlockHeight)
+	orderedCommittee, err := s.callGetOrderedCommitteeSystemContract(ctx, currentBlockHeight, prevBlockReferenceTime)
 	if err != nil {
 		return nil, err
 	}
@@ -33,40 +32,39 @@ func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight pr
 	return orderedCommittee, nil
 }
 
-func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight) ([]primitives.NodeAddress, error) {
+func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, proposedPrevBlockReferenceTime primitives.TimestampSeconds) ([]primitives.NodeAddress, error) {
 	systemContractName := primitives.ContractName(committee_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(committee_systemcontract.METHOD_GET_ORDERED_COMMITTEE)
 
+	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, blockHeight, proposedPrevBlockReferenceTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "GetOrderedCommittee")
+	}
+
 	output, err := s.virtualMachine.CallSystemContract(ctx, &services.CallSystemContractInput{
-		BlockHeight:        blockHeight,
-		BlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()), // use now as the call is a kind of RunQuery and doesn't happen under consensus
-		ContractName:       systemContractName,
-		MethodName:         systemMethodName,
-		InputArgumentArray: protocol.ArgumentsArrayEmpty(),
+		BlockHeight:               blockHeight,
+		BlockTimestamp:            primitives.TimestampNano(time.Now().UnixNano()), // use now as the call is a kind of RunQuery and doesn't happen under consensus
+		ContractName:              systemContractName,
+		MethodName:                systemMethodName,
+		CurrentBlockReferenceTime: 0, // future use ?
+		PrevBlockReferenceTime:    prevBlockReferenceTime,
+		InputArgumentArray:        protocol.ArgumentsArrayEmpty(),
 	})
 	if err != nil {
 		return nil, err
 	}
 	if output.CallResult != protocol.EXECUTION_RESULT_SUCCESS {
-		return nil, errors.Errorf("call system %s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
+		return nil, errors.Errorf("GetOrderedCommittee call system %s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
 	}
 
 	argIterator := output.OutputArgumentArray.ArgumentsIterator()
 	if !argIterator.HasNext() {
-		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
+		return nil, errors.Errorf("GetOrderedCommittee call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
 	}
 	arg0 := argIterator.NextArguments()
 	if !arg0.IsTypeBytesArrayValue() {
-		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
+		return nil, errors.Errorf("GetOrderedCommittee call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
 	}
 	return toAddresses(arg0), nil
 }
 
-// helper
-func toAddresses(input *protocol.Argument) (addresses []primitives.NodeAddress) {
-	itr := input.BytesArrayValueIterator()
-	for itr.HasNext() {
-		addresses = append(addresses, itr.NextBytes())
-	}
-	return
-}
