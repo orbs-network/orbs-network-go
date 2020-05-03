@@ -7,7 +7,6 @@
 package e2e
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -15,8 +14,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
-	"text/template"
 )
 
 const blockStorageDataDirPrefix = "/tmp/orbs/e2e"
@@ -84,92 +81,4 @@ func deployBlockStorageFiles(targetDir string, logger log.Logger) {
 
 func vChainPathComponent(virtualChainId primitives.VirtualChainId) string {
 	return fmt.Sprintf("vcid_%d", virtualChainId)
-}
-
-/**
-	These functions are used to align & update the orbs-contract-sdk version found
-	in our main go.mod file of orbs-network-go to the go.mod used for contract compilations
-	being run in the e2e tests. This harness copies the template go.mod (same as happens during a CI docker build for our binary)
-	to mimick the same behavior. If these functions are not used, the go.mod template would not contain a valid version of the SDK to import
-	by the compiler and native contract deployments will fail to build.
-
-	The template doesn't contain the same version as in the main go.mod file to keep things DRY and avoid mismatches
-**/
-
-type artifactsDependencyVersions struct {
-	SDK_VER      string
-	X_CRYPTO_VER string
-}
-
-func extractGoModVersion(input []byte, dependency string) (version string) {
-	goModLines := strings.Split(string(input), "\n")
-	for _, line := range goModLines {
-		if strings.Contains(line, dependency) {
-			parts := strings.Split(strings.Trim(line, "\t\n"), " ")
-			version = parts[1]
-		}
-	}
-
-	return
-}
-
-func getMainProjectDependencyVersions(pathToMainGoMod string) artifactsDependencyVersions {
-	input, err := ioutil.ReadFile(pathToMainGoMod)
-	if err != nil {
-		panic(fmt.Sprintf("failed to read file: %s", err.Error()))
-	}
-
-	return artifactsDependencyVersions{
-		SDK_VER:      extractGoModVersion(input, "orbs-contract-sdk"),
-		X_CRYPTO_VER: extractGoModVersion(input, "golang.org/x/crypto"),
-	}
-}
-
-func updateArtifactsGoMod(targetFilePath string, versions artifactsDependencyVersions) {
-	input, err := ioutil.ReadFile(targetFilePath)
-
-	if err != nil {
-		panic(fmt.Sprintf("failed to open e2e go.mod file for reading: %s", err.Error()))
-	}
-
-	t, err := template.New("go.mod.template").Parse(string(input))
-	if err != nil {
-		panic(fmt.Sprintf("failed to parse go.mod.template file: %s", err.Error()))
-	}
-
-	output := bytes.NewBufferString("")
-	if err := t.Execute(output, versions); err != nil {
-		panic(fmt.Sprintf("failed to execute go.mod.template file: %s", err.Error()))
-	}
-
-	if err = ioutil.WriteFile(targetFilePath, output.Bytes(), 0666); err != nil {
-		panic(fmt.Sprintf("failed to re-write e2e go.mod file: %s", err.Error()))
-	}
-}
-
-func setUpProcessorArtifactPath(virtualChainId primitives.VirtualChainId) string {
-	processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
-
-	// copy go.mod file:
-	err := os.MkdirAll(processorArtifactPath, 0755)
-	if err != nil {
-		panic(fmt.Sprintf("failed to make dir: %s", err.Error()))
-	}
-
-	mainGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "go.mod")
-	versions := getMainProjectDependencyVersions(mainGoModPath)
-
-	goModTemplateFileName := "go.mod.template"
-
-	sourceGoModPath := filepath.Join(config.GetCurrentSourceFileDirPath(), "..", "..", "docker/build", goModTemplateFileName)
-	targetGoModPath := filepath.Join(processorArtifactPath, "go.mod")
-	err = CopyFile(sourceGoModPath, targetGoModPath)
-	if err != nil {
-		panic(fmt.Sprintf("failed to copy go.mod file: %s", err.Error()))
-	}
-
-	fmt.Println("the target go.mod is at:", targetGoModPath, "sdk", versions.SDK_VER, "x/crypto", versions.X_CRYPTO_VER)
-	updateArtifactsGoMod(targetGoModPath, versions)
-
-	return processorArtifactPath
 }

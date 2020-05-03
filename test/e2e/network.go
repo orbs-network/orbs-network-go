@@ -28,7 +28,7 @@ type inProcessE2ENetwork struct {
 	nodes          []*bootstrap.Node
 	virtualChainId primitives.VirtualChainId
 	sync.RWMutex
-	cfg	           config.NodeConfig
+	cfg config.NodeConfig
 }
 
 var OwnerOfAllSupply = keys.Ed25519KeyPairForTests(5) // needs to be a constant across all e2e tests since we deploy the contract only once
@@ -86,7 +86,7 @@ func bootstrapE2ENetwork(logFilePrefix string, virtualChainId primitives.Virtual
 		}
 
 		nodeLogger := tl.logger.WithOutput(tl.console, log.NewFormattingOutput(logFile, log.NewJsonFormatter()))
-		processorArtifactPath := setUpProcessorArtifactPath(virtualChainId)
+		processorArtifactPath, _ := getProcessorArtifactPath(virtualChainId)
 
 		net.cfg = config.
 			ForE2E(

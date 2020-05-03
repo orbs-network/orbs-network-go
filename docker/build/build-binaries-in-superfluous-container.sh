@@ -26,12 +26,5 @@ docker run --name orbs_build orbs:build sleep 1
 
 export SRC=/src
 
-rm -rf _bin && mkdir -p _bin _dockerbuild
-rm -f ./_dockerbuild/go.mod.template
-SDK_VERSION=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
-X_CRYPTO_VER=$(cat go.mod | grep orbs-contract-sdk | awk '{print $2}')
-cp $GO_MOD_TEMPLATE ./_dockerbuild/go.mod.t
-sed "s/SDK_VER/$SDK_VERSION/g" _dockerbuild/go.mod.t > _dockerbuild/go.mod.template
-
 docker cp orbs_build:$SRC/_bin .
 

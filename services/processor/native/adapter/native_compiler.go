@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -102,6 +103,12 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	defer c.metrics.totalCompileTime.RecordSince(start)
 
 	artifactsPath := c.config.ProcessorArtifactPath()
+	os.MkdirAll(artifactsPath, 0755)
+
+	goModPath := path.Join(artifactsPath, "go.mod")
+	defaultGoModPath := path.Join(config.GetProjectSourceRootPath(), "go.mod")
+	versions := config.GetMainProjectDependencyVersions(defaultGoModPath)
+	UpdateArtifactsGoMod(goModPath, versions)
 
 	hashOfCode := getHashOfCode(code)
 
