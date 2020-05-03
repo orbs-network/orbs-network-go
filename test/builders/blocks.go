@@ -8,9 +8,9 @@ package builders
 
 import (
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -50,7 +50,7 @@ func BlockPair() *blockPair {
 			TransactionsMerkleRootHash: empty32ByteHash,
 			MetadataHash:               empty32ByteHash,
 			NumSignedTransactions:      1,
-			BlockProposerAddress: 		empty32ByteHash,
+			BlockProposerAddress:       empty32ByteHash,
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
 		transactions: transactions,
@@ -67,7 +67,7 @@ func BlockPair() *blockPair {
 			PreExecutionStateMerkleRootHash: empty32ByteHash,
 			NumContractStateDiffs:           1,
 			NumTransactionReceipts:          1,
-			BlockProposerAddress: 			 empty32ByteHash,
+			BlockProposerAddress:            empty32ByteHash,
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),

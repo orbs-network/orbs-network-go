@@ -10,11 +10,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	ethereumDigest "github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	lhprotocol "github.com/orbs-network/lean-helix-go/spec/types/go/protocol"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
@@ -51,7 +51,7 @@ func (km *keyManager) SignRandomSeed(ctx context.Context, blockHeight lhprimitiv
 }
 
 func (km *keyManager) VerifyConsensusMessage(blockHeight lhprimitives.BlockHeight, content []byte, sender *lhprotocol.SenderSignature) error {
-	return digest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature()))
+	return ethereumDigest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature()))
 }
 
 func (km *keyManager) VerifyRandomSeed(blockHeight lhprimitives.BlockHeight, content []byte, sender *lhprotocol.SenderSignature) error {
@@ -68,7 +68,7 @@ func (km *keyManager) VerifyRandomSeed(blockHeight lhprimitives.BlockHeight, con
 		return nil
 	}
 
-	if err := digest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature())); err != nil {
+	if err := ethereumDigest.VerifyNodeSignature(primitives.NodeAddress(sender.MemberId()), content, primitives.EcdsaSecp256K1Sig(sender.Signature())); err != nil {
 		return errors.Wrapf(err, "digest.VerifyNodeSignature() failed")
 	}
 	return nil

@@ -7,12 +7,12 @@
 package leanhelixconsensus
 
 import (
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/scribe/log"
 
-	"github.com/orbs-network/orbs-network-go/crypto/validators"
+	"github.com/orbs-network/crypto-lib-go/crypto/validators"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/pkg/errors"
