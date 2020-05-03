@@ -9,9 +9,9 @@ package deployments_systemcontract
 import (
 	"bytes"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/encoding"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/address"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/state"
-	"github.com/orbs-network/orbs-network-go/crypto/encoding"
 )
 
 func lockNativeDeployment() {

@@ -9,8 +9,8 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/services/virtualmachine"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -28,7 +28,7 @@ type harness struct {
 	processors           map[protocol.ProcessorType]*services.MockProcessor
 	crosschainConnectors map[protocol.CrosschainConnectorType]*services.MockCrosschainConnector
 	management           *services.MockManagement
-	cfg					 *managementConfig
+	cfg                  *managementConfig
 	logger               log.Logger
 	service              services.VirtualMachine
 }
@@ -57,7 +57,7 @@ func newHarness(logger log.Logger) *harness {
 	cfg := NewTestManagementProvider()
 	management := &services.MockManagement{}
 	management.When("GetCommittee", mock.Any, mock.Any).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[:4]}, nil)
-	management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive:true}, nil)
+	management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive: true}, nil)
 
 	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, management, cfg, logger)
 
@@ -212,7 +212,7 @@ type managementConfig struct {
 }
 
 func NewTestManagementProvider() *managementConfig {
-	return  &managementConfig{ liveTime: 1*time.Minute}
+	return &managementConfig{liveTime: 1 * time.Minute}
 }
 
 func (mp *managementConfig) ManagementNetworkLivenessTimeout() time.Duration {

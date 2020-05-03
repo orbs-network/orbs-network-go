@@ -8,7 +8,7 @@ package transactionpool
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"

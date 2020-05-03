@@ -8,7 +8,7 @@ package consensuscontext
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -27,12 +27,12 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "CreateTransactionsBlock failed genesis time %s", err)
 	}
 
-	proposedReferenceTime, err  := s.proposeBlockReferenceTime(ctx, prevBlockReferenceTime)
+	proposedReferenceTime, err := s.proposeBlockReferenceTime(ctx, prevBlockReferenceTime)
 	if err != nil {
 		return nil, err
 	}
 
-	proposedProtocolVersion, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:proposedReferenceTime})
+	proposedProtocolVersion, err := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference: proposedReferenceTime})
 	if err != nil {
 		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
 		return nil, err

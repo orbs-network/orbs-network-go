@@ -9,10 +9,10 @@ package inmemory
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/bootstrap"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
 	blockStorageMemoryAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"

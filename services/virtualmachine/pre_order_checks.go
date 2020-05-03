@@ -7,8 +7,8 @@
 package virtualmachine
 
 import (
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/crypto/signature"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/signature"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -40,14 +40,14 @@ func verifyEd25519Signer(signedTransaction *protocol.SignedTransaction) bool {
 }
 
 func (s *service) verifySubscription(ctx context.Context, reference primitives.TimestampSeconds) bool {
- 	res, err := s.management.GetSubscriptionStatus(ctx, &services.GetSubscriptionStatusInput{Reference: reference})
- 	if err != nil {
- 		s.logger.Error("management.GetSubscriptionStatus should not return error", log.Error(err))
- 		return false
+	res, err := s.management.GetSubscriptionStatus(ctx, &services.GetSubscriptionStatusInput{Reference: reference})
+	if err != nil {
+		s.logger.Error("management.GetSubscriptionStatus should not return error", log.Error(err))
+		return false
 	}
 	return res.SubscriptionStatusIsActive
 }
 
 func (s *service) verifyLiveness(blockTime primitives.TimestampNano, referenceTime primitives.TimestampSeconds) bool {
-	return  time.Duration(referenceTime) * time.Second + s.cfg.ManagementNetworkLivenessTimeout() >= time.Duration(blockTime)
+	return time.Duration(referenceTime)*time.Second+s.cfg.ManagementNetworkLivenessTimeout() >= time.Duration(blockTime)
 }

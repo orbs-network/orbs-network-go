@@ -8,7 +8,7 @@ package consensuscontext
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -46,4 +46,3 @@ func (s *service) printTxHash(logger log.Logger, txBlock *protocol.TransactionsB
 		logger.Info("transaction entered transactions block", log.String("flow", "checkpoint"), logfields.Transaction(txHash), logfields.BlockHeight(txBlock.Header.BlockHeight()))
 	}
 }
-

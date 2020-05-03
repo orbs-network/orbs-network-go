@@ -9,9 +9,9 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/signer"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"

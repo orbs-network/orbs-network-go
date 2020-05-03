@@ -8,7 +8,7 @@ package test
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -79,7 +79,7 @@ func TestCreateBlock_CreateTxsBlockFailsWithBadGenesis(t *testing.T) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
 			h.management.Reset()
-			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix()+5000))
 			txCount := uint32(2)
 			h.expectTxPoolToReturnXTransactions(txCount)
 
@@ -102,10 +102,10 @@ func TestCreateBlock_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTime
 			h.expectTxPoolToReturnXTransactions(txCount)
 
 			txBlock, err := h.service.RequestNewTransactionsBlock(ctx, &services.RequestNewTransactionsBlockInput{
-				CurrentBlockHeight:      2,
-				PrevBlockHash:           hash.CalcSha256([]byte{1}),
-				PrevBlockTimestamp:      primitives.TimestampNano(time.Now().UnixNano() - 100),
-				PrevBlockReferenceTime:  prevRef,
+				CurrentBlockHeight:     2,
+				PrevBlockHash:          hash.CalcSha256([]byte{1}),
+				PrevBlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano() - 100),
+				PrevBlockReferenceTime: prevRef,
 			})
 
 			require.NoError(t, err, "request transactions block failed")
@@ -125,7 +125,7 @@ func TestCreateBlock_CreateResultsBlockFailsWithBadGenesis(t *testing.T) {
 			require.NoError(t, err, "request transactions block failed")
 
 			h.management.Reset()
-			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+			setManagementValues(h.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix()+5000))
 			_, err = h.requestResultsBlock(ctx, txBlock)
 
 			require.Error(t, err, "request results block should fail")

@@ -10,9 +10,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/processor/native"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/testkit"
@@ -37,8 +37,8 @@ func generateDeployTx() *protocol.SignedTransaction {
 }
 
 type harness struct {
-	vm                services.VirtualMachine
-	repository        *testkit.ManualRepository
+	vm         services.VirtualMachine
+	repository *testkit.ManualRepository
 }
 
 func newVmHarness(logger log.Logger) *harness {
@@ -94,9 +94,8 @@ func (h *harness) process(ctx context.Context, txs ...*protocol.SignedTransactio
 	})
 }
 
-type vmCfg struct {}
+type vmCfg struct{}
 
 func (c *vmCfg) ManagementNetworkLivenessTimeout() time.Duration {
-	return 10*time.Minute
+	return 10 * time.Minute
 }
-

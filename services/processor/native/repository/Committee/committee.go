@@ -8,8 +8,8 @@ package committee_systemcontract
 
 import (
 	"encoding/binary"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/env"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 )
 
 /**
@@ -76,5 +76,5 @@ func _nextRandom(random []byte) []byte {
 }
 
 func _getRandomWeight(random []byte, maxWeight int) int {
-	return int(binary.LittleEndian.Uint32(random[hash.SHA256_HASH_SIZE_BYTES-4:]) % uint32(maxWeight)) + 1
+	return int(binary.LittleEndian.Uint32(random[hash.SHA256_HASH_SIZE_BYTES-4:])%uint32(maxWeight)) + 1
 }

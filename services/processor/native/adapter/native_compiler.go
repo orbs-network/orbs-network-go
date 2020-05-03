@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	sdkContext "github.com/orbs-network/orbs-contract-sdk/go/context"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/test/contracts"

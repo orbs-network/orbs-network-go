@@ -8,7 +8,7 @@ package acceptance
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"

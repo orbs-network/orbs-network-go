@@ -9,8 +9,8 @@ package statestorage
 import (
 	"bytes"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/crypto/hash"
-	"github.com/orbs-network/orbs-network-go/crypto/merkle"
+	"github.com/orbs-network/crypto-lib-go/crypto/hash"
+	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -60,11 +60,11 @@ func newRollingRevisions(logger log.Logger, persist adapter.StatePersistence, tr
 	}
 
 	result := &rollingRevisions{
-		logger:             logger,
-		persist:            persist,
-		transientRevisions: transientRevisions,
-		merkle:             merkle,
-		currentHeight:      h,
+		logger:               logger,
+		persist:              persist,
+		transientRevisions:   transientRevisions,
+		merkle:               merkle,
+		currentHeight:        h,
 		currentTs:            ts,
 		currentProposer:      pa,
 		currentMerkleRoot:    r,

@@ -7,10 +7,10 @@
 package test
 
 import (
+	"github.com/orbs-network/crypto-lib-go/crypto/digest"
 	"github.com/orbs-network/lean-helix-go/services/interfaces"
 	"github.com/orbs-network/lean-helix-go/services/messagesfactory"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
-	"github.com/orbs-network/orbs-network-go/crypto/digest"
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/leanhelixconsensus"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 )
