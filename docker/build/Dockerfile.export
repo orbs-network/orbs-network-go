@@ -2,7 +2,7 @@ FROM golang:1.12.9
 
 RUN apt-get install -y git
 
-RUN mkdir -p /src/_tmp/processor-artifacts/
+ADD ./_bin/go.mod /src/_tmp/processor-artifacts/go.mod
 
 RUN cd /src/_tmp/processor-artifacts/ && go mod download
 

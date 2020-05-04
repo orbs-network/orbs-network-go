@@ -23,7 +23,7 @@ require (
 )
 `
 
-func writeArtifactsGoModToDisk(targetFilePath string, versions config.ArtifactsDependencyVersions) error {
+func WriteArtifactsGoModToDisk(targetFilePath string, versions config.ArtifactsDependencyVersions) error {
 	t, err := template.New("go.mod.template").Parse(GO_MOD_TEMPLATE)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse go.mod.template file")

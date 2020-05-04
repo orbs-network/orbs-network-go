@@ -4,6 +4,10 @@ WORKDIR /src
 
 RUN apt-get install -y git bash libc6-dev
 
+ADD ./go.* /src/
+
+RUN go mod download
+
 ADD . /src
 
 RUN env

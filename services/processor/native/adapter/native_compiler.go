@@ -113,7 +113,7 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	projectGoModPath := path.Join(config.GetProjectSourceRootPath(), "go.mod") // ensures compatibility with tests
 	versions := config.GetMainProjectDependencyVersions(projectGoModPath)
 	goModPath := filepath.Join(artifactsPath, "go.mod")
-	if err := writeArtifactsGoModToDisk(goModPath, versions); err != nil {
+	if err := WriteArtifactsGoModToDisk(goModPath, versions); err != nil {
 		return nil, err
 	}
 
