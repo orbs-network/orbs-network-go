@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -55,12 +56,22 @@ func RunOnRandomPort(t testing.TB, overrideConfig string) string {
 
 func SendTransaction(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.OrbsAccount, contractName string, method string, args ...interface{}) *codec.SendTransactionResponse {
 
-	tx, _, err := orbs.CreateTransaction(sender.PublicKey, sender.PrivateKey, contractName, method, args...)
+	tx, txId, err := orbs.CreateTransaction(sender.PublicKey, sender.PrivateKey, contractName, method, args...)
 	require.NoError(t, err, "failed creating tx %s.%s", contractName, method)
 	res, err := orbs.SendTransaction(tx)
-	require.NoError(t, err, "failed sending tx %s.%s", contractName, method)
-	require.EqualValues(t, codec.TRANSACTION_STATUS_COMMITTED.String(), res.TransactionStatus.String(), "transaction to %s.%s not committed", contractName, method)
-	require.EqualValues(t, codec.EXECUTION_RESULT_SUCCESS.String(), res.ExecutionResult.String(), "transaction to %s.%s not successful", contractName, method)
+	if err != nil && isNotHttp202Error(err) {
+		require.NoError(t, err, "failed sending tx %s.%s", contractName, method)
+	}
+
+	test.Eventually(10*time.Second, func() bool {
+		r, err := orbs.GetTransactionStatus(txId)
+		if err != nil {
+			return false
+		}
+
+		return codec.TRANSACTION_STATUS_COMMITTED.String() == r.TransactionStatus.String() &&
+			codec.EXECUTION_RESULT_SUCCESS.String() == r.ExecutionResult.String()
+	})
 
 	return res
 }
@@ -97,4 +108,8 @@ func Shutdown(t *testing.T, endpoint string) {
 	res, err := http.Post(fmt.Sprintf("%s/debug/gamma/shutdown", endpoint), "text/plain", nil)
 	require.NoError(t, err, "failed sending shutdown call")
 	require.EqualValues(t, 200, res.StatusCode, "failed sending shutdown call")
+}
+
+func isNotHttp202Error(err error) bool {
+	return !strings.Contains(err.Error(), "http status 202 Accepted")
 }

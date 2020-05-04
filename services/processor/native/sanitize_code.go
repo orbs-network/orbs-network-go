@@ -22,9 +22,6 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			// SDK
 			`"github.com/orbs-network/orbs-contract-sdk/go/sdk/v1/*"`: "SDK",
 
-			// Contract external libraries
-			`"github.com/orbs-network/contract-external-libraries-go/v1/*"`: "Contract external libraries",
-
 			// Text
 			`"strings"`:       "Text manipulation",
 			`"strconv"`:       "Text manipulation",
@@ -56,8 +53,7 @@ func SanitizerConfigForProduction() *sanitizer.SanitizerConfig {
 			`"golang.org/x/crypto/sha3"`:    "SHA-3",
 
 			// Math
-			`"math/big"`:                    "Math for big.Int",
-
+			`"math/big"`: "Math for big.Int",
 		},
 		FunctionBlacklist: map[string][]string{
 			"time": {

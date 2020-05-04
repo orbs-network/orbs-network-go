@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/config"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -102,11 +103,24 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 	defer c.metrics.totalCompileTime.RecordSince(start)
 
 	artifactsPath := c.config.ProcessorArtifactPath()
+	os.MkdirAll(artifactsPath, 0755)
 
 	hashOfCode := getHashOfCode(code)
 
 	logger.Info("writing source code to disk", log.String("artifact-path", artifactsPath), log.String("hash-of-code", hashOfCode))
 	writeTime := time.Now()
+
+	projectGoModPath := path.Join(config.GetProjectSourceRootPath(), "go.mod") // ensures compatibility with tests
+	versions := config.GetMainProjectDependencyVersions(projectGoModPath)
+	goModPath := filepath.Join(artifactsPath, "go.mod")
+	if err := WriteArtifactsGoModToDisk(goModPath, versions); err != nil {
+		return nil, err
+	}
+
+	out, err := runGoCommand(context.Background(), artifactsPath, "mod", "download")
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not download dependencies: %s", out)
+	}
 
 	sourceCodeFilePaths, err := writeSourceCodeToDisk(hashOfCode, code, artifactsPath)
 	c.metrics.writeToDiskTime.RecordSince(writeTime)
@@ -120,7 +134,9 @@ func (c *nativeCompiler) Compile(ctx context.Context, code ...string) (*sdkConte
 
 	logger.Info("building shared object", log.StringableSlice("source-path", sourceCodeFilePaths))
 	buildTime := time.Now()
+
 	soFilePath, err := buildSharedObject(ctx, hashOfCode, sourceCodeFilePaths, artifactsPath)
+
 	c.metrics.buildTime.RecordSince(buildTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not build a shared object")
