@@ -2,29 +2,28 @@ package serializer
 
 import (
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 )
 
 type StatePersistenceDeserializer interface {
-	Deserialize([]byte) (adapter.StatePersistence, error)
+	Deserialize([]byte) error
 }
 
 type statePersistenceDeserializer struct {
 	*memory.InMemoryStatePersistence
 }
 
-func NewPersistenceDeserializer(registry metric.Registry) StatePersistenceDeserializer {
+func NewStatePersistenceDeserializer(persistence *memory.InMemoryStatePersistence) StatePersistenceDeserializer {
 	return &statePersistenceDeserializer{
-		memory.NewStatePersistence(registry),
+		persistence,
 	}
 }
 
-func (s *statePersistenceDeserializer) Deserialize(raw []byte) (adapter.StatePersistence, error) {
+func (s *statePersistenceDeserializer) Deserialize(raw []byte) error {
 	reader := SerializedMemoryPersistenceReader(raw)
 	if !reader.IsValid() {
-		return nil, fmt.Errorf("impossibe to deserialize state: invalid input")
+		return fmt.Errorf("impossibe to deserialize state: invalid input")
 	}
 
 	blockHeight := reader.BlockHeight()
@@ -38,8 +37,9 @@ func (s *statePersistenceDeserializer) Deserialize(raw []byte) (adapter.StatePer
 		entry := i.NextEntries()
 		// FIXME could be optimized further
 		diff := adapter.ChainState{entry.ContractName(): {string(entry.Key()): entry.Value()}}
+		// FIXME check for errors
 		s.Write(blockHeight, timestamp, refTime, prevRefTime, proposer, merkle, diff)
 	}
 
-	return s.InMemoryStatePersistence, nil
+	return nil
 }

@@ -17,10 +17,10 @@ func TestStatePersistenceSerializer_Dump(t *testing.T) {
 	dump, err := serializer.Dump()
 	require.NoError(t, err)
 
-	m, err := NewPersistenceDeserializer(metric.NewRegistry()).Deserialize(dump)
+	deserializedDriver := newDriver()
+	err = NewStatePersistenceDeserializer(deserializedDriver.InMemoryStatePersistence).Deserialize(dump)
 	require.NoError(t, err)
 
-	deserializedDriver := newDriverFromPersistence(m.(*memory.InMemoryStatePersistence))
 	deserializedDriver.checkIntegrity(t)
 }
 
@@ -31,12 +31,6 @@ type driver struct {
 func newDriver() *driver {
 	return &driver{
 		memory.NewStatePersistence(metric.NewRegistry()),
-	}
-}
-
-func newDriverFromPersistence(persistence *memory.InMemoryStatePersistence) *driver {
-	return &driver{
-		persistence,
 	}
 }
 

@@ -86,13 +86,14 @@ func TestServiceSyncStartupManually(t *testing.T) {
 		dump, err := ioutil.ReadFile("./dump.bin")
 		require.NoError(t, err)
 
-		inmemory, err := NewPersistenceDeserializer(metric.NewRegistry()).Deserialize(dump)
+		metricFactory := metric.NewRegistry()
+		inmemory := memory.NewStatePersistence(metricFactory)
+		err = NewStatePersistenceDeserializer(inmemory).Deserialize(dump)
 		require.NoError(t, err)
 
-		fmt.Println(inmemory.(*memory.InMemoryStatePersistence).Dump())
+		fmt.Println(inmemory.Dump())
 
 		logger := log.GetLogger().WithFilters(log.DiscardAll())
-		metricFactory := metric.NewRegistry()
 
 		persistence, blockHeight := getBlockPersistence(t, logger, metricFactory)
 
