@@ -7,7 +7,6 @@
 package serializer
 
 import (
-	"fmt"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter"
 	"github.com/orbs-network/orbs-network-go/services/statestorage/adapter/memory"
 )
@@ -53,8 +52,8 @@ func (s *statePersistenceSerializer) Dump() ([]byte, error) {
 		}
 	}
 
-	fmt.Println(fmt.Sprintf("%+v", persistence))
-	fmt.Println(persistence.Build().String())
+	//fmt.Println(fmt.Sprintf("%+v", persistence))
+	//fmt.Println(persistence.Build().String())
 
 	return persistence.Build().Raw(), nil
 }
