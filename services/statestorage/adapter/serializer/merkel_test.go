@@ -2,6 +2,7 @@ package serializer
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/crypto-lib-go/crypto/merkle"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -11,16 +12,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"testing"
+	"time"
 )
 
 func TestMerkle(t *testing.T) {
 	with.Context(func(ctx context.Context) {
+		metricFactory := metric.NewRegistry()
+		inmemory := memory.NewStatePersistence(metricFactory)
+
+		timeDeserialize := time.Now()
 		dump, err := ioutil.ReadFile("./dump.bin")
 		require.NoError(t, err)
 
-		metricFactory := metric.NewRegistry()
-		inmemory := memory.NewStatePersistence(metricFactory)
 		err = NewStatePersistenceDeserializer(inmemory).Deserialize(dump)
+		fmt.Println("loading + deserialization time", time.Since(timeDeserialize))
 		require.NoError(t, err)
 
 		forest, root := merkle.NewForest()
