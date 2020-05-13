@@ -44,7 +44,7 @@ func (l *localConfig) NetworkType() protocol.SignerNetworkType {
 }
 
 func TestServiceSyncManually(t *testing.T) {
-	t.Skip("manual test")
+	//t.Skip("manual test")
 
 	with.Context(func(ctx context.Context) {
 		logger := log.GetLogger().WithFilters(log.DiscardAll())
@@ -61,12 +61,12 @@ func TestServiceSyncManually(t *testing.T) {
 		servicesync.NewServiceBlockSync(ctx, logger, persistence, committer)
 
 		syncStart := time.Now()
-		test.Eventually(10*time.Minute, func() bool {
+		require.Eventually(t, func() bool {
 			inmemoryBlockHeight, _, _, _, _, _, err := inmemory.ReadMetadata()
 			fmt.Println(fmt.Sprintf("stateBH/persistentBH %d/%d", inmemoryBlockHeight, blockHeight))
 			fmt.Println("time elapsed", time.Since(syncStart).String())
 			return err == nil && inmemoryBlockHeight >= blockHeight-100 // gets stuck on last 5 blocks for whatever reason
-		})
+		}, 10*time.Minute, 1*time.Second)
 		fmt.Println("sync time", time.Since(syncStart).String())
 
 		dumpStart := time.Now()
@@ -74,7 +74,9 @@ func TestServiceSyncManually(t *testing.T) {
 		fmt.Println("dump time", time.Since(dumpStart).String())
 		require.NoError(t, err)
 
+		dumpWriteTime := time.Now()
 		err = ioutil.WriteFile("./dump.bin", dump, 0644)
+		fmt.Println("dump writing time", time.Since(dumpWriteTime).String())
 		require.NoError(t, err)
 	})
 }
@@ -118,6 +120,21 @@ func TestServiceSyncStartupManually(t *testing.T) {
 
 func getBlockPersistence(t *testing.T, logger log.Logger, metricFactory metric.Factory) (*filesystem.BlockPersistence, primitives.BlockHeight) {
 	start := time.Now()
+
+	//vcid, _ := strconv.ParseInt(os.Getenv("VCHAIN"), 10, 32)
+	//blocksPath := os.Getenv("BLOCKS_DIR")
+	//
+	//persistence, err := filesystem.NewBlockPersistence(&localConfig{
+	//	chainId:     primitives.VirtualChainId(vcid),
+	//	networkType: protocol.NETWORK_TYPE_RESERVED,
+	//	dir:         blocksPath,
+	//}, logger, metricFactory)
+
+	//persistence, err := filesystem.NewBlockPersistence(&localConfig{
+	//	chainId:     1960000,
+	//	networkType: protocol.NETWORK_TYPE_RESERVED,
+	//	dir:         "/Users/kirill/Downloads",
+	//}, logger, metricFactory)
 
 	persistence, err := filesystem.NewBlockPersistence(&localConfig{
 		chainId:     1100000,
