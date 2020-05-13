@@ -40,9 +40,9 @@ func NewInMemoryPersistenceWrapper(config config.NodeConfig, logger log.Logger, 
 }
 
 func (w *memoryPersistenceWrapper) loadStatePersistence() {
-	stateFilePath := w.getStateFilePath()
+	start := time.Now()
 
-	dump, err := ioutil.ReadFile(stateFilePath)
+	dump, err := ioutil.ReadFile(w.getStateFilePath())
 	if err != nil {
 		w.logger.Error("failed to read state file", log.Error(err))
 		return
@@ -52,7 +52,7 @@ func (w *memoryPersistenceWrapper) loadStatePersistence() {
 		w.logger.Error("failed to deserialize state file", log.Error(err))
 		return
 	} else {
-		w.logger.Info("finished loading the state")
+		w.logger.Info("finished loading the state", log.String("duration", time.Since(start).String()))
 	}
 
 	fmt.Println("loading the state ")
