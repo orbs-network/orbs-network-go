@@ -82,7 +82,7 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 		referenceDistance:        100 * time.Second,
 		managementReferenceGrace: 100 * time.Second,
 		blocksOrder:              gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
-		descendingActivationDate: "2220-06-15T12:00:00.000Z",
+		descendingActivationDate: time.Now().AddDate(0, -1, 0).Format(time.RFC3339),//"2220-06-15T12:00:00.000Z",
 	}
 }
 

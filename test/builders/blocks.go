@@ -132,6 +132,12 @@ func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {
 	return b
 }
 
+func (b *blockPair) WithReferenceTime(refTime primitives.TimestampSeconds) *blockPair {
+	b.txHeader.ReferenceTime = refTime
+	b.rxHeader.ReferenceTime = refTime
+	return b
+}
+
 func (b *blockPair) WithProtocolVersion(version primitives.ProtocolVersion) *blockPair {
 	b.txHeader.ProtocolVersion = version
 	b.rxHeader.ProtocolVersion = version

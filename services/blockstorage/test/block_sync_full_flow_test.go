@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -31,9 +30,10 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(200 * time.Millisecond).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
-			withSyncCollectChunksTimeout(50 * time.Millisecond)
+			withSyncCollectChunksTimeout(50 * time.Millisecond).
+			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, 1, 0).Format(time.RFC3339)) // ensures activation date in the future => ascending order
 
-		testSyncPetitionerCompleteSyncFlow(ctx, t, harness)	})
+			testSyncPetitionerCompleteSyncFlow(ctx, t, harness)	})
 }
 
 func TestSyncPetitioner_CompleteSyncFlowDescending(t *testing.T) {
@@ -159,47 +159,6 @@ func (s *syncFlowResults) logHandleBlockConsensusCalls(t *testing.T, input *hand
 	}
 }
 
-func reverse(arr []*protocol.BlockPairContainer) {
-	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
-		arr[i], arr[j] = arr[j], arr[i]
-	}
-}
-
-func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, blockChain []*protocol.BlockPairContainer, batchSize uint32) {
-	blocksOrder := input.Message.SignedChunkRange.BlocksOrder()
-	fromBlock := input.Message.SignedChunkRange.FirstBlockHeight()
-	toBlock := input.Message.SignedChunkRange.LastBlockHeight()
-	availableBlocks := len(blockChain)
-	blockChainCopy := make([]*protocol.BlockPairContainer, availableBlocks)
-	copy(blockChainCopy, blockChain)
-	var blocks []*protocol.BlockPairContainer
-
-	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
-		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
-			fromBlock = primitives.BlockHeight(availableBlocks)
-		}
-		if toBlock > primitives.BlockHeight(availableBlocks) {
-			return
-		}
-		// limit batch size server
-		if (fromBlock + 1 > primitives.BlockHeight(batchSize)) && (fromBlock + 1 - primitives.BlockHeight(batchSize) > toBlock) {
-			toBlock = fromBlock + 1 - primitives.BlockHeight(batchSize)
-		}
-		blocks = blockChainCopy[toBlock-1 : fromBlock]
-		reverse(blocks)
-
-	} else {
-		blocks = blockChain[fromBlock-1 : toBlock]
-	}
-	response := builders.BlockSyncResponseInput().
-		WithFirstBlockHeight(fromBlock).
-		WithLastBlockHeight(toBlock).
-		WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
-		WithBlocksOrder(input.Message.SignedChunkRange.BlocksOrder()).
-		WithSenderNodeAddress(input.RecipientNodeAddress).
-		WithBlocks(blocks).Build()
-	go harness.blockStorage.HandleBlockSyncResponse(ctx, response)
-}
 
 func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, input *gossiptopics.BlockSyncRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
 	sourceAddresses := make([]primitives.NodeAddress, 0, len(sources))
@@ -214,7 +173,7 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 
 	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		require.Conditionf(t, func() (success bool) {
-			return (lastRequestedBlock >= 1 && lastRequestedBlock <= availableBlocks) && (firstRequestedBlock == 0 || firstRequestedBlock >= lastRequestedBlock && firstRequestedBlock <= availableBlocks)
+			return (lastRequestedBlock >= 1 && lastRequestedBlock <= availableBlocks) && (firstRequestedBlock == 0 || (firstRequestedBlock >= lastRequestedBlock && firstRequestedBlock <= availableBlocks))
 		}, "request is not consistent with my BlockAvailabilityResponse: first (%d) and last (%d) requested block must be smaller than total (%d); either first requested block is unknown(0) or first must be larger than last", firstRequestedBlock, lastRequestedBlock, availableBlocks )
 
 	} else {

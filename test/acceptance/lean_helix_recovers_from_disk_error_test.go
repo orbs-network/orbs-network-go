@@ -9,6 +9,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -19,9 +20,13 @@ import (
 )
 
 func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		AllowingErrors(

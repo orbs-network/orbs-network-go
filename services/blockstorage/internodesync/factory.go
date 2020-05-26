@@ -37,7 +37,7 @@ func (bi *BlockInfo) String() string {
 }
 
 type TempSyncStorage struct {
-	mutex     sync.RWMutex
+	Mutex     sync.RWMutex
 	blocksMap map[primitives.BlockHeight]*protocol.BlockPairContainer
 	syncState *StorageSyncState
 }
@@ -79,13 +79,21 @@ func (st *StorageSyncState) String() string {
 }
 
 func (s *TempSyncStorage) GetStorageSyncState() *StorageSyncState {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
+	s.Mutex.RLock()
+	defer s.Mutex.RUnlock()
 	return s.syncState
 }
 
-func (s *TempSyncStorage) UpdateStorageSyncState(committedBlock *protocol.BlockPairContainer) {
-
+func (s *TempSyncStorage) Update(committedBlock *protocol.BlockPairContainer) {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+	commitBlockHeight := committedBlock.TransactionsBlock.Header.BlockHeight()
+	if commitBlockHeight > s.syncState.Top.Height {
+		s.blocksMap[commitBlockHeight] = committedBlock
+		s.syncState.Top.Set(committedBlock)
+		s.syncState.LastSynced.Set(committedBlock)
+		s.syncState.TopInOrder.Set(committedBlock)
+	}
 }
 
 type stateFactory struct {
@@ -175,25 +183,20 @@ func NewStateFactoryWithTimers(
 }
 
 func (f *stateFactory) NotifyTempStorageSyncState(committedBlock *protocol.BlockPairContainer) {
-	f.tempSyncStorage.mutex.Lock()
-	defer f.tempSyncStorage.mutex.Unlock()
-
 	if committedBlock == nil {
 		return
 	}
 	commitBlockHeight := committedBlock.TransactionsBlock.Header.BlockHeight()
 	f.logger.Info("Trying to update SyncStorageState", logfields.BlockHeight(commitBlockHeight))
-
-	syncState := f.tempSyncStorage.syncState
-	if commitBlockHeight > syncState.Top.Height {
-		syncState.Top.Set(committedBlock)
-		syncState.LastSynced.Set(syncState.Top.Block)
-		syncState.TopInOrder.Set(syncState.Top.Block)
-	}
+	f.tempSyncStorage.Update(committedBlock)
 }
 
 func (f *stateFactory) GetTempStorageSyncState() *StorageSyncState {
 	return f.tempSyncStorage.GetStorageSyncState()
+}
+
+func (f *stateFactory) GetTempStorage() TempSyncStorage {
+	return f.tempSyncStorage
 }
 
 func (f *stateFactory) GetSyncBlocksOrder() gossipmessages.SyncBlocksOrder {

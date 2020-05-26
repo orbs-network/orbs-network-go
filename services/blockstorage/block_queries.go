@@ -104,7 +104,7 @@ func (s *Service) GetTransactionReceipt(ctx context.Context, input *services.Get
 // Returns a slice of blocks containing first and last
 // TODO kill this method signature or use a larger page size without returning too many blocks
 func (s *Service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
-	blocks := make([]*protocol.BlockPairContainer, 0, last-first+1)
+	blocks := make([]*protocol.BlockPairContainer, 0, last+1-first)
 	err := s.persistence.ScanBlocks(first, 1, func(firstInPage primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 		blocks = append(blocks, page...)
 		return firstInPage < last

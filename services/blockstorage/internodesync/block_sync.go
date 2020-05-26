@@ -172,8 +172,7 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
-
-	bs.updateStorageSyncState()
+	bs.UpdateStorageSyncState()
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
@@ -213,7 +212,11 @@ func (bs *BlockSync) GetStorageSyncState() *StorageSyncState {
 	return bs.factory.GetTempStorageSyncState()
 }
 
-func (bs *BlockSync) updateStorageSyncState() {
+func (bs *BlockSync) GetTempStorage() TempSyncStorage {
+	return bs.factory.GetTempStorage()
+}
+
+func (bs *BlockSync) UpdateStorageSyncState() {
 	if topBlock, err := bs.storage.GetLastCommittedBlock(); err == nil{
 		bs.factory.NotifyTempStorageSyncState(topBlock)
 	} else {

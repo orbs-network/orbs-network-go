@@ -21,12 +21,16 @@ import (
 )
 
 func TestCommitReputation_TransactionToElected(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-
 	nodeTampered := testKeys.NodeAddressesForTests()[4]
 	const maxruns = 100
 
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[0:5])
+			require.NoError(t, err)
+		}).
 		WithNumNodes(5).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -64,11 +68,11 @@ func TestCommitReputation_TransactionToElected(t *testing.T) {
 			}
 			require.NotEqual(t, maxruns, i, "failed to clear misses after %d passes", maxruns)
 
-	})
+		})
 }
 
 func findMissesOf(nodeAddress primitives.NodeAddress, committee [][20]byte, misses []uint32) int {
-	for i := 0;i < len(committee); i++ {
+	for i := 0; i < len(committee); i++ {
 		if bytes.Equal(nodeAddress, committee[i][:]) {
 			return int(misses[i])
 		}
@@ -84,7 +88,7 @@ func getCommitteeMisses(t testing.TB, queryResponse *client.RunQueryResponse) (c
 	misses = argsArray[1].([]uint32)
 
 	t.Logf("Committee at block %d", block)
-	for i := 0;i < len(committee); i++ {
+	for i := 0; i < len(committee); i++ {
 		t.Logf("#%d: Node %x Misses %d", i, committee[i], misses[i])
 	}
 	return

@@ -189,6 +189,10 @@ func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	}
 }
 
+func (d *harness) getBlockSync() *internodesync.BlockSync {
+	return d.blockStorage.GetNodeSync()
+}
+
 func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
 	d.config.syncNoCommit = duration
 	return d
@@ -236,6 +240,8 @@ func (d *harness) failNextBlocks() {
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
 	for i := 1; i <= count; i++ {
 		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+		d.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
+		time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -256,7 +262,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
-	cfg.descendingActivationDate = "2220-06-15T12:00:00.000Z"
+	cfg.descendingActivationDate = time.Now().AddDate(0, -1, 0).Format(time.RFC3339) //"2220-06-15T12:00:00.000Z"
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
@@ -342,4 +348,56 @@ func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness
 		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
 	}
 
+}
+
+
+
+func reverse(arr []*protocol.BlockPairContainer) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
+}
+
+func createBlockSyncResponse(input *gossiptopics.BlockSyncRequestInput, blockChain []*protocol.BlockPairContainer, batchSize uint32) *gossiptopics.BlockSyncResponseInput {
+	blocksOrder := input.Message.SignedChunkRange.BlocksOrder()
+	fromBlock := input.Message.SignedChunkRange.FirstBlockHeight()
+	toBlock := input.Message.SignedChunkRange.LastBlockHeight()
+	availableBlocks := len(blockChain)
+	blockChainCopy := make([]*protocol.BlockPairContainer, availableBlocks)
+	copy(blockChainCopy, blockChain)
+	var blocks []*protocol.BlockPairContainer
+
+	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
+			fromBlock = primitives.BlockHeight(availableBlocks)
+		}
+		if toBlock > primitives.BlockHeight(availableBlocks) {
+			return nil
+		}
+		// limit batch size server
+		if (fromBlock + 1 > primitives.BlockHeight(batchSize)) && (fromBlock + 1 - primitives.BlockHeight(batchSize) > toBlock) {
+			toBlock = fromBlock + 1 - primitives.BlockHeight(batchSize)
+		}
+		blocks = blockChainCopy[toBlock-1 : fromBlock]
+		reverse(blocks)
+
+	} else {
+		blocks = blockChain[fromBlock-1 : toBlock]
+	}
+	response := builders.BlockSyncResponseInput().
+		WithFirstBlockHeight(fromBlock).
+		WithLastBlockHeight(toBlock).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
+		WithBlocksOrder(input.Message.SignedChunkRange.BlocksOrder()).
+		WithSenderNodeAddress(input.RecipientNodeAddress).
+		WithBlocks(blocks).Build()
+
+	return response
+}
+
+func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, blockChain []*protocol.BlockPairContainer, batchSize uint32) {
+	response := createBlockSyncResponse(input, blockChain, batchSize)
+	if response != nil {
+		go harness.blockStorage.HandleBlockSyncResponse(ctx, response)
+	}
 }

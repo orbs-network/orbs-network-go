@@ -68,6 +68,9 @@ func (s *idleState) processState(ctx context.Context) syncState {
 
 
 func (s *idleState) checkManagementReferenceIsUpToDate(ctx context.Context) bool {
+	if s.managementReferenceGrace == 0 { // check is disabled // TODO: due to testing incompatibility with current reference time and time.Now()
+		return true
+	}
 	ref, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
 	if err != nil {
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))

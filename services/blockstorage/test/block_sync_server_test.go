@@ -11,10 +11,12 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"math"
@@ -23,15 +25,15 @@ import (
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		sourceAddress := keys.EcdsaSecp256K1KeyPairForTests(4).NodeAddress()
 		harness := newBlockStorageHarness(parent).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
+
+		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
+		harness.start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
 		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
@@ -74,8 +76,10 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
+
+		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
+		harness.start(ctx)
 
 		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -96,10 +100,11 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
 
+		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
+		harness.start(ctx)
 
 		msg := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(0)).Build()
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
@@ -118,8 +123,29 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 			expectValidateConsensusAlgos().
 			start(ctx)
 
+		// temp sync storage update artifact - as it depends on signal from persistent storage
+		// TODO: remove with temp storage
+		tempSyncStorage := harness.getBlockSync().GetTempStorage()
+		blockSyncHeightTracker := synchronization.NewBlockTracker(harness.Logger, 0, math.MaxUint16)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					if tempSyncStorage.GetStorageSyncState().Top.Height >= 3 {
+						blockSyncHeightTracker.IncrementTo(1)
+						blockSyncHeightTracker.IncrementTo(2)
+						blockSyncHeightTracker.IncrementTo(3)
+						return
+					}
+				}
+			}
+		}()
+
 		harness.commitSomeBlocks(ctx, 3)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(10*time.Millisecond)
+		blockSyncHeightTracker.WaitForBlock(ctx, primitives.BlockHeight(3))
 
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 		msg := builders.BlockAvailabilityRequestInput().

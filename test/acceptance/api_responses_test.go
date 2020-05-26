@@ -18,7 +18,12 @@ import (
 )
 
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -31,9 +36,12 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -46,22 +54,32 @@ func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-		defer cancel()
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 
-		tx := builders.TransferTransaction().WithArgs("bad", "types", "of", "args")
-		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
-		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_INPUT, resp.TransactionReceipt().ExecutionResult())
-	})
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
+
+			tx := builders.TransferTransaction().WithArgs("bad", "types", "of", "args")
+			resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
+			require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
+			require.Equal(t, protocol.EXECUTION_RESULT_ERROR_INPUT, resp.TransactionReceipt().ExecutionResult())
+		})
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -74,8 +92,12 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	t.Skip("Gad: Remove the skip when ")
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -88,8 +110,12 @@ func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestResponseForTransactionWithBadSignature(t *testing.T) {
-	NewHarness().
-		AllowingErrors("error validating transaction for preorder").
+	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
+		// set current reference time to now for node sync verifications
+		newRefTime := GenerateNewManagementReferenceTime(0)
+		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+		require.NoError(t, err)
+	}).AllowingErrors("error validating transaction for preorder").
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()

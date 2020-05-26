@@ -169,21 +169,10 @@ func (bc *blockChunk) generateBlocksChunk() {
 
 func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
 
-
 	if bc.blocks == nil {
 		bc.generateBlocksChunk()
 	}
 
-	//var blocks []*protocol.BlockPairContainer
-	//
-	//for i := bc.firstBlockHeight; i <= bc.lastBlockHeight; i++ {
-	//	blockTime := time.Unix(1550394190000000000+int64(i), 0) // deterministic block creation in the past based on block height
-	//	blocks = append(blocks, BlockPair().WithHeight(i).WithBlockCreated(blockTime).Build())
-	//}
-	//fmt.Println("block chunk build", bc.firstBlockHeight, bc.lastBlockHeight)
-	//for i, b := range blocks {
-	//	fmt.Println("blocks ", i, b.TransactionsBlock.Header.BlockHeight())
-	//}
 	return &gossiptopics.BlockSyncResponseInput{
 		Message: &gossipmessages.BlockSyncResponseMessage{
 			SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{

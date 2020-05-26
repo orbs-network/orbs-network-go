@@ -52,6 +52,12 @@ func TestLeanHelix_CommitTransaction(t *testing.T) {
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 			defer cancel()
@@ -83,6 +89,12 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
@@ -111,7 +123,14 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 }
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
-	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 

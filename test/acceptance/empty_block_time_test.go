@@ -9,6 +9,7 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
@@ -18,6 +19,12 @@ import (
 
 func TestIncomingTransactionTriggersExactlyOneBlock(t *testing.T) {
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
 		WithEmptyBlockTime(1*time.Second).
 		Start(t, func(tb testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
@@ -35,6 +42,12 @@ func TestIncomingTransactionTriggersExactlyOneBlock(t *testing.T) {
 
 func TestIncomingTransactionTriggersImmediateBlockClosure(t *testing.T) {
 	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
 		WithEmptyBlockTime(1*time.Hour).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		WithLogFilters(log.ExcludeEntryPoint("BlockSync")).

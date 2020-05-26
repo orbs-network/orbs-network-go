@@ -8,6 +8,7 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -38,25 +39,25 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	if s.nodeSync == nil {
 		return nil
 	}
-	storageSyncState := s.nodeSync.GetStorageSyncState()
+	tempSyncStorage := s.nodeSync.GetTempStorage()
 	logger.Info("received block availability request",
 		log.Stringable("availability-request-message", message))
 
-	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
-	requestFrom := message.SignedBatchRange.FirstBlockHeight()
-	requestTo := message.SignedBatchRange.LastBlockHeight()
-	requestSyncBlocksOrder := message.SignedBatchRange.BlocksOrder()
-
-	responseFrom, responseTo, err := getServerSyncRange(storageSyncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
-	if err != nil {
-		logger.Info("invalid sync range ", log.Error(err))
-		return nil
-	}
 	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
+	requestFrom := message.SignedBatchRange.FirstBlockHeight()
+	requestTo := message.SignedBatchRange.LastBlockHeight()
+	requestSyncBlocksOrder := message.SignedBatchRange.BlocksOrder()
+
+	responseFrom, responseTo, err := getServerSyncRange(tempSyncStorage, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
+	if err != nil {
+		logger.Info("invalid sync range ", log.Error(err))
+		return nil
+	}
 
 	response := &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientNodeAddress: message.Sender.SenderNodeAddress(),
@@ -82,13 +83,17 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 
 }
 
-func getServerSyncRange(storageSyncState *internodesync.StorageSyncState,
+func getServerSyncRange(tempSyncStorage internodesync.TempSyncStorage,
 	requestFrom primitives.BlockHeight,
 	requestTo primitives.BlockHeight,
 	requestSyncBlocksOrder gossipmessages.SyncBlocksOrder,
 	batchSize primitives.BlockHeight,
 ) (responseFrom primitives.BlockHeight, responseTo primitives.BlockHeight, err error) {
 
+	tempSyncStorage.Mutex.RLock()
+	defer tempSyncStorage.Mutex.RUnlock()
+
+	storageSyncState := tempSyncStorage.GetStorageSyncState()
 	topInOrder := storageSyncState.TopInOrder.Height
 	lastSynced := storageSyncState.LastSynced.Height
 	top := storageSyncState.Top.Height
@@ -97,13 +102,13 @@ func getServerSyncRange(storageSyncState *internodesync.StorageSyncState,
 	responseTo = requestTo
 
 	if (requestFrom > top) || (topInOrder < requestFrom && requestFrom < lastSynced) { // server does not hold range beginning
-		err = errors.New("Server does not hold requested range")
+		err = fmt.Errorf("server does not hold requested range requested (%s - %s) where storage sync state is: top(%s), lastSynced(%s), topInOrder(%s)", requestFrom.String(), requestTo.String(), top.String(), lastSynced.String(), topInOrder.String())
 		return
 	}
 
 	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING || requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED {
 		if requestFrom > requestTo {
-			err = errors.New("Invalid requested range")
+			err = errors.New("Invalid requested range ascending order with from > to")
 			return
 		}
 		if requestFrom <= topInOrder { // includes topInOrder = lastSynced = top
@@ -116,7 +121,7 @@ func getServerSyncRange(storageSyncState *internodesync.StorageSyncState,
 	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		// assert range - either (from=unknown or from > to ) and to > 0
 		if (requestTo == 0) || (requestFrom > 0 && requestTo > requestFrom) {
-			err = errors.New("Invalid requested range")
+			err = errors.New("Invalid requested range descending order with from < to")
 			return
 		}
 		if requestFrom == UNKNOWN_BLOCK_HEIGHT { // open ended request
@@ -155,32 +160,37 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	if s.nodeSync == nil {
 		return nil
 	}
-	storageSyncState := s.nodeSync.GetStorageSyncState()
+	tempSyncStorage := s.nodeSync.GetTempStorage()
 	logger.Info("received block sync chunk request",
 		log.Stringable("chunk-request-message", message))
-
-	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
-	requestFrom := message.SignedChunkRange.FirstBlockHeight()
-	requestTo := message.SignedChunkRange.LastBlockHeight()
-	requestSyncBlocksOrder := message.SignedChunkRange.BlocksOrder()
-	senderNodeAddress := message.Sender.SenderNodeAddress()
-
-	responseFrom, responseTo, err := getServerSyncRange(storageSyncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
-	if err != nil {
-		return err
-	}
 
 	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
+	requestFrom := message.SignedChunkRange.FirstBlockHeight()
+	requestTo := message.SignedChunkRange.LastBlockHeight()
+	requestSyncBlocksOrder := message.SignedChunkRange.BlocksOrder()
+	senderNodeAddress := message.Sender.SenderNodeAddress()
+
+	responseFrom, responseTo, err := getServerSyncRange(tempSyncStorage, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
+	if err != nil {
+		return err
+	}
 
 	var blocks []*protocol.BlockPairContainer
 	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING || requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED {
+		if responseFrom > responseTo {
+			return fmt.Errorf("Invalid calculated block slice range: from(%s) - to(%s) ", responseFrom.String(), responseTo.String())
+		}
 		blocks, _, _, err = s.GetBlockSlice(responseFrom, responseTo)
 	}
 	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if responseTo > responseFrom {
+			return fmt.Errorf("Invalid calculated block slice range: from(%s) - to(%s) ", responseFrom.String(), responseTo.String())
+		}
 		blocks, _, _, err = s.GetBlockSlice(responseTo, responseFrom)
 		if err == nil { // reverse blocks
 			reverse(blocks)

@@ -72,6 +72,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 	receivedSyncBlocksOrder := s.blocks.SignedChunkRange.BlocksOrder()
 	err := s.validatePosChain(ctx, s.blocks.BlockPairs, receivedSyncBlocksOrder)
+
 	if err != nil {
 		logger.Error("failed to verify the blocks chunk received via sync", log.Error(err))
 		return s.factory.CreateIdleState()
@@ -84,7 +85,6 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		}
 		prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
-
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
 			logger.Info("failed to validate Block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-Block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
@@ -106,11 +106,9 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && s.syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		return nil
 	} else if s.syncBlocksOrder != receivedSyncBlocksOrder {
-		return errors.New("received chunk with blocks order which does not match blockSync")
+		return errors.New("received chunk with blocks order which does not match blockSync expected blocks order")
 	}
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
-		//return nil
-		// TODO: revert
 		firstBlock := blocks[0]
 		if nextBlock := s.tempSyncStorage.getBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); nextBlock != nil { // will verify hash pointer to block
 			// prepend
@@ -121,13 +119,15 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 				s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 				return err
 			}
-			currentTime := primitives.TimestampSeconds(time.Now().Unix())
-			managementGrace := primitives.TimestampSeconds(s.managementReferenceGrace / time.Second)
-			if ref.CurrentReference + managementGrace < currentTime {
-				return errors.New(fmt.Sprintf("management.GetCurrentReference(%d) is outdated compared to current time (%d) and allowed grace (%d)", ref.CurrentReference, currentTime, managementGrace))
-			}
-			if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(s.referenceMaxDistance/time.Second) < ref.CurrentReference {
-				return errors.New(fmt.Sprintf("Block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
+			if s.managementReferenceGrace > 0 { // check is enabled // TODO: due to testing incompatibility with current reference time and time.Now()
+				currentTime := primitives.TimestampSeconds(time.Now().Unix())
+				managementGrace := primitives.TimestampSeconds(s.managementReferenceGrace / time.Second)
+				if ref.CurrentReference + managementGrace < currentTime {
+					return errors.New(fmt.Sprintf("management.GetCurrentReference(%d) is outdated compared to current time (%d) and allowed grace (%d)", ref.CurrentReference, currentTime, managementGrace))
+				}
+				if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(s.referenceMaxDistance/time.Second) < ref.CurrentReference {
+					return errors.New(fmt.Sprintf("Block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
+				}
 			}
 		}
 
@@ -163,6 +163,8 @@ func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder 
 		return blocks[index-1]
 	}
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		s.tempSyncStorage.Mutex.RLock()
+		defer s.tempSyncStorage.Mutex.RUnlock()
 		if index == len(blocks)-1 {
 			return s.tempSyncStorage.getBlock(blocks[index].TransactionsBlock.Header.BlockHeight() - 1)
 		}
@@ -172,8 +174,8 @@ func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder 
 }
 
 func commitBlockTemp(ctx context.Context, tempSyncStorage TempSyncStorage, block *protocol.BlockPairContainer, persistentStorage BlockSyncStorage, logger log.Logger, metrics processingStateMetrics) error {
-	tempSyncStorage.mutex.Lock()
-	defer tempSyncStorage.mutex.Unlock()
+	tempSyncStorage.Mutex.Lock()
+	defer tempSyncStorage.Mutex.Unlock()
 
 	commitBlockHeight := block.TransactionsBlock.Header.BlockHeight()
 	logger.Info("Trying to commit a Block to TempSyncStorage", logfields.BlockHeight(commitBlockHeight))

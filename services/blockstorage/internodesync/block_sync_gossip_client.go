@@ -126,8 +126,8 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 
 // inclusive range
 func (c *blockSyncClient) getClientSyncRange(syncBlocksOrder gossipmessages.SyncBlocksOrder, batchSize primitives.BlockHeight) (from primitives.BlockHeight, to primitives.BlockHeight, err error) {
-	c.tempSyncStorage.mutex.RLock()
-	defer c.tempSyncStorage.mutex.RUnlock()
+	c.tempSyncStorage.Mutex.RLock()
+	defer c.tempSyncStorage.Mutex.RUnlock()
 
 	topInOrder := c.tempSyncStorage.syncState.TopInOrder.Height
 	lastSynced := c.tempSyncStorage.syncState.LastSynced.Height

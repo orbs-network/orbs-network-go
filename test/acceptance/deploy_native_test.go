@@ -11,13 +11,21 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	"github.com/orbs-network/orbs-network-go/test/contracts"
+	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestDeployNativeContract(t *testing.T) {
-	NewHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
@@ -46,7 +54,14 @@ func TestDeployNativeContract(t *testing.T) {
 }
 
 func TestLockNativeDeployment(t *testing.T) {
-	NewHarness().Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().
+		WithSetup(func(ctx context.Context, network *Network) {
+			// set current reference time to now for node sync verifications
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			require.NoError(t, err)
+		}).
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		counterStart := contracts.MOCK_COUNTER_CONTRACT_START_FROM
 		network.MockContract(contracts.MockForCounter(), string(contracts.NativeSourceCodeForCounter(counterStart)))
