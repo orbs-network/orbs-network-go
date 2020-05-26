@@ -33,6 +33,7 @@ type Service struct {
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
 	txPool       services.TransactionPool
+	management      services.Management
 
 	config config.BlockStorageConfig
 
@@ -62,8 +63,17 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
-	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) *Service {
+func NewBlockStorage(
+	ctx context.Context,
+	config config.BlockStorageConfig,
+	persistence adapter.BlockPersistence,
+	management services.Management,
+	gossip gossiptopics.BlockSync,
+	parentLogger log.Logger,
+	metricFactory metric.Factory,
+	blockPairReceivers []servicesync.BlockPairCommitter,
+) *Service {
+
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &Service{
@@ -76,7 +86,7 @@ func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, pers
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
-	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
+	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, management, logger, metricFactory)
 
 	for _, bpr := range blockPairReceivers {
 		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))

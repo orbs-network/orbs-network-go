@@ -20,6 +20,8 @@ import (
 // (could have mocked the whole thing)
 // Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
 func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 
 	NewHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).

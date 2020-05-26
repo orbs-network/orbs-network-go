@@ -40,6 +40,8 @@ func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 }
 
 func TestSimpleTransfer(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	t.Run("Benchmark", testSimpleTransfer(""))
 	t.Run("LeanHelix", testSimpleTransfer(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
 

@@ -17,11 +17,11 @@ import (
 func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilityResponses(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
-			h := newBlockSyncHarness(harness.Logger)
+			h := newBlockSyncHarness(harness.Logger)//.withStorageSyncState(9,9,9)
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorage(11)
@@ -52,12 +52,12 @@ func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabili
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-			harness.AllowErrorsMatching("failed to validate block received via sync")
+			harness.AllowErrorsMatching("failed to validate Block received via sync")
 
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorageAndFailLastValidation(11, message.SignedChunkRange.FirstBlockHeight())
@@ -76,12 +76,13 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-			harness.AllowErrorsMatching("failed to commit block received via sync")
+			harness.AllowErrorsMatching("failed to commit Block received via sync")
+			harness.AllowErrorsMatching("failed to commit to persistent storage from temp storage")
 
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorage(11)

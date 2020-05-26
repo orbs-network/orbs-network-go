@@ -22,6 +22,7 @@ import (
 )
 
 func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
@@ -55,7 +56,6 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			}
 			return nil, nil
 		})
-
 		harness.start(ctx)
 
 		select {

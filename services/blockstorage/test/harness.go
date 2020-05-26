@@ -13,12 +13,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -29,14 +31,18 @@ import (
 )
 
 type configForBlockStorageTests struct {
-	nodeAddress           primitives.NodeAddress
-	syncBatchSize         uint32
-	syncNoCommit          time.Duration
-	syncCollectResponses  time.Duration
-	syncCollectChunks     time.Duration
-	queryGrace            time.Duration
-	queryExpirationWindow time.Duration
-	blockTrackerGrace     time.Duration
+	nodeAddress              primitives.NodeAddress
+	syncBatchSize            uint32
+	syncNoCommit             time.Duration
+	syncCollectResponses     time.Duration
+	syncCollectChunks        time.Duration
+	syncReferenceDistance    time.Duration
+	managementReferenceGrace time.Duration
+	syncBlocksOrder          gossipmessages.SyncBlocksOrder
+	descendingActivationDate string
+	queryGrace               time.Duration
+	queryExpirationWindow    time.Duration
+	blockTrackerGrace        time.Duration
 }
 
 func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
@@ -59,6 +65,22 @@ func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Durati
 	return c.syncCollectChunks
 }
 
+func (c *configForBlockStorageTests) BlockSyncReferenceMaxAllowedDistance() time.Duration {
+	return c.syncReferenceDistance
+}
+
+func (c *configForBlockStorageTests) ManagementReferenceGraceTimeout() time.Duration {
+	return c.managementReferenceGrace
+}
+
+func (c *configForBlockStorageTests) BlockSyncDescendingActivationDate() string {
+	return c.descendingActivationDate
+}
+
+func (c *configForBlockStorageTests) BlockSyncDescending() gossipmessages.SyncBlocksOrder {
+	return c.syncBlocksOrder
+}
+
 func (c *configForBlockStorageTests) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
 	return c.queryGrace
 }
@@ -78,6 +100,7 @@ type harness struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
 	blockStorage   *blockstorage.Service
+	management     *services.MockManagement
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
@@ -181,6 +204,11 @@ func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness 
 	return d
 }
 
+func (d *harness) withBlockSyncDescendingActivationDate(date string) *harness {
+	d.config.descendingActivationDate = date
+	return d
+}
+
 func (d *harness) withBatchSize(size uint32) *harness {
 	d.config.syncBatchSize = size
 	return d
@@ -228,6 +256,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
+	cfg.descendingActivationDate = "2220-06-15T12:00:00.000Z"
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
@@ -245,6 +274,8 @@ func newBlockStorageHarness(parentHarness *with.ConcurrencyHarness) *harness {
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = testkit.NewBlockPersistence(d.Logger, nil, registry)
 
+	d.management = &services.MockManagement{}
+	// TODO: BlockSync configure the management + test support with
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
 	d.gossip = &gossiptopics.MockBlockSync{}
@@ -270,7 +301,7 @@ func (d *harness) start(ctx context.Context) *harness {
 	defer d.Unlock()
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.Logger, registry, nil)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.management, d.gossip, d.Logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	d.Supervise(d.blockStorage)
@@ -286,17 +317,28 @@ func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness
 		return // protect against edge condition where harness did not finish initializing and sync has started
 	}
 
-	firstBlockHeight := requestInput.Message.SignedBatchRange.FirstBlockHeight()
-	if firstBlockHeight > availableBlocks {
+	blocksOrder := requestInput.Message.SignedBatchRange.BlocksOrder()
+	fromBlock := requestInput.Message.SignedBatchRange.FirstBlockHeight()
+	toBlock := requestInput.Message.SignedBatchRange.LastBlockHeight()
+
+	if fromBlock > availableBlocks || toBlock > availableBlocks {
 		return
+	}
+	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
+			fromBlock = availableBlocks
+		}
+	} else {
+		toBlock = availableBlocks
 	}
 
 	for _, sourceAddressIndex := range sources {
 		response := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithFirstBlockHeight(firstBlockHeight).
-			WithLastBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).Build()
+			WithLastCommittedBlockHeight(availableBlocks).
+			WithFirstBlockHeight(fromBlock).
+			WithLastBlockHeight(toBlock).
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).
+			WithBlocksOrder(blocksOrder).Build()
 		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
 	}
 

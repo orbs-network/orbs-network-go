@@ -77,7 +77,6 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 
 	s.handlers.RLock()
 	defer s.handlers.RUnlock()
-
 	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {

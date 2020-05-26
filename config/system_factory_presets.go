@@ -62,6 +62,11 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 1*time.Second)
 
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
+
+	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 12*time.Hour)
+	cfg.SetDuration(MANAGEMENT_REFERENCE_GRACE_TIMEOUT, 10*time.Minute)
+	cfg.SetString(BLOCK_SYNC_DESCENDING_ACTIVATION_DATE, "2020-06-15T12:00:00.000Z") // format time.RFC3339
+
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 20*time.Second)
 
 	// 5 empty blocks

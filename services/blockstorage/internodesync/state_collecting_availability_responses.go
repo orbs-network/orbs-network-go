@@ -18,12 +18,13 @@ import (
 )
 
 type collectingAvailabilityResponsesState struct {
-	factory     *stateFactory
-	client      *blockSyncClient
-	createTimer func() *synchronization.Timer
-	logger      log.Logger
-	conduit     blockSyncConduit
-	metrics     collectingStateMetrics
+	factory          *stateFactory
+	client           *blockSyncClient
+	createTimer      func() *synchronization.Timer
+	logger           log.Logger
+	conduit          blockSyncConduit
+	syncBlocksOrder  gossipmessages.SyncBlocksOrder
+	metrics          collectingStateMetrics
 }
 
 func (s *collectingAvailabilityResponsesState) name() string {
@@ -38,7 +39,6 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	start := time.Now()
 	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
-
 	var responses []*gossipmessages.BlockAvailabilityResponseMessage
 
 	govnr.Once(logfields.GovnrErrorer(logger), func() {
@@ -46,10 +46,9 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 		defer cancel()
 		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
 	})
-
-	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx)
+	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx, s.syncBlocksOrder)
 	if err != nil {
-		logger.Info("failed to broadcast block availability request", log.Error(err))
+		logger.Info("failed to broadcast Block availability request", log.Error(err))
 		s.metrics.timesFailedSendingAvailabilityRequest.Inc()
 		return s.factory.CreateIdleState()
 	}
@@ -64,7 +63,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			switch r := e.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				responses = append(responses, r)
-				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()), log.Stringable("first-block", r.SignedBatchRange.FirstBlockHeight()), log.Stringable("last-block", r.SignedBatchRange.LastBlockHeight()), log.Stringable("last-committed-block", r.SignedBatchRange.LastCommittedBlockHeight()))
+				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()), log.Stringable("first-Block", r.SignedBatchRange.FirstBlockHeight()), log.Stringable("last-Block", r.SignedBatchRange.LastBlockHeight()), log.Stringable("last-committed-Block", r.SignedBatchRange.LastCommittedBlockHeight()))
 			}
 		case <-ctx.Done():
 			return nil

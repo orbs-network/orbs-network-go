@@ -21,6 +21,8 @@ import (
 )
 
 func TestCommitReputation_TransactionToElected(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	nodeTampered := testKeys.NodeAddressesForTests()[4]
 	const maxruns = 100
 

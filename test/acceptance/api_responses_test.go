@@ -31,6 +31,8 @@ func TestResponseForTransactionOnValidContract(t *testing.T) {
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
@@ -57,6 +59,8 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
@@ -70,6 +74,7 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
 	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()

@@ -19,8 +19,8 @@ func TestBlockSyncStartsWithImmediateSync(t *testing.T) {
 			return synchronization.NewTimerWithManualTick()
 		})
 		h.expectSyncOnStart()
-		parent.Supervise(newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory))
-		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip/storage for sync
+		parent.Supervise(newBlockSyncWithFactory(ctx, h.factory.config, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory))
+		h.eventuallyVerifyMocks(t, 2) // just need to verify we used gossip for sync
 	})
 }
 
@@ -35,7 +35,7 @@ func TestBlockSyncStaysInIdleOnBlockCommitExternalMessage(t *testing.T) {
 
 		h.expectSyncOnStart()
 
-		bs := newBlockSyncWithFactory(ctx, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory)
+		bs := newBlockSyncWithFactory(ctx, h.factory.config, h.factory, h.gossip, h.storage, parent.Logger, h.metricFactory)
 		parent.Supervise(bs)
 
 		firstIdleStateTimeoutTimer := <-manualIdleStateTimeoutTimers // reach first idle state

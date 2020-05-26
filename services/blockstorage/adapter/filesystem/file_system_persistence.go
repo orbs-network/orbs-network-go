@@ -314,6 +314,14 @@ func (f *BlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) 
 	return f.bhIndex.getLastBlock(), nil
 }
 
+func (f *BlockPersistence) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	bpc, err := f.getBlockAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	return bpc, nil
+}
+
 func (f *BlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	bpc, err := f.getBlockAtHeight(height)
 	if err != nil {

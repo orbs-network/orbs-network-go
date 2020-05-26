@@ -200,6 +200,8 @@ github.com/orbs-network/lean-helix-go v0.2.7 h1:d7k67YUIMqXihIl5x/S9p7VIpBGpBzI1
 github.com/orbs-network/lean-helix-go v0.2.7/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/lean-helix-go v0.3.0 h1:lN46V8I5LV7eZF0sYf8/0BBte8J+i/fl8j/fempWEAM=
 github.com/orbs-network/lean-helix-go v0.3.0/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
+github.com/orbs-network/lean-helix-go v0.3.1-0.20200524235631-b7d49dc1d62a h1:CrezkBpRQMda9kbIYzzc6aa/fdWAW7biUriyDQhMSfk=
+github.com/orbs-network/lean-helix-go v0.3.1-0.20200524235631-b7d49dc1d62a/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/membuffers v0.3.2/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
 github.com/orbs-network/membuffers v0.3.6 h1:SEfVtDhzi8YHR4qY8ouu8G57sKGsT4vfgdBC5bjG8TE=
 github.com/orbs-network/membuffers v0.3.6/go.mod h1:M5ABv0m0XBGoJbX+7UKVY02hLF4XhS2SlZVEVABMc6M=
@@ -241,6 +243,9 @@ github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3 h1:jdCqdamZ
 github.com/orbs-network/orbs-spec v0.0.0-20200421175506-e30b5e6a19c3/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
 github.com/orbs-network/orbs-spec v0.0.0-20200503073830-babdf6adc845 h1:hWMWdWxmlUBLv/jE8JBWUI7A4BbPoocTUQx5Dec43NE=
 github.com/orbs-network/orbs-spec v0.0.0-20200503073830-babdf6adc845/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200524234311-ad99bb5a54ee h1:xoaJ2lBuvbmqfk1Dl+CgGKC9Gc8AvqYQVaEhZLuta+k=
+github.com/orbs-network/orbs-spec v0.0.0-20200524234311-ad99bb5a54ee/go.mod h1:D4+jHMhQ+mPB4uhqZ2wtzuG8RV2JgltWG1FqAwLIaOw=
+github.com/orbs-network/orbs-spec v0.0.0-20200525092007-a71f2b62f2e5 h1:BpAmtcAIgMf9brHJuzzPVcbagz/XqIrF7hNsEjS7W2k=
 github.com/orbs-network/pbparser v0.2.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/pbparser v0.3.0/go.mod h1:WSzcxgH5xzywQm0YSASbD7RcdxBXZgqZaDVK8M+8DJ8=
 github.com/orbs-network/scribe v0.1.0/go.mod h1:FmGcbukz5eolO+mqzxwmuy4RF4UEoLfGJIeEDAoGsBU=

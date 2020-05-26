@@ -75,3 +75,20 @@ func toMemberIds(nodeAddresses []primitives.NodeAddress) []lhprimitives.MemberId
 	}
 	return memberIds
 }
+
+func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lhprimitives.MemberId, error) {
+	res, err := m.consensusContext.RequestBlockProofOrderingCommittee(ctx, &services.RequestBlockProofCommitteeInput{
+		PrevBlockReferenceTime: primitives.TimestampSeconds(prevBlockReferenceTime),
+		MaxCommitteeSize:   m.maxCommitteeSize,
+	})
+	if err != nil {
+		m.logger.Info(" failed RequestCommitteeForBlockProof()", log.Error(err))
+		return nil, err
+	}
+
+	nodeAddresses := toMemberIds(res.NodeAddresses)
+	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
+	m.logger.Info("Received committee members for block proof", log.Uint32("prev-block-ref-time", uint32(prevBlockReferenceTime)), log.String("committee-members", committeeMembersStr))
+
+	return nodeAddresses, nil
+}

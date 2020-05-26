@@ -145,6 +145,14 @@ func (bp *InMemoryBlockPersistence) getBlockPairAtHeight(height primitives.Block
 	return bp.blockChain.blocks[height-1], nil
 }
 
+func (bp *InMemoryBlockPersistence) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	blockPair, err := bp.getBlockPairAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	return blockPair, nil
+}
+
 func (bp *InMemoryBlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
 	blockPair, err := bp.getBlockPairAtHeight(height)
 	if err != nil {

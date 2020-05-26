@@ -42,3 +42,30 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	}
 	return res, nil
 }
+
+
+func (s *service) RequestBlockProofOrderingCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
+	return s.RequestBlockProofValidationCommittee(ctx, input)
+}
+
+func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
+	out, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference:input.PrevBlockReferenceTime})
+	if err != nil {
+		return nil, err
+	}
+	committee := out.Members
+	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
+
+	s.metrics.committeeSize.Update(int64(len(committee)))
+	committeeStringArray := make([]string, len(committee))
+	for j, nodeAddress := range committee {
+		committeeStringArray[j] = fmt.Sprintf("\"%v\"", nodeAddress)  // %v is because NodeAddress has .String()
+	}
+	s.metrics.committeeMembers.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
+	s.metrics.committeeRefTime.Update(int64(input.PrevBlockReferenceTime))
+
+	res := &services.RequestBlockProofCommitteeOutput{
+		NodeAddresses:            committee,
+	}
+	return res, nil
+}

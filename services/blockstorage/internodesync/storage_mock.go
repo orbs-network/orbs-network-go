@@ -9,6 +9,7 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
 
@@ -45,4 +46,13 @@ func (s *blockSyncStorageMock) ValidateBlockForCommit(ctx context.Context, input
 
 func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context) {
 	s.Called(ctx)
+}
+
+func (s *blockSyncStorageMock) GetLastCommittedBlock() (*protocol.BlockPairContainer, error) {
+	ret := s.Called()
+	if out := ret.Get(0); out != nil {
+		return out.(*protocol.BlockPairContainer), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
 }

@@ -15,6 +15,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (s *Service)  GetLastCommittedBlock() (*protocol.BlockPairContainer, error) {
+	return s.persistence.GetLastBlock()
+}
+
 func (s *Service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	b, err := s.persistence.GetLastBlock()
 	if err != nil {

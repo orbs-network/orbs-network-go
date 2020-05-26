@@ -104,6 +104,8 @@ func TestCommitteeElections_MultipleReElections(t *testing.T) {
 }
 
 func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	NewHarness().
 		WithNumNodes(8).
 		WithManagementPollingInterval(20*time.Millisecond).
@@ -140,6 +142,8 @@ func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
 }
 
 func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
+	t.Skip("Gad: Remove the skip when ")
+
 	NewHarness().
 		WithNumNodes(7).
 		WithManagementPollingInterval(50*time.Millisecond).

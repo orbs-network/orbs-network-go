@@ -25,6 +25,7 @@ type BlockPersistence interface {
 	GetLastBlockHeight() (primitives.BlockHeight, error)
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 
+	GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error)
 	GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error)
 	GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error)
 	GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error)

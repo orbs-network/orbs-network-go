@@ -142,7 +142,7 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 				withNodeAddress(stateSourceAddress).
 				withWaitForChunksTimeout(5 * time.Second)
 
-			h.expectLastCommittedBlockHeightQueryFromStorage(10)
+			//h.expectLastCommittedBlockHeightQueryFromStorage(10)
 			h.expectSendingOfBlockSyncRequest()
 
 			state := h.factory.CreateWaitingForChunksState(h.config.NodeAddress())
@@ -162,7 +162,7 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 					}
 				}()
 
-				// send a valid block message after enough time has passed
+				// send a valid Block message after enough time has passed
 				time.Sleep(500 * time.Millisecond)
 				h.factory.conduit <- validBlocksMessage
 
