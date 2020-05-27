@@ -239,7 +239,7 @@ func (d *harness) failNextBlocks() {
 
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
 	for i := 1; i <= count; i++ {
-		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(time.Now()).Build())
 		d.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
 		time.Sleep(10*time.Millisecond)
 	}
