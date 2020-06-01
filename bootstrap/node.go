@@ -41,6 +41,7 @@ func GetMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 	version := config.GetVersion()
 
+	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String())
 	metricRegistry.NewText("Version.Semantic", version.Semantic)
 	metricRegistry.NewText("Version.Commit", version.Commit)
 
