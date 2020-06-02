@@ -90,6 +90,30 @@ func TestManagement_GetCommitteeWhenTwoChangesClose(t *testing.T) {
 	})
 }
 
+func TestManagement_GetCommitteeWhenTwoInSameRef(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		test.WithContext(func(ctx context.Context) {
+			cp := newStaticCommitteeManagement(0, testKeys.NodeAddressesForTests()[:4])
+			termChangeHeight := primitives.TimestampSeconds(10)
+			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
+			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[5:9])
+			cp.addCommittee(termChangeHeight+10, testKeys.NodeAddressesForTests()[2:5])
+
+			committee := getCommittee(cp, ctx, termChangeHeight)
+			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
+
+			committee = getCommittee(cp, ctx, termChangeHeight-1)
+			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
+
+			committee = getCommittee(cp, ctx, termChangeHeight+1)
+			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
+
+			committee = getCommittee(cp, ctx, termChangeHeight+11)
+			require.EqualValues(t, testKeys.NodeAddressesForTests()[2:5], committee, "wrong committee values")
+		})
+	})
+}
+
 func getCommittee(m *service, ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
 	committee, err := m.GetCommittee(ctx, &services.GetCommitteeInput{Reference:reference})
 	if err != nil {
