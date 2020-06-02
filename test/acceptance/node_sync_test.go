@@ -45,8 +45,10 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 			numBlocks, err := network.BlockPersistence(1).GetLastBlockHeight()
 			require.NoError(t, err)
 			require.Zero(t, numBlocks)
+			numBlocks, _ = network.BlockPersistence(0).GetLastBlockHeight()
 
 		}).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+
 		if err := network.BlockPersistence(0).GetBlockTracker().WaitForBlock(ctx, 10); err != nil {
 			t.Errorf("waiting for block on node 0 failed: %s", err)
 		}

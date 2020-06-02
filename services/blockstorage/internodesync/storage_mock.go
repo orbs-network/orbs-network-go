@@ -9,6 +9,7 @@ package internodesync
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 )
@@ -48,11 +49,21 @@ func (s *blockSyncStorageMock) UpdateConsensusAlgosAboutLastCommittedBlockInLoca
 	s.Called(ctx)
 }
 
-func (s *blockSyncStorageMock) GetLastCommittedBlock() (*protocol.BlockPairContainer, error) {
-	ret := s.Called()
+func (s *blockSyncStorageMock) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	ret := s.Called(height)
 	if out := ret.Get(0); out != nil {
 		return out.(*protocol.BlockPairContainer), ret.Error(1)
 	} else {
 		return nil, ret.Error(1)
 	}
 }
+
+func (s *blockSyncStorageMock) GetSyncState() SyncState {
+	ret := s.Called()
+	if out := ret.Get(0); out != nil {
+		return out.(SyncState)
+	} else {
+		return SyncState{}
+	}
+}
+

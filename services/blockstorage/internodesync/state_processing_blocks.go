@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -30,7 +29,6 @@ type processingBlocksState struct {
 	factory                  *stateFactory
 	conduit                  blockSyncConduit
 	syncBlocksOrder          gossipmessages.SyncBlocksOrder
-	tempSyncStorage          TempSyncStorage
 	management               services.Management
 	referenceMaxDistance     time.Duration
 	managementReferenceGrace time.Duration
@@ -83,16 +81,23 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		if !s.conduit.drainAndCheckForShutdown(ctx) {
 			return nil
 		}
-		prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
+ 		prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
-			logger.Info("failed to validate Block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-Block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
+			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
 			break
 		}
-
-		// TODO: Gad temporary code for PR
-		err = commitBlockTemp(ctx, s.tempSyncStorage, blockPair, s.storage, s.logger, s.metrics)
+		_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
+		if err != nil {
+			s.metrics.failedCommitBlocks.Inc()
+			logger.Error("failed to commit block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			break
+		} else {
+			s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
+			s.metrics.committedBlocks.Inc()
+			logger.Info("successfully committed block received via sync", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+		}
 	}
 
 	if !s.conduit.drainAndCheckForShutdown(ctx) {
@@ -110,7 +115,7 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 	}
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		firstBlock := blocks[0]
-		if nextBlock := s.tempSyncStorage.getBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); nextBlock != nil { // will verify hash pointer to block
+		if nextBlock, _ := s.storage.GetBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); nextBlock != nil { // will verify hash pointer to block
 			// prepend
 			blocks = append([]*protocol.BlockPairContainer{nextBlock}, blocks...)
 		} else {
@@ -153,69 +158,26 @@ func verifyPrevHashPointer(blockPair *protocol.BlockPairContainer, prevBlockPair
 	return true
 }
 
-func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) *protocol.BlockPairContainer {
+func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) (prevBlock *protocol.BlockPairContainer) {
 	blocks := s.blocks.BlockPairs
+	blockHeight := blocks[index].TransactionsBlock.Header.BlockHeight()
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		if index == 0 {
-			lastBlock, _ := s.storage.GetLastCommittedBlock()
-			return lastBlock
-		}
-		return blocks[index-1]
-	}
-	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
-		s.tempSyncStorage.Mutex.RLock()
-		defer s.tempSyncStorage.Mutex.RUnlock()
-		if index == len(blocks)-1 {
-			return s.tempSyncStorage.getBlock(blocks[index].TransactionsBlock.Header.BlockHeight() - 1)
-		}
-		return blocks[index+1]
-	}
-	return nil
-}
-
-func commitBlockTemp(ctx context.Context, tempSyncStorage TempSyncStorage, block *protocol.BlockPairContainer, persistentStorage BlockSyncStorage, logger log.Logger, metrics processingStateMetrics) error {
-	tempSyncStorage.Mutex.Lock()
-	defer tempSyncStorage.Mutex.Unlock()
-
-	commitBlockHeight := block.TransactionsBlock.Header.BlockHeight()
-	logger.Info("Trying to commit a Block to TempSyncStorage", logfields.BlockHeight(commitBlockHeight))
-	if block.TransactionsBlock.Header.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions Block header", block.TransactionsBlock.Header.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
-	}
-	if block.ResultsBlock.Header.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in results Block header", block.ResultsBlock.Header.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
-	}
-
-	if tempSyncStorage.getBlock(commitBlockHeight) == nil {
-		tempSyncStorage.blocksMap[commitBlockHeight] = block
-	}
-
-	syncState := tempSyncStorage.syncState
-	if commitBlockHeight > syncState.Top.Height {
-		syncState.Top.Set(block)
-	}
-	if commitBlockHeight == syncState.TopInOrder.Height+1 {
-		var tempBlock *protocol.BlockPairContainer
-		//commit to persistent storage
-		for height := syncState.TopInOrder.Height + 1; height <= syncState.Top.Height; height++ {
-			tempBlock = tempSyncStorage.getBlock(height)
-			if tempBlock != nil {
-				_, err := persistentStorage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: tempBlock})
-				if err != nil {
-					metrics.failedCommitBlocks.Inc()
-					logger.Error("failed to commit to persistent storage from temp storage", log.Error(err), logfields.BlockHeight(tempBlock.TransactionsBlock.Header.BlockHeight()))
-				} else {
-					syncState.TopInOrder.Set(tempBlock)
-					metrics.lastCommittedTime.Update(time.Now().UnixNano())
-					metrics.committedBlocks.Inc()
-					logger.Info("successfully committed Block received via sync", logfields.BlockHeight(tempBlock.TransactionsBlock.Header.BlockHeight()))
-				}
+			if blockHeight > 0 {
+				prevBlock, _ = s.storage.GetBlock(blockHeight - 1)
 			}
+		} else {
+			prevBlock = blocks[index-1]
 		}
-		syncState.LastSynced.Set(syncState.Top.Block)
-	} else {
-		syncState.LastSynced.Set(block)
+	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if index == len(blocks)-1 {
+			if blockHeight > 0 {
+				prevBlock, _ = s.storage.GetBlock(blockHeight - 1)
+			}
+		} else {
+			prevBlock = blocks[index+1]
+		}
 	}
-
-	return nil
+	return
 }
+

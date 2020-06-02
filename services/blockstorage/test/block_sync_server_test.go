@@ -11,7 +11,6 @@ import (
 	"errors"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/tcp"
-	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -123,30 +122,7 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 			expectValidateConsensusAlgos().
 			start(ctx)
 
-		// temp sync storage update artifact - as it depends on signal from persistent storage
-		// TODO: remove with temp storage
-		tempSyncStorage := harness.getBlockSync().GetTempStorage()
-		blockSyncHeightTracker := synchronization.NewBlockTracker(harness.Logger, 0, math.MaxUint16)
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					if tempSyncStorage.GetStorageSyncState().Top.Height >= 3 {
-						blockSyncHeightTracker.IncrementTo(1)
-						blockSyncHeightTracker.IncrementTo(2)
-						blockSyncHeightTracker.IncrementTo(3)
-						return
-					}
-				}
-			}
-		}()
-
 		harness.commitSomeBlocks(ctx, 3)
-		time.Sleep(10*time.Millisecond)
-		blockSyncHeightTracker.WaitForBlock(ctx, primitives.BlockHeight(3))
-
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 		msg := builders.BlockAvailabilityRequestInput().
 			WithFirstBlockHeight(1).

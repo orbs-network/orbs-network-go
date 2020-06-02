@@ -7,12 +7,9 @@
 package internodesync
 
 import (
-	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -20,81 +17,6 @@ import (
 	"sync"
 	"time"
 )
-
-// TODO: This is a temporary code for current PR - afterwards it will move to blockStorage
-type BlockInfo struct {
-	Block  *protocol.BlockPairContainer
-	Height primitives.BlockHeight
-}
-
-func (bi *BlockInfo) Set(block *protocol.BlockPairContainer) {
-	bi.Height = block.TransactionsBlock.Header.BlockHeight()
-	bi.Block = block
-}
-
-func (bi *BlockInfo) String() string {
-	return fmt.Sprintf("{BlockHeight:%v, Block:%v}", bi.Height.String(), bi.Block.String())
-}
-
-type TempSyncStorage struct {
-	Mutex     sync.RWMutex
-	blocksMap map[primitives.BlockHeight]*protocol.BlockPairContainer
-	syncState *StorageSyncState
-}
-
-func NewTempSyncStorage(persistentStorage BlockSyncStorage, logger log.Logger) TempSyncStorage {
-	topBlock, err := persistentStorage.GetLastCommittedBlock()
-	if err != nil {
-		logger.Error("failed to instantiate TempSyncStorage", log.Error(err))
-	}
-	syncState := &StorageSyncState{}
-	if topBlock != nil {
-		syncState.Top.Set(topBlock)
-		syncState.LastSynced.Set(topBlock)
-		syncState.TopInOrder.Set(topBlock)
-	}
-
-	t := TempSyncStorage{
-		blocksMap: make(map[primitives.BlockHeight]*protocol.BlockPairContainer),
-		syncState: syncState,
-	}
-	return t
-}
-
-func (s *TempSyncStorage) getBlock(blockHeight primitives.BlockHeight) *protocol.BlockPairContainer {
-	if block, ok := s.blocksMap[blockHeight]; ok {
-		return block
-	}
-	return nil
-}
-
-type StorageSyncState struct {
-	Top        BlockInfo
-	TopInOrder BlockInfo
-	LastSynced BlockInfo
-}
-
-func (st *StorageSyncState) String() string {
-	return fmt.Sprintf("{TopInOrder:%d, LastSynced:%d, Top:%d}", st.TopInOrder.Height, st.LastSynced.Height, st.Top.Height)
-}
-
-func (s *TempSyncStorage) GetStorageSyncState() *StorageSyncState {
-	s.Mutex.RLock()
-	defer s.Mutex.RUnlock()
-	return s.syncState
-}
-
-func (s *TempSyncStorage) Update(committedBlock *protocol.BlockPairContainer) {
-	s.Mutex.Lock()
-	defer s.Mutex.Unlock()
-	commitBlockHeight := committedBlock.TransactionsBlock.Header.BlockHeight()
-	if commitBlockHeight > s.syncState.Top.Height {
-		s.blocksMap[commitBlockHeight] = committedBlock
-		s.syncState.Top.Set(committedBlock)
-		s.syncState.LastSynced.Set(committedBlock)
-		s.syncState.TopInOrder.Set(committedBlock)
-	}
-}
 
 type stateFactory struct {
 	config                          blockSyncConfig
@@ -108,7 +30,6 @@ type stateFactory struct {
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer
 	logger                          log.Logger
 	metrics                         *stateMetrics
-	tempSyncStorage                 TempSyncStorage
 	management                      services.Management
 }
 
@@ -157,7 +78,6 @@ func NewStateFactoryWithTimers(
 		management:      management,
 		logger:          logger,
 		metrics:         newStateMetrics(factory),
-		tempSyncStorage: NewTempSyncStorage(storage, logger),
 		syncBlocksOrder: blocksOrder,
 	}
 
@@ -180,23 +100,6 @@ func NewStateFactoryWithTimers(
 	}
 
 	return f
-}
-
-func (f *stateFactory) NotifyTempStorageSyncState(committedBlock *protocol.BlockPairContainer) {
-	if committedBlock == nil {
-		return
-	}
-	commitBlockHeight := committedBlock.TransactionsBlock.Header.BlockHeight()
-	f.logger.Info("Trying to update SyncStorageState", logfields.BlockHeight(commitBlockHeight))
-	f.tempSyncStorage.Update(committedBlock)
-}
-
-func (f *stateFactory) GetTempStorageSyncState() *StorageSyncState {
-	return f.tempSyncStorage.GetStorageSyncState()
-}
-
-func (f *stateFactory) GetTempStorage() TempSyncStorage {
-	return f.tempSyncStorage
 }
 
 func (f *stateFactory) GetSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
@@ -241,7 +144,7 @@ func (f *stateFactory) CreateIdleState() syncState {
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
 		factory:          f,
-		client:           newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress, f.tempSyncStorage),
+		client:           newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:      f.createCollectTimeoutTimer,
 		logger:           f.logger,
 		conduit:          f.conduit,
@@ -263,7 +166,7 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 	return &waitingForChunksState{
 		sourceNodeAddress: sourceNodeAddress,
 		factory:           f,
-		client:            newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress, f.tempSyncStorage),
+		client:            newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
 		createTimer:       f.createWaitForChunksTimeoutTimer,
 		logger:            f.logger,
 		conduit:           f.conduit,
@@ -280,7 +183,6 @@ func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.Block
 		storage:                  f.storage,
 		conduit:                  f.conduit,
 		syncBlocksOrder:          f.syncBlocksOrder,
-		tempSyncStorage:          f.tempSyncStorage,
 		management:               f.management,
 		referenceMaxDistance:     f.config.BlockSyncReferenceMaxAllowedDistance(),
 		managementReferenceGrace: f.config.ManagementReferenceGraceTimeout(),

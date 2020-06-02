@@ -240,8 +240,6 @@ func (d *harness) failNextBlocks() {
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
 	for i := 1; i <= count; i++ {
 		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(time.Now()).Build())
-		d.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
-		time.Sleep(10*time.Millisecond)
 	}
 }
 
@@ -327,14 +325,17 @@ func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness
 	fromBlock := requestInput.Message.SignedBatchRange.FirstBlockHeight()
 	toBlock := requestInput.Message.SignedBatchRange.LastBlockHeight()
 
-	if fromBlock > availableBlocks || toBlock > availableBlocks {
-		return
-	}
 	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if toBlock > availableBlocks {
+			return
+		}
 		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
 			fromBlock = availableBlocks
 		}
 	} else {
+		if fromBlock > availableBlocks {
+			return
+		}
 		toBlock = availableBlocks
 	}
 
@@ -349,8 +350,6 @@ func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness
 	}
 
 }
-
-
 
 func reverse(arr []*protocol.BlockPairContainer) {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {

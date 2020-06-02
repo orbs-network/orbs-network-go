@@ -79,7 +79,7 @@ func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 		WithSetup(func(ctx context.Context, network *Network) {
 			// set current reference time to now for node sync verifications
 			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
+			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[0:7])
 			require.NoError(t, err)
 		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {

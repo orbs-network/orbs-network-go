@@ -42,12 +42,19 @@ type blockSyncConfig interface {
 	ManagementReferenceGraceTimeout() time.Duration
 }
 
+type SyncState struct {
+	Top        primitives.BlockHeight
+	TopInOrder primitives.BlockHeight
+	LastSynced primitives.BlockHeight
+}
+
 type BlockSyncStorage interface {
 	GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error)
 	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
 	UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context)
-	GetLastCommittedBlock() (*protocol.BlockPairContainer, error)
+	GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error)
+	GetSyncState() SyncState
 }
 
 // state machine passes outside events into this channel type for consumption by the currently active state instance.
@@ -172,7 +179,7 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
-	bs.UpdateStorageSyncState()
+	//bs.UpdateStorageSyncState()
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
@@ -205,21 +212,4 @@ func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossipt
 	}
 
 	return nil, nil
-}
-
-
-func (bs *BlockSync) GetStorageSyncState() *StorageSyncState {
-	return bs.factory.GetTempStorageSyncState()
-}
-
-func (bs *BlockSync) GetTempStorage() TempSyncStorage {
-	return bs.factory.GetTempStorage()
-}
-
-func (bs *BlockSync) UpdateStorageSyncState() {
-	if topBlock, err := bs.storage.GetLastCommittedBlock(); err == nil{
-		bs.factory.NotifyTempStorageSyncState(topBlock)
-	} else {
-		bs.logger.Info("failed to retrieve last committed block")
-	}
 }

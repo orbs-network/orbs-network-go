@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -320,6 +321,12 @@ func (f *BlockPersistence) GetBlock(height primitives.BlockHeight) (*protocol.Bl
 		return nil, err
 	}
 	return bpc, nil
+}
+
+func (f *BlockPersistence) GetSyncState() internodesync.SyncState {
+	// TODO: Gad fill out
+	return internodesync.SyncState{
+	}
 }
 
 func (f *BlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {

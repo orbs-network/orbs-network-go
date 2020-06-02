@@ -54,7 +54,7 @@ func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, inpu
 		return nil, err
 	}
 	committee := out.Members
-	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
+	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), trace.LogFieldFrom(ctx))
 
 	s.metrics.committeeSize.Update(int64(len(committee)))
 	committeeStringArray := make([]string, len(committee))

@@ -8,6 +8,7 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilit
 
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorage(11)
-
+			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
 
@@ -40,6 +41,7 @@ func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
+			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 			state := h.factory.CreateProcessingBlocksState(nil)
 			nextState := state.processState(ctx)
 
@@ -62,6 +64,7 @@ func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabili
 
 			h.expectBlockValidationQueriesFromStorageAndFailLastValidation(11, message.SignedChunkRange.FirstBlockHeight())
 			h.expectBlockCommitsToStorage(10)
+			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
@@ -76,8 +79,7 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-			harness.AllowErrorsMatching("failed to commit Block received via sync")
-			harness.AllowErrorsMatching("failed to commit to persistent storage from temp storage")
+			harness.AllowErrorsMatching("failed to commit block received via sync")
 
 			message := builders.BlockSyncResponseInput().
 				WithFirstBlockHeight(1).
@@ -87,6 +89,7 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorageAndFailLastCommit(11, message.SignedChunkRange.FirstBlockHeight())
+			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 
 			processingState := h.factory.CreateProcessingBlocksState(message)
 			next := processingState.processState(ctx)
@@ -109,6 +112,7 @@ func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 			Build().Message
 
 		cancel()
+		h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 		state := h.factory.CreateProcessingBlocksState(message)
 		nextState := state.processState(ctx)
 

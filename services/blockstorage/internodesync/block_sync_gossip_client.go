@@ -25,7 +25,6 @@ type blockSyncClient struct {
 	logger      log.Logger
 	batchSize   func() uint32
 	nodeAddress func() primitives.NodeAddress
-	tempSyncStorage          TempSyncStorage
 }
 
 func newBlockSyncGossipClient(
@@ -34,7 +33,7 @@ func newBlockSyncGossipClient(
 	l log.Logger,
 	batchSize func() uint32,
 	na func() primitives.NodeAddress,
-	ts TempSyncStorage) *blockSyncClient {
+	) *blockSyncClient {
 
 	return &blockSyncClient{
 		gossip:      g,
@@ -42,7 +41,6 @@ func newBlockSyncGossipClient(
 		logger:      l,
 		batchSize:   batchSize,
 		nodeAddress: na,
-		tempSyncStorage: ts,
 	}
 }
 
@@ -52,7 +50,8 @@ func (c *blockSyncClient) petitionerUpdateConsensusAlgosAboutLastCommittedBlockI
 
 func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx context.Context, syncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
-	from, to, err := c.getClientSyncRange(syncBlocksOrder, primitives.BlockHeight(c.batchSize()))
+	syncState := c.storage.GetSyncState()
+	from, to, err := getClientSyncRange(syncState, syncBlocksOrder, primitives.BlockHeight(c.batchSize()), c.logger)
 	if err != nil {
 		return errors.Wrapf(err, "invalid block availability range request: from %d to %d, blocksOrder: %v", from, to, syncBlocksOrder)
 	}
@@ -88,7 +87,8 @@ func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx contex
 
 func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, syncBlocksOrder gossipmessages.SyncBlocksOrder, blockType gossipmessages.BlockType, recipientNodeAddress primitives.NodeAddress) error {
 	logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
-	from, to, err := c.getClientSyncRange(syncBlocksOrder, primitives.BlockHeight(c.batchSize()))
+	syncState := c.storage.GetSyncState()
+	from, to, err := getClientSyncRange(syncState, syncBlocksOrder, primitives.BlockHeight(c.batchSize()), c.logger)
 	if err != nil {
 		return errors.Wrapf(err, "invalid block availability range request: from %d to %d, blocksOrder: %v", from, to, syncBlocksOrder)
 	}
@@ -125,12 +125,11 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 
 
 // inclusive range
-func (c *blockSyncClient) getClientSyncRange(syncBlocksOrder gossipmessages.SyncBlocksOrder, batchSize primitives.BlockHeight) (from primitives.BlockHeight, to primitives.BlockHeight, err error) {
-	c.tempSyncStorage.Mutex.RLock()
-	defer c.tempSyncStorage.Mutex.RUnlock()
+func getClientSyncRange(syncState SyncState, syncBlocksOrder gossipmessages.SyncBlocksOrder, batchSize primitives.BlockHeight, logger log.Logger) (from primitives.BlockHeight, to primitives.BlockHeight, err error) {
 
-	topInOrder := c.tempSyncStorage.syncState.TopInOrder.Height
-	lastSynced := c.tempSyncStorage.syncState.LastSynced.Height
+	topInOrder := syncState.TopInOrder
+	lastSynced := syncState.LastSynced
+	logger.Info("GetClientSyncRange ", log.Stringable("topInOrder", topInOrder), log.Stringable("lastSynced", lastSynced))
 	if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		from = topInOrder + 1
 		to = from + batchSize - 1

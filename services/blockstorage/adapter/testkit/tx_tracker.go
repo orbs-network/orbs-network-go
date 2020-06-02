@@ -19,6 +19,7 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"math"
 	"sync"
+	"time"
 )
 
 type txTracker struct {
@@ -60,31 +61,33 @@ func (t *txTracker) advertise(height primitives.BlockHeight, transactions []*pro
 	t.Lock()
 	defer t.Unlock()
 
-	if height <= t.topHeight { // block already advertised
-		t.logger.Info("advertising block transactions aborted - already advertised", logfields.BlockHeight(height))
-		return
-	}
+	//if height <= t.topHeight { // block already advertised
+	//	t.logger.Info("advertising block transactions aborted - already advertised", logfields.BlockHeight(height))
+	//	return
+	//}
 
 	for _, tx := range transactions {
 		txHash := digest.CalcTxHash(tx.Transaction())
 
-		prevHeight, existed := t.txToHeight[txHash.KeyForMap()]
+		_, existed := t.txToHeight[txHash.KeyForMap()]
 
-		if existed {
-			if prevHeight != height {
-				t.logger.Error("FORK/DOUBLE-SPEND!! same transaction reported in different heights. may be committed twice", logfields.Transaction(txHash), logfields.BlockHeight(height), log.Uint64("previously-reported-height", uint64(prevHeight)))
-				panic(fmt.Sprintf("FORK/DOUBLE-SPEND!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, height))
-			} else {
-				t.logger.Error("BUG!! txTracker.txToHeight contains a block height ahead of topHeight", logfields.Transaction(txHash), logfields.BlockHeight(height), log.Uint64("tracker-top-height", uint64(t.topHeight)))
-				panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
-			}
+		//if existed {
+		//	if prevHeight != height {
+		//		t.logger.Error("FORK/DOUBLE-SPEND!! same transaction reported in different heights. may be committed twice", logfields.Transaction(txHash), logfields.BlockHeight(height), log.Uint64("previously-reported-height", uint64(prevHeight)))
+		//		panic(fmt.Sprintf("FORK/DOUBLE-SPEND!! transaction %s previously advertised for height %d and now again for height %d. may be committed twice", txHash.String(), prevHeight, height))
+		//	} else {
+		//		t.logger.Error("BUG!! txTracker.txToHeight contains a block height ahead of topHeight", logfields.Transaction(txHash), logfields.BlockHeight(height), log.Uint64("tracker-top-height", uint64(t.topHeight)))
+		//		panic(fmt.Sprintf("BUG!! txTracker.txToHeight contains a block height ahead of topHeight. tx %s found listed for height %d. but topHeight is %d", txHash.String(), height, t.topHeight))
+		//	}
+		//}
+
+		if !existed {
+			t.txToHeight[txHash.KeyForMap()] = height
 		}
-
-		t.txToHeight[txHash.KeyForMap()] = height
 	}
 	t.logger.Info("advertising block transactions done", logfields.BlockHeight(height))
 
-	t.blockTracker.IncrementTo(height)
+	//t.blockTracker.IncrementTo(height)
 	t.topHeight = height
 }
 
@@ -92,6 +95,10 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 	logger := t.logger.WithTags(trace.LogFieldFrom(ctx))
 	logger.Info("waiting for transaction", logfields.Transaction(txHash))
 	for {
+		if ctx.Err() != nil {
+			instrumentation.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
+			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
+		}
 		txHeight, topHeight := t.getBlockHeight(txHash)
 
 		if txHeight > 0 { // found requested height
@@ -100,10 +107,11 @@ func (t *txTracker) waitForTransaction(ctx context.Context, txHash primitives.Sh
 		}
 
 		logger.Info("transaction not found in current block, will wait for next block to look for it again", logfields.Transaction(txHash), logfields.BlockHeight(topHeight))
-		err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
-		if err != nil {
-			instrumentation.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
-			panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
-		}
+		time.Sleep(1*time.Millisecond)
+		//err := t.blockTracker.WaitForBlock(ctx, topHeight+1) // wait for next block
+		//if err != nil {
+		//	instrumentation.DebugPrintGoroutineStacks(logger) // since test timed out, help find deadlocked goroutines
+		//	panic(fmt.Sprintf("timed out waiting for transaction with hash %s", txHash))
+		//}
 	}
 }

@@ -7,6 +7,7 @@
 package adapter
 
 import (
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -17,6 +18,12 @@ import (
 // repeatedly until it returns false to signal no more pages are required or until there are no more blocks to fetch.
 type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool)
 
+//type SyncState struct {
+//	Top        primitives.BlockHeight
+//	TopInOrder primitives.BlockHeight
+//	LastSynced primitives.BlockHeight
+//}
+
 type BlockPersistence interface {
 	WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error)
 
@@ -26,6 +33,8 @@ type BlockPersistence interface {
 	GetLastBlock() (*protocol.BlockPairContainer, error)
 
 	GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error)
+	GetSyncState() internodesync.SyncState
+
 	GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error)
 	GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error)
 	GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error)

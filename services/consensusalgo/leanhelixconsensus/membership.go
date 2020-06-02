@@ -79,7 +79,6 @@ func toMemberIds(nodeAddresses []primitives.NodeAddress) []lhprimitives.MemberId
 func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lhprimitives.MemberId, error) {
 	res, err := m.consensusContext.RequestBlockProofOrderingCommittee(ctx, &services.RequestBlockProofCommitteeInput{
 		PrevBlockReferenceTime: primitives.TimestampSeconds(prevBlockReferenceTime),
-		MaxCommitteeSize:   m.maxCommitteeSize,
 	})
 	if err != nil {
 		m.logger.Info(" failed RequestCommitteeForBlockProof()", log.Error(err))

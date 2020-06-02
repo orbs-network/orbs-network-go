@@ -107,9 +107,7 @@ func newBlockSyncHarnessWithTimers(
 	storage := &blockSyncStorageMock{}
 	conduit := make(blockSyncConduit)
 	management := &services.MockManagement{}
-
 	metricFactory := metric.NewRegistry()
-	storage.When("GetLastCommittedBlock").Return(nil, nil)
 
 	return &blockSyncHarness{
 		logger:        logger,
@@ -213,10 +211,12 @@ func (h *blockSyncHarness) expectUpdateConsensusAlgosAboutLastCommittedBlockInLo
 }
 
 func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequestToFail() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 }
 
 func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
@@ -252,9 +252,11 @@ func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpec
 }
 
 func (h *blockSyncHarness) expectSendingOfBlockSyncRequest() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
 func (h *blockSyncHarness) expectSendingOfBlockSyncRequestToFail() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 }

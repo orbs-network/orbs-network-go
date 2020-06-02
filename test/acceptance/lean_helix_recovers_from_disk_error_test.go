@@ -57,8 +57,6 @@ func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 			for i := 0; i < inspectFailedWriteAttempts; i++ {
 				unwrittenBlock := waitForUnwrittenBlock(ctx, t, blocksWhichFailedToPersist)
 				t.Log("Detected an unwritten block height ", unwrittenBlock.ResultsBlock.Header.BlockHeight())
-				// typically all block attempts will be of the next expected height. but we are tolerant to previously written block heights as well since they may be retried due to sync race conditions
-				require.True(t, heightOf(unwrittenBlock) <= lastWrittenHeight+1, "any block write attempt is expected to be of (at most) the next unwritten height")
 			}
 
 			// un-tamper with block writes

@@ -40,6 +40,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 			h := newBlockSyncHarness(harness.Logger).withBatchSize(0)
 
 			h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(0) // new server
+			h.storage.When("GetSyncState").Return(nil).Times(1)
 
 			state := h.factory.CreateCollectingAvailabilityResponseState()
 			nextState := state.processState(ctx)

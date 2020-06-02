@@ -40,13 +40,13 @@ func TestSyncSource_IgnoresRangesOfBlockSyncRequestAccordingToLocalBatchSettings
 		}
 
 		harness.commitBlock(ctx, blocks[0])
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
+		//harness.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
 		harness.commitBlock(ctx, blocks[1])
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
+		//harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
 		harness.commitBlock(ctx, blocks[2])
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
+		//harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
 		harness.commitBlock(ctx, blocks[3])
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
+		//harness.blockStorage.GetNodeSync().UpdateStorageSyncState()
 
 
 		expectedBlocks := []*protocol.BlockPairContainer{blocks[1], blocks[2]}

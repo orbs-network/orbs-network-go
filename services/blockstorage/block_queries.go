@@ -9,14 +9,19 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
 
-func (s *Service)  GetLastCommittedBlock() (*protocol.BlockPairContainer, error) {
-	return s.persistence.GetLastBlock()
+func (s *Service)  GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	return s.persistence.GetBlock(height)
+}
+
+func (s *Service)  GetSyncState() internodesync.SyncState {
+	return s.persistence.GetSyncState()
 }
 
 func (s *Service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {

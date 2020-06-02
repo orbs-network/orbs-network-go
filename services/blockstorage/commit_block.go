@@ -37,14 +37,14 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	added, persistedHeight, err := s.persistence.WriteNextBlock(input.BlockPair)
+	added, _, err := s.persistence.WriteNextBlock(input.BlockPair)
 	if err != nil {
 		return nil, err
 	}
 
-	if proposedBlockHeight > persistedHeight+1 {
-		return nil, fmt.Errorf("attempt to write future block %d. current top height is %d", proposedBlockHeight, persistedHeight)
-	}
+	//if proposedBlockHeight > persistedHeight+1 {
+	//	return nil, fmt.Errorf("attempt to write future block %d. current top height is %d", proposedBlockHeight, persistedHeight)
+	//}
 
 	if !added {
 		storedRsBlock, err := s.persistence.GetResultsBlock(proposedBlockHeight)

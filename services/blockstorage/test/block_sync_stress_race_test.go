@@ -9,9 +9,11 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -34,7 +36,6 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 }
 
 func TestSyncPetitioner_Stress_CommitsDuringSync_Descending(t *testing.T) {
-	t.Skip("Current block storage does not support future blocks yet")
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncNoCommitTimeout(10 * time.Millisecond).
@@ -59,10 +60,17 @@ func testSyncPetitionerStressCommitsDuringSync(ctx context.Context, t *testing.T
 	})
 
 	harness.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockSyncRequestInput) (*gossiptopics.EmptyOutput, error) {
-		if input.Message.SignedChunkRange.LastBlockHeight() >= NUM_BLOCKS {
+		blocksOrder := input.Message.SignedChunkRange.BlocksOrder()
+		fromBlock := input.Message.SignedChunkRange.FirstBlockHeight()
+		toBlock := input.Message.SignedChunkRange.LastBlockHeight()
+
+		if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+			if toBlock == 1 && fromBlock > internodesync.UNKNOWN_BLOCK_HEIGHT  {
+				done <- struct{}{}
+			}
+		} else if toBlock >= NUM_BLOCKS {
 			done <- struct{}{}
 		}
-
 		respondToBlockSyncRequestWithConcurrentCommit(t, ctx, harness, input, blockChain)
 		return nil, nil
 	})
@@ -105,12 +113,10 @@ func respondToBlockSyncRequestWithConcurrentCommit(t testing.TB, ctx context.Con
 		_, err := harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 			BlockPair: response.Message.BlockPairs[0],
 		})
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
 		require.NoError(t, err, "failed committing first block in parallel to sync")
 		_, err = harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
 			BlockPair: response.Message.BlockPairs[1],
 		})
-		harness.blockStorage.GetNodeSync().UpdateStorageSyncState() // temp sync storage issue TODO: remove with temp sync storage
 		require.NoError(t, err, "failed committing second block in parallel to sync")
 	}()
 }
