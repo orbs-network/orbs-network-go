@@ -41,6 +41,7 @@ func GetMetricRegistry(nodeConfig config.NodeConfig) metric.Registry {
 
 	version := config.GetVersion()
 
+	metricRegistry.NewText("Node.Address", nodeConfig.NodeAddress().String())
 	metricRegistry.NewText("Version.Semantic", version.Semantic)
 	metricRegistry.NewText("Version.Commit", version.Commit)
 
@@ -61,7 +62,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 	transport := tcp.NewDirectTransport(ctx, nodeConfig, nodeLogger, metricRegistry)
 
 	var managementProvider management.Provider
-	if len(nodeConfig.ManagementFilePath()) == 0 {
+	if nodeConfig.ManagementFilePath() == "" {
 		err := config.ValidateInMemoryManagement(nodeConfig)
 		if err != nil {
 			nodeLogger.Error("InMemory parmerters error cannot start", log.Error(err))

@@ -95,6 +95,7 @@ jobs:
       - checkout
       - run: ./docker/build/build-docker-node.sh
       - run: ./.circleci/release-node-to-ecr.sh
+      - run: ./.circleci/release-node-to-staging.sh
 
   circleci_scripts:
     docker:

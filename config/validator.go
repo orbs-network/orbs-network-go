@@ -30,9 +30,6 @@ func ValidateNodeLogic(cfg NodeConfig) error {
 	if len(cfg.NodeAddress()) == 0 {
 		return errors.New("node address must not be empty")
 	}
-	if len(cfg.GenesisValidatorNodes()) == 0 { // TODO POSV2 this should be removed
-		return errors.New("genesis validator list must not be empty")
-	}
 
 	if cfg.SignerEndpoint() == "" {
 		if len(cfg.NodePrivateKey()) == 0 {

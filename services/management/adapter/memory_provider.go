@@ -102,8 +102,8 @@ func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, co
 	mp.Lock()
 	defer mp.Unlock()
 
-	if mp.committees[len(mp.committees)-1].AsOfReference >= reference {
-		return errors.Errorf("new committee must have an 'asOf' reference bigger than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
+	if mp.committees[len(mp.committees)-1].AsOfReference > reference {
+		return errors.Errorf("new committee cannot have an 'asOf' reference smaller than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
 	}
 
 	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee})
@@ -115,8 +115,8 @@ func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds,
 	mp.Lock()
 	defer mp.Unlock()
 
-	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference >= reference {
-		return errors.Errorf("new subscription must have an 'asOf' reference bigger than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
+	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference > reference {
+		return errors.Errorf("new subscription cannot have an 'asOf' reference smaller than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
 	}
 
 	mp.isSubscriptionActives = append(mp.isSubscriptionActives, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive})
