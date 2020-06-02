@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestManagementMemory_PreventDoubleCommitteeOnSameBlock(t *testing.T) {
+func TestManagementMemory_AllowDoubleCommitteeOnSameBlock(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cp := NewMemoryProvider(newMemoryConfig(), harness.Logger)
 		termChangeHeight := primitives.TimestampSeconds(10)
@@ -21,7 +21,7 @@ func TestManagementMemory_PreventDoubleCommitteeOnSameBlock(t *testing.T) {
 		require.Error(t, err, "must fail on smaller")
 
 		err = cp.AddCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
-		require.Error(t, err, "must fail on equal")
+		require.NoError(t, err, "must not fail on equal")
 	})
 }
 

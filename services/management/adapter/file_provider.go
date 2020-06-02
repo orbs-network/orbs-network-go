@@ -95,7 +95,8 @@ func (mp *FileProvider) readFile(filePath string) ([]byte, error) {
 }
 
 type topologyNode struct {
-	Address string
+	EthAddress string
+	OrbsAddress string
 	Ip string
 	Port int
 }
@@ -192,7 +193,7 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 func parseTopology(currentTopology []topologyNode) ([]*services.GossipPeer, error) {
 	topology := make([]*services.GossipPeer, 0, len(currentTopology))
 	for _, item := range currentTopology {
-		hexAddress := item.Address
+		hexAddress := item.OrbsAddress
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
 			return nil, errors.Wrapf(err, "cannot translate topology node address from hex %s", hexAddress)
 		} else if net.ParseIP(item.Ip) == nil {
@@ -227,10 +228,6 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Members: committee})
 	}
 
-	sort.SliceStable(committeeTerms, func(i, j int) bool {
-		return committeeTerms[i].AsOfReference < committeeTerms[j].AsOfReference
-	})
-
 	return committeeTerms, nil
 }
 
@@ -248,10 +245,6 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive:isActive})
 	}
 
-	sort.SliceStable(subscriptionPeriods, func(i, j int) bool {
-		return subscriptionPeriods[i].AsOfReference < subscriptionPeriods[j].AsOfReference
-	})
-
 	return subscriptionPeriods, nil
 }
 
@@ -260,10 +253,6 @@ func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []manage
 	for _, event := range protocolVersionEvents {
 		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Version: primitives.ProtocolVersion(event.Data.Version)})
 	}
-
-	sort.SliceStable(protocolVersionPeriods, func(i, j int) bool {
-		return protocolVersionPeriods[i].AsOfReference < protocolVersionPeriods[j].AsOfReference
-	})
 
 	if len(protocolVersionPeriods) == 0 {
 		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
