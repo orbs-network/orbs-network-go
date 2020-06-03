@@ -36,9 +36,6 @@ func (s *Service) HandleBlockSyncRequest(ctx context.Context, input *gossiptopic
 func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, message *gossipmessages.BlockAvailabilityRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	if s.nodeSync == nil {
-		return nil
-	}
 	logger.Info("received block availability request",
 		log.Stringable("availability-request-message", message))
 
@@ -161,9 +158,6 @@ func reverse(arr []*protocol.BlockPairContainer) {
 func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	if s.nodeSync == nil {
-		return nil
-	}
 	logger.Info("received block sync chunk request",
 		log.Stringable("chunk-request-message", message))
 
