@@ -88,9 +88,9 @@ func getServerSyncRange(syncState internodesync.SyncState,
 	batchSize primitives.BlockHeight,
 ) (responseFrom primitives.BlockHeight, responseTo primitives.BlockHeight, err error) {
 
-	topInOrder := syncState.TopInOrder
-	lastSynced := syncState.LastSynced
-	top := syncState.Top
+	topInOrder := syncState.InOrderHeight
+	lastSynced := syncState.LastSyncedHeight
+	top := syncState.TopHeight
 
 	responseFrom = requestFrom
 	responseTo = requestTo

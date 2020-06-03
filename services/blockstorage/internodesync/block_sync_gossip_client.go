@@ -127,8 +127,8 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 // inclusive range
 func getClientSyncRange(syncState SyncState, syncBlocksOrder gossipmessages.SyncBlocksOrder, batchSize primitives.BlockHeight, logger log.Logger) (from primitives.BlockHeight, to primitives.BlockHeight, err error) {
 
-	topInOrder := syncState.TopInOrder
-	lastSynced := syncState.LastSynced
+	topInOrder := syncState.InOrderHeight
+	lastSynced := syncState.LastSyncedHeight
 	logger.Info("GetClientSyncRange ", log.Stringable("topInOrder", topInOrder), log.Stringable("lastSynced", lastSynced))
 	if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		from = topInOrder + 1

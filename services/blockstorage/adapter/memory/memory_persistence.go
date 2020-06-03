@@ -26,10 +26,10 @@ type memMetrics struct {
 
 type aChainOfBlocks struct {
 	sync.RWMutex
-	blocks     map[primitives.BlockHeight]*protocol.BlockPairContainer
-	top        *protocol.BlockPairContainer
-	topInOrder *protocol.BlockPairContainer
-	lastSynced *protocol.BlockPairContainer
+	blocks           map[primitives.BlockHeight]*protocol.BlockPairContainer
+	inOrder          *protocol.BlockPairContainer
+	topHeight        primitives.BlockHeight
+	lastSyncedHeight primitives.BlockHeight
 }
 
 type InMemoryBlockPersistence struct {
@@ -49,7 +49,7 @@ func NewBlockPersistence(parent log.Logger, metricFactory metric.Factory, preloa
 	}
 	// TODO: currently preloadedBlocks is sorted by height - ascending
 	p.blockChain = createChainOfBlocks(preloadedBlocks) // this is needed so that each instance of BlockPersistence has its own copy of the block chain
-	startingHeight := uint64(getBlockHeight(p.blockChain.topInOrder))
+	startingHeight := uint64(getBlockHeight(p.blockChain.inOrder))
 	p.tracker = synchronization.NewBlockTracker(logger, startingHeight, 5)
 	return p
 }
@@ -59,9 +59,9 @@ func (bp *InMemoryBlockPersistence) GetSyncState() internodesync.SyncState {
 	defer bp.blockChain.RUnlock()
 
 	return internodesync.SyncState {
-		Top:        getBlockHeight(bp.blockChain.top),
-		TopInOrder: getBlockHeight(bp.blockChain.topInOrder),
-		LastSynced: getBlockHeight(bp.blockChain.lastSynced),
+		TopHeight:        bp.blockChain.topHeight,
+		InOrderHeight:    getBlockHeight(bp.blockChain.inOrder),
+		LastSyncedHeight: bp.blockChain.lastSyncedHeight,
 	}
 }
 
@@ -75,11 +75,12 @@ func createChainOfBlocks(blocks []*protocol.BlockPairContainer) aChainOfBlocks {
 	count := len(blocks)
 	if count > 0 {
 		for _, block := range blocks {
-			cb.blocks[getBlockHeight(block)] = block
-			if getBlockHeight(block) > getBlockHeight(cb.topInOrder) {
-				cb.topInOrder = block
-				cb.top = block
-				cb.lastSynced = block
+			blockHeight := getBlockHeight(block)
+			cb.blocks[blockHeight] = block
+			if blockHeight > getBlockHeight(cb.inOrder) {
+				cb.inOrder = block
+				cb.topHeight = blockHeight
+				cb.lastSyncedHeight = blockHeight
 			}
 		}
 	}
@@ -101,14 +102,14 @@ func (bp *InMemoryBlockPersistence) GetLastBlock() (*protocol.BlockPairContainer
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	return bp.blockChain.topInOrder, nil
+	return bp.blockChain.inOrder, nil
 }
 
 func (bp *InMemoryBlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	return getBlockHeight(bp.blockChain.topInOrder), nil
+	return getBlockHeight(bp.blockChain.inOrder), nil
 }
 
 func (bp *InMemoryBlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
@@ -127,25 +128,29 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	defer bp.blockChain.Unlock()
 
 	newBlockHeight := getBlockHeight(blockPair)
-	topInOrderHeight := getBlockHeight(bp.blockChain.topInOrder)
+	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
 	if _, ok := bp.blockChain.blocks[newBlockHeight]; ok { // block exists
-		return false, topInOrderHeight
-	}
-	bp.blockChain.blocks[newBlockHeight] = blockPair
-	bp.blockChain.lastSynced = blockPair
-	if newBlockHeight > getBlockHeight(bp.blockChain.top) {
-		bp.blockChain.top = blockPair
+		return false, inOrderHeight
 	}
 
-	topHeight := getBlockHeight(bp.blockChain.top)
-	if newBlockHeight == topInOrderHeight+1 {
-		for height := topInOrderHeight + 1; height <= topHeight; height++ {
-			tempBlock, _ := bp.blockChain.blocks[height]
-			if tempBlock == nil {
-				break
+	bp.blockChain.blocks[newBlockHeight] = blockPair
+	bp.blockChain.lastSyncedHeight = newBlockHeight
+	if newBlockHeight > bp.blockChain.topHeight {
+		bp.blockChain.topHeight = newBlockHeight
+	}
+
+	if bp.blockChain.lastSyncedHeight == inOrderHeight+1 { // gap was closed storage holds consecutive blocks 1-topHeight
+		for height := inOrderHeight + 1; height <= bp.blockChain.topHeight; height++ { // update indices and blockTracker
+			if block, _ := bp.blockChain.blocks[height]; block == nil {
+				panic("block was not found in memory - should not happen")
 			}
-			bp.blockChain.topInOrder = tempBlock
 			bp.tracker.IncrementTo(height)
+		}
+		bp.blockChain.lastSyncedHeight = bp.blockChain.topHeight
+		if block, _ := bp.blockChain.blocks[bp.blockChain.topHeight]; block == nil {
+			panic("block was not found in memory - should not happen")
+		} else {
+			bp.blockChain.inOrder = block
 		}
 	}
 
@@ -214,7 +219,7 @@ func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, page
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	lastBlockHeight := getBlockHeight(bp.blockChain.topInOrder)
+	lastBlockHeight := getBlockHeight(bp.blockChain.inOrder)
 
 	if from > lastBlockHeight || from == 0 {
 		return fmt.Errorf("requested unknown block height %d. current height is %d", from, lastBlockHeight)

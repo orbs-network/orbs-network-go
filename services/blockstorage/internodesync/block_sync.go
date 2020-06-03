@@ -43,9 +43,9 @@ type blockSyncConfig interface {
 }
 
 type SyncState struct {
-	Top        primitives.BlockHeight
-	TopInOrder primitives.BlockHeight
-	LastSynced primitives.BlockHeight
+	TopHeight        primitives.BlockHeight
+	InOrderHeight    primitives.BlockHeight
+	LastSyncedHeight primitives.BlockHeight
 }
 
 type BlockSyncStorage interface {
