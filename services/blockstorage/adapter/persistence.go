@@ -18,12 +18,6 @@ import (
 // repeatedly until it returns false to signal no more pages are required or until there are no more blocks to fetch.
 type CursorFunc func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool)
 
-//type SyncState struct {
-//	TopHeight        primitives.BlockHeight
-//	InOrderHeight primitives.BlockHeight
-//	LastSyncedHeight primitives.BlockHeight
-//}
-
 type BlockPersistence interface {
 	WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error)
 
