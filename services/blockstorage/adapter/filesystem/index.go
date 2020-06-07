@@ -8,6 +8,8 @@ package filesystem
 
 import (
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
+	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
@@ -18,41 +20,53 @@ type blockHeightIndex struct {
 	sync.RWMutex
 	heightOffset         map[primitives.BlockHeight]int64
 	firstBlockInTsBucket map[uint32]primitives.BlockHeight
+	currentOffset        int64
+	inOrderBlock         *protocol.BlockPairContainer
 	topBlock             *protocol.BlockPairContainer
-	topBlockHeight       primitives.BlockHeight
+	lastSyncedHeight     primitives.BlockHeight
 	logger               log.Logger
 }
 
 func newBlockHeightIndex(logger log.Logger, firstBlockOffset int64) *blockHeightIndex {
 	return &blockHeightIndex{
 		logger:               logger,
-		heightOffset:         map[primitives.BlockHeight]int64{1: firstBlockOffset},
+		heightOffset:         map[primitives.BlockHeight]int64{},
 		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
+		currentOffset:        firstBlockOffset,
+		inOrderBlock:         nil,
 		topBlock:             nil,
-		topBlockHeight:       0,
+		lastSyncedHeight:     0,
 	}
 }
 
-func (i *blockHeightIndex) fetchTopOffset() int64 {
+func (i *blockHeightIndex) getSyncState() internodesync.SyncState {
 	i.RLock()
 	defer i.RUnlock()
-
-	offset, ok := i.heightOffset[i.topBlockHeight+1]
-	if !ok {
-		panic(fmt.Sprintf("index missing offset for block height %d", i.topBlockHeight))
+	return internodesync.SyncState{
+		TopHeight:        getBlockHeight(i.topBlock),
+		InOrderHeight:    getBlockHeight(i.inOrderBlock),
+		LastSyncedHeight: i.lastSyncedHeight,
 	}
-	return offset
 }
 
-func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) int64 {
+func (i *blockHeightIndex) fetchCurrentOffset() int64 {
 	i.RLock()
 	defer i.RUnlock()
 
-	offset, ok := i.heightOffset[height]
-	if !ok {
-		panic(fmt.Sprintf("index missing offset for block height %d", height))
-	}
-	return offset
+	return i.currentOffset
+}
+
+func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (offset int64, ok bool) {
+	i.RLock()
+	defer i.RUnlock()
+
+	offset, ok = i.heightOffset[height]
+	return
+	//if offset, ok := i.heightOffset[height]; !ok {
+	//	return 0, fmt.Errorf("index missing offset for block height %d", height)
+	//} else {
+	//	return offset, nil
+	//}
 }
 
 func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primitives.TimestampNano, rangeEnd primitives.TimestampNano) (primitives.BlockHeight, bool) {
@@ -71,26 +85,40 @@ func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primi
 
 }
 
-func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64, newBlock *protocol.BlockPairContainer) error {
+func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.BlockPairContainer, blockTracker *synchronization.BlockTracker) error {
 	i.Lock()
 	defer i.Unlock()
 
-	newBlockHeight := newBlock.ResultsBlock.Header.BlockHeight()
+	newBlockHeight := getBlockHeight(newBlock)
+	topHeight := getBlockHeight(i.topBlock)
+	inOrderHeight := getBlockHeight(i.inOrderBlock)
 	numTxReceipts := newBlock.ResultsBlock.Header.NumTransactionReceipts()
 	blockTs := newBlock.ResultsBlock.Header.Timestamp()
 
-	currentTopOffset, ok := i.heightOffset[i.topBlockHeight+1]
-	if !ok {
-		return fmt.Errorf("index missing offset for block height %d", i.topBlockHeight)
-	}
-	if currentTopOffset != prevTopOffset {
-		return fmt.Errorf("unexpected top block offest, may be a result of two processes writing concurrently. found offest %d while expecting %d", currentTopOffset, prevTopOffset)
+	if _, ok := i.heightOffset[newBlockHeight]; ok { // block exists
+		return fmt.Errorf("index of blockHeight (%d) already exists ", uint64(newBlockHeight))
 	}
 
-	// update index
-	i.topBlock = newBlock
-	i.topBlockHeight = newBlock.ResultsBlock.Header.BlockHeight()
-	i.heightOffset[newBlockHeight+1] = newTopOffset
+	i.heightOffset[newBlockHeight] = i.currentOffset
+	i.currentOffset = newOffset
+	// update indices
+	i.lastSyncedHeight = newBlockHeight
+	if newBlockHeight > topHeight {
+		i.topBlock = newBlock
+		topHeight = newBlockHeight
+	}
+	if i.lastSyncedHeight == inOrderHeight+1 {
+		if blockTracker != nil {
+			for height := inOrderHeight + 1; height <= topHeight; height++ {
+				if _, ok := i.heightOffset[height]; !ok { // block does not exists
+					panic("block offset not found - should not happen")
+				}
+				blockTracker.IncrementTo(height)
+			}
+		}
+		i.lastSyncedHeight = topHeight
+		i.inOrderBlock = i.topBlock
+	}
 
 	if numTxReceipts > 0 {
 		_, exists := i.firstBlockInTsBucket[blockTsBucketKey(blockTs)]
@@ -105,13 +133,13 @@ func (i *blockHeightIndex) appendBlock(prevTopOffset int64, newTopOffset int64, 
 func (i *blockHeightIndex) getLastBlock() *protocol.BlockPairContainer {
 	i.RLock()
 	defer i.RUnlock()
-	return i.topBlock
+	return i.inOrderBlock
 }
 
 func (i *blockHeightIndex) getLastBlockHeight() primitives.BlockHeight {
 	i.RLock()
 	defer i.RUnlock()
-	return i.topBlockHeight
+	return getBlockHeight(i.inOrderBlock)
 }
 
 const minuteToNanoRatio = 60 * 1000 * 1000 * 1000

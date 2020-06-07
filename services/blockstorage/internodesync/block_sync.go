@@ -37,9 +37,8 @@ type blockSyncConfig interface {
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
-	BlockSyncDescendingActivationDate() string
+	BlockSyncDescendingEnabled() bool
 	BlockSyncReferenceMaxAllowedDistance() time.Duration
-	ManagementReferenceGraceTimeout() time.Duration
 }
 
 type SyncState struct {
@@ -83,7 +82,6 @@ type BlockSync struct {
 	conduit                    blockSyncConduit
 	metrics                    *stateMachineMetrics
 	config                     blockSyncConfig
-	blocksOrderActivationTimer *time.Timer
 }
 
 type stateMachineMetrics struct {
@@ -109,16 +107,15 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 		config:  config,
 	}
 
+	setupSyncBlocksOrder(bs, config.BlockSyncDescendingEnabled())
+
 	logger.Info("Block sync init",
 		log.Stringable("no-commit-timeout", bs.factory.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.factory.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
-		log.String("descending-activation-date", bs.factory.config.BlockSyncDescendingActivationDate()),
-		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()),
-		log.Stringable("management-reference-grace-timeout", bs.factory.config.ManagementReferenceGraceTimeout()))
-
-	setupSyncBlocksOrder(bs, config.BlockSyncDescendingActivationDate(), logger)
+		log.Stringable("blocks-order", bs.factory.syncBlocksOrder),
+		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)
@@ -127,21 +124,11 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 	return bs
 }
 
-func setupSyncBlocksOrder(bs *BlockSync, descendingActivationDateStr string, logger log.Logger) {
-	activationDate, err := time.Parse(time.RFC3339, descendingActivationDateStr)
-	if err != nil {
-		logger.Error("BlockSync failed to parse descending blocks order activation date", log.Error(err))
-		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING)
-		return
-	}
-
-	if timeUntilActivation := activationDate.Sub(time.Now()); timeUntilActivation < 0 {
+func setupSyncBlocksOrder(bs *BlockSync, descendingOrderEnabled bool) {
+	if descendingOrderEnabled {
 		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING)
 	} else {
 		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING)
-		bs.blocksOrderActivationTimer = time.AfterFunc(timeUntilActivation, func() {
-			bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING)
-		})
 	}
 }
 
@@ -160,14 +147,7 @@ func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopi
 	)
 }
 
-func (bs *BlockSync) deactivateBlocksOrderTimer() {
-	if bs.blocksOrderActivationTimer != nil {
-		bs.blocksOrderActivationTimer.Stop()
-	}
-}
-
 func (bs *BlockSync) syncLoop(parent context.Context) {
-	defer bs.deactivateBlocksOrderTimer()
 	for currentState := bs.factory.CreateCollectingAvailabilityResponseState(); currentState != nil; {
 		ctx := trace.NewContext(parent, "BlockSync")
 		bs.logger.Info("state transitioning", log.Stringable("current-state", currentState), trace.LogFieldFrom(ctx))

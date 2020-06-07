@@ -25,15 +25,14 @@ import (
 )
 
 type blockSyncConfigForTests struct {
-	nodeAddress              primitives.NodeAddress
-	batchSize                uint32
-	noCommit                 time.Duration
-	collectResponses         time.Duration
-	collectChunks            time.Duration
-	referenceDistance        time.Duration
-	managementReferenceGrace time.Duration
-	blocksOrder              gossipmessages.SyncBlocksOrder
-	descendingActivationDate string
+	nodeAddress       primitives.NodeAddress
+	batchSize         uint32
+	noCommit          time.Duration
+	collectResponses  time.Duration
+	collectChunks     time.Duration
+	referenceDistance time.Duration
+	blocksOrder       gossipmessages.SyncBlocksOrder
+	descendingEnabled bool
 }
 
 func (c *blockSyncConfigForTests) NodeAddress() primitives.NodeAddress {
@@ -60,29 +59,24 @@ func (c *blockSyncConfigForTests) BlockSyncReferenceMaxAllowedDistance() time.Du
 	return c.referenceDistance
 }
 
-func (c *blockSyncConfigForTests) ManagementReferenceGraceTimeout() time.Duration {
-	return c.managementReferenceGrace
-}
-
 func (c *blockSyncConfigForTests) BlockSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
 	return c.blocksOrder
 }
 
-func (c *blockSyncConfigForTests) BlockSyncDescendingActivationDate() string {
-	return c.descendingActivationDate
+func (c *blockSyncConfigForTests) BlockSyncDescendingEnabled() bool {
+	return c.descendingEnabled
 }
 
 func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	return &blockSyncConfigForTests{
-		nodeAddress:              testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:                10,
-		noCommit:                 3 * time.Millisecond,
-		collectResponses:         3 * time.Millisecond,
-		collectChunks:            3 * time.Millisecond,
-		referenceDistance:        100 * time.Second,
-		managementReferenceGrace: 100 * time.Second,
-		blocksOrder:              gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
-		descendingActivationDate: time.Now().AddDate(0, -1, 0).Format(time.RFC3339),//"2220-06-15T12:00:00.000Z",
+		nodeAddress:       testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
+		batchSize:         10,
+		noCommit:          3 * time.Millisecond,
+		collectResponses:  3 * time.Millisecond,
+		collectChunks:     3 * time.Millisecond,
+		referenceDistance: 100 * time.Second,
+		blocksOrder:       gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
+		descendingEnabled: true,
 	}
 }
 
@@ -155,13 +149,9 @@ func (h *blockSyncHarness) withReferenceDistance(d time.Duration) *blockSyncHarn
 	return h
 }
 
-func (h *blockSyncHarness) withSyncBlocksOrder(order gossipmessages.SyncBlocksOrder) *blockSyncHarness {
-	h.factory.syncBlocksOrder = order
+func (h *blockSyncHarness) withDescendingEnabled(isEnabled bool) *blockSyncHarness {
+	h.config.descendingEnabled = isEnabled
 	return h
-}
-
-func (h *blockSyncHarness) setSyncBlocksOrder(order gossipmessages.SyncBlocksOrder) {
-	h.config.blocksOrder = order
 }
 
 func (h *blockSyncHarness) expectSyncOnStart() {

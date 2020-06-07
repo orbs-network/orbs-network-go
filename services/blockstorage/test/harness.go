@@ -31,18 +31,17 @@ import (
 )
 
 type configForBlockStorageTests struct {
-	nodeAddress              primitives.NodeAddress
-	syncBatchSize            uint32
-	syncNoCommit             time.Duration
-	syncCollectResponses     time.Duration
-	syncCollectChunks        time.Duration
-	syncReferenceDistance    time.Duration
-	managementReferenceGrace time.Duration
-	syncBlocksOrder          gossipmessages.SyncBlocksOrder
-	descendingActivationDate string
-	queryGrace               time.Duration
-	queryExpirationWindow    time.Duration
-	blockTrackerGrace        time.Duration
+	nodeAddress           primitives.NodeAddress
+	syncBatchSize         uint32
+	syncNoCommit          time.Duration
+	syncCollectResponses  time.Duration
+	syncCollectChunks     time.Duration
+	syncReferenceDistance time.Duration
+	syncBlocksOrder       gossipmessages.SyncBlocksOrder
+	descendingEnabled     bool
+	queryGrace            time.Duration
+	queryExpirationWindow time.Duration
+	blockTrackerGrace     time.Duration
 }
 
 func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
@@ -69,15 +68,11 @@ func (c *configForBlockStorageTests) BlockSyncReferenceMaxAllowedDistance() time
 	return c.syncReferenceDistance
 }
 
-func (c *configForBlockStorageTests) ManagementReferenceGraceTimeout() time.Duration {
-	return c.managementReferenceGrace
+func (c *configForBlockStorageTests) BlockSyncDescendingEnabled() bool {
+	return c.descendingEnabled
 }
 
-func (c *configForBlockStorageTests) BlockSyncDescendingActivationDate() string {
-	return c.descendingActivationDate
-}
-
-func (c *configForBlockStorageTests) BlockSyncDescending() gossipmessages.SyncBlocksOrder {
+func (c *configForBlockStorageTests) BlockSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
 	return c.syncBlocksOrder
 }
 
@@ -189,10 +184,6 @@ func (d *harness) getBlock(height int) *protocol.BlockPairContainer {
 	}
 }
 
-func (d *harness) getBlockSync() *internodesync.BlockSync {
-	return d.blockStorage.GetNodeSync()
-}
-
 func (d *harness) withSyncNoCommitTimeout(duration time.Duration) *harness {
 	d.config.syncNoCommit = duration
 	return d
@@ -208,8 +199,8 @@ func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness 
 	return d
 }
 
-func (d *harness) withBlockSyncDescendingActivationDate(date string) *harness {
-	d.config.descendingActivationDate = date
+func (d *harness) withBlockSyncDescendingEnabled(isEnabled bool) *harness {
+	d.config.descendingEnabled = isEnabled
 	return d
 }
 
@@ -260,7 +251,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
-	cfg.descendingActivationDate = time.Now().AddDate(0, -1, 0).Format(time.RFC3339) //"2220-06-15T12:00:00.000Z"
+	cfg.descendingEnabled = true
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
@@ -374,7 +365,7 @@ func createBlockSyncResponse(input *gossiptopics.BlockSyncRequestInput, blockCha
 			return nil
 		}
 		// limit batch size server
-		if (fromBlock + 1 > primitives.BlockHeight(batchSize)) && (fromBlock + 1 - primitives.BlockHeight(batchSize) > toBlock) {
+		if (fromBlock+1 > primitives.BlockHeight(batchSize)) && (fromBlock+1-primitives.BlockHeight(batchSize) > toBlock) {
 			toBlock = fromBlock + 1 - primitives.BlockHeight(batchSize)
 		}
 		blocks = blockChainCopy[toBlock-1 : fromBlock]

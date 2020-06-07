@@ -22,12 +22,6 @@ import (
 
 func TestLeanHelix_CommitTransaction(t *testing.T) {
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[0:4])
-			require.NoError(t, err)
-		}).
 		WithNumNodes(4).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
@@ -58,12 +52,6 @@ func TestLeanHelix_CommitTransaction(t *testing.T) {
 
 func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 			defer cancel()
@@ -95,12 +83,6 @@ func TestLeaderCommitsTransactionsAndSkipsInvalidOnes(t *testing.T) {
 
 func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
@@ -130,35 +112,29 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-		defer cancel()
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
 
-		contract := network.DeployBenchmarkTokenContract(ctx, 5)
+			contract := network.DeployBenchmarkTokenContract(ctx, 5)
 
-		// leader is nodeIndex 0, validator is nodeIndex 1
+			// leader is nodeIndex 0, validator is nodeIndex 1
 
-		txHash1 := contract.TransferInBackground(ctx, 0, 17, 5, 6)
-		txHash2 := contract.TransferInBackground(ctx, 0, 22, 5, 6)
+			txHash1 := contract.TransferInBackground(ctx, 0, 17, 5, 6)
+			txHash2 := contract.TransferInBackground(ctx, 0, 22, 5, 6)
 
-		t.Log("waiting for node 0")
+			t.Log("waiting for node 0")
 
-		network.WaitForTransactionInNodeState(ctx, txHash1, 0)
-		network.WaitForTransactionInNodeState(ctx, txHash2, 0)
-		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 0, 5), "getBalance result on leader")
-		require.EqualValues(t, 39, contract.GetBalance(ctx, 0, 6), "getBalance result on leader")
+			network.WaitForTransactionInNodeState(ctx, txHash1, 0)
+			network.WaitForTransactionInNodeState(ctx, txHash2, 0)
+			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 0, 5), "getBalance result on leader")
+			require.EqualValues(t, 39, contract.GetBalance(ctx, 0, 6), "getBalance result on leader")
 
-		t.Log("waiting for node 1")
+			t.Log("waiting for node 1")
 
-		network.WaitForTransactionInNodeState(ctx, txHash1, 1)
-		network.WaitForTransactionInNodeState(ctx, txHash2, 1)
-		require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 1, 5), "getBalance result on non leader")
-		require.EqualValues(t, 39, contract.GetBalance(ctx, 1, 6), "getBalance result on non leader")
-	})
+			network.WaitForTransactionInNodeState(ctx, txHash1, 1)
+			network.WaitForTransactionInNodeState(ctx, txHash2, 1)
+			require.EqualValues(t, benchmarktoken.TOTAL_SUPPLY-39, contract.GetBalance(ctx, 1, 5), "getBalance result on non leader")
+			require.EqualValues(t, 39, contract.GetBalance(ctx, 1, 6), "getBalance result on non leader")
+		})
 }

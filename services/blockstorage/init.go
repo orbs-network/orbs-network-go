@@ -44,7 +44,7 @@ type Service struct {
 	}
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
-	nodeSync *internodesync.BlockSync
+	nodeSync       *internodesync.BlockSync
 	metrics        *metrics
 	notifyNodeSync chan struct{}
 }
@@ -154,8 +154,4 @@ func (s *Service) notifyNodeSyncOfCommittedBlock(ctx context.Context) {
 	defer cancel()
 	s.nodeSync.HandleBlockCommitted(shortCtx)
 
-}
-
-func (s *Service) GetNodeSync() *internodesync.BlockSync {
-	return s.nodeSync
 }

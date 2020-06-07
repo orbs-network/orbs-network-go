@@ -60,9 +60,8 @@ const (
 	BLOCK_SYNC_NO_COMMIT_INTERVAL             = "BLOCK_SYNC_NO_COMMIT_INTERVAL"
 	BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT       = "BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT"
 	BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT         = "BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT"
-	BLOCK_SYNC_DESCENDING_ACTIVATION_DATE     = "BLOCK_SYNC_DESCENDING_ACTIVATION_DATE"
+	BLOCK_SYNC_DESCENDING_ENABLED             = "BLOCK_SYNC_DESCENDING_ENABLED"
 	BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE = "BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE"
-	MANAGEMENT_REFERENCE_GRACE_TIMEOUT        = "MANAGEMENT_REFERENCE_GRACE_TIMEOUT"
 
 	BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE = "BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE"
 
@@ -333,16 +332,12 @@ func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
 }
 
-func (c *config) BlockSyncDescendingActivationDate() string {
-	return c.kv[BLOCK_SYNC_DESCENDING_ACTIVATION_DATE].StringValue
+func (c *config) BlockSyncDescendingEnabled() bool {
+	return c.kv[BLOCK_SYNC_DESCENDING_ENABLED].BoolValue
 }
 
 func (c *config) BlockSyncReferenceMaxAllowedDistance() time.Duration {
 	return c.kv[BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE].DurationValue
-}
-
-func (c *config) ManagementReferenceGraceTimeout() time.Duration {
-	return c.kv[MANAGEMENT_REFERENCE_GRACE_TIMEOUT].DurationValue
 }
 
 func (c *config) ProcessorArtifactPath() string {

@@ -16,11 +16,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Service)  GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+func (s *Service) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
 	return s.persistence.GetBlock(height)
 }
 
-func (s *Service)  GetSyncState() internodesync.SyncState {
+func (s *Service) GetSyncState() internodesync.SyncState {
 	return s.persistence.GetSyncState()
 }
 

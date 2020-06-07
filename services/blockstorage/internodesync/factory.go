@@ -136,8 +136,6 @@ func (f *stateFactory) CreateIdleState() syncState {
 		logger:                   f.logger,
 		conduit:                  f.conduit,
 		metrics:                  f.metrics.idleStateMetrics,
-		management:               f.management,
-		managementReferenceGrace: f.config.ManagementReferenceGraceTimeout(),
 	}
 }
 
@@ -184,8 +182,6 @@ func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.Block
 		conduit:                  f.conduit,
 		syncBlocksOrder:          f.syncBlocksOrder,
 		management:               f.management,
-		referenceMaxDistance:     f.config.BlockSyncReferenceMaxAllowedDistance(),
-		managementReferenceGrace: f.config.ManagementReferenceGraceTimeout(),
 		metrics:                  f.metrics.processingStateMetrics,
 	}
 }

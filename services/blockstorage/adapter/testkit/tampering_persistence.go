@@ -36,7 +36,7 @@ func NewBlockPersistence(parent log.Logger, preloadedBlocks []*protocol.BlockPai
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
 	return &tamperingBlockPersistence{
 		InMemoryBlockPersistence: *memory.NewBlockPersistence(logger, metricFactory, preloadedBlocks...),
-		txTracker:                newTxTracker(logger,  preloadedBlocks),
+		txTracker:                newTxTracker(logger, preloadedBlocks),
 	}
 }
 

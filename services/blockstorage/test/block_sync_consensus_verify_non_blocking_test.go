@@ -38,7 +38,7 @@ func TestSyncPetitioner_ConsensusVerify_NonBlocking(t *testing.T) {
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, 1, 0).Format(time.RFC3339)). // ensures activation date in the future => ascending order
+			withBlockSyncDescendingEnabled(false). // => ascending order
 			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch")
 
 		testSyncPetitionerConsensusVerifyNonBlocking(ctx, t, harness)
@@ -52,7 +52,7 @@ func TestSyncPetitioner_ConsensusVerify_NonBlocking_Descending(t *testing.T) {
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, -1, 0).Format(time.RFC3339)). // ensures activation date in the past => descending order
+			withBlockSyncDescendingEnabled(true). // => descending order
 			allowingErrorsMatching("FORK!! block already in storage, timestamp mismatch")
 
 		testSyncPetitionerConsensusVerifyNonBlocking(ctx, t, harness)

@@ -42,10 +42,6 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	//if proposedBlockHeight > persistedHeight+1 {
-	//	return nil, fmt.Errorf("attempt to write future block %d. current top height is %d", proposedBlockHeight, persistedHeight)
-	//}
-
 	if !added {
 		storedRsBlock, err := s.persistence.GetResultsBlock(proposedBlockHeight)
 		if err != nil {

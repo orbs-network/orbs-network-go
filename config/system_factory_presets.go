@@ -64,8 +64,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
 
 	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 12*time.Hour)
-	cfg.SetDuration(MANAGEMENT_REFERENCE_GRACE_TIMEOUT, 10*time.Minute)
-	cfg.SetString(BLOCK_SYNC_DESCENDING_ACTIVATION_DATE, time.Now().AddDate(0, -1, 0).Format(time.RFC3339))//"2020-06-15T12:00:00.000Z") // format time.RFC3339
+	// have block sync use descending order of blocks from top
+	cfg.SetBool(BLOCK_SYNC_DESCENDING_ENABLED, true)
 
 	cfg.SetDuration(PUBLIC_API_SEND_TRANSACTION_TIMEOUT, 20*time.Second)
 
@@ -170,8 +170,6 @@ func ForE2E(
 	// makes sync slower, 4*slow_network_latency
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 2*time.Second)
-	cfg.SetDuration(MANAGEMENT_REFERENCE_GRACE_TIMEOUT, 0*time.Minute) // disable comparing management.currentReference with time.Now
-
 
 	cfg.SetUint32(TRANSACTION_POOL_PROPAGATION_BATCH_SIZE, 1000)
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 50*time.Millisecond)
@@ -234,7 +232,6 @@ func ForAcceptanceTestNetwork(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 200*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 15*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 15*time.Millisecond)
-	//cfg.SetDuration(MANAGEMENT_REFERENCE_GRACE_TIMEOUT, 0*time.Minute) // disable comparing management.currentReference with time.Now
 
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 0*time.Millisecond)
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
@@ -271,7 +268,6 @@ func TemplateForGamma(
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 100*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 100*time.Millisecond)
-	cfg.SetDuration(MANAGEMENT_REFERENCE_GRACE_TIMEOUT, 0*time.Minute) // disable comparing management.currentReference with time.Now
 	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Second) // relevant for ganache
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
 

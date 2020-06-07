@@ -9,7 +9,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -21,18 +20,13 @@ import (
 
 func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
+		WithTestTimeout(20*time.Second).
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		AllowingErrors(
 			"failed to commit to persistent storage from temp storage", // Temp: this test intentionally fails block writes
-			"failed to commit block received via sync",           // this test intentionally fails block writes
-			"cannot get elected validators from system contract", // LH tries to read state from a block height that has not been properly persisted and therefore, fails
+			"failed to commit block received via sync",                 // this test intentionally fails block writes
+			"cannot get elected validators from system contract",       // LH tries to read state from a block height that has not been properly persisted and therefore, fails
 		).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			r := rand.NewControlledRand(t)

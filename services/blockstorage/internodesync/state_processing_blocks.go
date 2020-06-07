@@ -30,8 +30,6 @@ type processingBlocksState struct {
 	conduit                  blockSyncConduit
 	syncBlocksOrder          gossipmessages.SyncBlocksOrder
 	management               services.Management
-	referenceMaxDistance     time.Duration
-	managementReferenceGrace time.Duration
 	metrics                  processingStateMetrics
 }
 
@@ -69,7 +67,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Uint64("last-Block-height", uint64(lastBlockHeight)))
 
 	receivedSyncBlocksOrder := s.blocks.SignedChunkRange.BlocksOrder()
-	err := s.validatePosChain(ctx, s.blocks.BlockPairs, receivedSyncBlocksOrder)
+	err := s.validatePosChain(ctx, s.blocks.BlockPairs, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder)
 
 	if err != nil {
 		logger.Error("failed to verify the blocks chunk received via sync", log.Error(err))
@@ -107,13 +105,14 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	return s.factory.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, blockSyncReferenceMaxDistance time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && s.syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		return nil
+
 	} else if s.syncBlocksOrder != receivedSyncBlocksOrder {
 		return errors.New("received chunk with blocks order which does not match blockSync expected blocks order")
-	}
-	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+
+	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		firstBlock := blocks[0]
 		if nextBlock, _ := s.storage.GetBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); nextBlock != nil { // will verify hash pointer to block
 			// prepend
@@ -124,15 +123,8 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 				s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 				return err
 			}
-			if s.managementReferenceGrace > 0 { // check is enabled // TODO: due to testing incompatibility with current reference time and time.Now()
-				currentTime := primitives.TimestampSeconds(time.Now().Unix())
-				managementGrace := primitives.TimestampSeconds(s.managementReferenceGrace / time.Second)
-				if ref.CurrentReference + managementGrace < currentTime {
-					return errors.New(fmt.Sprintf("management.GetCurrentReference(%d) is outdated compared to current time (%d) and allowed grace (%d)", ref.CurrentReference, currentTime, managementGrace))
-				}
-				if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(s.referenceMaxDistance/time.Second) < ref.CurrentReference {
-					return errors.New(fmt.Sprintf("Block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
-				}
+			if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(blockSyncReferenceMaxDistance/time.Second) < ref.CurrentReference {
+				return errors.New(fmt.Sprintf("Block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
 			}
 		}
 

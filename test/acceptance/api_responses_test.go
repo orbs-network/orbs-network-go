@@ -18,48 +18,35 @@ import (
 )
 
 func TestResponseForTransactionOnValidContract(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-		defer cancel()
+	NewHarness().
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
 
-		tx := builders.TransferTransaction()
-		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
-		require.Equal(t, protocol.REQUEST_STATUS_COMPLETED, resp.RequestResult().RequestStatus())
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
-		require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, resp.TransactionReceipt().ExecutionResult())
-	})
+			tx := builders.TransferTransaction()
+			resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
+			require.Equal(t, protocol.REQUEST_STATUS_COMPLETED, resp.RequestResult().RequestStatus())
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
+			require.Equal(t, protocol.EXECUTION_RESULT_SUCCESS, resp.TransactionReceipt().ExecutionResult())
+		})
 }
 
 func TestResponseForTransactionOnContractNotDeployed(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
-		defer cancel()
+	NewHarness().
+		Start(t, func(t testing.TB, parent context.Context, network *Network) {
+			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+			defer cancel()
 
-		tx := builders.Transaction().WithContract("UnknownContract")
-		resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
-		require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
-		require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
-		require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, resp.TransactionReceipt().ExecutionResult())
-	})
+			tx := builders.Transaction().WithContract("UnknownContract")
+			resp, _ := network.SendTransaction(ctx, tx.Builder(), 0)
+			require.Equal(t, protocol.REQUEST_STATUS_BAD_REQUEST, resp.RequestResult().RequestStatus())
+			require.Equal(t, protocol.TRANSACTION_STATUS_COMMITTED, resp.TransactionStatus())
+			require.Equal(t, protocol.EXECUTION_RESULT_ERROR_CONTRACT_NOT_DEPLOYED, resp.TransactionReceipt().ExecutionResult())
+		})
 }
 
 func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).
+	NewHarness().
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
@@ -74,12 +61,7 @@ func TestResponseForTransactionOnContractWithBadInput(t *testing.T) {
 }
 
 func TestResponseForTransactionOnFailingContract(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -92,12 +74,7 @@ func TestResponseForTransactionOnFailingContract(t *testing.T) {
 }
 
 func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).Start(t, func(t testing.TB, parent context.Context, network *Network) {
+	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
 		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 		defer cancel()
 
@@ -110,12 +87,7 @@ func TestResponseForTransactionWithInvalidProtocolVersion(t *testing.T) {
 }
 
 func TestResponseForTransactionWithBadSignature(t *testing.T) {
-	NewHarness().WithSetup(func(ctx context.Context, network *Network) {
-		// set current reference time to now for node sync verifications
-		newRefTime := GenerateNewManagementReferenceTime(0)
-		err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-		require.NoError(t, err)
-	}).AllowingErrors("error validating transaction for preorder").
+	NewHarness().AllowingErrors("error validating transaction for preorder").
 		Start(t, func(t testing.TB, parent context.Context, network *Network) {
 			ctx, cancel := context.WithTimeout(parent, 1*time.Second)
 			defer cancel()

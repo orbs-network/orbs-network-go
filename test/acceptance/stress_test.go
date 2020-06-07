@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	. "github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/BenchmarkToken"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/rand"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
@@ -23,12 +22,6 @@ import (
 func TestGazillionTxHappyFlow(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	NewHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			sendTransfersAndAssertTotalBalance(ctx, network, t, 200, rnd)
 		})
@@ -37,12 +30,6 @@ func TestGazillionTxHappyFlow(t *testing.T) {
 func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		AllowingErrors(
 			"error adding forwarded transaction to pending pool", // because we duplicate, among other messages, the transaction propagation message
 			"already stored Preprepare.*",                        // because LH will try to store PREPREPARE twice - see lean-helix-go at term_in_committee.go:validatePreprepare()
@@ -58,12 +45,6 @@ func TestGazillionTxWhileDuplicatingMessages(t *testing.T) {
 func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
-		}).
 		WithTestTimeout(time.Minute). // dropped messages cause LH view progression and the test takes longer
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			network.TransportTamperer().Fail(HasHeader(AConsensusMessage).And(WithPercentChance(rnd, 3)))
@@ -76,12 +57,7 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		WithSetup(func(ctx context.Context, network *Network) {
-			// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[0:7])
-			require.NoError(t, err)
-		}).
+		WithTestTimeout(20*time.Second).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(50))) * time.Millisecond

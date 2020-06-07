@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -31,20 +30,11 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	NewHarness().
 		WithInitialBlocks(blocks).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
-		//AllowingErrors().
-		WithSetup(func(ctx context.Context, network *Network) {
-
-		// set current reference time to now for node sync verifications
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[0:7])
-			require.NoError(t, err)
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 			topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
 			_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
 			_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
-
 
 			// this is required because GlobalPreOrder contract relies on state (Approve method), and if state storage is too far behind, GlobalPreOrder will fail on gap
 			require.NoError(t, network.stateBlockHeightTrackers[0].WaitForBlock(ctx, topBlockHeight))

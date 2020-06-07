@@ -9,12 +9,12 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/orbs-network-go/test/builders"
-	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 // There is no need to test more than one consensus algo, because the SUT here is the node-sync mechanism, not the consensus algo
@@ -22,21 +22,15 @@ import (
 // Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
 func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 	NewHarness().
+		WithTestTimeout(20*time.Second).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
-		//WithLogFilters(log.ExcludeEntryPoint("BenchmarkConsensus.Tick")).
-		//AllowingErrors().
 		WithSetup(func(ctx context.Context, network *Network) {
-			newRefTime := GenerateNewManagementReferenceTime(0)
-			err := network.committeeProvider.AddCommittee(newRefTime, testKeys.NodeAddressesForTests()[1:5])
-			require.NoError(t, err)
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {
-				//blockPair := builders.LeanHelixBlockPair().
 				blockPair := builders.BenchmarkConsensusBlockPair().
 					WithHeight(primitives.BlockHeight(i)).
 					WithTransactions(2).
 					WithPrevBlock(prevBlock).
-					WithReferenceTime(newRefTime).
 					Build()
 				network.BlockPersistence(0).WriteNextBlock(blockPair)
 				prevBlock = blockPair

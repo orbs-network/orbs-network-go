@@ -29,7 +29,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, 1, 0).Format(time.RFC3339)) // ensures activation date in the future => ascending order
+			withBlockSyncDescendingEnabled(false) // ascending order
 
 			testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
 	})
@@ -41,7 +41,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync_Descending(t *testing.T) {
 			withSyncNoCommitTimeout(10 * time.Millisecond).
 			withSyncCollectResponsesTimeout(10 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, -1, 0).Format(time.RFC3339)) // ensures activation date in the past => descending order
+			withBlockSyncDescendingEnabled(true) // descending order
 
 			testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
 	})

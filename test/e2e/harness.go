@@ -9,10 +9,10 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
@@ -190,7 +190,7 @@ func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
-	require.True(t, test.Eventually(15*time.Second, func() bool {
+	require.True(t, test.Eventually(20*time.Second, func() bool {
 
 		m := h.GetMetrics()
 		if m == nil {

@@ -63,11 +63,11 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 				SenderNodeAddress: s.config.NodeAddress(),
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:        gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-				FirstBlockHeight: responseFrom,
-				LastBlockHeight:  responseTo,
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         responseFrom,
+				LastBlockHeight:          responseTo,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
-				BlocksOrder: requestSyncBlocksOrder,
+				BlocksOrder:              requestSyncBlocksOrder,
 			}).Build(),
 		},
 	}
@@ -79,7 +79,6 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	return err
 
 }
-
 
 func getServerSyncRange(syncState internodesync.SyncState,
 	requestFrom primitives.BlockHeight,
@@ -110,9 +109,8 @@ func getServerSyncRange(syncState internodesync.SyncState,
 		} else if lastSynced <= requestFrom && requestFrom <= top {
 			responseTo = min(requestFrom+batchSize-1, requestTo, top)
 		}
-	}
 
-	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+	} else if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		// assert range - either (from=unknown or from > to ) and to > 0
 		if (requestTo == 0) || (requestFrom > 0 && requestTo > requestFrom) {
 			err = errors.New("Invalid requested range descending order with from < to")
@@ -202,7 +200,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		if chunkSize > 0 {
 			responseTo = blocks[chunkSize-1].TransactionsBlock.Header.BlockHeight()
 		} else {
-			responseTo = responseFrom-1
+			responseTo = responseFrom - 1
 		}
 		response := &gossiptopics.BlockSyncResponseInput{
 			RecipientNodeAddress: senderNodeAddress,
@@ -211,11 +209,11 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 					SenderNodeAddress: s.config.NodeAddress(),
 				}).Build(),
 				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-					BlockType:        gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
-					FirstBlockHeight: responseFrom,
-					LastBlockHeight:  responseTo,
+					BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+					FirstBlockHeight:         responseFrom,
+					LastBlockHeight:          responseTo,
 					LastCommittedBlockHeight: lastCommittedBlockHeight,
-					BlocksOrder: requestSyncBlocksOrder,
+					BlocksOrder:              requestSyncBlocksOrder,
 				}).Build(),
 				BlockPairs: blocks[:chunkSize],
 			},

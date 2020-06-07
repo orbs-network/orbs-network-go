@@ -58,7 +58,7 @@ func (bp *InMemoryBlockPersistence) GetSyncState() internodesync.SyncState {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	return internodesync.SyncState {
+	return internodesync.SyncState{
 		TopHeight:        bp.blockChain.topHeight,
 		InOrderHeight:    getBlockHeight(bp.blockChain.inOrder),
 		LastSyncedHeight: bp.blockChain.lastSyncedHeight,
@@ -130,7 +130,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	newBlockHeight := getBlockHeight(blockPair)
 	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
 	if _, ok := bp.blockChain.blocks[newBlockHeight]; ok { // block exists
-		return false, inOrderHeight
+		return false, bp.blockChain.lastSyncedHeight
 	}
 
 	bp.blockChain.blocks[newBlockHeight] = blockPair
@@ -154,7 +154,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 		}
 	}
 
-	return true, newBlockHeight
+	return true, bp.blockChain.lastSyncedHeight
 }
 
 func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {
@@ -215,15 +215,19 @@ func (bp *InMemoryBlockPersistence) GetResultsBlock(height primitives.BlockHeigh
 	return blockPair.ResultsBlock, nil
 }
 
+// supports two blockHeight ranges - (1-inOrder), (lastSynced-top)
 func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, f adapter.CursorFunc) error {
 	bp.blockChain.RLock()
 	defer bp.blockChain.RUnlock()
 
-	lastBlockHeight := getBlockHeight(bp.blockChain.inOrder)
-
-	if from > lastBlockHeight || from == 0 {
-		return fmt.Errorf("requested unknown block height %d. current height is %d", from, lastBlockHeight)
+	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
+	if (inOrderHeight < from && from < bp.blockChain.lastSyncedHeight) || from > bp.blockChain.topHeight || from == 0 {
+		return fmt.Errorf("requested unknown block height %d. current height ranges are: inOrder(%d), lastSynced(%d), top(%d)", from, inOrderHeight, bp.blockChain.lastSyncedHeight, bp.blockChain.topHeight)
 	}
+	lastBlockHeight := bp.blockChain.topHeight
+	if from <= inOrderHeight {
+		lastBlockHeight = inOrderHeight
+	} // else (together with the above checks) implies: lastSynced < from < top
 
 	fromHeight := from
 	wantsMore := true
@@ -232,18 +236,17 @@ func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, page
 		if toHeight > lastBlockHeight {
 			toHeight = lastBlockHeight
 		}
-		blockSlice := make([]*protocol.BlockPairContainer, 0)
+		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 		for height := fromHeight; height <= toHeight; height++ {
-			tempBlock, _ := bp.blockChain.blocks[height]
-			if tempBlock == nil {
+			aBlock, _ := bp.blockChain.blocks[height]
+			if aBlock == nil {
 				break
 			}
-			blockSlice = append(blockSlice, tempBlock)
+			page = append(page, aBlock)
 		}
-		if len(blockSlice) == 0 {
-			return nil
+		if len(page) > 0 {
+			wantsMore = f(fromHeight, page)
 		}
-		wantsMore = f(fromHeight, blockSlice)
 		fromHeight = toHeight + 1
 	}
 	return nil

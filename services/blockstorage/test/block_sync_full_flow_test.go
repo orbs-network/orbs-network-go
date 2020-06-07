@@ -31,7 +31,7 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			withSyncNoCommitTimeout(200 * time.Millisecond).
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, 1, 0).Format(time.RFC3339)) // ensures activation date in the future => ascending order
+			withBlockSyncDescendingEnabled(false) // ascending order
 
 			testSyncPetitionerCompleteSyncFlow(ctx, t, harness)	})
 }
@@ -43,7 +43,7 @@ func TestSyncPetitioner_CompleteSyncFlowDescending(t *testing.T) {
 			withSyncCollectResponsesTimeout(50 * time.Millisecond).
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withBatchSize(3).
-			withBlockSyncDescendingActivationDate(time.Now().AddDate(0, -1, 0).Format(time.RFC3339)) // ensures activation date in the past => descending order
+			withBlockSyncDescendingEnabled(true) // descending order
 
 		testSyncPetitionerCompleteSyncFlow(ctx, t, harness)
 	})
