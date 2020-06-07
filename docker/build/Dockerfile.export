@@ -8,10 +8,16 @@ RUN cd /src/_tmp/processor-artifacts/ && go mod download
 
 ADD ./_bin/orbs-node /opt/orbs/
 
+ADD ./_bin/healthcheck /opt/orbs/
+
 VOLUME /usr/local/var/orbs/
 
 VOLUME /opt/orbs/logs
 
+VOLUME /opt/orbs/status
+
 WORKDIR /opt/orbs
+
+HEALTHCHECK CMD /opt/orbs/healthcheck --url http://localhost:8080/metrics --output /opt/orbs/status/status.json
 
 CMD ./orbs-node
