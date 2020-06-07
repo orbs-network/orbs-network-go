@@ -157,8 +157,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
 				msg := fmt.Sprintf("node %v did not reach block 1: %s", nx.name, err)
 				nodeLogger.Error(msg)
-				//return
-				//panic(msg)
+				panic(msg)
 			} else {
 				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", nx.name))
 			}

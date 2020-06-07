@@ -28,9 +28,9 @@ func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilit
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorage(11)
 			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
+			h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
-
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
 			h.verifyMocks(t)
 		})
