@@ -48,7 +48,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 	})
 	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx, s.syncBlocksOrder)
 	if err != nil {
-		logger.Info("failed to broadcast Block availability request", log.Error(err))
+		logger.Info("failed to broadcast block availability request", log.Error(err))
 		s.metrics.timesFailedSendingAvailabilityRequest.Inc()
 		return s.factory.CreateIdleState()
 	}
@@ -63,7 +63,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 			switch r := e.(type) {
 			case *gossipmessages.BlockAvailabilityResponseMessage:
 				responses = append(responses, r)
-				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()), log.Stringable("first-Block", r.SignedBatchRange.FirstBlockHeight()), log.Stringable("last-Block", r.SignedBatchRange.LastBlockHeight()), log.Stringable("last-committed-Block", r.SignedBatchRange.LastCommittedBlockHeight()))
+				logger.Info("got a new availability response", log.Stringable("response-source", r.Sender.SenderNodeAddress()), log.Stringable("first-block", r.SignedBatchRange.FirstBlockHeight()), log.Stringable("last-Block", r.SignedBatchRange.LastBlockHeight()), log.Stringable("last-committed-Block", r.SignedBatchRange.LastCommittedBlockHeight()))
 			}
 		case <-ctx.Done():
 			return nil

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -52,7 +53,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	defer s.metrics.timeSpentInState.RecordSince(start) // runtime metric
 
 	if s.blocks == nil || len(s.blocks.BlockPairs) == 0 {
-		s.logger.Info("possible byzantine state in Block sync, received no blocks to processing blocks state")
+		s.logger.Info("possible byzantine state in block sync, received no blocks to processing blocks state")
 		return s.factory.CreateIdleState()
 	}
 
@@ -61,10 +62,10 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 	numBlocks := len(s.blocks.BlockPairs)
 	logger.Info("committing blocks from sync",
-		log.Int("Block-count", numBlocks),
+		log.Int("block-count", numBlocks),
 		log.Stringable("sender", s.blocks.Sender),
-		log.Uint64("first-Block-height", uint64(firstBlockHeight)),
-		log.Uint64("last-Block-height", uint64(lastBlockHeight)))
+		log.Uint64("first-block-height", uint64(firstBlockHeight)),
+		log.Uint64("last-block-height", uint64(lastBlockHeight)))
 
 	receivedSyncBlocksOrder := s.blocks.SignedChunkRange.BlocksOrder()
 	err := s.validatePosChain(ctx, s.blocks.BlockPairs, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder)
@@ -97,7 +98,11 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 			logger.Info("successfully committed block received via sync", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
 		}
 	}
-
+	govnr.Once(logfields.GovnrErrorer(logger), func() {
+		shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+		defer cancel()
+		s.storage.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
+	})
 	if !s.conduit.drainAndCheckForShutdown(ctx) {
 		return nil
 	}
@@ -124,7 +129,7 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 				return err
 			}
 			if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(blockSyncReferenceMaxDistance/time.Second) < ref.CurrentReference {
-				return errors.New(fmt.Sprintf("Block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
+				return errors.New(fmt.Sprintf("block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
 			}
 		}
 
@@ -132,7 +137,7 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 			blockPair := blocks[i]
 			prevBlockPair := blocks[i+1]
 			if !verifyPrevHashPointer(blockPair, prevBlockPair) {
-				return errors.New(fmt.Sprintf("Block prevBlockHash mismatches prevBlock: Block %v; prevBlock %v", blockPair.String(), prevBlockPair.String()))
+				return errors.New(fmt.Sprintf("prevBlockHash mismatch: block %v; prevBlock: %v", blockPair.String(), prevBlockPair.String()))
 			}
 		}
 	}

@@ -57,7 +57,6 @@ func TestGazillionTxWhileDroppingMessages(t *testing.T) {
 func TestGazillionTxWhileDelayingMessages(t *testing.T) {
 	rnd := rand.NewControlledRand(t)
 	getStressTestHarness().
-		WithTestTimeout(20*time.Second).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			network.TransportTamperer().Delay(func() time.Duration {
 				return (time.Duration(rnd.Intn(50))) * time.Millisecond

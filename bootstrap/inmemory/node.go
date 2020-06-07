@@ -27,7 +27,7 @@ import (
 // Useful for in-process tests and simulating Orbs chains during development
 type Node struct {
 	index                       int
-	Name                        string
+	name                        string
 	config                      config.NodeConfig
 	blockPersistence            blockStorageAdapter.BlockPersistence
 	statePersistence            stateStorageAdapter.StatePersistence

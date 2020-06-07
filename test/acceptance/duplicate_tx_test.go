@@ -23,12 +23,11 @@ var STATUS_DUPLICATE = []TransactionStatus{TRANSACTION_STATUS_DUPLICATE_TRANSACT
 
 // LH: Use ControlledRandom (ctrlrnd.go) (in acceptance harness) to generate the initial RandomSeed and put it in LeanHelix's config
 func TestSendSameTransactionFastToTwoNodes(t *testing.T) {
-	NewHarness().
-		AllowingErrors(
-			"error adding transaction to pending pool",
-			"error adding forwarded transaction to pending pool",
-			"error sending transaction",
-		).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().AllowingErrors(
+		"error adding transaction to pending pool",
+		"error adding forwarded transaction to pending pool",
+		"error sending transaction",
+	).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 		ts := time.Now()
 
 		network.DeployBenchmarkTokenContract(ctx, 1)
@@ -124,13 +123,12 @@ func requireTxCommittedOnce(ctx context.Context, t testing.TB, network *Network,
 }
 
 func TestBlockTrackerAndScanBlocksStayInSync(t *testing.T) {
-	NewHarness().
-		AllowingErrors(
-			"error adding transaction to pending pool",
-			"error adding forwarded transaction to pending pool",
-			"error sending transaction",
-			"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
-		).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+	NewHarness().AllowingErrors(
+		"error adding transaction to pending pool",
+		"error adding forwarded transaction to pending pool",
+		"error sending transaction",
+		"transaction rejected: TRANSACTION_STATUS_DUPLICATE_TRANSACTION_ALREADY_PENDING",
+	).Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 		persistence := network.BlockPersistence(0)
 		targetBlockHeight := 2

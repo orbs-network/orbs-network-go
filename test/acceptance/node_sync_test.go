@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 // There is no need to test more than one consensus algo, because the SUT here is the node-sync mechanism, not the consensus algo
@@ -22,7 +21,6 @@ import (
 // Either test with Benchmark Consensus which is makes it easier to generate fake proofs, or use real recorded Lean Helix blocks
 func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 	NewHarness().
-		WithTestTimeout(20*time.Second).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithSetup(func(ctx context.Context, network *Network) {
 			var prevBlock *protocol.BlockPairContainer

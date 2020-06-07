@@ -109,9 +109,15 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	})
 
 	harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE  {
-			simulateConsensusCommits(ctx, harness, blocks, committedBlockHeights, simulatedCommitsTarget)
+		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY  {
 			simulateVerifyBlockConsensus(ctx, t, consensusContext, input.BlockPair.TransactionsBlock.Header.BlockHeight(), done)
+		}
+		return nil, nil
+	})
+
+	harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
+		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY {
+			simulateConsensusCommits(ctx, harness, blocks, committedBlockHeights, simulatedCommitsTarget)
 		}
 		return nil, nil
 	})

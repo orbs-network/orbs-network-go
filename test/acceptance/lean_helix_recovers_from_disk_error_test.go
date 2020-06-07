@@ -20,7 +20,6 @@ import (
 
 func TestLeanHelix_RecoversFromDiskWriteError(t *testing.T) {
 	NewHarness().
-		WithTestTimeout(20*time.Second).
 		// TODO - reduce sync timeout to speed up test
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		AllowingErrors(

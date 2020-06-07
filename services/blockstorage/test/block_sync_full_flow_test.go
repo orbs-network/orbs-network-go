@@ -112,6 +112,7 @@ func requireValidHandleBlockConsensusMode(t *testing.T, mode handlers.HandleBloc
 	require.Contains(t, []handlers.HandleBlockConsensusMode{ // require mode is one of two expected
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE,
+		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
 	}, mode, "consensus updates must be update or update+verify")
 }
 
@@ -152,6 +153,11 @@ func (s *syncFlowResults) logHandleBlockConsensusCalls(t *testing.T, input *hand
 			s.didUpdateConsensusAboutHeightZero = true
 		}
 	case handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE:
+		require.Condition(t, func() (success bool) {
+			return input.BlockPair.TransactionsBlock.Header.BlockHeight() >= 1 && input.BlockPair.TransactionsBlock.Header.BlockHeight() <= availableBlocks
+		}, "validated block must be between 1 and total")
+		s.blocksReceivedByConsensus[input.BlockPair.TransactionsBlock.Header.BlockHeight()] = true
+	case handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY:
 		require.Condition(t, func() (success bool) {
 			return input.BlockPair.TransactionsBlock.Header.BlockHeight() >= 1 && input.BlockPair.TransactionsBlock.Header.BlockHeight() <= availableBlocks
 		}, "validated block must be between 1 and total")

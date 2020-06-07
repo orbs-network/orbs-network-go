@@ -9,7 +9,6 @@ package acceptance
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/test/acceptance/callcontract"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -26,13 +25,6 @@ func TestCommitteeElections_OneElectionAndCheckReputationChanges(t *testing.T) {
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-reference-grace-timeout": "0*time.Minute"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			network.WaitForBlock(ctx, 2)
@@ -58,13 +50,6 @@ func TestCommitteeElections_VerifyCommitteeSigns(t *testing.T) {
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-reference-grace-timeout": "0*time.Minute"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
@@ -93,13 +78,6 @@ func TestCommitteeElections_MultipleReElections(t *testing.T) {
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-reference-grace-timeout": "0*time.Minute"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
@@ -131,13 +109,6 @@ func TestCommitteeElections_AllNodesLoseElectionButReturn(t *testing.T) {
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-reference-grace-timeout": "0*time.Minute"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)
@@ -174,13 +145,6 @@ func TestCommitteeElections_GrowingNumberOfElected(t *testing.T) {
 		WithManagementPollingInterval(50*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-reference-grace-timeout": "0*time.Minute"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			contract := callcontract.NewContractClient(network)
 			token := network.DeployBenchmarkTokenContract(ctx, 5)

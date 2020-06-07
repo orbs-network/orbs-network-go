@@ -54,7 +54,7 @@ func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabili
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-			harness.AllowErrorsMatching("failed to validate Block received via sync")
+			harness.AllowErrorsMatching("failed to validate block received via sync")
 
 			message := builders.BlockSyncResponseInput().
 				WithFirstBlockHeight(1).

@@ -116,7 +116,7 @@ func (n *Network) addNode(name string, cfg config.NodeConfig, nodeDependencies *
 
 	node := &Node{}
 	node.index = len(n.Nodes)
-	node.Name = name
+	node.name = name
 	node.config = cfg
 	node.statePersistence = nodeDependencies.StatePersistence
 	node.stateBlockHeightReporter = nodeDependencies.StateBlockHeightReporter
@@ -137,7 +137,7 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 	for _, node := range nodes {
 		wg.Add(1)
 
-		nodeLogger := n.Logger.WithTags(log.Node(node.Name))
+		nodeLogger := n.Logger.WithTags(log.Node(node.name))
 		node.nodeLogic = bootstrap.NewNodeLogic(
 			ctx,
 			n.Transport,
@@ -155,11 +155,12 @@ func (n *Network) CreateAndStartNodes(ctx context.Context, numOfNodesToStart int
 		)
 		go func(nx *Node) { // nodes should not block each other from executing wait
 			if err := nx.transactionPoolBlockTracker.WaitForBlock(ctx, 1); err != nil {
-				msg := fmt.Sprintf("node %v did not reach block 1: %s", nx.Name, err)
+				msg := fmt.Sprintf("node %v did not reach block 1: %s", nx.name, err)
 				nodeLogger.Error(msg)
-				panic(msg)
+				//return
+				//panic(msg)
 			} else {
-				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", nx.Name))
+				nodeLogger.Info(fmt.Sprintf("node %v reached block 1", nx.name))
 			}
 			wg.Done()
 		}(node)

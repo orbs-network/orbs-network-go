@@ -162,7 +162,7 @@ func TestStateWaitingForChunks_ByzantineStressTest(t *testing.T) {
 					}
 				}()
 
-				// send a valid Block message after enough time has passed
+				// send a valid block message after enough time has passed
 				time.Sleep(500 * time.Millisecond)
 				h.factory.conduit <- validBlocksMessage
 

@@ -62,11 +62,11 @@ func TestCommitReputation_TransactionToElected(t *testing.T) {
 			}
 			require.NotEqual(t, maxruns, i, "failed to clear misses after %d passes", maxruns)
 
-		})
+	})
 }
 
 func findMissesOf(nodeAddress primitives.NodeAddress, committee [][20]byte, misses []uint32) int {
-	for i := 0; i < len(committee); i++ {
+	for i := 0;i < len(committee); i++ {
 		if bytes.Equal(nodeAddress, committee[i][:]) {
 			return int(misses[i])
 		}
@@ -82,7 +82,7 @@ func getCommitteeMisses(t testing.TB, queryResponse *client.RunQueryResponse) (c
 	misses = argsArray[1].([]uint32)
 
 	t.Logf("Committee at block %d", block)
-	for i := 0; i < len(committee); i++ {
+	for i := 0;i < len(committee); i++ {
 		t.Logf("#%d: Node %x Misses %d", i, committee[i], misses[i])
 	}
 	return

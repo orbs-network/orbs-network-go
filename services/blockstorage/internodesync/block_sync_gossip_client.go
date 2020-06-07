@@ -61,9 +61,9 @@ func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx contex
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
 
-	logger.Info("broadcast Block availability request",
-		log.Uint64("first-Block-height", uint64(from)),
-		log.Uint64("last-Block-height", uint64(to)),
+	logger.Info("broadcast block availability request",
+		log.Uint64("first-block-height", uint64(from)),
+		log.Uint64("last-block-height", uint64(to)),
 		log.Stringable("blocks-order", syncBlocksOrder))
 
 	input := &gossiptopics.BlockAvailabilityRequestInput{
@@ -97,10 +97,10 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
-	logger.Info("sending Block sync request",
+	logger.Info("sending block sync request",
 		log.Stringable("recipient-address", recipientNodeAddress),
-		log.Stringable("first-Block", from),
-		log.Stringable("last-Block", to),
+		log.Stringable("first-block", from),
+		log.Stringable("last-block", to),
 		log.Stringable("last-committed-height", lastCommittedBlockHeight))
 
 	request := &gossiptopics.BlockSyncRequestInput{
@@ -129,7 +129,7 @@ func getClientSyncRange(syncState SyncState, syncBlocksOrder gossipmessages.Sync
 
 	topInOrder := syncState.InOrderHeight
 	lastSynced := syncState.LastSyncedHeight
-	logger.Info("GetClientSyncRange ", log.Stringable("topInOrder", topInOrder), log.Stringable("lastSynced", lastSynced))
+	logger.Info("GetClientSyncRange ", log.Uint64("topInOrder", uint64(topInOrder)), log.Uint64("lastSynced", uint64(lastSynced)), log.Uint64("top", uint64(syncState.TopHeight)))
 	if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		from = topInOrder + 1
 		to = from + batchSize - 1

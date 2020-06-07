@@ -221,7 +221,7 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBl
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
-			return nil, errors.Errorf("failed to validate Block #%d", numExpectedBlocks)
+			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)
 		}
 		return nil, nil
 	}).Times(numExpectedBlocks)
@@ -235,7 +235,7 @@ func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
 func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
 	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
-			return nil, errors.Errorf("failed to commit Block #%d", numExpectedBlocks)
+			return nil, errors.Errorf("failed to commit block #%d", numExpectedBlocks)
 		}
 		return nil, nil
 	}).Times(numExpectedBlocks)

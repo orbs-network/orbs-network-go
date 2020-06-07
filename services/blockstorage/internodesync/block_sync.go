@@ -21,9 +21,9 @@ import (
 	"time"
 )
 
-var LogTag = log.String("flow", "Block-sync")
+var LogTag = log.String("flow", "block-sync")
 
-// this is coupled to gossip because the entire service is (Block storage)
+// this is coupled to gossip because the entire service is (block storage)
 // nothing to gain right now in decoupling just the sync
 type syncState interface {
 	name() string
@@ -163,7 +163,7 @@ func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():
-		logger.Info("terminated on handle Block committed", log.Error(ctx.Err()))
+		logger.Info("terminated on handle block committed", log.Error(ctx.Err()))
 	}
 }
 
@@ -186,7 +186,7 @@ func (bs *BlockSync) HandleBlockSyncResponse(ctx context.Context, input *gossipt
 	select {
 	case bs.conduit <- input.Message:
 	case <-ctx.Done():
-		logger.Info("terminated on writing new Block chunk message",
+		logger.Info("terminated on writing new block chunk message",
 			log.String("context-message", ctx.Err().Error()),
 			log.Stringable("message-sender", input.Message.Sender.SenderNodeAddress()))
 	}
