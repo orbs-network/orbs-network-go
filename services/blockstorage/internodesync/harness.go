@@ -100,12 +100,11 @@ func newBlockSyncHarnessWithTimers(
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	conduit := make(blockSyncConduit)
-	management := &services.MockManagement{}
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
 		logger:        logger,
-		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, management, cfg.blocksOrder, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, cfg.blocksOrder, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
 		config:        cfg,
 		gossip:        gossip,
 		storage:       storage,
@@ -215,10 +214,12 @@ func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
+	h.storage.When("GetBlock", mock.Any).Return(nil, nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("GetBlock", mock.Any).Return(nil, nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)
@@ -230,9 +231,11 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastVal
 func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
 	outCommit := &services.CommitBlockOutput{}
 	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(numExpectedBlocks)
+	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 }
 
 func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to commit block #%d", numExpectedBlocks)

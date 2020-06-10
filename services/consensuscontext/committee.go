@@ -55,12 +55,6 @@ func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, inpu
 	}
 	committee := out.Members
 	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), trace.LogFieldFrom(ctx))
-
-	committeeStringArray := make([]string, len(committee))
-	for j, nodeAddress := range committee {
-		committeeStringArray[j] = fmt.Sprintf("\"%v\"", nodeAddress)  // %v is because NodeAddress has .String()
-	}
-
 	res := &services.RequestBlockProofCommitteeOutput{
 		NodeAddresses:            committee,
 	}

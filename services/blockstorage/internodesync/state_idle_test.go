@@ -8,14 +8,10 @@ package internodesync
 
 import (
 	"context"
-	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-network-go/test/with"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func TestStateIdle_StaysIdleOnIdleReset(t *testing.T) {
@@ -42,10 +38,6 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-			management := &services.MockManagement{}
-			management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
-			h.factory.management = management
-
 			state := h.factory.CreateIdleState()
 			nextState := state.processState(ctx)
 

@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilityResponses(t *testing.T) {
@@ -27,8 +28,6 @@ func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilit
 
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorage(11)
-			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
-			h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
@@ -51,6 +50,7 @@ func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 }
 
 func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
+	// TODO: Gad support descending
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
@@ -64,7 +64,6 @@ func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabili
 
 			h.expectBlockValidationQueriesFromStorageAndFailLastValidation(11, message.SignedChunkRange.FirstBlockHeight())
 			h.expectBlockCommitsToStorage(10)
-			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
@@ -89,7 +88,6 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorageAndFailLastCommit(11, message.SignedChunkRange.FirstBlockHeight())
-			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 
 			processingState := h.factory.CreateProcessingBlocksState(message)
 			next := processingState.processState(ctx)
@@ -113,8 +111,11 @@ func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 
 		cancel()
 		h.storage.When("GetBlock", mock.Any).Return(nil, nil)
+		h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
+
 		state := h.factory.CreateProcessingBlocksState(message)
 		nextState := state.processState(ctx)
+		time.Sleep(5*time.Second)
 
 		require.Nil(t, nextState, "next state should be nil on context termination")
 	})

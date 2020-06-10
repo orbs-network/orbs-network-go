@@ -33,10 +33,7 @@ type Service struct {
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
 	txPool       services.TransactionPool
-	management   services.Management
-
 	config config.BlockStorageConfig
-
 	logger                  log.Logger
 	consensusBlocksHandlers struct {
 		sync.RWMutex
@@ -65,7 +62,6 @@ func NewBlockStorage(
 	ctx context.Context,
 	config config.BlockStorageConfig,
 	persistence adapter.BlockPersistence,
-	management services.Management,
 	gossip gossiptopics.BlockSync,
 	parentLogger log.Logger,
 	metricFactory metric.Factory,
@@ -84,7 +80,7 @@ func NewBlockStorage(
 	}
 
 	gossip.RegisterBlockSyncHandler(s)
-	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, management, logger, metricFactory)
+	s.nodeSync = internodesync.NewBlockSync(ctx, config, gossip, s, logger, metricFactory)
 
 	for _, bpr := range blockPairReceivers {
 		s.Supervise(servicesync.NewServiceBlockSync(ctx, logger, persistence, bpr))

@@ -15,7 +15,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/stretchr/testify/require"
 	"math"
@@ -31,7 +30,6 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos()
 
-		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 		harness.start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
@@ -77,7 +75,6 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos()
 
-		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 		harness.start(ctx)
 
 		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
@@ -101,7 +98,6 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 			withSyncBroadcast(1).
 			expectValidateConsensusAlgos()
 
-		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
 		harness.start(ctx)
 

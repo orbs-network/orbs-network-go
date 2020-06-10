@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -27,7 +26,6 @@ func TestSyncPetitioner_Stress_SingleThreadedConsensusAlgoDoesNotDeadlock(t *tes
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).withSyncNoCommitTimeout(time.Nanosecond)
 		harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).AtLeast(0)
-		harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 
 		updateConsensusAlgoHeight := make(chan struct{})
 

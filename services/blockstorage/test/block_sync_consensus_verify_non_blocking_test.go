@@ -69,8 +69,6 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	cfg := config.ForConsensusContextTests(false)
 	management := &services.MockManagement{}
 	management.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: 5000, GenesisReference: 0,}, nil)
-	harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
-
 	consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, management, cfg, harness.Logger, metric.NewRegistry())
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)

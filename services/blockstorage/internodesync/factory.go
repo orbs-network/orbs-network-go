@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
-	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 	"sync"
@@ -30,7 +29,6 @@ type stateFactory struct {
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer
 	logger                          log.Logger
 	metrics                         *stateMetrics
-	management                      services.Management
 }
 
 func NewStateFactory(
@@ -38,7 +36,6 @@ func NewStateFactory(
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
 	conduit blockSyncConduit,
-	management services.Management,
 	logger log.Logger,
 	factory metric.Factory,
 ) *stateFactory {
@@ -47,7 +44,6 @@ func NewStateFactory(
 		gossip,
 		storage,
 		conduit,
-		management,
 		gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
 		nil,
 		nil,
@@ -61,7 +57,6 @@ func NewStateFactoryWithTimers(
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
 	conduit blockSyncConduit,
-	management services.Management,
 	blocksOrder gossipmessages.SyncBlocksOrder,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
@@ -75,7 +70,6 @@ func NewStateFactoryWithTimers(
 		gossip:          gossip,
 		storage:         storage,
 		conduit:         conduit,
-		management:      management,
 		logger:          logger,
 		metrics:         newStateMetrics(factory),
 		syncBlocksOrder: blocksOrder,
@@ -181,7 +175,6 @@ func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.Block
 		storage:                  f.storage,
 		conduit:                  f.conduit,
 		syncBlocksOrder:          f.syncBlocksOrder,
-		management:               f.management,
 		metrics:                  f.metrics.processingStateMetrics,
 	}
 }

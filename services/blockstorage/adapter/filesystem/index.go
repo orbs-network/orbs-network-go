@@ -111,7 +111,8 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 		if blockTracker != nil {
 			for height := inOrderHeight + 1; height <= topHeight; height++ {
 				if _, ok := i.heightOffset[height]; !ok { // block does not exists
-					return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(inOrderHeight + 1), uint64(topHeight))
+					i.lastSyncedHeight = topHeight
+					return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(inOrderHeight+1), uint64(topHeight))
 				}
 				blockTracker.IncrementTo(height)
 			}

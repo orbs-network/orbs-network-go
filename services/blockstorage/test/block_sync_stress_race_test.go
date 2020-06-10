@@ -11,7 +11,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test/with"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -51,8 +50,6 @@ func testSyncPetitionerStressCommitsDuringSync(ctx context.Context, t *testing.T
 	const NUM_BLOCKS = 50
 	blockChain := generateInMemoryBlockChain(NUM_BLOCKS)
 	done := make(chan struct{})
-
-	harness.management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: primitives.TimestampSeconds(time.Now().Unix())}, nil)
 
 	harness.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Call(func(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 		respondToBroadcastAvailabilityRequest(ctx, harness, input, NUM_BLOCKS, 7)

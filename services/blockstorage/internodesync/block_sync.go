@@ -132,14 +132,14 @@ func setupSyncBlocksOrder(bs *BlockSync, descendingOrderEnabled bool) {
 	}
 }
 
-func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, management services.Management, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
+func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := make(blockSyncConduit)
 	return newBlockSyncWithFactory(
 		ctx,
 		config,
-		NewStateFactory(config, gossip, storage, conduit, management, logger, metricFactory),
+		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
 		gossip,
 		storage,
 		logger,

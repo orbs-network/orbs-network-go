@@ -95,7 +95,6 @@ type harness struct {
 	stateStorage   *services.MockStateStorage
 	storageAdapter testkit.TamperingInMemoryBlockPersistence
 	blockStorage   *blockstorage.Service
-	management     *services.MockManagement
 	consensus      *handlers.MockConsensusBlocksHandler
 	gossip         *gossiptopics.MockBlockSync
 	txPool         *services.MockTransactionPool
@@ -269,8 +268,6 @@ func newBlockStorageHarness(parentHarness *with.ConcurrencyHarness) *harness {
 	d.stateStorage = &services.MockStateStorage{}
 	d.storageAdapter = testkit.NewBlockPersistence(d.Logger, nil, registry)
 
-	d.management = &services.MockManagement{}
-	// TODO: BlockSync configure the management + test support with
 	d.consensus = &handlers.MockConsensusBlocksHandler{}
 
 	d.gossip = &gossiptopics.MockBlockSync{}
@@ -296,7 +293,7 @@ func (d *harness) start(ctx context.Context) *harness {
 	defer d.Unlock()
 	registry := metric.NewRegistry()
 
-	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.management, d.gossip, d.Logger, registry, nil)
+	d.blockStorage = blockstorage.NewBlockStorage(ctx, d.config, d.storageAdapter, d.gossip, d.Logger, registry, nil)
 	d.blockStorage.RegisterConsensusBlocksHandler(d.consensus)
 
 	d.Supervise(d.blockStorage)

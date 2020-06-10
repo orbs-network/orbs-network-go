@@ -30,7 +30,6 @@ type processingBlocksState struct {
 	factory                  *stateFactory
 	conduit                  blockSyncConduit
 	syncBlocksOrder          gossipmessages.SyncBlocksOrder
-	management               services.Management
 	metrics                  processingStateMetrics
 }
 
@@ -110,7 +109,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	return s.factory.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, blockSyncReferenceMaxDistance time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, committeeValidityGraceTimeout time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && s.syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		return nil
 
@@ -123,13 +122,10 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 			// prepend
 			blocks = append([]*protocol.BlockPairContainer{nextBlock}, blocks...)
 		} else {
-			ref, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
-			if err != nil {
-				s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
-				return err
-			}
-			if firstBlock.TransactionsBlock.Header.ReferenceTime() + primitives.TimestampSeconds(blockSyncReferenceMaxDistance/time.Second) < ref.CurrentReference {
-				return errors.New(fmt.Sprintf("block time reference %d is too far back compared to validator current time reference %d", firstBlock.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference))
+			topBlockReference := firstBlock.TransactionsBlock.Header.ReferenceTime()
+			now := primitives.TimestampSeconds(time.Now().Unix())
+			if topBlockReference + primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second) < now {
+				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d)", topBlockReference, now))
 			}
 		}
 

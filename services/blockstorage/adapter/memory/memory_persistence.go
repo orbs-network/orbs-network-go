@@ -142,16 +142,14 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	if bp.blockChain.lastSyncedHeight == inOrderHeight+1 { // gap was closed storage holds consecutive blocks 1-topHeight
 		for height := inOrderHeight + 1; height <= bp.blockChain.topHeight; height++ { // update indices and blockTracker
 			if block, _ := bp.blockChain.blocks[height]; block == nil {
-				panic("block was not found in memory - should not happen")
+				bp.Logger.Error(fmt.Sprintf("missing block with height (%d) - should not happen", uint64(height)))
+				bp.blockChain.lastSyncedHeight = bp.blockChain.topHeight
+				return false, bp.blockChain.lastSyncedHeight
 			}
 			bp.tracker.IncrementTo(height)
 		}
+		bp.blockChain.inOrder = bp.blockChain.blocks[bp.blockChain.topHeight]
 		bp.blockChain.lastSyncedHeight = bp.blockChain.topHeight
-		if block, _ := bp.blockChain.blocks[bp.blockChain.topHeight]; block == nil {
-			panic("block was not found in memory - should not happen")
-		} else {
-			bp.blockChain.inOrder = block
-		}
 	}
 
 	return true, bp.blockChain.lastSyncedHeight
