@@ -125,7 +125,7 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 			topBlockReference := firstBlock.TransactionsBlock.Header.ReferenceTime()
 			now := primitives.TimestampSeconds(time.Now().Unix())
 			if topBlockReference + primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second) < now {
-				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d)", topBlockReference, now))
+				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second)))
 			}
 		}
 
