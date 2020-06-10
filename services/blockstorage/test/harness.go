@@ -251,6 +251,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
 	cfg.descendingEnabled = true
+	cfg.syncReferenceDistance = 1 * time.Minute
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
