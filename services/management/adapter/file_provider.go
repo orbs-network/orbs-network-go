@@ -104,7 +104,7 @@ type topologyNode struct {
 type committee struct {
 	EthAddress string
 	OrbsAddress string
-	EffectiveStake uint64
+	Weight uint64
 	IdentityType uint
 }
 
