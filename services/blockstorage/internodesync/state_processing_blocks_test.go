@@ -110,7 +110,8 @@ func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 			Build().Message
 
 		cancel()
-		h.storage.When("GetBlock", mock.Any).Return(nil, nil)
+		h.storage.When("GetSyncState").Return( nil).Times(1)
+		h.storage.When("GetBlock", mock.Any).Return(nil)
 		h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 
 		state := h.factory.CreateProcessingBlocksState(message)

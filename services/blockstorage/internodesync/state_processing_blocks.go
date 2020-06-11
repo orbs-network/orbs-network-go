@@ -24,13 +24,13 @@ import (
 )
 
 type processingBlocksState struct {
-	blocks                   *gossipmessages.BlockSyncResponseMessage
-	logger                   log.Logger
-	storage                  BlockSyncStorage
-	factory                  *stateFactory
-	conduit                  blockSyncConduit
-	syncBlocksOrder          gossipmessages.SyncBlocksOrder
-	metrics                  processingStateMetrics
+	blocks          *gossipmessages.BlockSyncResponseMessage
+	logger          log.Logger
+	storage         BlockSyncStorage
+	factory         *stateFactory
+	conduit         blockSyncConduit
+	syncBlocksOrder gossipmessages.SyncBlocksOrder
+	metrics         processingStateMetrics
 }
 
 func (s *processingBlocksState) name() string {
@@ -67,41 +67,49 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		log.Uint64("last-block-height", uint64(lastBlockHeight)))
 
 	receivedSyncBlocksOrder := s.blocks.SignedChunkRange.BlocksOrder()
-	err := s.validatePosChain(ctx, s.blocks.BlockPairs, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder)
-
-	if err != nil {
-		logger.Error("failed to verify the blocks chunk received via sync", log.Error(err))
-		return s.factory.CreateIdleState()
+	syncState := s.storage.GetSyncState()
+	errRange := s.validateBlocksRange(s.blocks.BlockPairs, syncState, receivedSyncBlocksOrder)
+	if errRange != nil {
+		logger.Info("failed to verify the blocks chunk range received via sync", log.Error(errRange))
 	}
-	s.metrics.blocksRate.Measure(int64(numBlocks))
-
-	for index, blockPair := range s.blocks.BlockPairs {
-		if !s.conduit.drainAndCheckForShutdown(ctx) {
-			return nil
-		}
- 		prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
-		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
-		if err != nil {
-			s.metrics.failedValidationBlocks.Inc()
-			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
-			break
-		}
-		_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
-		if err != nil {
-			s.metrics.failedCommitBlocks.Inc()
-			logger.Error("failed to commit block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-			break
-		} else {
-			s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
-			s.metrics.committedBlocks.Inc()
-			logger.Info("successfully committed block received via sync", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
-		}
+	errPoS := s.validatePosChain(s.blocks.BlockPairs, syncState, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder)
+	if errPoS != nil {
+		logger.Info("failed to verify the blocks chunk PoS received via sync", log.Error(errPoS))
 	}
-	govnr.Once(logfields.GovnrErrorer(logger), func() {
-		shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
-		defer cancel()
-		s.storage.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
-	})
+
+	if errRange == nil && errPoS == nil {
+
+		s.metrics.blocksRate.Measure(int64(numBlocks))
+
+		for index, blockPair := range s.blocks.BlockPairs {
+			if !s.conduit.drainAndCheckForShutdown(ctx) {
+				return nil
+			}
+			prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
+			_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
+			if err != nil {
+				s.metrics.failedValidationBlocks.Inc()
+				logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
+				break
+			}
+			_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
+			if err != nil {
+				s.metrics.failedCommitBlocks.Inc()
+				logger.Error("failed to commit block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+				break
+			} else {
+				s.metrics.lastCommittedTime.Update(time.Now().UnixNano())
+				s.metrics.committedBlocks.Inc()
+				logger.Info("successfully committed block received via sync", logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()))
+			}
+		}
+
+		govnr.Once(logfields.GovnrErrorer(logger), func() {
+			shortCtx, cancel := context.WithTimeout(ctx, time.Second) // TODO V1 move timeout to configuration
+			defer cancel()
+			s.storage.UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
+		})
+	}
 	if !s.conduit.drainAndCheckForShutdown(ctx) {
 		return nil
 	}
@@ -109,8 +117,16 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	return s.factory.CreateCollectingAvailabilityResponseState()
 }
 
-func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, committeeValidityGraceTimeout time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPairContainer, syncState SyncState, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && s.syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
+		prevHeight := syncState.InOrderHeight
+		for _, blockPair := range s.blocks.BlockPairs {
+			currentHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+			if currentHeight != prevHeight+1 {
+				return fmt.Errorf("invalid blocks chunk found a non consecutive ascending range prevHeight (%d), currentHeight (%d)", prevHeight, currentHeight)
+			}
+			prevHeight = currentHeight
+		}
 		return nil
 
 	} else if s.syncBlocksOrder != receivedSyncBlocksOrder {
@@ -118,15 +134,52 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 
 	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		firstBlock := blocks[0]
-		if nextBlock, _ := s.storage.GetBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); nextBlock != nil { // will verify hash pointer to block
-			// prepend
-			blocks = append([]*protocol.BlockPairContainer{nextBlock}, blocks...)
-		} else {
+		firstBlockHeight := firstBlock.TransactionsBlock.Header.BlockHeight()
+		if syncState.InOrderHeight == syncState.TopHeight {
+			if firstBlockHeight <= syncState.InOrderHeight {
+				return fmt.Errorf("invalid blocks chunk where first block height (%d) < syncState.inOrderHeight (%d)", firstBlockHeight, syncState.InOrderHeight)
+			}
+		} else if syncState.InOrderHeight < syncState.TopHeight { // blocks chunk should range from lastSynced-1 down
+			if firstBlockHeight != syncState.LastSyncedHeight-1 {
+				return fmt.Errorf("invalid blocks chunk where first block height (%d) != syncState.LastSyncedHeight(%d) -1, inorder(%d), top(%d) ", firstBlockHeight, syncState.LastSyncedHeight, syncState.InOrderHeight, syncState.TopHeight)
+			}
+		}
+		prevHeight := firstBlockHeight + 1
+		for _, blockPair := range s.blocks.BlockPairs {
+			currentHeight := blockPair.TransactionsBlock.Header.BlockHeight()
+			if currentHeight+1 != prevHeight {
+				return fmt.Errorf("invalid blocks chunk found a non consecutive descending range prevHeight (%d), currentHeight (%d)", prevHeight, currentHeight)
+			}
+			prevHeight = currentHeight
+		}
+		return nil
+	}
+	return nil
+}
+
+// assumes blocks range is correct. Specifically in descending (blockStorage.lastSynced.height - 1 == blocks[0].height ) or ( blocks[0].height > blockStorage.top.height)
+func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairContainer, syncState SyncState, committeeValidityGraceTimeout time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && s.syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
+		return nil
+
+	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		firstBlock := blocks[0]
+		firstBlockHeight := firstBlock.TransactionsBlock.Header.BlockHeight()
+		if firstBlockHeight == syncState.LastSyncedHeight-1 { // will verify hash pointer to block
+			if nextBlock, err := s.storage.GetBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); err == nil && nextBlock != nil {
+				// prepend
+				blocks = append([]*protocol.BlockPairContainer{nextBlock}, blocks...)
+			} else {
+				return err
+			}
+		} else if firstBlockHeight > syncState.TopHeight { // verify the first block reference is complies with committee PoS honesty assumption
 			topBlockReference := firstBlock.TransactionsBlock.Header.ReferenceTime()
 			now := primitives.TimestampSeconds(time.Now().Unix())
-			if topBlockReference + primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second) < now {
+			if topBlockReference+primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second) < now {
 				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second)))
 			}
+		} else {
+			return errors.New(fmt.Sprintf("blocks chunk received (firstHeight %d) does not match current syncState (%v)", firstBlockHeight, syncState))
 		}
 
 		for i := 0; i < len(blocks)-1; i++ {
@@ -173,4 +226,3 @@ func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder 
 	}
 	return
 }
-

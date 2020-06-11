@@ -62,11 +62,6 @@ func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (offs
 
 	offset, ok = i.heightOffset[height]
 	return
-	//if offset, ok := i.heightOffset[height]; !ok {
-	//	return 0, fmt.Errorf("index missing offset for block height %d", height)
-	//} else {
-	//	return offset, nil
-	//}
 }
 
 func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primitives.TimestampNano, rangeEnd primitives.TimestampNano) (primitives.BlockHeight, bool) {
@@ -122,9 +117,10 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 	}
 
 	if numTxReceipts > 0 {
-		_, exists := i.firstBlockInTsBucket[blockTsBucketKey(blockTs)]
-		if !exists {
-			i.firstBlockInTsBucket[blockTsBucketKey(blockTs)] = newBlockHeight
+		bucketKey := blockTsBucketKey(blockTs)
+		firstBlockHeightInBucket, exists := i.firstBlockInTsBucket[bucketKey]
+		if !exists || newBlockHeight < firstBlockHeightInBucket {
+				i.firstBlockInTsBucket[bucketKey] = newBlockHeight
 		}
 	}
 

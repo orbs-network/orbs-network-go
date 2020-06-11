@@ -219,20 +219,16 @@ func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, page
 	defer bp.blockChain.RUnlock()
 
 	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
-	if (inOrderHeight < from && from < bp.blockChain.lastSyncedHeight) || from > bp.blockChain.topHeight || from == 0 {
-		return fmt.Errorf("requested unknown block height %d. current height ranges are: inOrder(%d), lastSynced(%d), top(%d)", from, inOrderHeight, bp.blockChain.lastSyncedHeight, bp.blockChain.topHeight)
+	if (inOrderHeight < from) || from == 0 {
+		return fmt.Errorf("requested unsupported block height %d. Supported range for scan is determined by inOrder(%d)", from, inOrderHeight)
 	}
-	lastBlockHeight := bp.blockChain.topHeight
-	if from <= inOrderHeight {
-		lastBlockHeight = inOrderHeight
-	} // else (together with the above checks) implies: lastSynced < from < top
 
 	fromHeight := from
 	wantsMore := true
-	for fromHeight <= lastBlockHeight && wantsMore {
+	for fromHeight <= inOrderHeight && wantsMore {
 		toHeight := fromHeight + primitives.BlockHeight(pageSize) - 1
-		if toHeight > lastBlockHeight {
-			toHeight = lastBlockHeight
+		if toHeight > inOrderHeight {
+			toHeight = inOrderHeight
 		}
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 		for height := fromHeight; height <= toHeight; height++ {
@@ -246,6 +242,7 @@ func (bp *InMemoryBlockPersistence) ScanBlocks(from primitives.BlockHeight, page
 			wantsMore = f(fromHeight, page)
 		}
 		fromHeight = toHeight + 1
+		inOrderHeight = getBlockHeight(bp.blockChain.inOrder)
 	}
 	return nil
 }

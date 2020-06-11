@@ -50,7 +50,7 @@ func TestSyncPetitioner_CompleteSyncFlowDescending(t *testing.T) {
 
 
 func testSyncPetitionerCompleteSyncFlow(ctx context.Context, t *testing.T, harness *harness) {
-	const NUM_BLOCKS = 4
+	const NUM_BLOCKS = 20
 	blockChain := generateInMemoryBlockChain(NUM_BLOCKS)
 
 	resultsForVerification := newSyncFlowSummary()

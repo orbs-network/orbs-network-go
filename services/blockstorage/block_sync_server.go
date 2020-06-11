@@ -80,6 +80,7 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 
 }
 
+// support for syncing only for block range (1-inOrder)
 func getServerSyncRange(syncState internodesync.SyncState,
 	requestFrom primitives.BlockHeight,
 	requestTo primitives.BlockHeight,
@@ -87,28 +88,20 @@ func getServerSyncRange(syncState internodesync.SyncState,
 	batchSize primitives.BlockHeight,
 ) (responseFrom primitives.BlockHeight, responseTo primitives.BlockHeight, err error) {
 
-	topInOrder := syncState.InOrderHeight
-	lastSynced := syncState.LastSyncedHeight
-	top := syncState.TopHeight
-
+	inOrder := syncState.InOrderHeight
 	responseFrom = requestFrom
 	responseTo = requestTo
-
-	if (requestFrom > top) || (topInOrder < requestFrom && requestFrom < lastSynced) { // server does not hold range beginning
-		err = fmt.Errorf("server does not hold requested range requested from(%d) - to(%d) where storage sync state is: top(%d), lastSynced(%d), topInOrder(%d)", uint64(requestFrom), uint64(requestTo), uint64(top), uint64(lastSynced), uint64(topInOrder))
-		return
-	}
 
 	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING || requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED {
 		if requestFrom > requestTo {
 			err = errors.New("Invalid requested range ascending order with from > to")
 			return
 		}
-		if requestFrom <= topInOrder { // includes topInOrder = lastSynced = top
-			responseTo = min(requestFrom+batchSize-1, requestTo, topInOrder)
-		} else if lastSynced <= requestFrom && requestFrom <= top {
-			responseTo = min(requestFrom+batchSize-1, requestTo, top)
+		if requestFrom > inOrder { // server does not hold range beginning
+			err = fmt.Errorf("server does not hold requested ascending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+			return
 		}
+		responseTo = min(requestFrom+batchSize-1, requestTo, inOrder)
 
 	} else if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		// assert range - either (from=unknown or from > to ) and to > 0
@@ -116,21 +109,16 @@ func getServerSyncRange(syncState internodesync.SyncState,
 			err = errors.New("Invalid requested range descending order with from < to")
 			return
 		}
+		if requestFrom > inOrder || requestTo > inOrder { // server does not hold range
+			err = fmt.Errorf("server does not hold requested descending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+			return
+		}
+
 		if requestFrom == UNKNOWN_BLOCK_HEIGHT { // open ended request
-			if (requestTo > top) || (topInOrder < requestTo && requestTo < lastSynced) { // server does not hold range beginning
-				err = fmt.Errorf("server does not hold requested range requested from(%d) - to(%d) where storage sync state is: top(%d), lastSynced(%d), topInOrder(%d)", uint64(requestFrom), uint64(requestTo), uint64(top), uint64(lastSynced), uint64(topInOrder))
-				return
-			}
-			responseFrom = top
-			if requestTo < topInOrder {
-				responseFrom = topInOrder
-			}
+				responseFrom = inOrder
 		}
 		if (responseFrom >= batchSize) && (responseFrom-batchSize+1 > responseTo) {
 			responseTo = responseFrom - batchSize + 1
-		}
-		if (lastSynced < top) && (responseTo < lastSynced && lastSynced <= responseFrom) {
-			responseTo = lastSynced
 		}
 	}
 	return

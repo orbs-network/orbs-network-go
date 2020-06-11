@@ -214,12 +214,14 @@ func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
-	h.storage.When("GetBlock", mock.Any).Return(nil, nil).Times(1)
+	h.storage.When("GetSyncState").Return( nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
-	h.storage.When("GetBlock", mock.Any).Return(nil, nil).Times(1)
+	h.storage.When("GetSyncState").Return( nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)

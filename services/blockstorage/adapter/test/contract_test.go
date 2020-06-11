@@ -108,6 +108,18 @@ func TestBlockPersistenceContract_WriteOutOfOrderFuture_Succeeds(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, added, "persistence storage should support out of order writes")
 		require.EqualValues(t, 3, persistedHeight, "persisted height should be reported correctly as lastSynced block height")
+
+		_, err = adapter.GetBlock(1)
+		require.NoError(t, err)
+
+		_, err = adapter.GetBlock(3)
+		require.NoError(t, err)
+
+		err = adapter.ScanBlocks(3, 1, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+			t.Fatal("expected cursorFunc never to be invoked if requested block height is not in storage")
+			return false
+		})
+		require.Error(t, err)
 	})
 }
 

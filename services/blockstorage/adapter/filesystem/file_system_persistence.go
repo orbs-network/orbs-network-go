@@ -253,6 +253,7 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 	bh := getBlockHeight(blockPair)
 	lastWrittenHeight := f.bhIndex.lastSyncedHeight
+	// TODO: calc next height and avoid mapping
 	if _, found := f.bhIndex.fetchBlockOffset(bh); found { // block already in storage, ignores as defined in test expected
 		return false, lastWrittenHeight, nil
 	}
@@ -276,14 +277,9 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
 
 	inOrderHeight := getBlockHeight(f.bhIndex.inOrderBlock)
-	topHeight := getBlockHeight(f.bhIndex.topBlock)
-	if (inOrderHeight < from && from < f.bhIndex.lastSyncedHeight) || from > topHeight || from == 0 {
-		return fmt.Errorf("requested unknown block height %d. current height ranges are: inOrder(%d), lastSynced(%d), top(%d)", from, inOrderHeight, f.bhIndex.lastSyncedHeight, topHeight)
+	if (inOrderHeight < from) || from == 0 {
+		return fmt.Errorf("requested unsupported block height %d. Supported range for scan is determined by inOrder(%d)", from, inOrderHeight)
 	}
-	lastBlockHeight := topHeight
-	if from <= inOrderHeight {
-		lastBlockHeight = inOrderHeight
-	} // else (together with the above checks) implies: lastSynced < from < top
 
 	file, err := os.Open(f.blockFileName())
 	if err != nil {
@@ -294,42 +290,46 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 	fromHeight := from
 	wantsMore := true
 	eof := false
-	for fromHeight <= lastBlockHeight && wantsMore && !eof {
+	for fromHeight <= inOrderHeight && wantsMore && !eof {
 		toHeight := fromHeight + primitives.BlockHeight(pageSize) - 1
-		if toHeight > lastBlockHeight {
-			toHeight = lastBlockHeight
+		if toHeight > inOrderHeight {
+			toHeight = inOrderHeight
 		}
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
+		// TODO: Gad allow update of inOrder inside page
 		for height := fromHeight; height <= toHeight; height++ {
-			initialOffset, ok := f.bhIndex.fetchBlockOffset(height)
-			if !ok {
-				return fmt.Errorf("failed to find requested block %d", uint64(from))
-			}
-			newOffset, err := file.Seek(initialOffset, io.SeekStart)
-			if newOffset != initialOffset || err != nil {
-				return errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
-			}
-			aBlock, _, err := f.codec.decode(file)
-			if err != nil {
+			if aBlock, err := f.fetchBlockFromFile(height, file); err != nil {
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
 					eof = true
 					break
+				} else {
+					return errors.Wrapf(err, "failed to decode block")
 				}
-				return errors.Wrapf(err, "failed to decode block")
+			} else {
+				page = append(page, aBlock)
 			}
-			page = append(page, aBlock)
 		}
 		if len(page) > 0 {
 			wantsMore = cursor(page[0].ResultsBlock.Header.BlockHeight(), page)
 		}
-		lastBlockHeight = getBlockHeight(f.bhIndex.topBlock)
-		if from <= inOrderHeight {
-			lastBlockHeight = getBlockHeight(f.bhIndex.inOrderBlock)
-		}
+		inOrderHeight = getBlockHeight(f.bhIndex.inOrderBlock)
 		fromHeight = toHeight + 1
 	}
 
 	return nil
+}
+
+func (f *BlockPersistence) fetchBlockFromFile(height primitives.BlockHeight, file *os.File) (*protocol.BlockPairContainer, error) {
+	initialOffset, ok := f.bhIndex.fetchBlockOffset(height)
+	if !ok {
+		return nil, fmt.Errorf("failed to find requested block %d", uint64(height))
+	}
+	newOffset, err := file.Seek(initialOffset, io.SeekStart)
+	if newOffset != initialOffset || err != nil {
+		return nil, errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
+	}
+	aBlock, _, err := f.codec.decode(file)
+	return aBlock, err
 }
 
 func (f *BlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
@@ -365,12 +365,17 @@ func (f *BlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*prot
 }
 
 func (f *BlockPersistence) getBlockAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
-	var bpc *protocol.BlockPairContainer
-	err := f.ScanBlocks(height, 1, func(h primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
-		bpc = page[0]
-		return false
-	})
-	return bpc, err
+	file, err := os.Open(f.blockFileName())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open blocks file for reading")
+	}
+	defer closeSilently(file, f.logger)
+
+	if aBlock, err := f.fetchBlockFromFile(height, file); err != nil {
+		return nil, errors.Wrapf(err, "failed to decode block")
+	} else {
+		return aBlock, nil
+	}
 }
 
 func (f *BlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (block *protocol.BlockPairContainer, txIndexInBlock int, err error) {
