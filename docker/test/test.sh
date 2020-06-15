@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -xe
 
 # Important note: trying to run the stress test locally? you will need to increase your max allowed sockets open / open files
 # as shown in this stack overflow URL:
@@ -24,30 +24,19 @@ rm -rf _logs _out
 
 [[ -z $CONSENSUSALGO ]] && echo "Consensus algo is not set! quiting.." && exit 1
 
-# Only in Lean Helix disable the initial block height test for now
-if [[ $CONSENSUSALGO == "leanhelix" ]]; then
- export REMOTE_ENV="true"
-fi
-
 export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 # prepare persistent blocks for docker tests
-# skip on Mac
-if [[ $(uname) == "Linux" ]]; then
-    sudo rm -rf _tmp/blocks
-fi
+# this is a weird trick to get around filesystem permissions to avoid using sudo and blocking things on Mac
+docker run --rm -ti -v $(pwd)/_tmp:/opt/_tmp busybox sh -c "rm -rf /opt/_tmp/* && mkdir -p /opt/_tmp/blocks/node{1..4} && chmod -R 0777 /opt/_tmp/"
 
-# At the moment Lean Helix doesn't deal well with an existing blocks file
-if [[ $CONSENSUSALGO == "benchmark" ]]; then
-mkdir -p _tmp/blocks/node{1..4}
-
+# We do not copy blocks for node1 to check the block sync
 cp ./test/e2e/_data/blocks _tmp/blocks/node1
 cp ./test/e2e/_data/blocks _tmp/blocks/node2
 cp ./test/e2e/_data/blocks _tmp/blocks/node3
-cp ./test/e2e/_data/blocks _tmp/blocks/node4
-fi
+#cp ./test/e2e/_data/blocks _tmp/blocks/node4
 
 # run docker-reliant tests
 docker-compose -f ./docker/test/docker-compose.yml up -d
@@ -57,9 +46,7 @@ if [ $EXIT_CODE -ne 0 ]
 fi
 
 export API_ENDPOINT=http://localhost:8082/api/v1/ \
-#      MGMT_API_ENDPOINT=http://localhost:8086/api/v1/ \
       VCHAIN=42 \
-#      MGMT_VCHAIN=40 \
       STRESS_TEST_NUMBER_OF_TRANSACTIONS=5000 \
       STRESS_TEST_FAILURE_RATE=20 \
       STRESS_TEST_TARGET_TPS=100 \
