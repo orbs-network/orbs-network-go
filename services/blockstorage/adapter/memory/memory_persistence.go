@@ -129,7 +129,10 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 
 	newBlockHeight := getBlockHeight(blockPair)
 	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
-	if _, ok := bp.blockChain.blocks[newBlockHeight]; ok { // block exists
+
+	if (bp.blockChain.lastSyncedHeight > inOrderHeight && newBlockHeight != bp.blockChain.lastSyncedHeight-1) ||
+		(inOrderHeight == bp.blockChain.topHeight && newBlockHeight <= inOrderHeight) {
+		bp.Logger.Info(fmt.Errorf("trying to write a block with height (%d) which does not match current storage state: inOrder (%d), lastSynced (%d), top (%d)", uint64(newBlockHeight), uint64(inOrderHeight), uint64(bp.blockChain.lastSyncedHeight), uint64(bp.blockChain.topHeight), ).Error())
 		return false, bp.blockChain.lastSyncedHeight
 	}
 
@@ -161,10 +164,15 @@ func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBl
 	defer bp.blockChain.RUnlock()
 
 	var candidateBlocks []*protocol.BlockPairContainer
-	for _, blockPair := range bp.blockChain.blocks {
-		bts := blockPair.TransactionsBlock.Header.Timestamp()
-		if maxBlockTs >= bts && minBlockTs <= bts {
-			candidateBlocks = append(candidateBlocks, blockPair)
+	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
+	for height := primitives.BlockHeight(1); height <= inOrderHeight; height++ {
+		if blockPair, _ := bp.blockChain.blocks[height]; blockPair != nil {
+			bts := blockPair.TransactionsBlock.Header.Timestamp()
+			if maxBlockTs < bts {
+				break
+			} else if minBlockTs <= bts {
+				candidateBlocks = append(candidateBlocks, blockPair)
+			}
 		}
 	}
 

@@ -63,6 +63,7 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
 
+	// TODO: merging with management liveness config failed tests
 	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 12*time.Hour)
 	// have block sync use descending order of blocks from top
 	cfg.SetBool(BLOCK_SYNC_DESCENDING_ENABLED, true)

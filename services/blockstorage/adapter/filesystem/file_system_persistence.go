@@ -90,7 +90,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 		return nil, err
 	}
 
-	newTip, err := newFileBlockWriter(file, codec, bhIndex.fetchCurrentOffset())
+	newTip, err := newFileBlockWriter(file, codec, bhIndex.fetchNextOffset())
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err
@@ -99,7 +99,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 	adapter := &BlockPersistence{
 		bhIndex:      bhIndex,
 		config:       conf,
-		blockTracker: synchronization.NewBlockTracker(logger, uint64(getBlockHeight(bhIndex.inOrderBlock)), 5),
+		blockTracker: synchronization.NewBlockTracker(logger, uint64(bhIndex.getLastBlockHeight()), 5),
 		metrics:      newMetrics(metricFactory),
 		logger:       logger,
 		blockWriter:  newTip,
@@ -232,9 +232,9 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 		aBlock, blockSize, err := c.decode(r)
 		if err != nil {
 			if err == io.EOF {
-				logger.Info("built index", log.Int64("valid-block-bytes", offset), logfields.BlockHeight(getBlockHeight(bhIndex.inOrderBlock)))
+				logger.Info("built index", log.Int64("valid-block-bytes", offset), logfields.BlockHeight(bhIndex.getLastBlockHeight()))
 			} else {
-				logger.Error("built index, found and ignoring invalid block records", log.Int64("valid-block-bytes", offset), log.Error(err), logfields.BlockHeight(getBlockHeight(bhIndex.inOrderBlock)))
+				logger.Error("built index, found and ignoring invalid block records", log.Int64("valid-block-bytes", offset), log.Error(err), logfields.BlockHeight(bhIndex.getLastBlockHeight()))
 			}
 			break // index up to EOF or first invalid record.
 		}
@@ -247,26 +247,36 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 	return bhIndex, nil
 }
 
+//func validateCandidateBlockHeight(candidateBlockHeight primitives.BlockHeight, syncState internodesync.SyncState, logger log.Logger) error {
+//	if (syncState.LastSyncedHeight > syncState.InOrderHeight && candidateBlockHeight != syncState.LastSyncedHeight-1) ||
+//		(syncState.InOrderHeight == syncState.TopHeight && candidateBlockHeight <= syncState.InOrderHeight) {
+//		err := fmt.Errorf("trying to write a block with height (%d) which does not match current storage state (%v)", uint64(candidateBlockHeight), syncState)
+//		logger.Info(err.Error())
+//		return err
+//	}
+//	return nil
+//}
+
 func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 	f.blockWriter.Lock()
 	defer f.blockWriter.Unlock()
 
 	bh := getBlockHeight(blockPair)
-	lastWrittenHeight := f.bhIndex.lastSyncedHeight
-	// TODO: calc next height and avoid mapping
-	if _, found := f.bhIndex.fetchBlockOffset(bh); found { // block already in storage, ignores as defined in test expected
-		return false, lastWrittenHeight, nil
+
+	syncState := f.bhIndex.getSyncState()
+	if err := f.bhIndex.validateCandidateBlockHeight(bh); err != nil {
+		return false, syncState.LastSyncedHeight, nil
 	}
 
 	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
-		return false, lastWrittenHeight, err
+		return false, syncState.LastSyncedHeight, err
 	}
 
-	startPos := f.bhIndex.fetchCurrentOffset()
+	startPos := f.bhIndex.fetchNextOffset()
 	err = f.bhIndex.appendBlock(startPos+int64(n), blockPair, f.blockTracker)
 	if err != nil {
-		return false, lastWrittenHeight, errors.Wrap(err, "failed to update index after writing block")
+		return false, syncState.LastSyncedHeight, errors.Wrap(err, "failed to update index after writing block")
 	}
 
 	f.metrics.sizeOnDisk.Add(int64(n))
@@ -276,7 +286,7 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
 
-	inOrderHeight := getBlockHeight(f.bhIndex.inOrderBlock)
+	inOrderHeight := f.bhIndex.getLastBlockHeight()
 	if (inOrderHeight < from) || from == 0 {
 		return fmt.Errorf("requested unsupported block height %d. Supported range for scan is determined by inOrder(%d)", from, inOrderHeight)
 	}
@@ -312,7 +322,7 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		if len(page) > 0 {
 			wantsMore = cursor(page[0].ResultsBlock.Header.BlockHeight(), page)
 		}
-		inOrderHeight = getBlockHeight(f.bhIndex.inOrderBlock)
+		inOrderHeight = f.bhIndex.getLastBlockHeight()
 		fromHeight = toHeight + 1
 	}
 
