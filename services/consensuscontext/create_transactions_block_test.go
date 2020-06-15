@@ -7,11 +7,15 @@
 package consensuscontext
 
 import (
+	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-network-go/test/builders"
+	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -47,4 +51,14 @@ func TestConsensusContextCreateBlock_UpdateAddTriggerWhenEnabled(t *testing.T) {
 	require.Equal(t, len(txs)+1, len(outputTxs), "should not add txs")
 	require.EqualValues(t, txs[0], outputTxs[0], "should be same tx")
 	requireTransactionToBeATriggerTransaction(t, outputTxs[1], s.config)
+}
+
+func TestConsensusContextCreateBlock_proposeBlockReference_FailsWhenPrevIsHigherThanCurrent(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		management := &services.MockManagement{}
+		management.When("GetCurrentReference", mock.Any, mock.Any).Return(&services.GetCurrentReferenceOutput{CurrentReference: 5000}, nil)
+		s := &service{management: management}
+		_, err := s.proposeBlockReferenceTime(ctx, 5001)
+		require.Error(t, err)
+	})
 }

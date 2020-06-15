@@ -81,19 +81,18 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 }
 
 func (s *service) proposeBlockReferenceTime(ctx context.Context, prevReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
-	leaderReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	leaderReferenceTime, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{SystemTime: prevReferenceTime})
 	if err != nil {
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 	}
 
-	proposedReferenceTime := leaderReferenceTime.CurrentReference
-	if prevReferenceTime > proposedReferenceTime {
-		proposedReferenceTime = prevReferenceTime
+	if leaderReferenceTime.CurrentReference < prevReferenceTime {
+		return 0, errors.Errorf("leader reference time %d (before grace adjustment) is not upto date compared to previous block reference time %d", leaderReferenceTime.CurrentReference, prevReferenceTime)
 	}
 
-	if err := validateProposeBlockReferenceTime(prevReferenceTime, proposedReferenceTime,
-		leaderReferenceTime.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err != nil {
-		return 0, err
+	proposedReferenceTime := leaderReferenceTime.CurrentReference - primitives.TimestampSeconds(s.config.ManagementConsensusGraceTimeout() / time.Second)
+	if prevReferenceTime > proposedReferenceTime {
+		proposedReferenceTime = prevReferenceTime
 	}
 
 	// NOTE: network live and subscription is done in vm.pre-order to allow empty blocks to close.
