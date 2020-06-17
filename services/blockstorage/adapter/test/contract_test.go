@@ -107,7 +107,6 @@ func TestBlockPersistenceContract_WriteOutOfOrderFuture_Succeeds(t *testing.T) {
 		added, persistedHeight, err = adapter.WriteNextBlock(builders.BlockPair().WithHeight(3).Build())
 		require.NoError(t, err)
 		require.True(t, added, "persistence storage should support out of order writes")
-		require.EqualValues(t, 3, persistedHeight, "persisted height should be reported correctly as lastSynced block height")
 
 		_, err = adapter.GetBlock(1)
 		require.NoError(t, err)

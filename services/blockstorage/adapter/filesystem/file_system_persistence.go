@@ -247,16 +247,6 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 	return bhIndex, nil
 }
 
-//func validateCandidateBlockHeight(candidateBlockHeight primitives.BlockHeight, syncState internodesync.SyncState, logger log.Logger) error {
-//	if (syncState.LastSyncedHeight > syncState.InOrderHeight && candidateBlockHeight != syncState.LastSyncedHeight-1) ||
-//		(syncState.InOrderHeight == syncState.TopHeight && candidateBlockHeight <= syncState.InOrderHeight) {
-//		err := fmt.Errorf("trying to write a block with height (%d) which does not match current storage state (%v)", uint64(candidateBlockHeight), syncState)
-//		logger.Info(err.Error())
-//		return err
-//	}
-//	return nil
-//}
-
 func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer) (bool, primitives.BlockHeight, error) {
 	f.blockWriter.Lock()
 	defer f.blockWriter.Unlock()
@@ -265,23 +255,22 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 	syncState := f.bhIndex.getSyncState()
 	if err := f.bhIndex.validateCandidateBlockHeight(bh); err != nil {
-		return false, syncState.LastSyncedHeight, nil
+		return false, syncState.InOrderHeight, nil
 	}
 
 	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
-		return false, syncState.LastSyncedHeight, err
+		return false, syncState.InOrderHeight, err
 	}
 
 	startPos := f.bhIndex.fetchNextOffset()
 	err = f.bhIndex.appendBlock(startPos+int64(n), blockPair, f.blockTracker)
 	if err != nil {
-		return false, syncState.LastSyncedHeight, errors.Wrap(err, "failed to update index after writing block")
+		return false, syncState.InOrderHeight, errors.Wrap(err, "failed to update index after writing block")
 	}
 
 	f.metrics.sizeOnDisk.Add(int64(n))
-
-	return true, bh, nil
+	return true, f.bhIndex.getLastBlockHeight(), nil
 }
 
 func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
@@ -308,16 +297,15 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 		// TODO: Gad allow update of inOrder inside page
 		for height := fromHeight; height <= toHeight; height++ {
-			if aBlock, err := f.fetchBlockFromFile(height, file); err != nil {
+			aBlock, err := f.fetchBlockFromFile(height, file)
+			if err != nil {
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
 					eof = true
 					break
-				} else {
-					return errors.Wrapf(err, "failed to decode block")
 				}
-			} else {
-				page = append(page, aBlock)
+				return errors.Wrapf(err, "failed to decode block")
 			}
+			page = append(page, aBlock)
 		}
 		if len(page) > 0 {
 			wantsMore = cursor(page[0].ResultsBlock.Header.BlockHeight(), page)
@@ -350,16 +338,8 @@ func (f *BlockPersistence) GetLastBlock() (*protocol.BlockPairContainer, error) 
 	return f.bhIndex.getLastBlock(), nil
 }
 
-func (f *BlockPersistence) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
-	bpc, err := f.getBlockAtHeight(height)
-	if err != nil {
-		return nil, err
-	}
-	return bpc, nil
-}
-
 func (f *BlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (*protocol.TransactionsBlockContainer, error) {
-	bpc, err := f.getBlockAtHeight(height)
+	bpc, err := f.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
@@ -367,14 +347,14 @@ func (f *BlockPersistence) GetTransactionsBlock(height primitives.BlockHeight) (
 }
 
 func (f *BlockPersistence) GetResultsBlock(height primitives.BlockHeight) (*protocol.ResultsBlockContainer, error) {
-	bpc, err := f.getBlockAtHeight(height)
+	bpc, err := f.GetBlock(height)
 	if err != nil {
 		return nil, err
 	}
 	return bpc.ResultsBlock, nil
 }
 
-func (f *BlockPersistence) getBlockAtHeight(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+func (f *BlockPersistence) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
 	file, err := os.Open(f.blockFileName())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open blocks file for reading")

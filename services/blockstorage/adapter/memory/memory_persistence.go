@@ -130,10 +130,16 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 	newBlockHeight := getBlockHeight(blockPair)
 	inOrderHeight := getBlockHeight(bp.blockChain.inOrder)
 
-	if (bp.blockChain.lastSyncedHeight > inOrderHeight && newBlockHeight != bp.blockChain.lastSyncedHeight-1) ||
-		(inOrderHeight == bp.blockChain.topHeight && newBlockHeight <= inOrderHeight) {
-		bp.Logger.Info(fmt.Errorf("trying to write a block with height (%d) which does not match current storage state: inOrder (%d), lastSynced (%d), top (%d)", uint64(newBlockHeight), uint64(inOrderHeight), uint64(bp.blockChain.lastSyncedHeight), uint64(bp.blockChain.topHeight), ).Error())
-		return false, bp.blockChain.lastSyncedHeight
+	var err error
+	if bp.blockChain.lastSyncedHeight > inOrderHeight && newBlockHeight != bp.blockChain.lastSyncedHeight-1 {
+		err = fmt.Errorf("sync session in progress, expected block height %d; candidate block height %d", bp.blockChain.lastSyncedHeight-1, newBlockHeight)
+	} else if inOrderHeight == bp.blockChain.topHeight && newBlockHeight <= inOrderHeight {
+		err = fmt.Errorf("expected block height higher than current top %d; candidate block height %d",  inOrderHeight, newBlockHeight)
+	}
+
+	if err != nil {
+		bp.Logger.Info(err.Error())
+		return false, inOrderHeight
 	}
 
 	bp.blockChain.blocks[newBlockHeight] = blockPair
@@ -147,7 +153,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 			if block, _ := bp.blockChain.blocks[height]; block == nil {
 				bp.Logger.Error(fmt.Sprintf("missing block with height (%d) - should not happen", uint64(height)))
 				bp.blockChain.lastSyncedHeight = bp.blockChain.topHeight
-				return false, bp.blockChain.lastSyncedHeight
+				return false, getBlockHeight(bp.blockChain.inOrder)
 			}
 			bp.tracker.IncrementTo(height)
 		}
@@ -155,7 +161,7 @@ func (bp *InMemoryBlockPersistence) validateAndAddNextBlock(blockPair *protocol.
 		bp.blockChain.lastSyncedHeight = bp.blockChain.topHeight
 	}
 
-	return true, bp.blockChain.lastSyncedHeight
+	return true, getBlockHeight(bp.blockChain.inOrder)
 }
 
 func (bp *InMemoryBlockPersistence) GetBlockByTx(txHash primitives.Sha256, minBlockTs primitives.TimestampNano, maxBlockTs primitives.TimestampNano) (*protocol.BlockPairContainer, int, error) {

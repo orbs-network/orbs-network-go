@@ -71,7 +71,7 @@ func (i *blockHeightIndex) fetchBlockOffset(height primitives.BlockHeight) (offs
 	return
 }
 
-// assumes timeStamp(inOrderBlock) <= timeStamp(topBlock)
+// ignores blocks which are not fully synced (storage is missing blocks with lower height)
 func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primitives.TimestampNano, rangeEnd primitives.TimestampNano) (primitives.BlockHeight, bool) {
 	i.RLock()
 	defer i.RUnlock()
@@ -91,20 +91,24 @@ func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primi
 
 }
 
-func (i *blockHeightIndex) validateCandidateBlockHeight(candidateBlockHeight primitives.BlockHeight) error {
+func (i *blockHeightIndex) validateCandidateBlockHeight(candidateBlockHeight primitives.BlockHeight) (err error) {
 	i.RLock()
 	defer i.RUnlock()
 
 	topHeight := getBlockHeight(i.topBlock)
 	inOrderHeight := getBlockHeight(i.inOrderBlock)
 
-	if (i.lastSyncedHeight > inOrderHeight && candidateBlockHeight != i.lastSyncedHeight-1) ||
-		(inOrderHeight == topHeight && candidateBlockHeight <= inOrderHeight) {
-		err := fmt.Errorf("trying to write a block with height (%d) which does not match current storage state: inOrderHeight(%d), lastSyncedHeight(%d), topHeight(%d)", uint64(candidateBlockHeight), uint64(inOrderHeight), uint64(i.lastSyncedHeight), uint64(topHeight))
-		i.logger.Info(err.Error())
-		return err
+	if i.lastSyncedHeight > inOrderHeight && candidateBlockHeight != i.lastSyncedHeight-1 {
+		err = fmt.Errorf("sync session in progress, expected block height %d", i.lastSyncedHeight-1)
+
+	} else if inOrderHeight == topHeight && candidateBlockHeight <= inOrderHeight {
+		err = fmt.Errorf("expected block height higher than current top %d",  inOrderHeight)
 	}
-	return nil
+
+	if err != nil {
+		i.logger.Info(err.Error())
+	}
+	return
 }
 
 func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.BlockPairContainer, blockTracker *synchronization.BlockTracker) error {
