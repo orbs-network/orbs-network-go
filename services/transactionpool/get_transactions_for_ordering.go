@@ -96,6 +96,7 @@ func (s *service) GetTransactionsForOrdering(ctx context.Context, input *service
 	timeoutCtx, cancel := context.WithTimeout(ctx, s.config.BlockTrackerGraceTimeout())
 	defer cancel()
 
+	logger.Info("GetTransactionsForOrdering WaitForBlock ", logfields.BlockHeight(input.CurrentBlockHeight-1))
 	// we're collecting transactions for a new proposed block at input.CurrentBlockHeight
 	// wait for previous block height to be synced to avoid processing any tx that was already committed a second time.
 	if err := s.blockTracker.WaitForBlock(timeoutCtx, input.CurrentBlockHeight-1); err != nil {

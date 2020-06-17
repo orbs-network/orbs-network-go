@@ -9,11 +9,20 @@ package blockstorage
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 )
+
+func (s *Service) GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error) {
+	return s.persistence.GetBlock(height)
+}
+
+func (s *Service) GetSyncState() internodesync.SyncState {
+	return s.persistence.GetSyncState()
+}
 
 func (s *Service) GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error) {
 	b, err := s.persistence.GetLastBlock()
@@ -100,7 +109,7 @@ func (s *Service) GetTransactionReceipt(ctx context.Context, input *services.Get
 // Returns a slice of blocks containing first and last
 // TODO kill this method signature or use a larger page size without returning too many blocks
 func (s *Service) GetBlockSlice(first primitives.BlockHeight, last primitives.BlockHeight) ([]*protocol.BlockPairContainer, primitives.BlockHeight, primitives.BlockHeight, error) {
-	blocks := make([]*protocol.BlockPairContainer, 0, last-first+1)
+	blocks := make([]*protocol.BlockPairContainer, 0, last+1-first)
 	err := s.persistence.ScanBlocks(first, 1, func(firstInPage primitives.BlockHeight, page []*protocol.BlockPairContainer) bool {
 		blocks = append(blocks, page...)
 		return firstInPage < last

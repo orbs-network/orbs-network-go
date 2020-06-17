@@ -35,7 +35,7 @@ func (s *Service) UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(
 	err = s.notifyConsensusAlgos(
 		ctx,
 		nil,                // don't care about prev block, we are updating consensus algo about last committed, not asking it to validate using the prev block
-		lastCommittedBlock, // if lastCommittedBlock is nil, it means this is the Genesis Block
+		lastCommittedBlock, // if lastCommittedBlock is nil, it means this is the Genesis block
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY)
 	if err != nil {
 		logger.Error("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(): notifyConsensusAlgos() failed", log.Error(err))

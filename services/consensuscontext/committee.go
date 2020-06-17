@@ -42,3 +42,21 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	}
 	return res, nil
 }
+
+
+func (s *service) RequestBlockProofOrderingCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
+	return s.RequestBlockProofValidationCommittee(ctx, input)
+}
+
+func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
+	out, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference:input.PrevBlockReferenceTime})
+	if err != nil {
+		return nil, err
+	}
+	committee := out.Members
+	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), trace.LogFieldFrom(ctx))
+	res := &services.RequestBlockProofCommitteeOutput{
+		NodeAddresses:            committee,
+	}
+	return res, nil
+}

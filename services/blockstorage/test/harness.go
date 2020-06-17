@@ -13,12 +13,14 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/testkit"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/orbs-spec/types/go/services/handlers"
@@ -34,6 +36,9 @@ type configForBlockStorageTests struct {
 	syncNoCommit          time.Duration
 	syncCollectResponses  time.Duration
 	syncCollectChunks     time.Duration
+	syncReferenceDistance time.Duration
+	syncBlocksOrder       gossipmessages.SyncBlocksOrder
+	descendingEnabled     bool
 	queryGrace            time.Duration
 	queryExpirationWindow time.Duration
 	blockTrackerGrace     time.Duration
@@ -57,6 +62,18 @@ func (c *configForBlockStorageTests) BlockSyncCollectResponseTimeout() time.Dura
 
 func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.syncCollectChunks
+}
+
+func (c *configForBlockStorageTests) BlockSyncReferenceMaxAllowedDistance() time.Duration {
+	return c.syncReferenceDistance
+}
+
+func (c *configForBlockStorageTests) BlockSyncDescendingEnabled() bool {
+	return c.descendingEnabled
+}
+
+func (c *configForBlockStorageTests) BlockSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
+	return c.syncBlocksOrder
 }
 
 func (c *configForBlockStorageTests) BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration {
@@ -181,6 +198,11 @@ func (d *harness) withSyncCollectChunksTimeout(duration time.Duration) *harness 
 	return d
 }
 
+func (d *harness) withBlockSyncDescendingEnabled(isEnabled bool) *harness {
+	d.config.descendingEnabled = isEnabled
+	return d
+}
+
 func (d *harness) withBatchSize(size uint32) *harness {
 	d.config.syncBatchSize = size
 	return d
@@ -207,7 +229,7 @@ func (d *harness) failNextBlocks() {
 
 func (d *harness) commitSomeBlocks(ctx context.Context, count int) {
 	for i := 1; i <= count; i++ {
-		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).Build())
+		_, _ = d.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(i)).WithBlockCreated(time.Now()).Build())
 	}
 }
 
@@ -228,6 +250,8 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncNoCommit = 30 * time.Second // setting a long time here so sync never starts during the tests
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
+	cfg.descendingEnabled = true
+	cfg.syncReferenceDistance = 1 * time.Minute
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute
@@ -286,18 +310,82 @@ func respondToBroadcastAvailabilityRequest(ctx context.Context, harness *harness
 		return // protect against edge condition where harness did not finish initializing and sync has started
 	}
 
-	firstBlockHeight := requestInput.Message.SignedBatchRange.FirstBlockHeight()
-	if firstBlockHeight > availableBlocks {
-		return
+	blocksOrder := requestInput.Message.SignedBatchRange.BlocksOrder()
+	fromBlock := requestInput.Message.SignedBatchRange.FirstBlockHeight()
+	toBlock := requestInput.Message.SignedBatchRange.LastBlockHeight()
+
+	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if toBlock > availableBlocks {
+			return
+		}
+		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
+			fromBlock = availableBlocks
+		}
+	} else {
+		if fromBlock > availableBlocks {
+			return
+		}
+		toBlock = availableBlocks
 	}
 
 	for _, sourceAddressIndex := range sources {
 		response := builders.BlockAvailabilityResponseInput().
-			WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithFirstBlockHeight(firstBlockHeight).
-			WithLastBlockHeight(primitives.BlockHeight(availableBlocks)).
-			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).Build()
+			WithLastCommittedBlockHeight(availableBlocks).
+			WithFirstBlockHeight(fromBlock).
+			WithLastBlockHeight(toBlock).
+			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(sourceAddressIndex).NodeAddress()).
+			WithBlocksOrder(blocksOrder).Build()
 		go harness.blockStorage.HandleBlockAvailabilityResponse(ctx, response)
 	}
 
+}
+
+func reverse(arr []*protocol.BlockPairContainer) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
+}
+
+func createBlockSyncResponse(input *gossiptopics.BlockSyncRequestInput, blockChain []*protocol.BlockPairContainer, batchSize uint32) *gossiptopics.BlockSyncResponseInput {
+	blocksOrder := input.Message.SignedChunkRange.BlocksOrder()
+	fromBlock := input.Message.SignedChunkRange.FirstBlockHeight()
+	toBlock := input.Message.SignedChunkRange.LastBlockHeight()
+	availableBlocks := len(blockChain)
+	blockChainCopy := make([]*protocol.BlockPairContainer, availableBlocks)
+	copy(blockChainCopy, blockChain)
+	var blocks []*protocol.BlockPairContainer
+
+	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if fromBlock == internodesync.UNKNOWN_BLOCK_HEIGHT {
+			fromBlock = primitives.BlockHeight(availableBlocks)
+		}
+		if toBlock > primitives.BlockHeight(availableBlocks) {
+			return nil
+		}
+		// limit batch size server
+		if (fromBlock+1 > primitives.BlockHeight(batchSize)) && (fromBlock+1-primitives.BlockHeight(batchSize) > toBlock) {
+			toBlock = fromBlock + 1 - primitives.BlockHeight(batchSize)
+		}
+		blocks = blockChainCopy[toBlock-1 : fromBlock]
+		reverse(blocks)
+
+	} else {
+		blocks = blockChain[fromBlock-1 : toBlock]
+	}
+	response := builders.BlockSyncResponseInput().
+		WithFirstBlockHeight(fromBlock).
+		WithLastBlockHeight(toBlock).
+		WithLastCommittedBlockHeight(primitives.BlockHeight(availableBlocks)).
+		WithBlocksOrder(input.Message.SignedChunkRange.BlocksOrder()).
+		WithSenderNodeAddress(input.RecipientNodeAddress).
+		WithBlocks(blocks).Build()
+
+	return response
+}
+
+func respondToBlockSyncRequest(ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, blockChain []*protocol.BlockPairContainer, batchSize uint32) {
+	response := createBlockSyncResponse(input, blockChain, batchSize)
+	if response != nil {
+		go harness.blockStorage.HandleBlockSyncResponse(ctx, response)
+	}
 }

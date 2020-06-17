@@ -13,6 +13,8 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
@@ -35,6 +37,14 @@ type blockSyncConfig interface {
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
+	BlockSyncDescendingEnabled() bool
+	BlockSyncReferenceMaxAllowedDistance() time.Duration
+}
+
+type SyncState struct {
+	TopHeight        primitives.BlockHeight
+	InOrderHeight    primitives.BlockHeight
+	LastSyncedHeight primitives.BlockHeight
 }
 
 type BlockSyncStorage interface {
@@ -42,6 +52,8 @@ type BlockSyncStorage interface {
 	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
 	UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context)
+	GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error)
+	GetSyncState() SyncState
 }
 
 // state machine passes outside events into this channel type for consumption by the currently active state instance.
@@ -63,14 +75,13 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 
 type BlockSync struct {
 	govnr.TreeSupervisor
-	logger  log.Logger
-	factory *stateFactory
-	gossip  gossiptopics.BlockSync
-	storage BlockSyncStorage
-
-	conduit blockSyncConduit
-
-	metrics *stateMachineMetrics
+	logger                     log.Logger
+	factory                    *stateFactory
+	gossip                     gossiptopics.BlockSync
+	storage                    BlockSyncStorage
+	conduit                    blockSyncConduit
+	metrics                    *stateMachineMetrics
+	config                     blockSyncConfig
 }
 
 type stateMachineMetrics struct {
@@ -83,7 +94,7 @@ func newStateMachineMetrics(factory metric.Factory) *stateMachineMetrics {
 	}
 }
 
-func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.Logger, metricFactory metric.Factory) *BlockSync {
+func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factory *stateFactory, gossip gossiptopics.BlockSync, storage BlockSyncStorage, logger log.Logger, metricFactory metric.Factory) *BlockSync {
 	metrics := newStateMachineMetrics(metricFactory)
 
 	bs := &BlockSync{
@@ -93,13 +104,18 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 		storage: storage,
 		conduit: factory.conduit,
 		metrics: metrics,
+		config:  config,
 	}
 
-	logger.Info("block sync init",
+	setupSyncBlocksOrder(bs, config.BlockSyncDescendingEnabled())
+
+	logger.Info("Block sync init",
 		log.Stringable("no-commit-timeout", bs.factory.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.factory.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
-		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()))
+		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
+		log.Stringable("blocks-order", bs.factory.syncBlocksOrder),
+		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)
@@ -108,12 +124,21 @@ func newBlockSyncWithFactory(ctx context.Context, factory *stateFactory, gossip 
 	return bs
 }
 
+func setupSyncBlocksOrder(bs *BlockSync, descendingOrderEnabled bool) {
+	if descendingOrderEnabled {
+		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING)
+	} else {
+		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING)
+	}
+}
+
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {
 	logger := parentLogger.WithTags(LogTag)
 
 	conduit := make(blockSyncConduit)
 	return newBlockSyncWithFactory(
 		ctx,
+		config,
 		NewStateFactory(config, gossip, storage, conduit, logger, metricFactory),
 		gossip,
 		storage,
@@ -134,7 +159,7 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
-
+	//bs.UpdateStorageSyncState()
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():

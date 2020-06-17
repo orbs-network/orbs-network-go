@@ -72,7 +72,7 @@ func validateTxBlockProposer(ctx context.Context, vctx *txValidatorContext) erro
 	blockProposer := vctx.input.TransactionsBlock.Header.BlockProposerAddress()
 	if len(blockProposer) > 0 { // If tx block header - block proposer is len 0 this is older version and for backward compatibility validate check is skipped
 		if !bytes.Equal(blockProposer, expectedBlockProposer) {
-			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx block: expected %v actual %v", expectedBlockProposer, blockProposer)
 		}
 	}
 	return nil

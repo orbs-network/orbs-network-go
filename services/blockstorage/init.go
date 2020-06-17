@@ -33,9 +33,7 @@ type Service struct {
 	stateStorage services.StateStorage
 	gossip       gossiptopics.BlockSync
 	txPool       services.TransactionPool
-
 	config config.BlockStorageConfig
-
 	logger                  log.Logger
 	consensusBlocksHandlers struct {
 		sync.RWMutex
@@ -43,9 +41,7 @@ type Service struct {
 	}
 
 	// lastCommittedBlock state variable is inside adapter.BlockPersistence (GetLastBlock)
-
-	nodeSync *internodesync.BlockSync
-
+	nodeSync       *internodesync.BlockSync
 	metrics        *metrics
 	notifyNodeSync chan struct{}
 }
@@ -62,8 +58,16 @@ func newMetrics(m metric.Factory) *metrics {
 	}
 }
 
-func NewBlockStorage(ctx context.Context, config config.BlockStorageConfig, persistence adapter.BlockPersistence, gossip gossiptopics.BlockSync,
-	parentLogger log.Logger, metricFactory metric.Factory, blockPairReceivers []servicesync.BlockPairCommitter) *Service {
+func NewBlockStorage(
+	ctx context.Context,
+	config config.BlockStorageConfig,
+	persistence adapter.BlockPersistence,
+	gossip gossiptopics.BlockSync,
+	parentLogger log.Logger,
+	metricFactory metric.Factory,
+	blockPairReceivers []servicesync.BlockPairCommitter,
+) *Service {
+
 	logger := parentLogger.WithTags(LogTag)
 
 	s := &Service{
