@@ -29,8 +29,8 @@ func TestManagement_getCurrentReference_RefExists(t *testing.T) {
 	}
 
 	// input of systemRef is ignored
-	require.EqualValues(t, 50, s.getCurrentReference(5))
-	require.EqualValues(t, 50, s.getCurrentReference(primitives.TimestampSeconds(time.Now().Unix())))
+	require.EqualValues(t, 50, s.getCurrentReferenceUnderLock(5))
+	require.EqualValues(t, 50, s.getCurrentReferenceUnderLock(primitives.TimestampSeconds(time.Now().Unix())))
 }
 
 func TestManagement_getCurrentReference_NoRef(t *testing.T) {
@@ -45,7 +45,7 @@ func TestManagement_getCurrentReference_NoRef(t *testing.T) {
 		},
 	}
 
-	require.EqualValues(t, now-4000, s.getCurrentReference(now))
+	require.EqualValues(t, now-4000, s.getCurrentReferenceUnderLock(now))
 }
 
 const ACurrentRef = primitives.TimestampSeconds(5501)

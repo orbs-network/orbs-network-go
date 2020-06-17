@@ -111,16 +111,14 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 	return s
 }
 
-func (s *service) getCurrentReference(systemRef primitives.TimestampSeconds) primitives.TimestampSeconds {
-	s.RLock()
-	defer s.RUnlock()
+func (s *service) getCurrentReferenceUnderLock(systemRef primitives.TimestampSeconds) primitives.TimestampSeconds {
 	if s.data.CurrentReference != 0 {
 		return s.data.CurrentReference
 	}
 
-	committeeTerm := s.getCommittee(systemRef, s.data.Committees)
-	subTerm := s.getSubscriptionStatus(systemRef, s.data.Subscriptions)
-	pvTerm := s.getProtocolVersion(systemRef, s.data.ProtocolVersions)
+	committeeTerm := s.getCommitteeUnderLock(systemRef, s.data.Committees)
+	subTerm := s.getSubscriptionStatusUnderLock(systemRef, s.data.Subscriptions)
+	pvTerm := s.getProtocolVersionUnderLock(systemRef, s.data.ProtocolVersions)
 	return maxOf(committeeTerm.AsOfReference, subTerm.AsOfReference, pvTerm.AsOfReference)
 }
 
@@ -144,7 +142,7 @@ func (s *service) GetCurrentReference(ctx context.Context, input *services.GetCu
 	s.RLock()
 	defer s.RUnlock()
 	return &services.GetCurrentReferenceOutput{
-		CurrentReference: s.getCurrentReference(input.SystemTime),
+		CurrentReference: s.getCurrentReferenceUnderLock(input.SystemTime),
 	}, nil
 }
 
@@ -152,7 +150,7 @@ func (s *service) GetGenesisReference(ctx context.Context, input *services.GetGe
 	s.RLock()
 	defer s.RUnlock()
 	return &services.GetGenesisReferenceOutput{
-		CurrentReference: s.getCurrentReference(input.SystemTime),
+		CurrentReference: s.getCurrentReferenceUnderLock(input.SystemTime),
 		GenesisReference: s.data.GenesisReference,
 	}, nil
 }
@@ -164,9 +162,7 @@ func (s *service) validateRefTimeRequestNotInTheFuture(refTime primitives.Timest
 	return nil
 }
 
-func (s *service) getCommittee(refTime primitives.TimestampSeconds, committees []CommitteeTerm) *CommitteeTerm {
-	s.RLock()
-	defer s.RUnlock()
+func (s *service) getCommitteeUnderLock(refTime primitives.TimestampSeconds, committees []CommitteeTerm) *CommitteeTerm {
 	i := len(committees) - 1
 	for ; i > 0 && refTime < committees[i].AsOfReference; i-- {
 	}
@@ -179,8 +175,10 @@ func (s *service) GetCommittee(ctx context.Context, input *services.GetCommittee
 	}
 
 	if input.Reference >= s.data.StartPageReference {
+		s.RLock()
+		defer s.RUnlock()
 		return &services.GetCommitteeOutput{
-			Members: s.getCommittee(input.Reference, s.data.Committees).Members,
+			Members: s.getCommitteeUnderLock(input.Reference, s.data.Committees).Members,
 		}, nil
 	}
 
@@ -188,14 +186,14 @@ func (s *service) GetCommittee(ctx context.Context, input *services.GetCommittee
 		return nil, err
 	}
 
+	s.RLock()
+	defer s.RUnlock()
 	return &services.GetCommitteeOutput{
-		Members: s.getCommittee(input.Reference, s.cachedHistoricData.Committees).Members,
+		Members: s.getCommitteeUnderLock(input.Reference, s.cachedHistoricData.Committees).Members,
 	}, nil
 }
 
-func (s *service) getSubscriptionStatus(refTime primitives.TimestampSeconds, subscrptions []SubscriptionTerm) *SubscriptionTerm {
-	s.RLock()
-	defer s.RUnlock()
+func (s *service) getSubscriptionStatusUnderLock(refTime primitives.TimestampSeconds, subscrptions []SubscriptionTerm) *SubscriptionTerm {
 	i := len(subscrptions) - 1
 	for ; i > 0 && refTime < subscrptions[i].AsOfReference; i-- {
 	}
@@ -208,8 +206,10 @@ func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.Get
 	}
 
 	if input.Reference >= s.data.StartPageReference {
+		s.RLock()
+		defer s.RUnlock()
 		return &services.GetSubscriptionStatusOutput{
-			SubscriptionStatusIsActive: s.getSubscriptionStatus(input.Reference, s.data.Subscriptions).IsActive,
+			SubscriptionStatusIsActive: s.getSubscriptionStatusUnderLock(input.Reference, s.data.Subscriptions).IsActive,
 		}, nil
 	}
 
@@ -217,14 +217,14 @@ func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.Get
 		return nil, err
 	}
 
+	s.RLock()
+	defer s.RUnlock()
 	return &services.GetSubscriptionStatusOutput{
-		SubscriptionStatusIsActive: s.getSubscriptionStatus(input.Reference, s.cachedHistoricData.Subscriptions).IsActive,
+		SubscriptionStatusIsActive: s.getSubscriptionStatusUnderLock(input.Reference, s.cachedHistoricData.Subscriptions).IsActive,
 	}, nil
 }
 
-func (s *service) getProtocolVersion(refTime primitives.TimestampSeconds, protocolVersions []ProtocolVersionTerm) *ProtocolVersionTerm {
-	s.RLock()
-	defer s.RUnlock()
+func (s *service) getProtocolVersionUnderLock(refTime primitives.TimestampSeconds, protocolVersions []ProtocolVersionTerm) *ProtocolVersionTerm {
 	i := len(protocolVersions) - 1
 	for ; i > 0 && refTime < protocolVersions[i].AsOfReference; i-- {
 	}
@@ -237,8 +237,10 @@ func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetPro
 	}
 
 	if input.Reference >= s.data.StartPageReference {
+		s.RLock()
+		defer s.RUnlock()
 		return &services.GetProtocolVersionOutput{
-			ProtocolVersion: s.getProtocolVersion(input.Reference, s.data.ProtocolVersions).Version,
+			ProtocolVersion: s.getProtocolVersionUnderLock(input.Reference, s.data.ProtocolVersions).Version,
 		}, nil
 	}
 
@@ -246,8 +248,10 @@ func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetPro
 		return nil, err
 	}
 
+	s.RLock()
+	defer s.RUnlock()
 	return &services.GetProtocolVersionOutput{
-		ProtocolVersion: s.getProtocolVersion(input.Reference, s.cachedHistoricData.ProtocolVersions).Version,
+		ProtocolVersion: s.getProtocolVersionUnderLock(input.Reference, s.cachedHistoricData.ProtocolVersions).Version,
 	}, nil
 }
 
@@ -292,14 +296,6 @@ func (s *service) updateHistoric(ctx context.Context, refTime primitives.Timesta
 		}
 		s.Lock()
 		defer s.Unlock()
-		//s.cachedHistoricData.CurrentReference = historic.CurrentReference
-		//s.cachedHistoricData.GenesisReference = historic.GenesisReference
-		//s.cachedHistoricData.StartPageReference = historic.StartPageReference
-		//s.cachedHistoricData.EndPageReference = historic.EndPageReference
-		//s.cachedHistoricData.CurrentTopology = historic.CurrentTopology
-		//s.cachedHistoricData.Committees = historic.Committees
-		//s.cachedHistoricData.Subscriptions = historic.Subscriptions
-		//s.cachedHistoricData.ProtocolVersions = historic.ProtocolVersions
 		s.cachedHistoricData = historic
 		s.metrics.pageCachedStartRefTime.Update(int64(s.cachedHistoricData.StartPageReference))
 		s.metrics.pageCachedEndRefTime.Update(int64(s.cachedHistoricData.EndPageReference))
@@ -345,7 +341,7 @@ func (s *service) updateMetrics() {
 	s.metrics.currentTopology.Update("[" + strings.Join(topologyStringArray, ", ") + "]")
 
 	s.metrics.numCommitteeEvents.Update(int64(len(s.data.Committees)))
-	committeeTerm := s.getCommittee(currentRef, s.data.Committees)
+	committeeTerm := s.getCommitteeUnderLock(currentRef, s.data.Committees)
 	s.metrics.currentCommitteeRefTime.Update(int64(committeeTerm.AsOfReference))
 	committeeStringArray := make([]string, len(committeeTerm.Members))
 	for j, nodeAddress := range committeeTerm.Members {
@@ -354,7 +350,7 @@ func (s *service) updateMetrics() {
 	s.metrics.currentCommittee.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 
 	s.metrics.numSubscriptionEvents.Update(int64(len(s.data.Subscriptions)))
-	subscriptionTerm := s.getSubscriptionStatus(currentRef, s.data.Subscriptions)
+	subscriptionTerm := s.getSubscriptionStatusUnderLock(currentRef, s.data.Subscriptions)
 	s.metrics.currentSubscriptionRefTime.Update(int64(subscriptionTerm.AsOfReference))
 	if subscriptionTerm.IsActive {
 		s.metrics.currentSubscription.Update("Active")
@@ -363,7 +359,7 @@ func (s *service) updateMetrics() {
 	}
 
 	s.metrics.numProtocolEvents.Update(int64(len(s.data.ProtocolVersions)))
-	pvTerm := s.getProtocolVersion(currentRef, s.data.ProtocolVersions)
+	pvTerm := s.getProtocolVersionUnderLock(currentRef, s.data.ProtocolVersions)
 	s.metrics.currentProtocolRefTime.Update(int64(pvTerm.AsOfReference))
 	s.metrics.currentProtocol.Update(int64(pvTerm.Version))
 }
