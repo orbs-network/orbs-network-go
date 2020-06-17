@@ -27,7 +27,9 @@ func (s *Service) CommitBlock(ctx context.Context, input *services.CommitBlockIn
 
 func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockInput, notifyNodeSync bool) (*services.CommitBlockOutput, error) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
-
+	if input.BlockPair == nil {
+		return nil, fmt.Errorf("attempt to commit a nil block")
+	}
 	proposedBlockHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
 	logger.Info("Trying to commit a block", logfields.BlockHeight(proposedBlockHeight))
 
@@ -35,13 +37,9 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, err
 	}
 
-	added, persistedHeight, err := s.persistence.WriteNextBlock(input.BlockPair)
+	added, _, err := s.persistence.WriteNextBlock(input.BlockPair)
 	if err != nil {
 		return nil, err
-	}
-
-	if proposedBlockHeight > persistedHeight+1 {
-		return nil, fmt.Errorf("attempt to write future block %d. current top height is %d", proposedBlockHeight, persistedHeight)
 	}
 
 	if !added {

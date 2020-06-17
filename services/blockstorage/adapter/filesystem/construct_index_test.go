@@ -45,9 +45,9 @@ func TestConstructIndexFromReader(t *testing.T) {
 		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
 
 		require.NoError(t, err, "expected index to construct with no error")
-		require.EqualValues(t, numBlocks, blockHeightIndex.topBlockHeight, "expected index to reach top block height")
-		test.RequireCmpEqual(t, blockHeightIndex.topBlock, lastBlockInChain, "expected index to cache last block")
-		require.EqualValues(t, totalBytesRead, blockHeightIndex.heightOffset[primitives.BlockHeight(numBlocks)+1], "expected next block offset to be the buffer size")
+		require.EqualValues(t, numBlocks, blockHeightIndex.getLastBlockHeight(), "expected index to reach topHeight block height")
+		test.RequireCmpEqual(t, blockHeightIndex.getLastBlock(), lastBlockInChain, "expected index to cache last block")
+		require.EqualValues(t, totalBytesRead, blockHeightIndex.fetchNextOffset(), "expected next block offset to be the buffer size")
 	})
 
 }
@@ -112,7 +112,7 @@ func TestBuildIndexSucceedsIndexingFromReader(t *testing.T) {
 		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
 
 		require.NoError(t, err, "expected buildIndex to succeed")
-		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
 
 		<-done
 	})
@@ -137,7 +137,7 @@ func TestBuildIndexHandlesPartialReads(t *testing.T) {
 		bhIndex, err := buildIndex(rBuffered, 0, harness.Logger, codec)
 
 		require.NoError(t, err, "expected buildIndex to succeed with a buffered reader")
-		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
+		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
 
 		<-done
 		<-done2
@@ -152,7 +152,7 @@ func TestBuildIndexHandlesEmptyFile(t *testing.T) {
 		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
 
 		require.NoError(t, err, "expected buildIndex to succeed")
-		require.Equal(t, bhIndex.topBlockHeight, primitives.BlockHeight(0), "expected block height to be zero")
+		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(0), "expected block height to be zero")
 	})
 }
 

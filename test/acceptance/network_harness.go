@@ -177,7 +177,6 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
 			ctx, cancel := context.WithTimeout(context.Background(), b.testTimeout)
 			defer cancel()
-
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.managementPollingInterval, b.configOverride)
 			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)

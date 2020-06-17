@@ -19,10 +19,10 @@ import (
 	"github.com/pkg/errors"
 	"sort"
 	"sync"
+	"time"
 )
 
-const DEFAULT_REF_TIME = 1492983000
-const DEFAULT_GENESIS_REF_TIME = 1492982000
+const DEFAULT_GENESIS_ONSET = 1000
 
 type MemoryConfig interface {
 	GossipPeers() adapter.TransportPeers
@@ -45,8 +45,8 @@ func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(cfg)
 	return &MemoryProvider{
 		logger:                logger,
-		currentReference:      DEFAULT_REF_TIME,
-		genesisReference:      DEFAULT_GENESIS_REF_TIME,
+		currentReference:      primitives.TimestampSeconds(time.Now().Unix()),
+		genesisReference:      primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
 		topology:              getTopologyFromConfig(cfg, logger),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
@@ -93,7 +93,7 @@ func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainMana
 		CurrentTopology:  mp.topology,
 		Committees:       mp.committees,
 		Subscriptions:    mp.isSubscriptionActives,
-        ProtocolVersions: mp.protocolVersions,
+		ProtocolVersions: mp.protocolVersions,
 	}, nil
 }
 

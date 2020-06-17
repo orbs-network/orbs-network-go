@@ -51,6 +51,7 @@ func BlockPair() *blockPair {
 			MetadataHash:               empty32ByteHash,
 			NumSignedTransactions:      1,
 			BlockProposerAddress:       empty32ByteHash,
+			ReferenceTime:              primitives.TimestampSeconds(createdDate.Unix()),
 		},
 		txMetadata:   &protocol.TransactionsBlockMetadataBuilder{},
 		transactions: transactions,
@@ -68,6 +69,7 @@ func BlockPair() *blockPair {
 			NumContractStateDiffs:           1,
 			NumTransactionReceipts:          1,
 			BlockProposerAddress:            empty32ByteHash,
+			ReferenceTime:                   primitives.TimestampSeconds(createdDate.Unix()),
 		},
 		receipts: []*protocol.TransactionReceipt{
 			(TransactionReceipt().Build()),
@@ -127,6 +129,12 @@ func (b *blockPair) WithPrevBlockHash(hash primitives.Sha256) *blockPair {
 func (b *blockPair) WithBlockCreated(time time.Time) *blockPair {
 	b.txHeader.Timestamp = primitives.TimestampNano(time.UnixNano())
 	b.rxHeader.Timestamp = primitives.TimestampNano(time.UnixNano())
+	return b
+}
+
+func (b *blockPair) WithReferenceTime(refTime primitives.TimestampSeconds) *blockPair {
+	b.txHeader.ReferenceTime = refTime
+	b.rxHeader.ReferenceTime = refTime
 	return b
 }
 

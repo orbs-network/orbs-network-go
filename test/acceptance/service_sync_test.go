@@ -20,7 +20,6 @@ import (
 )
 
 func TestServiceBlockSync_TransactionPool(t *testing.T) {
-
 	blockCount := primitives.BlockHeight(10)
 	txBuilders := make([]*builders.TransactionBuilder, blockCount)
 	for i := 0; i < int(blockCount); i++ {
@@ -28,23 +27,19 @@ func TestServiceBlockSync_TransactionPool(t *testing.T) {
 	}
 
 	blocks := createInitialBlocks(t, txBuilders)
-
 	NewHarness().
 		WithInitialBlocks(blocks).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS). // this test only runs with BenchmarkConsensus since we only create blocks compatible with that algo
-		//AllowingErrors().
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 
 			topBlockHeight := blocks[len(blocks)-1].ResultsBlock.Header.BlockHeight()
-
 			_ = network.GetTransactionPoolBlockHeightTracker(0).WaitForBlock(ctx, topBlockHeight)
 			_ = network.GetTransactionPoolBlockHeightTracker(1).WaitForBlock(ctx, topBlockHeight)
 
 			// this is required because GlobalPreOrder contract relies on state (Approve method), and if state storage is too far behind, GlobalPreOrder will fail on gap
 			require.NoError(t, network.stateBlockHeightTrackers[0].WaitForBlock(ctx, topBlockHeight))
 			require.NoError(t, network.stateBlockHeightTrackers[1].WaitForBlock(ctx, topBlockHeight))
-
-			// Resend an already committed transaction to Leader
+			//Resend an already committed transaction to Leader
 			leaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 0)
 			nonLeaderTxResponse, _ := network.SendTransaction(ctx, txBuilders[0].Builder(), 1)
 

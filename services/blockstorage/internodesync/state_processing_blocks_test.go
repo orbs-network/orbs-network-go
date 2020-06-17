@@ -8,28 +8,28 @@ package internodesync
 
 import (
 	"context"
+	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestStateProcessingBlocks_CommitsAccordinglyAndMovesToCollectingAvailabilityResponses(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
-			h := newBlockSyncHarness(harness.Logger)
+			h := newBlockSyncHarness(harness.Logger)//.withStorageSyncState(9,9,9)
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorage(11)
-
 			state := h.factory.CreateProcessingBlocksState(message)
 			nextState := state.processState(ctx)
-
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
 			h.verifyMocks(t)
 		})
@@ -40,6 +40,7 @@ func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
+			h.storage.When("GetBlock", mock.Any).Return(nil, nil)
 			state := h.factory.CreateProcessingBlocksState(nil)
 			nextState := state.processState(ctx)
 
@@ -49,15 +50,16 @@ func TestStateProcessingBlocks_ReturnsToIdleWhenNoBlocksReceived(t *testing.T) {
 }
 
 func TestStateProcessingBlocks_ValidateBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
+	// TODO: Gad support descending
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
 			harness.AllowErrorsMatching("failed to validate block received via sync")
 
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorageAndFailLastValidation(11, message.SignedChunkRange.FirstBlockHeight())
@@ -79,9 +81,9 @@ func TestStateProcessingBlocks_CommitBlockFailureReturnsToCollectingAvailability
 			harness.AllowErrorsMatching("failed to commit block received via sync")
 
 			message := builders.BlockSyncResponseInput().
-				WithFirstBlockHeight(10).
-				WithLastBlockHeight(20).
-				WithLastCommittedBlockHeight(20).
+				WithFirstBlockHeight(1).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(11).
 				Build().Message
 
 			h.expectBlockValidationQueriesFromStorage(11)
@@ -108,8 +110,13 @@ func TestStateProcessingBlocks_TerminatesOnContextTermination(t *testing.T) {
 			Build().Message
 
 		cancel()
+		h.storage.When("GetSyncState").Return( nil).Times(1)
+		h.storage.When("GetBlock", mock.Any).Return(nil)
+		h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
+
 		state := h.factory.CreateProcessingBlocksState(message)
 		nextState := state.processState(ctx)
+		time.Sleep(5*time.Second)
 
 		require.Nil(t, nextState, "next state should be nil on context termination")
 	})

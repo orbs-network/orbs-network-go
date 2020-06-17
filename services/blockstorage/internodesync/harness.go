@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
@@ -24,11 +25,14 @@ import (
 )
 
 type blockSyncConfigForTests struct {
-	nodeAddress      primitives.NodeAddress
-	batchSize        uint32
-	noCommit         time.Duration
-	collectResponses time.Duration
-	collectChunks    time.Duration
+	nodeAddress       primitives.NodeAddress
+	batchSize         uint32
+	noCommit          time.Duration
+	collectResponses  time.Duration
+	collectChunks     time.Duration
+	referenceDistance time.Duration
+	blocksOrder       gossipmessages.SyncBlocksOrder
+	descendingEnabled bool
 }
 
 func (c *blockSyncConfigForTests) NodeAddress() primitives.NodeAddress {
@@ -51,13 +55,28 @@ func (c *blockSyncConfigForTests) BlockSyncCollectChunksTimeout() time.Duration 
 	return c.collectChunks
 }
 
+func (c *blockSyncConfigForTests) BlockSyncReferenceMaxAllowedDistance() time.Duration {
+	return c.referenceDistance
+}
+
+func (c *blockSyncConfigForTests) BlockSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
+	return c.blocksOrder
+}
+
+func (c *blockSyncConfigForTests) BlockSyncDescendingEnabled() bool {
+	return c.descendingEnabled
+}
+
 func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	return &blockSyncConfigForTests{
-		nodeAddress:      testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:        10,
-		noCommit:         3 * time.Millisecond,
-		collectResponses: 3 * time.Millisecond,
-		collectChunks:    3 * time.Millisecond,
+		nodeAddress:       testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
+		batchSize:         10,
+		noCommit:          3 * time.Millisecond,
+		collectResponses:  3 * time.Millisecond,
+		collectChunks:     3 * time.Millisecond,
+		referenceDistance: 100 * time.Second,
+		blocksOrder:       gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
+		descendingEnabled: true,
 	}
 }
 
@@ -81,12 +100,11 @@ func newBlockSyncHarnessWithTimers(
 	gossip := &gossiptopics.MockBlockSync{}
 	storage := &blockSyncStorageMock{}
 	conduit := make(blockSyncConduit)
-
 	metricFactory := metric.NewRegistry()
 
 	return &blockSyncHarness{
 		logger:        logger,
-		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, cfg.blocksOrder, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
 		config:        cfg,
 		gossip:        gossip,
 		storage:       storage,
@@ -125,18 +143,28 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	return h
 }
 
+func (h *blockSyncHarness) withReferenceDistance(d time.Duration) *blockSyncHarness {
+	h.config.referenceDistance = d
+	return h
+}
+
+func (h *blockSyncHarness) withDescendingEnabled(isEnabled bool) *blockSyncHarness {
+	h.config.descendingEnabled = isEnabled
+	return h
+}
+
 func (h *blockSyncHarness) expectSyncOnStart() {
 	h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(10)
 	h.expectBroadcastOfBlockAvailabilityRequest()
 }
 
 func (h *blockSyncHarness) eventuallyVerifyMocks(t *testing.T, times int) {
-	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	err := test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip)
 	require.NoError(t, err)
 }
 
 func (h *blockSyncHarness) consistentlyVerifyMocks(t *testing.T, times int, message string) {
-	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip, h.storage)
+	err := test.ConsistentlyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT*time.Duration(times), h.gossip)
 	require.NoError(t, err, message)
 }
 
@@ -172,10 +200,12 @@ func (h *blockSyncHarness) expectUpdateConsensusAlgosAboutLastCommittedBlockInLo
 }
 
 func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequestToFail() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 }
 
 func (h *blockSyncHarness) expectBroadcastOfBlockAvailabilityRequest() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("BroadcastBlockAvailabilityRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
@@ -184,10 +214,14 @@ func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
+	h.storage.When("GetSyncState").Return( nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("GetSyncState").Return( nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)
@@ -199,9 +233,11 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastVal
 func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
 	outCommit := &services.CommitBlockOutput{}
 	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Return(outCommit, nil).Times(numExpectedBlocks)
+	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 }
 
 func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+	h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 	h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
 			return nil, errors.Errorf("failed to commit block #%d", numExpectedBlocks)
@@ -211,9 +247,11 @@ func (h *blockSyncHarness) expectBlockCommitsToStorageAndFailLastCommit(numExpec
 }
 
 func (h *blockSyncHarness) expectSendingOfBlockSyncRequest() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, nil).Times(1)
 }
 
 func (h *blockSyncHarness) expectSendingOfBlockSyncRequestToFail() {
+	h.storage.When("GetSyncState").Return(nil).Times(1)
 	h.gossip.When("SendBlockSyncRequest", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 }

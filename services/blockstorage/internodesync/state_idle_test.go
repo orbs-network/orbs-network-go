@@ -38,7 +38,6 @@ func TestStateIdle_MovesToCollectingAvailabilityResponsesOnNoCommitTimeout(t *te
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newBlockSyncHarness(harness.Logger)
-
 			state := h.factory.CreateIdleState()
 			nextState := state.processState(ctx)
 

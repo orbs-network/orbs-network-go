@@ -8,15 +8,20 @@ package blockstorage
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/internodesync"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 )
+
+const UNKNOWN_BLOCK_HEIGHT = primitives.BlockHeight(0)
 
 func (s *Service) HandleBlockAvailabilityRequest(ctx context.Context, input *gossiptopics.BlockAvailabilityRequestInput) (*gossiptopics.EmptyOutput, error) {
 	err := s.sourceHandleBlockAvailabilityRequest(ctx, input.Message)
@@ -32,23 +37,24 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	logger.Info("received block availability request",
-		log.Stringable("petitioner", message.Sender.SenderNodeAddress()),
-		log.Uint64("requested-first-block", uint64(message.SignedBatchRange.FirstBlockHeight())),
-		log.Uint64("requested-last-block", uint64(message.SignedBatchRange.LastBlockHeight())),
-		log.Uint64("requested-last-committed-block", uint64(message.SignedBatchRange.LastCommittedBlockHeight())))
+		log.Stringable("availability-request-message", message))
 
 	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
+	requestFrom := message.SignedBatchRange.FirstBlockHeight()
+	requestTo := message.SignedBatchRange.LastBlockHeight()
+	requestSyncBlocksOrder := message.SignedBatchRange.BlocksOrder()
 
-	if lastCommittedBlockHeight <= message.SignedBatchRange.LastCommittedBlockHeight() {
+	syncState := s.persistence.GetSyncState()
+	responseFrom, responseTo, err := getServerSyncRange(syncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
+	if err != nil {
+		logger.Info("invalid sync range ", log.Error(err))
 		return nil
 	}
-
-	firstAvailableBlockHeight := primitives.BlockHeight(1)
-	blockType := message.SignedBatchRange.BlockType()
 
 	response := &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientNodeAddress: message.Sender.SenderNodeAddress(),
@@ -57,67 +63,133 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 				SenderNodeAddress: s.config.NodeAddress(),
 			}).Build(),
 			SignedBatchRange: (&gossipmessages.BlockSyncRangeBuilder{
-				BlockType:                blockType,
-				LastBlockHeight:          lastCommittedBlockHeight,
-				FirstBlockHeight:         firstAvailableBlockHeight,
+				BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+				FirstBlockHeight:         responseFrom,
+				LastBlockHeight:          responseTo,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
+				BlocksOrder:              requestSyncBlocksOrder,
 			}).Build(),
 		},
 	}
 
 	logger.Info("sending the response for availability request",
-		log.Stringable("petitioner", response.RecipientNodeAddress),
-		log.Uint64("first-available-block-height", uint64(response.Message.SignedBatchRange.FirstBlockHeight())),
-		log.Uint64("last-available-block-height", uint64(response.Message.SignedBatchRange.LastBlockHeight())),
-		log.Uint64("last-committed-available-block-height", uint64(response.Message.SignedBatchRange.LastCommittedBlockHeight())),
-		log.Stringable("source", response.Message.Sender.SenderNodeAddress()),
-	)
+		log.Stringable("availability-response-message", response))
 
 	_, err = s.gossip.SendBlockAvailabilityResponse(ctx, response)
 	return err
+
+}
+
+// support for syncing only for block range (1-inOrder)
+func getServerSyncRange(syncState internodesync.SyncState,
+	requestFrom primitives.BlockHeight,
+	requestTo primitives.BlockHeight,
+	requestSyncBlocksOrder gossipmessages.SyncBlocksOrder,
+	batchSize primitives.BlockHeight,
+) (responseFrom primitives.BlockHeight, responseTo primitives.BlockHeight, err error) {
+
+	inOrder := syncState.InOrderHeight
+	responseFrom = requestFrom
+	responseTo = requestTo
+
+	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING || requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED {
+		if requestFrom > requestTo {
+			err = errors.New("Invalid requested range ascending order with from > to")
+			return
+		}
+		if requestFrom > inOrder { // server does not hold range beginning
+			err = fmt.Errorf("server does not hold requested ascending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+			return
+		}
+		responseTo = min(requestFrom+batchSize-1, requestTo, inOrder)
+
+	} else if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		// assert range - either (from=unknown or from > to ) and to > 0
+		if (requestTo == 0) || (requestFrom > 0 && requestTo > requestFrom) {
+			err = errors.New("Invalid requested range descending order with from < to")
+			return
+		}
+		if requestFrom > inOrder || requestTo > inOrder { // server does not hold range
+			err = fmt.Errorf("server does not hold requested descending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+			return
+		}
+
+		if requestFrom == UNKNOWN_BLOCK_HEIGHT { // open ended request
+				responseFrom = inOrder
+		}
+		if (responseFrom >= batchSize) && (responseFrom-batchSize+1 > responseTo) {
+			responseTo = responseFrom - batchSize + 1
+		}
+	}
+	return
+}
+
+func min(a, b, c primitives.BlockHeight) primitives.BlockHeight {
+	result := a
+	if b < result {
+		result = b
+	}
+	if c < result {
+		result = c
+	}
+	return result
+}
+
+func reverse(arr []*protocol.BlockPairContainer) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
 }
 
 func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gossipmessages.BlockSyncRequestMessage) error {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	senderNodeAddress := message.Sender.SenderNodeAddress()
-	blockType := message.SignedChunkRange.BlockType()
-	firstRequestedBlockHeight := message.SignedChunkRange.FirstBlockHeight()
-	lastRequestedBlockHeight := message.SignedChunkRange.LastBlockHeight()
+	logger.Info("received block sync chunk request",
+		log.Stringable("chunk-request-message", message))
 
 	out, err := s.GetLastCommittedBlockHeight(ctx, &services.GetLastCommittedBlockHeightInput{})
 	if err != nil {
 		return err
 	}
 	lastCommittedBlockHeight := out.LastCommittedBlockHeight
+	batchSize := primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch())
+	requestFrom := message.SignedChunkRange.FirstBlockHeight()
+	requestTo := message.SignedChunkRange.LastBlockHeight()
+	requestSyncBlocksOrder := message.SignedChunkRange.BlocksOrder()
+	senderNodeAddress := message.Sender.SenderNodeAddress()
 
-	logger.Info("received block sync request",
-		log.Stringable("petitioner", message.Sender.SenderNodeAddress()),
-		log.Uint64("first-requested-block-height", uint64(firstRequestedBlockHeight)),
-		log.Uint64("last-requested-block-height", uint64(lastRequestedBlockHeight)),
-		log.Uint64("last-committed-block-height", uint64(lastCommittedBlockHeight)))
-
-	if firstRequestedBlockHeight > lastCommittedBlockHeight {
-		return errors.New("firstBlockHeight is greater than lastCommittedBlockHeight")
+	syncState := s.persistence.GetSyncState()
+	responseFrom, responseTo, err := getServerSyncRange(syncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
+	if err != nil {
+		return err
 	}
 
-	if firstRequestedBlockHeight-lastCommittedBlockHeight > primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1) {
-		lastRequestedBlockHeight = firstRequestedBlockHeight + primitives.BlockHeight(s.config.BlockSyncNumBlocksInBatch()-1)
+	var blocks []*protocol.BlockPairContainer
+	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING || requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED {
+		if responseFrom > responseTo {
+			return fmt.Errorf("Invalid calculated block slice range: from(%s) - to(%s) ", responseFrom.String(), responseTo.String())
+		}
+		blocks, _, _, err = s.GetBlockSlice(responseFrom, responseTo)
 	}
-
-	blocks, firstAvailableBlockHeight, _, err := s.GetBlockSlice(firstRequestedBlockHeight, lastRequestedBlockHeight)
+	if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
+		if responseTo > responseFrom {
+			return fmt.Errorf("Invalid calculated block slice range: from(%s) - to(%s) ", responseTo.String(), responseFrom.String())
+		}
+		blocks, _, _, err = s.GetBlockSlice(responseTo, responseFrom)
+		if err == nil { // reverse blocks
+			reverse(blocks)
+		}
+	}
 	if err != nil {
 		return errors.Wrap(err, "block sync failed reading from block persistence")
 	}
-
 	chunkSize := uint(len(blocks))
 	for {
-		lastAvailableBlockHeight := firstAvailableBlockHeight + primitives.BlockHeight(chunkSize) - 1
-		logger.Info("sending blocks to another node via block sync",
-			log.Stringable("petitioner", senderNodeAddress),
-			log.Uint64("first-available-block-height", uint64(firstAvailableBlockHeight)),
-			log.Uint64("last-available-block-height", uint64(lastAvailableBlockHeight)))
-
+		if chunkSize > 0 {
+			responseTo = blocks[chunkSize-1].TransactionsBlock.Header.BlockHeight()
+		} else {
+			responseTo = responseFrom - 1
+		}
 		response := &gossiptopics.BlockSyncResponseInput{
 			RecipientNodeAddress: senderNodeAddress,
 			Message: &gossipmessages.BlockSyncResponseMessage{
@@ -125,14 +197,19 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 					SenderNodeAddress: s.config.NodeAddress(),
 				}).Build(),
 				SignedChunkRange: (&gossipmessages.BlockSyncRangeBuilder{
-					BlockType:                blockType,
-					FirstBlockHeight:         firstAvailableBlockHeight,
-					LastBlockHeight:          lastAvailableBlockHeight,
+					BlockType:                gossipmessages.BLOCK_TYPE_BLOCK_PAIR,
+					FirstBlockHeight:         responseFrom,
+					LastBlockHeight:          responseTo,
 					LastCommittedBlockHeight: lastCommittedBlockHeight,
+					BlocksOrder:              requestSyncBlocksOrder,
 				}).Build(),
 				BlockPairs: blocks[:chunkSize],
 			},
 		}
+
+		logger.Info("sending blocks to another node via block sync",
+			log.Stringable("chunk-response-message", response))
+
 		_, err = s.gossip.SendBlockSyncResponse(ctx, response)
 		if err != nil {
 			if !gossip.IsChunkTooBigError(err) { // A non chunk-size related error, return immediately

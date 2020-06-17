@@ -9,10 +9,10 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/config"
-	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"

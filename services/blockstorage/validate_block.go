@@ -27,18 +27,12 @@ func (s *Service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, protocolVersionError
 	}
 
-	// the source of truth for the last committed block is persistence
-	lastCommittedBlock, err := s.persistence.GetLastBlock()
-	if err != nil {
-		return nil, err
-	}
-
-	if blockHeightError := s.validateConsecutiveBlockHeight(input.BlockPair, lastCommittedBlock); blockHeightError != nil {
+	if blockHeightError := s.validateConsecutiveBlockHeight(input.BlockPair, input.PrevBlockPair); blockHeightError != nil {
 		return nil, blockHeightError
 	}
 
 	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
-	if err := s.notifyConsensusAlgos(ctx, lastCommittedBlock, input.BlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE); err != nil {
+	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY); err != nil {
 		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
 			logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		}
@@ -87,8 +81,8 @@ func (s *Service) validateBlockDoesNotExist(ctx context.Context, txBlockHeader *
 	return true, nil
 }
 
-func (s *Service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairContainer, lastCommittedBlock *protocol.BlockPairContainer) error {
-	expectedBlockHeight := getBlockHeight(lastCommittedBlock) + 1
+func (s *Service) validateConsecutiveBlockHeight(blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+	expectedBlockHeight := getBlockHeight(prevBlockPair) + 1
 
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header

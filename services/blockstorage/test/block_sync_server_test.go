@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math"
 	"testing"
+	"time"
 )
 
 func TestSourceRespondToAvailabilityRequests(t *testing.T) {
@@ -27,8 +28,9 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 		harness := newBlockStorageHarness(parent).
 			withNodeAddress(sourceAddress).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
+
+		harness.start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
 		senderAddress := keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()
@@ -50,7 +52,7 @@ func TestSourceRespondToAvailabilityRequests(t *testing.T) {
 			require.Equal(t, sourceAddress, response.Message.Sender.SenderNodeAddress(), "source nodeAddress does not match")
 			require.Equal(t, primitives.BlockHeight(1), response.Message.SignedBatchRange.FirstBlockHeight(), "first block height is not as expected")
 			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastCommittedBlockHeight(), "last committed block height is not as expected")
-			require.Equal(t, primitives.BlockHeight(3), response.Message.SignedBatchRange.LastBlockHeight(), "last block height is not as expected")
+			require.Equal(t, primitives.BlockHeight(2), response.Message.SignedBatchRange.LastBlockHeight(), "last block height is not as expected")
 
 			return true
 		}
@@ -71,8 +73,9 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfSourceIsNotAheadOfPetitioner
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
+
+		harness.start(ctx)
 
 		_, _ = harness.commitBlock(ctx, builders.BlockPair().WithHeight(primitives.BlockHeight(1)).Build())
 
@@ -93,10 +96,10 @@ func TestSourceDoesNotRespondToAvailabilityRequestIfBothAreAtZero(t *testing.T) 
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		harness := newBlockStorageHarness(parent).
 			withSyncBroadcast(1).
-			expectValidateConsensusAlgos().
-			start(ctx)
+			expectValidateConsensusAlgos()
 
 		harness.gossip.Never("SendBlockAvailabilityResponse", mock.Any, mock.Any)
+		harness.start(ctx)
 
 		msg := builders.BlockAvailabilityRequestInput().WithLastCommittedBlockHeight(primitives.BlockHeight(0)).Build()
 		_, err := harness.blockStorage.HandleBlockAvailabilityRequest(ctx, msg)
@@ -116,7 +119,6 @@ func TestSourceIgnoresSendBlockAvailabilityRequestsIfFailedToRespond(t *testing.
 			start(ctx)
 
 		harness.commitSomeBlocks(ctx, 3)
-
 		harness.gossip.When("SendBlockAvailabilityResponse", mock.Any, mock.Any).Return(nil, errors.New("gossip failure")).Times(1)
 		msg := builders.BlockAvailabilityRequestInput().
 			WithFirstBlockHeight(1).
@@ -151,7 +153,6 @@ func TestSourceRespondsWithChunks(t *testing.T) {
 			WithSenderNodeAddress(keys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()).
 			WithFirstBlockHeight(firstHeight).
 			Build()
-
 		chunksResponseVerifier := func(i interface{}) bool {
 			response, ok := i.(*gossiptopics.BlockSyncResponseInput)
 			if !ok {
@@ -214,6 +215,7 @@ func TestSourceRetriesSendingSmallerChunksOnChunkTooBigError(t *testing.T) {
 
 		lastBlock := 12
 		harness.commitSomeBlocks(ctx, lastBlock)
+		time.Sleep(100 * time.Millisecond)
 
 		firstHeight := primitives.BlockHeight(1)
 

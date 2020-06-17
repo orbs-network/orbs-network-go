@@ -32,6 +32,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 	})
 }
 
+// TODO: weird test remove
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
@@ -39,6 +40,7 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeC
 			h := newBlockSyncHarness(harness.Logger).withBatchSize(0)
 
 			h.expectUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(0) // new server
+			h.storage.When("GetSyncState").Return(nil).Times(1)
 
 			state := h.factory.CreateCollectingAvailabilityResponseState()
 			nextState := state.processState(ctx)

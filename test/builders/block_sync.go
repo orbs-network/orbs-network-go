@@ -19,6 +19,7 @@ type basicSyncMessage struct {
 	lastCommittedBlockHeight primitives.BlockHeight
 	firstBlockHeight         primitives.BlockHeight
 	lastBlockHeight          primitives.BlockHeight
+	blocksOrder              gossipmessages.SyncBlocksOrder
 	senderNodeAddress        primitives.NodeAddress
 	recipientNodeAddress     primitives.NodeAddress
 }
@@ -32,6 +33,7 @@ func BlockAvailabilityResponseInput() *availabilityResponse {
 		lastBlockHeight:          100,
 		lastCommittedBlockHeight: 100,
 		firstBlockHeight:         10,
+		blocksOrder:              gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
 	}
 }
 
@@ -60,6 +62,11 @@ func (ar *availabilityResponse) WithLastBlockHeight(h primitives.BlockHeight) *a
 	return ar
 }
 
+func (ar *availabilityResponse) WithBlocksOrder(order gossipmessages.SyncBlocksOrder) *availabilityResponse {
+	ar.blocksOrder = order
+	return ar
+}
+
 func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseInput {
 	return &gossiptopics.BlockAvailabilityResponseInput{
 		RecipientNodeAddress: ar.recipientNodeAddress,
@@ -69,6 +76,7 @@ func (ar *availabilityResponse) Build() *gossiptopics.BlockAvailabilityResponseI
 				LastCommittedBlockHeight: ar.lastCommittedBlockHeight,
 				FirstBlockHeight:         ar.firstBlockHeight,
 				LastBlockHeight:          ar.lastBlockHeight,
+				BlocksOrder:              ar.blocksOrder,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: ar.senderNodeAddress,
@@ -89,6 +97,7 @@ func BlockSyncResponseInput() *blockChunk {
 	chunk.lastBlockHeight = 100
 	chunk.lastCommittedBlockHeight = 100
 	chunk.firstBlockHeight = 10
+	chunk.blocksOrder = gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING
 
 	return chunk
 }
@@ -118,12 +127,50 @@ func (bc *blockChunk) WithLastBlockHeight(h primitives.BlockHeight) *blockChunk 
 	return bc
 }
 
-func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
-	var blocks []*protocol.BlockPairContainer
+func (bc *blockChunk) WithBlocksOrder(order gossipmessages.SyncBlocksOrder) *blockChunk {
+	bc.blocksOrder = order
+	return bc
+}
 
-	for i := bc.firstBlockHeight; i <= bc.lastBlockHeight; i++ {
+func (bc *blockChunk) WithBlocks(blocks []*protocol.BlockPairContainer) *blockChunk {
+	bc.blocks = blocks
+	return bc
+}
+
+func reverse(arr []*protocol.BlockPairContainer) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
+}
+
+func (bc *blockChunk) generateBlocksChunk() {
+	var blocks []*protocol.BlockPairContainer
+	fromBlock := bc.firstBlockHeight
+	toBlock := bc.lastBlockHeight
+
+	if bc.blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING { // swap range direction
+		temp := fromBlock
+		fromBlock = toBlock
+		toBlock = temp
+	}
+	var prevBlock *protocol.BlockPairContainer
+	for i := fromBlock; i <= toBlock; i++ {
 		blockTime := time.Unix(1550394190000000000+int64(i), 0) // deterministic block creation in the past based on block height
-		blocks = append(blocks, BlockPair().WithHeight(i).WithBlockCreated(blockTime).Build())
+		blockPair := BlockPair().WithHeight(i).WithBlockCreated(blockTime).WithPrevBlock(prevBlock).Build()
+		prevBlock = blockPair
+		blocks = append(blocks, blockPair)
+	}
+
+	if bc.blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING { // reverse blocks order - blocks are in descending order
+		reverse(blocks)
+	}
+	bc.blocks = blocks
+}
+
+func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
+
+	if bc.blocks == nil {
+		bc.generateBlocksChunk()
 	}
 
 	return &gossiptopics.BlockSyncResponseInput{
@@ -133,11 +180,12 @@ func (bc *blockChunk) Build() *gossiptopics.BlockSyncResponseInput {
 				FirstBlockHeight:         bc.firstBlockHeight,
 				LastBlockHeight:          bc.lastBlockHeight,
 				LastCommittedBlockHeight: bc.lastCommittedBlockHeight,
+				BlocksOrder:              bc.blocksOrder,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: bc.senderNodeAddress,
 			}).Build(),
-			BlockPairs: blocks,
+			BlockPairs: bc.blocks,
 		},
 	}
 }
@@ -151,6 +199,7 @@ func BlockAvailabilityRequestInput() *blockAvailabilityRequest {
 	availabilityRequest.lastBlockHeight = 100
 	availabilityRequest.lastCommittedBlockHeight = 100
 	availabilityRequest.firstBlockHeight = 10
+	availabilityRequest.blocksOrder = gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING
 
 	return availabilityRequest
 }
@@ -188,6 +237,7 @@ func (bar *blockAvailabilityRequest) Build() *gossiptopics.BlockAvailabilityRequ
 				FirstBlockHeight:         bar.firstBlockHeight,
 				LastBlockHeight:          bar.lastBlockHeight,
 				LastCommittedBlockHeight: bar.lastCommittedBlockHeight,
+				BlocksOrder:              bar.blocksOrder,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: bar.senderNodeAddress,
@@ -205,6 +255,7 @@ func BlockSyncRequestInput() *blockSyncRequest {
 	syncRequest.lastBlockHeight = 100
 	syncRequest.lastCommittedBlockHeight = 100
 	syncRequest.firstBlockHeight = 10
+	syncRequest.blocksOrder = gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING
 
 	return syncRequest
 }
@@ -242,6 +293,7 @@ func (bsr *blockSyncRequest) Build() *gossiptopics.BlockSyncRequestInput {
 				FirstBlockHeight:         bsr.firstBlockHeight,
 				LastBlockHeight:          bsr.lastBlockHeight,
 				LastCommittedBlockHeight: bsr.lastCommittedBlockHeight,
+				BlocksOrder:              bsr.blocksOrder,
 			}).Build(),
 			Sender: (&gossipmessages.SenderSignatureBuilder{
 				SenderNodeAddress: bsr.senderNodeAddress,
