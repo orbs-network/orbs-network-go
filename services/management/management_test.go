@@ -29,8 +29,8 @@ func TestManagement_getCurrentReference_RefExists(t *testing.T) {
 	}
 
 	// input of systemRef is ignored
-	require.EqualValues(t, 50, s.getCurrentReferenceUnderLock(5))
-	require.EqualValues(t, 50, s.getCurrentReferenceUnderLock(primitives.TimestampSeconds(time.Now().Unix())))
+	require.EqualValues(t, 50, getCurrentReference(5, s.data))
+	require.EqualValues(t, 50, getCurrentReference(primitives.TimestampSeconds(time.Now().Unix()), s.data))
 }
 
 func TestManagement_getCurrentReference_NoRef(t *testing.T) {
@@ -45,7 +45,7 @@ func TestManagement_getCurrentReference_NoRef(t *testing.T) {
 		},
 	}
 
-	require.EqualValues(t, now-4000, s.getCurrentReferenceUnderLock(now))
+	require.EqualValues(t, now-4000, getCurrentReference(now, s.data))
 }
 
 const ACurrentRef = primitives.TimestampSeconds(5501)
@@ -57,7 +57,7 @@ func TestManagement_GetCommitteeNotSupportFuture(t *testing.T) {
 			p := newStaticProvider()
 			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 
-			committee := getCommittee(cp, ctx, ACurrentRef + 2000)
+			committee := getCommitteeOrNil(cp, ctx, ACurrentRef + 2000)
 			require.Nil(t, committee, "should not get a committee")
 		})
 	})
@@ -69,10 +69,10 @@ func TestManagement_GetCommitteeWhenOnlyOneTerm(t *testing.T) {
 			p := newStaticProvider()
 			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 
-			committee := getCommittee(cp, ctx, ACurrentRef)
+			committee := getCommitteeOrNil(cp, ctx, ACurrentRef)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, ACurrentRef+10)
+			committee = getCommitteeOrNil(cp, ctx, ACurrentRef+10)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 		})
 	})
@@ -86,13 +86,13 @@ func TestManagement_GetCommitteeAfterAnUpdateExists(t *testing.T) {
 			termChangeHeight := ACurrentRef + 10
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 
-			committee := getCommittee(cp, ctx, termChangeHeight-1)
+			committee := getCommitteeOrNil(cp, ctx, termChangeHeight-1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+1)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 		})
 	})
@@ -107,13 +107,13 @@ func TestManagement_GetCommitteeWhenTwoChangesOneAfterOther(t *testing.T) {
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 			cp.addCommittee(termChangeHeight+1, testKeys.NodeAddressesForTests()[5:9])
 
-			committee := getCommittee(cp, ctx, termChangeHeight)
+			committee := getCommitteeOrNil(cp, ctx, termChangeHeight)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+1)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+2)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+2)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 		})
 	})
@@ -128,16 +128,16 @@ func TestManagement_GetCommitteeWhenTwoChangesClose(t *testing.T) {
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[1:5])
 			cp.addCommittee(termChangeHeight+2, testKeys.NodeAddressesForTests()[5:9])
 
-			committee := getCommittee(cp, ctx, termChangeHeight)
+			committee := getCommitteeOrNil(cp, ctx, termChangeHeight)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+1)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+2)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+2)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+3)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+3)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 		})
 	})
@@ -153,16 +153,16 @@ func TestManagement_GetCommitteeWhenTwoInSameRef(t *testing.T) {
 			cp.addCommittee(termChangeHeight, testKeys.NodeAddressesForTests()[5:9])
 			cp.addCommittee(termChangeHeight+10, testKeys.NodeAddressesForTests()[2:5])
 
-			committee := getCommittee(cp, ctx, termChangeHeight)
+			committee := getCommitteeOrNil(cp, ctx, termChangeHeight)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight-1)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight-1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+1)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+1)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[5:9], committee, "wrong committee values")
 
-			committee = getCommittee(cp, ctx, termChangeHeight+11)
+			committee = getCommitteeOrNil(cp, ctx, termChangeHeight+11)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[2:5], committee, "wrong committee values")
 		})
 	})
@@ -174,7 +174,7 @@ func TestManagement_InternalDataUpdateLogic(t *testing.T) {
 			p := newStaticProvider()
 			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 
-			committee := getCommittee(cp, ctx, ACurrentRef)
+			committee := getCommitteeOrNil(cp, ctx, ACurrentRef)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
 			// update provider under the hood
@@ -182,12 +182,12 @@ func TestManagement_InternalDataUpdateLogic(t *testing.T) {
 			p.committee = testKeys.NodeAddressesForTests()[1:5]
 
 			// before manual update of service
-			committee = getCommittee(cp, ctx, ACurrentRef)
+			committee = getCommitteeOrNil(cp, ctx, ACurrentRef)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 
 			err := cp.update(ctx) // manual update of service
 			require.NoError(t, err)
-			committee = getCommittee(cp, ctx, ACurrentRef)
+			committee = getCommitteeOrNil(cp, ctx, ACurrentRef)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[1:5], committee, "wrong committee values")
 		})
 	})
@@ -201,19 +201,19 @@ func TestManagement_InternalHistoricData_UpdateLogic(t *testing.T) {
 
 			require.Nil(t, cp.cachedHistoricData.Committees, "cached reference was not empty to begin with")
 
-			cp.updateHistoric(ctx, 7) // any number to trigger
+			cp.tryGetHistoricData(ctx, 7) // any number to trigger
 
 			require.Equal(t, AHistoricRef, cp.cachedHistoricData.CurrentReference, "cache should hold the static historic")
 
 			// update provider under the hood if update succeeds cached value will change
 			p.historicRef = ACurrentRef
 
-			cp.updateHistoric(ctx, cp.cachedHistoricData.StartPageReference) // min still in cache
+			cp.tryGetHistoricData(ctx, cp.cachedHistoricData.StartPageReference) // min still in cache
 			require.Equal(t, AHistoricRef, cp.cachedHistoricData.CurrentReference, "cache should not change while ask in range")
-			cp.updateHistoric(ctx, cp.cachedHistoricData.EndPageReference) // max still in cache
+			cp.tryGetHistoricData(ctx, cp.cachedHistoricData.EndPageReference) // max still in cache
 			require.Equal(t, AHistoricRef, cp.cachedHistoricData.CurrentReference, "cache should not change while ask in range")
 
-			cp.updateHistoric(ctx, ACurrentRef) // outside cached ref
+			cp.tryGetHistoricData(ctx, ACurrentRef) // outside cached ref
 			require.Equal(t, ACurrentRef, cp.cachedHistoricData.CurrentReference)
 		})
 	})
@@ -226,12 +226,12 @@ func TestManagement_GetCommitteeWithHistoric(t *testing.T) {
 			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 			require.Nil(t, cp.cachedHistoricData.Committees, "cached reference was not empty to begin with")
 
-			committee := getCommittee(cp, ctx, AHistoricRef)
+			committee := getCommitteeOrNil(cp, ctx, AHistoricRef)
 			require.NotNil(t, cp.cachedHistoricData.Committees, "cached reference was not updated")
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[2:6], committee, "wrong committee values")
 
 			cp.cachedHistoricData = nil // make sure cache is not used here
-			committee = getCommittee(cp, ctx, ACurrentRef)
+			committee = getCommitteeOrNil(cp, ctx, ACurrentRef)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[:4], committee, "wrong committee values")
 		})
 	})
@@ -244,7 +244,7 @@ func TestManagement_GetCommitteeWithTwoHistoricCalls(t *testing.T) {
 			cp := NewManagement(ctx, newConfig(), p, p, harness.Logger, metric.NewRegistry())
 			require.Nil(t, cp.cachedHistoricData.Committees, "cached reference was not empty to begin with")
 
-			committee := getCommittee(cp, ctx, AHistoricRef)
+			committee := getCommitteeOrNil(cp, ctx, AHistoricRef)
 			require.NotNil(t, cp.cachedHistoricData.Committees, "cached reference was not updated")
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[2:6], committee, "wrong committee values")
 
@@ -252,7 +252,7 @@ func TestManagement_GetCommitteeWithTwoHistoricCalls(t *testing.T) {
 			p.historicRef = AHistoricRef - 1500
 			p.historicCommittee = testKeys.NodeAddressesForTests()[3:8]
 
-			committee = getCommittee(cp, ctx, AHistoricRef - 1500)
+			committee = getCommitteeOrNil(cp, ctx, AHistoricRef - 1500)
 			require.EqualValues(t, testKeys.NodeAddressesForTests()[3:8], committee, "wrong committee values")
 		})
 	})
@@ -266,7 +266,7 @@ func (s*service) addCommittee(ref primitives.TimestampSeconds, committee []primi
 	s.data.Committees = append (s.data.Committees, CommitteeTerm{ref, committee})
 }
 
-func getCommittee(m *service, ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
+func getCommitteeOrNil(m *service, ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
 	committee, err := m.GetCommittee(ctx, &services.GetCommitteeInput{Reference:reference})
 	if err != nil {
 		return nil
