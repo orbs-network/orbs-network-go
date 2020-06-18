@@ -66,7 +66,8 @@ type service struct {
 		genesisRefTime             *metric.Gauge
 		pageStartRefTime           *metric.Gauge
 		pageEndRefTime             *metric.Gauge
-		lasUpdateTime              *metric.Gauge
+		lastUpdateTime             *metric.Gauge
+		lastSuccessfulUpdateTime   *metric.Gauge
 		numCommitteeEvents         *metric.Gauge
 		currentCommittee           *metric.Text
 		currentCommitteeRefTime    *metric.Gauge
@@ -111,14 +112,17 @@ func NewManagement(parentCtx context.Context, config Config, provider Provider, 
 	return s
 }
 
-func (s *service) getCurrentReferenceUnderLock(systemRef primitives.TimestampSeconds) primitives.TimestampSeconds {
-	if s.data.CurrentReference != 0 {
-		return s.data.CurrentReference
+/*
+ * Current and Genesis Reference functions
+ */
+func getCurrentReference(systemRef primitives.TimestampSeconds, data *VirtualChainManagementData) primitives.TimestampSeconds {
+	if data.CurrentReference != 0 { // public management
+		return data.CurrentReference
 	}
-
-	committeeTerm := s.getCommitteeUnderLock(systemRef, s.data.Committees)
-	subTerm := s.getSubscriptionStatusUnderLock(systemRef, s.data.Subscriptions)
-	pvTerm := s.getProtocolVersionUnderLock(systemRef, s.data.ProtocolVersions)
+    // private management
+	committeeTerm := getCommittee(systemRef, data.Committees)
+	subTerm := getSubscriptionStatus(systemRef, data.Subscriptions)
+	pvTerm := getProtocolVersion(systemRef, data.ProtocolVersions)
 	return maxOf(committeeTerm.AsOfReference, subTerm.AsOfReference, pvTerm.AsOfReference)
 }
 
@@ -134,15 +138,13 @@ func maxOf(a, b, c primitives.TimestampSeconds) primitives.TimestampSeconds {
 	} else {
 		return c
 	}
-
 }
-
 
 func (s *service) GetCurrentReference(ctx context.Context, input *services.GetCurrentReferenceInput) (*services.GetCurrentReferenceOutput, error) {
 	s.RLock()
 	defer s.RUnlock()
 	return &services.GetCurrentReferenceOutput{
-		CurrentReference: s.getCurrentReferenceUnderLock(input.SystemTime),
+		CurrentReference: getCurrentReference(input.SystemTime, s.data),
 	}, nil
 }
 
@@ -150,19 +152,59 @@ func (s *service) GetGenesisReference(ctx context.Context, input *services.GetGe
 	s.RLock()
 	defer s.RUnlock()
 	return &services.GetGenesisReferenceOutput{
-		CurrentReference: s.getCurrentReferenceUnderLock(input.SystemTime),
+		CurrentReference: getCurrentReference(input.SystemTime, s.data),
 		GenesisReference: s.data.GenesisReference,
 	}, nil
 }
 
-func (s *service) validateRefTimeRequestNotInTheFuture(refTime primitives.TimestampSeconds) error {
-	if refTime > s.data.EndPageReference {
-		return errors.Errorf("ReferenceTime %d is in the future (current last valid is %d)", refTime, s.data.EndPageReference)
+/*
+ * Event data helper functions
+ */
+func (s *service) tryGetCurrentData(referenceTime primitives.TimestampSeconds) (*VirtualChainManagementData, error) {
+	s.RLock()
+	defer s.RUnlock()
+	if referenceTime > s.data.EndPageReference {
+		return nil, errors.Errorf("ReferenceTime %d is in the future (current last valid is %d)", referenceTime, s.data.EndPageReference)
 	}
-	return nil
+	if referenceTime >= s.data.StartPageReference {
+		return s.data, nil
+	}
+	return nil, nil
 }
 
-func (s *service) getCommitteeUnderLock(refTime primitives.TimestampSeconds, committees []CommitteeTerm) *CommitteeTerm {
+func (s *service) tryGetHistoricData(ctx context.Context, referenceTime primitives.TimestampSeconds) (*VirtualChainManagementData, error) {
+	s.Lock()
+	defer s.Unlock()
+	if referenceTime < s.cachedHistoricData.StartPageReference || referenceTime > s.cachedHistoricData.EndPageReference {
+		historic, err := s.provider.Get(ctx, referenceTime)
+		if err != nil {
+			return nil, errors.Wrapf(err, "management provider failed to get historic reference data for reference-time %d", referenceTime)
+		}
+		s.cachedHistoricData = historic
+		s.metrics.pageCachedStartRefTime.Update(int64(s.cachedHistoricData.StartPageReference))
+		s.metrics.pageCachedEndRefTime.Update(int64(s.cachedHistoricData.EndPageReference))
+	}
+	return s.cachedHistoricData, nil
+}
+
+func (s *service) getData(ctx context.Context, referenceTime primitives.TimestampSeconds) (*VirtualChainManagementData, error) {
+	data, err := s.tryGetCurrentData(referenceTime)
+	if err != nil {
+		return nil, err
+	} else if data != nil {
+		return data, nil
+	}
+	data, err = s.tryGetHistoricData(ctx, referenceTime)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+/*
+ * Event-finding Functions
+ */
+func getCommittee(refTime primitives.TimestampSeconds, committees []CommitteeTerm) *CommitteeTerm {
 	i := len(committees) - 1
 	for ; i > 0 && refTime < committees[i].AsOfReference; i-- {
 	}
@@ -170,30 +212,17 @@ func (s *service) getCommitteeUnderLock(refTime primitives.TimestampSeconds, com
 }
 
 func (s *service) GetCommittee(ctx context.Context, input *services.GetCommitteeInput) (*services.GetCommitteeOutput, error) {
-	if err := s.validateRefTimeRequestNotInTheFuture(input.Reference); err != nil {
+	data, err := s.getData(ctx, input.Reference)
+	if err != nil {
 		return nil, err
 	}
 
-	if input.Reference >= s.data.StartPageReference {
-		s.RLock()
-		defer s.RUnlock()
-		return &services.GetCommitteeOutput{
-			Members: s.getCommitteeUnderLock(input.Reference, s.data.Committees).Members,
-		}, nil
-	}
-
-	if err := s.updateHistoric(ctx, input.Reference); err != nil {
-		return nil, err
-	}
-
-	s.RLock()
-	defer s.RUnlock()
 	return &services.GetCommitteeOutput{
-		Members: s.getCommitteeUnderLock(input.Reference, s.cachedHistoricData.Committees).Members,
+		Members: getCommittee(input.Reference, data.Committees).Members,
 	}, nil
 }
 
-func (s *service) getSubscriptionStatusUnderLock(refTime primitives.TimestampSeconds, subscrptions []SubscriptionTerm) *SubscriptionTerm {
+func getSubscriptionStatus(refTime primitives.TimestampSeconds, subscrptions []SubscriptionTerm) *SubscriptionTerm {
 	i := len(subscrptions) - 1
 	for ; i > 0 && refTime < subscrptions[i].AsOfReference; i-- {
 	}
@@ -201,30 +230,17 @@ func (s *service) getSubscriptionStatusUnderLock(refTime primitives.TimestampSec
 }
 
 func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.GetSubscriptionStatusInput) (*services.GetSubscriptionStatusOutput, error) {
-	if err := s.validateRefTimeRequestNotInTheFuture(input.Reference); err != nil {
+	data, err := s.getData(ctx, input.Reference)
+	if err != nil {
 		return nil, err
 	}
 
-	if input.Reference >= s.data.StartPageReference {
-		s.RLock()
-		defer s.RUnlock()
-		return &services.GetSubscriptionStatusOutput{
-			SubscriptionStatusIsActive: s.getSubscriptionStatusUnderLock(input.Reference, s.data.Subscriptions).IsActive,
-		}, nil
-	}
-
-	if err := s.updateHistoric(ctx, input.Reference); err != nil {
-		return nil, err
-	}
-
-	s.RLock()
-	defer s.RUnlock()
 	return &services.GetSubscriptionStatusOutput{
-		SubscriptionStatusIsActive: s.getSubscriptionStatusUnderLock(input.Reference, s.cachedHistoricData.Subscriptions).IsActive,
+		SubscriptionStatusIsActive: getSubscriptionStatus(input.Reference, data.Subscriptions).IsActive,
 	}, nil
 }
 
-func (s *service) getProtocolVersionUnderLock(refTime primitives.TimestampSeconds, protocolVersions []ProtocolVersionTerm) *ProtocolVersionTerm {
+func getProtocolVersion(refTime primitives.TimestampSeconds, protocolVersions []ProtocolVersionTerm) *ProtocolVersionTerm {
 	i := len(protocolVersions) - 1
 	for ; i > 0 && refTime < protocolVersions[i].AsOfReference; i-- {
 	}
@@ -232,29 +248,19 @@ func (s *service) getProtocolVersionUnderLock(refTime primitives.TimestampSecond
 }
 
 func (s *service) GetProtocolVersion(ctx context.Context, input *services.GetProtocolVersionInput) (*services.GetProtocolVersionOutput, error) {
-	if err := s.validateRefTimeRequestNotInTheFuture(input.Reference); err != nil {
+	data, err := s.getData(ctx, input.Reference)
+	if err != nil {
 		return nil, err
 	}
 
-	if input.Reference >= s.data.StartPageReference {
-		s.RLock()
-		defer s.RUnlock()
-		return &services.GetProtocolVersionOutput{
-			ProtocolVersion: s.getProtocolVersionUnderLock(input.Reference, s.data.ProtocolVersions).Version,
-		}, nil
-	}
-
-	if err := s.updateHistoric(ctx, input.Reference); err != nil {
-		return nil, err
-	}
-
-	s.RLock()
-	defer s.RUnlock()
 	return &services.GetProtocolVersionOutput{
-		ProtocolVersion: s.getProtocolVersionUnderLock(input.Reference, s.cachedHistoricData.ProtocolVersions).Version,
+		ProtocolVersion: getProtocolVersion(input.Reference, data.ProtocolVersions).Version,
 	}, nil
 }
 
+/*
+ * update functions
+ */
 func (s *service) write(newData *VirtualChainManagementData) {
 	s.Lock()
 	defer s.Unlock()
@@ -282,33 +288,22 @@ func (s *service) startPollingForUpdates(bgCtx context.Context) govnr.ShutdownWa
 				if err != nil {
 					s.logger.Info("management provider failed to update the topology", log.Error(err))
 				}
-				s.updateMetrics()
+				s.updateMetrics(err == nil)
 			}
 		}
 	})
 }
 
-func (s *service) updateHistoric(ctx context.Context, refTime primitives.TimestampSeconds) error {
-	if refTime < s.cachedHistoricData.StartPageReference || refTime > s.cachedHistoricData.EndPageReference {
-		historic, err := s.provider.Get(ctx, refTime)
-		if err != nil {
-			return errors.Wrapf(err, "management provider failed to get historic reference data for reference-time %d", refTime)
-		}
-		s.Lock()
-		defer s.Unlock()
-		s.cachedHistoricData = historic
-		s.metrics.pageCachedStartRefTime.Update(int64(s.cachedHistoricData.StartPageReference))
-		s.metrics.pageCachedEndRefTime.Update(int64(s.cachedHistoricData.EndPageReference))
-	}
-	return nil
-}
-
+/*
+ * Metrics
+ */
 func (s *service) initMetrics(metricFactory metric.Factory) {
 	s.metrics.currentRefTime = metricFactory.NewGauge("Management.Data.CurrentRefTime")
 	s.metrics.genesisRefTime = metricFactory.NewGauge("Management.Data.GenesisRefTime")
 	s.metrics.pageStartRefTime = metricFactory.NewGauge("Management.Data.PageStartRefTime")
 	s.metrics.pageEndRefTime = metricFactory.NewGauge("Management.Data.PageEndRefTime")
-	s.metrics.lasUpdateTime = metricFactory.NewGauge("Management.Data.LastUpdateTime")
+	s.metrics.lastUpdateTime = metricFactory.NewGauge("Management.Data.LastUpdateTime")
+	s.metrics.lastSuccessfulUpdateTime = metricFactory.NewGauge("Management.Data.LastSuccessfulUpdateTime")
 	s.metrics.pageCachedStartRefTime = metricFactory.NewGauge("Management.Data.CachedStartRefTime")
 	s.metrics.pageCachedEndRefTime = metricFactory.NewGauge("Management.Data.CashedEndRefTime")
 	s.metrics.numCommitteeEvents = metricFactory.NewGauge("Management.Committee.Count")
@@ -323,7 +318,7 @@ func (s *service) initMetrics(metricFactory metric.Factory) {
 	s.metrics.currentTopology = metricFactory.NewText("Management.Topology.Current")
 }
 
-func (s *service) updateMetrics() {
+func (s *service) updateMetrics(isSuccessful bool) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -333,15 +328,18 @@ func (s *service) updateMetrics() {
 	s.metrics.genesisRefTime.Update(int64(s.data.GenesisReference))
 	s.metrics.pageStartRefTime.Update(int64(s.data.StartPageReference))
 	s.metrics.pageEndRefTime.Update(int64(s.data.EndPageReference))
-	s.metrics.lasUpdateTime.Update(time.Now().Unix())
+	s.metrics.lastUpdateTime.Update(time.Now().Unix())
+	if isSuccessful {
+		s.metrics.lastSuccessfulUpdateTime.Update(time.Now().Unix())
+	}
 	topologyStringArray := make([]string, len(s.data.CurrentTopology))
 	for j, peer := range s.data.CurrentTopology {
-		topologyStringArray[j] = fmt.Sprintf("{\"Address\":\"%s\",\"Endpoint\":\"%s\",\"Port\":%s,}", peer.StringAddress(), peer.StringEndpoint(), peer.StringPort())
+		topologyStringArray[j] = fmt.Sprintf("{\"Address\":\"%s\",\"Endpoint\":\"%s\",\"Port\":%s}", peer.StringAddress(), peer.StringEndpoint(), peer.StringPort())
 	}
 	s.metrics.currentTopology.Update("[" + strings.Join(topologyStringArray, ", ") + "]")
 
 	s.metrics.numCommitteeEvents.Update(int64(len(s.data.Committees)))
-	committeeTerm := s.getCommitteeUnderLock(currentRef, s.data.Committees)
+	committeeTerm := getCommittee(currentRef, s.data.Committees)
 	s.metrics.currentCommitteeRefTime.Update(int64(committeeTerm.AsOfReference))
 	committeeStringArray := make([]string, len(committeeTerm.Members))
 	for j, nodeAddress := range committeeTerm.Members {
@@ -350,7 +348,7 @@ func (s *service) updateMetrics() {
 	s.metrics.currentCommittee.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 
 	s.metrics.numSubscriptionEvents.Update(int64(len(s.data.Subscriptions)))
-	subscriptionTerm := s.getSubscriptionStatusUnderLock(currentRef, s.data.Subscriptions)
+	subscriptionTerm := getSubscriptionStatus(currentRef, s.data.Subscriptions)
 	s.metrics.currentSubscriptionRefTime.Update(int64(subscriptionTerm.AsOfReference))
 	if subscriptionTerm.IsActive {
 		s.metrics.currentSubscription.Update("Active")
@@ -359,7 +357,7 @@ func (s *service) updateMetrics() {
 	}
 
 	s.metrics.numProtocolEvents.Update(int64(len(s.data.ProtocolVersions)))
-	pvTerm := s.getProtocolVersionUnderLock(currentRef, s.data.ProtocolVersions)
+	pvTerm := getProtocolVersion(currentRef, s.data.ProtocolVersions)
 	s.metrics.currentProtocolRefTime.Update(int64(pvTerm.AsOfReference))
 	s.metrics.currentProtocol.Update(int64(pvTerm.Version))
 }
