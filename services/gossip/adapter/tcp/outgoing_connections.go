@@ -121,10 +121,16 @@ func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconne
 	}
 }
 
+var DataExceedsCapacityError = errors.Errorf("Data exceeds allowed size %d", SEND_QUEUE_MAX_BYTES)
+
 // TODO(https://github.com/orbs-network/orbs-network-go/issues/182): we are not currently respecting any intents given in ctx (added in context refactor)
 func (c *outgoingConnections) send(ctx context.Context, data *adapter.TransportData) error {
 	c.RLock()
 	defer c.RUnlock()
+
+	if data.TotalSize() > SEND_QUEUE_MAX_BYTES {
+		return DataExceedsCapacityError
+	}
 
 	switch data.RecipientMode {
 	case gossipmessages.RECIPIENT_LIST_MODE_BROADCAST:

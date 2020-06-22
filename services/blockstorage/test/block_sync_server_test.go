@@ -236,7 +236,7 @@ func TestSourceRetriesSendingSmallerChunksOnChunkTooBigError(t *testing.T) {
 			}
 
 			expectedChunkSize = expectedChunkSize / 2
-			return nil, tcp.NewQueueFullError(123, 123, 123) // the actual values are irrelevant
+			return nil, tcp.DataExceedsCapacityError
 		}
 		expectedAttemptsCount := int(math.Ceil(math.Log2(float64(batchSize)))) + 1
 		harness.gossip.When("SendBlockSyncResponse", mock.Any, mock.Any).Call(SendBlockSyncResponse).Times(expectedAttemptsCount)

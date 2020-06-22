@@ -115,7 +115,7 @@ func getServerSyncRange(syncState internodesync.SyncState,
 		}
 
 		if requestFrom == UNKNOWN_BLOCK_HEIGHT { // open ended request
-				responseFrom = inOrder
+			responseFrom = inOrder
 		}
 		if (responseFrom >= batchSize) && (responseFrom-batchSize+1 > responseTo) {
 			responseTo = responseFrom - batchSize + 1
@@ -212,7 +212,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 
 		_, err = s.gossip.SendBlockSyncResponse(ctx, response)
 		if err != nil {
-			if !gossip.IsChunkTooBigError(err) { // A non chunk-size related error, return immediately
+			if !gossip.IsDataExceedsCapacityError(err) { // A non chunk-size related error, return immediately
 				return err
 			}
 			if chunkSize == 0 { // We just tried sending a zero-length chunk and failed, time to give up

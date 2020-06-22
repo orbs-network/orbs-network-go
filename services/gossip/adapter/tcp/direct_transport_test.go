@@ -181,10 +181,49 @@ func TestDirectTransport_FailsGracefullyIfMulticastFailedToSendToASingleRecipien
 	})
 }
 
+func TestDirectTransport_FailsGracefullyIfCapacityExceeded(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		harness.AllowErrorsMatching("failed sending gossip message") // because the test will send to an arbitrary recipient which is not in topology
+
+		node1 := aNode(ctx, harness.Logger)
+		node2 := aNode(ctx, harness.Logger)
+		superviseAll(harness, node1, node2)
+		defer shutdownAll(ctx, node1, node2)
+
+		waitForAllNodesToSatisfy(t, "server did not start", func(node *nodeHarness) bool { return node.transport.IsServerListening() }, node1, node2)
+
+		firstTopology := aTopologyContaining(node1, node2)
+		node1.updateTopology(ctx, firstTopology)
+		node2.updateTopology(ctx, firstTopology)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all nodes to have peers added",
+			func(node *nodeHarness) bool { return node.transport.numActiveConnections() > 0 },
+			node1, node2)
+
+		waitForAllNodesToSatisfy(t,
+			"expected all outgoing queues to become enabled after topology change",
+			func(node *nodeHarness) bool { return node.transport.allOutgoingQueuesEnabled() },
+			node1, node2)
+
+		payloads := aVeryLargeMessage()
+
+		node2.listener.ExpectNotReceive()
+		require.EqualError(t, node1.transport.Send(ctx, &adapter.TransportData{
+			SenderNodeAddress:      node1.address,
+			RecipientMode:          gossipmessages.RECIPIENT_LIST_MODE_LIST,
+			RecipientNodeAddresses: []primitives.NodeAddress{{0x1}, node2.address},
+			Payloads:               payloads,
+		}), DataExceedsCapacityError.Error(), "expected DataExceedsCapacityError")
+
+		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ADAPTER_TIMEOUT, node2.listener), "message was not sent to target node")
+	})
+}
+
 type nodeHarness struct {
-	transport        *DirectTransport
-	address          primitives.NodeAddress
-	listener         *testkit.MockTransportListener
+	transport *DirectTransport
+	address   primitives.NodeAddress
+	listener  *testkit.MockTransportListener
 }
 
 func (n *nodeHarness) requireSendsSuccessfullyTo(t *testing.T, ctx context.Context, other *nodeHarness) {
@@ -205,7 +244,7 @@ func (n *nodeHarness) toGossipPeer() adapter.TransportPeer {
 	return adapter.NewGossipPeer(n.transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(n.address))
 }
 
-func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.TransportPeers)  {
+func (n *nodeHarness) updateTopology(ctx context.Context, peers adapter.TransportPeers) {
 	n.transport.UpdateTopology(ctx, peers)
 }
 
@@ -226,6 +265,18 @@ func aMessage() [][]byte {
 	}).Build()
 	message := &gossipmessages.LeanHelixMessage{
 		Content: []byte{},
+	}
+	payloads := [][]byte{header.Raw(), message.Content}
+	return payloads
+}
+
+func aVeryLargeMessage() [][]byte {
+	header := (&gossipmessages.HeaderBuilder{
+		Topic:         gossipmessages.HEADER_TOPIC_LEAN_HELIX,
+		RecipientMode: gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+	}).Build()
+	message := &gossipmessages.LeanHelixMessage{
+		Content: make([]byte, SEND_QUEUE_MAX_BYTES+1),
 	}
 	payloads := [][]byte{header.Raw(), message.Content}
 	return payloads
@@ -273,4 +324,3 @@ func (t *DirectTransport) numActiveConnections() int {
 	defer t.outgoingConnections.RUnlock()
 	return len(t.outgoingConnections.activeConnections)
 }
-
