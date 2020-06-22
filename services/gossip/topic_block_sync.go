@@ -161,8 +161,8 @@ func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 	}
 }
 
-func IsChunkTooBigError(err error) bool {
-	return tcp.IsQueueFullError(err)
+func IsDataExceedsCapacityError(err error) bool {
+	return err == tcp.DataExceedsCapacityError
 }
 
 func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {
