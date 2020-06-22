@@ -1,6 +1,6 @@
 FROM golang:1.12.9
 
-RUN apt-get install -y git
+RUN apt-get install -y git daemontools
 
 ADD ./_bin/go.mod /src/_tmp/processor-artifacts/go.mod
 
