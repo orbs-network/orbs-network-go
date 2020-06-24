@@ -19,7 +19,19 @@ import (
 	"testing"
 )
 
-func TestFileTopology_ReadFile(t *testing.T) {
+func TestManagementFileProvider_GeneratePath(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		const url = "x1"
+		cfg := newConfig(42, url)
+		fileProvider := NewFileProvider(cfg, parent.Logger)
+		path := fileProvider.generatePath(0)
+		pathWithRef := fileProvider.generatePath(100)
+		require.Equal(t, url, path)
+		require.Equal(t, url + "/100", pathWithRef)
+	})
+}
+
+func TestManagementFileProvider_ReadFile(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			topologyFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "good.json")
@@ -30,7 +42,7 @@ func TestFileTopology_ReadFile(t *testing.T) {
 	})
 }
 
-func TestFileTopology_ReadUrl(t *testing.T) {
+func TestManagementFileProvider_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			const url = "https://gist.githubusercontent.com/noambergIL/8131667fda382905e1c3997c7522a9c3/raw#"
@@ -42,7 +54,7 @@ func TestFileTopology_ReadUrl(t *testing.T) {
 }
 
 func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp management.Provider) {
-	data, err := fp.Get(ctx)
+	data, err := fp.Get(ctx, 0)
 	require.NoError(t, err)
 	require.EqualValues(t, data.CurrentReference, 1582616070)
 	require.EqualValues(t, data.GenesisReference, 1582615603)

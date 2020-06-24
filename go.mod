@@ -17,7 +17,6 @@ require (
 	github.com/ethereum/go-ethereum v1.9.6
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/google/go-cmp v0.3.1
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
@@ -32,7 +31,7 @@ require (
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
 	github.com/orbs-network/orbs-contract-sdk v1.5.0
-	github.com/orbs-network/orbs-spec v0.0.0-20200602223840-61cdeb34eda3
+	github.com/orbs-network/orbs-spec v0.0.0-20200617110800-c4c556472ce9
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1

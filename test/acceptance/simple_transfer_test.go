@@ -112,7 +112,7 @@ func TestNonLeaderPropagatesTransactionsToLeader(t *testing.T) {
 
 func TestLeaderCommitsTwoTransactionsInOneBlock(t *testing.T) {
 	NewHarness().Start(t, func(t testing.TB, parent context.Context, network *Network) {
-		ctx, cancel := context.WithTimeout(parent, 1*time.Second)
+		ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 		defer cancel()
 
 		contract := network.DeployBenchmarkTokenContract(ctx, 5)

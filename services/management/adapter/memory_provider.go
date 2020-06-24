@@ -83,21 +83,23 @@ func getTopologyFromConfig(cfg MemoryConfig, logger log.Logger) []*services.Goss
 	return topology
 }
 
-func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
+func (mp *MemoryProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
 	mp.RLock()
 	defer mp.RUnlock()
 
 	return &management.VirtualChainManagementData{
-		CurrentReference: mp.currentReference,
-		GenesisReference: mp.genesisReference,
-		CurrentTopology:  mp.topology,
-		Committees:       mp.committees,
-		Subscriptions:    mp.isSubscriptionActives,
-		ProtocolVersions: mp.protocolVersions,
+		CurrentReference:   mp.currentReference,
+		GenesisReference:   mp.genesisReference,
+		StartPageReference: 0,
+		EndPageReference:   mp.currentReference,
+		CurrentTopology:    mp.topology,
+		Committees:         mp.committees,
+		Subscriptions:      mp.isSubscriptionActives,
+		ProtocolVersions:   mp.protocolVersions,
 	}, nil
 }
 
-// for acceptance tests
+// for acceptance tests use one or the other no support for cross "types" adding with respect to paging
 func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, committee []primitives.NodeAddress) error {
 	mp.Lock()
 	defer mp.Unlock()

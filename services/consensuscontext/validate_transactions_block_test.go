@@ -201,13 +201,11 @@ func TestConsensusContextValidateTransactionsBlock_ForForwardedToPreOrderErrors(
 
 func TestConsensusContextValidateTransactionsBlock_ValidateBlockRefTime(t *testing.T) {
 	with.Context(func(ctx context.Context) {
-		cfg := config.ForConsensusContextTests(false)
-
 		t.Run("should NOT return error for new ref is newer than ref and not smaller than grace allows", func(t *testing.T) {
 			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
 			prevRef := proposedRef - 500
 			validatorRef := proposedRef
-			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
+			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef)
 			require.NoError(t, err)
 		})
 
@@ -215,15 +213,7 @@ func TestConsensusContextValidateTransactionsBlock_ValidateBlockRefTime(t *testi
 			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
 			prevRef := proposedRef + 500
 			validatorRef := proposedRef
-			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
-			require.Error(t, err)
-		})
-
-		t.Run("should return error for new ref is newer and not smaller than grace allows ", func(t *testing.T) {
-			proposedRef := primitives.TimestampSeconds(time.Now().Unix())
-			prevRef := proposedRef - 500
-			validatorRef := proposedRef - 2 * primitives.TimestampSeconds(cfg.ManagementConsensusGraceTimeout() / time.Second)
-			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef, cfg.ManagementConsensusGraceTimeout())
+			err := validateProposeBlockReferenceTime(prevRef, proposedRef, validatorRef)
 			require.Error(t, err)
 		})
 	})
