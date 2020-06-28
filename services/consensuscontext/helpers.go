@@ -19,7 +19,7 @@ import (
 
 func (s *service) prevReferenceOrGenesis(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
 	if blockHeight == 1 { // genesis block
-		reference, err := s.management.GetGenesisReference(ctx, &services.GetGenesisReferenceInput{})
+		reference, err := s.management.GetGenesisReference(ctx, &services.GetGenesisReferenceInput{SystemTime: prevBlockReferenceTime})
 		if err != nil {
 			s.logger.Error("management.GetGenesisReference should not return error", log.Error(err))
 			return 0, err

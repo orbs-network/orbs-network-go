@@ -19,10 +19,10 @@ import (
 	"github.com/pkg/errors"
 	"sort"
 	"sync"
+	"time"
 )
 
-const DEFAULT_REF_TIME = 1492983000
-const DEFAULT_GENESIS_REF_TIME = 1492982000
+const DEFAULT_GENESIS_ONSET = 1000
 
 type MemoryConfig interface {
 	GossipPeers() adapter.TransportPeers
@@ -45,8 +45,8 @@ func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
 	committee := getCommitteeFromConfig(cfg)
 	return &MemoryProvider{
 		logger:                logger,
-		currentReference:      DEFAULT_REF_TIME,
-		genesisReference:      DEFAULT_GENESIS_REF_TIME,
+		currentReference:      primitives.TimestampSeconds(time.Now().Unix()),
+		genesisReference:      primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
 		topology:              getTopologyFromConfig(cfg, logger),
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
@@ -83,21 +83,23 @@ func getTopologyFromConfig(cfg MemoryConfig, logger log.Logger) []*services.Goss
 	return topology
 }
 
-func (mp *MemoryProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
+func (mp *MemoryProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
 	mp.RLock()
 	defer mp.RUnlock()
 
 	return &management.VirtualChainManagementData{
-		CurrentReference: mp.currentReference,
-		GenesisReference: mp.genesisReference,
-		CurrentTopology:  mp.topology,
-		Committees:       mp.committees,
-		Subscriptions:    mp.isSubscriptionActives,
-        ProtocolVersions: mp.protocolVersions,
+		CurrentReference:   mp.currentReference,
+		GenesisReference:   mp.genesisReference,
+		StartPageReference: 0,
+		EndPageReference:   mp.currentReference,
+		CurrentTopology:    mp.topology,
+		Committees:         mp.committees,
+		Subscriptions:      mp.isSubscriptionActives,
+		ProtocolVersions:   mp.protocolVersions,
 	}, nil
 }
 
-// for acceptance tests
+// for acceptance tests use one or the other no support for cross "types" adding with respect to paging
 func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, committee []primitives.NodeAddress) error {
 	mp.Lock()
 	defer mp.Unlock()

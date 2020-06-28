@@ -38,8 +38,8 @@ type config struct {
 const (
 	MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests) cannot be smaller than min will fail
 	MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests)
-	VIRTUAL_CHAIN_ID                   = "VIRTUAL_CHAIN_ID"
-	NETWORK_TYPE                       = "NETWORK_TYPE"
+	VIRTUAL_CHAIN_ID                         = "VIRTUAL_CHAIN_ID"
+	NETWORK_TYPE                             = "NETWORK_TYPE"
 
 	MANAGEMENT_FILE_PATH                = "MANAGEMENT_FILE_PATH"
 	MANAGEMENT_MAX_FILE_SIZE            = "MANAGEMENT_MAX_FILE_SIZE"
@@ -56,10 +56,12 @@ const (
 	INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN   = "INTER_NODE_SYNC_AUDIT_BLOCKS_YOUNGER_THAN"
 	LEAN_HELIX_SHOW_DEBUG                       = "LEAN_HELIX_SHOW_DEBUG"
 
-	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH      = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
-	BLOCK_SYNC_NO_COMMIT_INTERVAL       = "BLOCK_SYNC_NO_COMMIT_INTERVAL"
-	BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT = "BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT"
-	BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT   = "BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT"
+	BLOCK_SYNC_NUM_BLOCKS_IN_BATCH            = "BLOCK_SYNC_NUM_BLOCKS_IN_BATCH"
+	BLOCK_SYNC_NO_COMMIT_INTERVAL             = "BLOCK_SYNC_NO_COMMIT_INTERVAL"
+	BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT       = "BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT"
+	BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT         = "BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT"
+	BLOCK_SYNC_DESCENDING_ENABLED             = "BLOCK_SYNC_DESCENDING_ENABLED"
+	BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE = "BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE"
 
 	BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE = "BLOCK_STORAGE_TRANSACTION_RECEIPT_QUERY_TIMESTAMP_GRACE"
 
@@ -206,15 +208,15 @@ func (c *config) ManagementMaxFileSize() uint32 {
 	return c.kv[MANAGEMENT_MAX_FILE_SIZE].Uint32Value
 }
 
-func (c *config) ManagementPollingInterval() time.Duration  {
+func (c *config) ManagementPollingInterval() time.Duration {
 	return c.kv[MANAGEMENT_POLLING_INTERVAL].DurationValue
 }
 
-func (c *config) ManagementConsensusGraceTimeout() time.Duration  {
+func (c *config) ManagementConsensusGraceTimeout() time.Duration {
 	return c.kv[MANAGEMENT_CONSENSUS_GRACE_TIMEOUT].DurationValue
 }
 
-func (c *config) ManagementNetworkLivenessTimeout() time.Duration  {
+func (c *config) ManagementNetworkLivenessTimeout() time.Duration {
 	return c.kv[MANAGEMENT_NETWORK_LIVENESS_TIMEOUT].DurationValue
 }
 
@@ -328,6 +330,14 @@ func (c *config) PublicApiNodeSyncWarningTime() time.Duration {
 
 func (c *config) BlockSyncCollectChunksTimeout() time.Duration {
 	return c.kv[BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT].DurationValue
+}
+
+func (c *config) BlockSyncDescendingEnabled() bool {
+	return c.kv[BLOCK_SYNC_DESCENDING_ENABLED].BoolValue
+}
+
+func (c *config) BlockSyncReferenceMaxAllowedDistance() time.Duration {
+	return c.kv[BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE].DurationValue
 }
 
 func (c *config) ProcessorArtifactPath() string {

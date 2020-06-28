@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"strings"
 	"sync"
 )
 
@@ -103,10 +102,6 @@ func (q *transportQueue) disabled() bool {
 func (q *transportQueue) OnNewConnection(ctx context.Context) {
 	q.Clear(ctx)
 	q.Enable()
-}
-
-func IsQueueFullError(err error) bool {
-	return strings.Contains(err.Error(), " bytes to queue - full with ")
 }
 
 func NewQueueFullError(bytesAttempted int, bytesInQueue int, queueSize int) error {

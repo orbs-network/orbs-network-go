@@ -41,8 +41,8 @@ func NewFileProvider(config FileConfig, logger log.Logger) *FileProvider {
 	return &FileProvider{config: config, logger :logger}
 }
 
-func (mp *FileProvider) Get(ctx context.Context) (*management.VirtualChainManagementData, error) {
-	path := mp.config.ManagementFilePath()
+func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
+	path := mp.generatePath(referenceTime)
 	var contents []byte
 	var err error
 
@@ -65,6 +65,16 @@ func (mp *FileProvider) Get(ctx context.Context) (*management.VirtualChainManage
 	}
 
 	return managementData, nil
+}
+
+func (mp *FileProvider) generatePath(referenceTime primitives.TimestampSeconds) string {
+	var path string
+	if referenceTime == 0 {
+		path = mp.config.ManagementFilePath()
+	} else {
+		path = fmt.Sprintf("%s/%d", mp.config.ManagementFilePath(), referenceTime)
+	}
+	return path
 }
 
 func (mp *FileProvider) readUrl(path string) ([]byte, error) {
@@ -104,7 +114,7 @@ type topologyNode struct {
 type committee struct {
 	EthAddress string
 	OrbsAddress string
-	EffectiveStake uint64
+	Weight uint64
 	IdentityType uint
 }
 
@@ -183,6 +193,8 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	return &management.VirtualChainManagementData{
 		CurrentReference: primitives.TimestampSeconds(data.CurrentRefTime),
 		GenesisReference: primitives.TimestampSeconds(vcData.GenesisRefTime),
+		StartPageReference: primitives.TimestampSeconds(data.PageStartRefTime),
+		EndPageReference: primitives.TimestampSeconds(data.PageEndRefTime),
 		CurrentTopology:  topology,
 		Committees:       committeeTerms,
 		Subscriptions:    subscriptions,

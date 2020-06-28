@@ -77,7 +77,6 @@ func (s *service) receivedBlockSyncAvailabilityRequest(ctx context.Context, head
 
 	s.handlers.RLock()
 	defer s.handlers.RUnlock()
-
 	for _, l := range s.handlers.blockSyncHandlers {
 		_, err := l.HandleBlockAvailabilityRequest(ctx, &gossiptopics.BlockAvailabilityRequestInput{Message: message})
 		if err != nil {
@@ -162,8 +161,8 @@ func (s *service) receivedBlockSyncRequest(ctx context.Context, header *gossipme
 	}
 }
 
-func IsChunkTooBigError(err error) bool {
-	return tcp.IsQueueFullError(err)
+func IsDataExceedsCapacityError(err error) bool {
+	return err == tcp.DataExceedsCapacityError
 }
 
 func (s *service) SendBlockSyncResponse(ctx context.Context, input *gossiptopics.BlockSyncResponseInput) (*gossiptopics.EmptyOutput, error) {

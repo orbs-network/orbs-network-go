@@ -28,11 +28,11 @@ require (
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/healthcheck v1.0.0 // indirect
-	github.com/orbs-network/lean-helix-go v0.3.0
+	github.com/orbs-network/lean-helix-go v0.3.1
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0
 	github.com/orbs-network/orbs-contract-sdk v1.5.0
-	github.com/orbs-network/orbs-spec v0.0.0-20200503073830-babdf6adc845
+	github.com/orbs-network/orbs-spec v0.0.0-20200617110800-c4c556472ce9
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
@@ -50,6 +50,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	golang.org/x/tools v0.0.0-20190723021737-8bb11ff117ca
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 )

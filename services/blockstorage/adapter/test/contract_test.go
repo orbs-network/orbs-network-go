@@ -97,7 +97,7 @@ func TestBlockPersistenceContract_ReadUnknownBlocksReturnsError(t *testing.T) {
 	})
 }
 
-func TestBlockPersistenceContract_WriteOutOfOrderFuture_DoesNotFail(t *testing.T) {
+func TestBlockPersistenceContract_WriteOutOfOrderFuture_Succeeds(t *testing.T) {
 	withEachAdapter(t, func(t *testing.T, adapter adapter.BlockPersistence) {
 		added, persistedHeight, err := adapter.WriteNextBlock(builders.BlockPair().WithHeight(1).Build())
 		require.NoError(t, err)
@@ -105,9 +105,20 @@ func TestBlockPersistenceContract_WriteOutOfOrderFuture_DoesNotFail(t *testing.T
 		require.EqualValues(t, 1, persistedHeight)
 
 		added, persistedHeight, err = adapter.WriteNextBlock(builders.BlockPair().WithHeight(3).Build())
-		require.NoError(t, err, "no IO error, bloc is ignored since out of order")
-		require.False(t, added, "block should not be added (due to failure)")
-		require.EqualValues(t, 1, persistedHeight, "persisted height should be reported correctly")
+		require.NoError(t, err)
+		require.True(t, added, "persistence storage should support out of order writes")
+
+		_, err = adapter.GetBlock(1)
+		require.NoError(t, err)
+
+		_, err = adapter.GetBlock(3)
+		require.NoError(t, err)
+
+		err = adapter.ScanBlocks(3, 1, func(first primitives.BlockHeight, page []*protocol.BlockPairContainer) (wantsMore bool) {
+			t.Fatal("expected cursorFunc never to be invoked if requested block height is not in storage")
+			return false
+		})
+		require.Error(t, err)
 	})
 }
 

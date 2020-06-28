@@ -50,6 +50,8 @@ type NodeConfig interface {
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
+	BlockSyncDescendingEnabled() bool
+	BlockSyncReferenceMaxAllowedDistance() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
@@ -147,6 +149,8 @@ type BlockStorageConfig interface {
 	BlockSyncNoCommitInterval() time.Duration
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
+	BlockSyncDescendingEnabled() bool
+	BlockSyncReferenceMaxAllowedDistance() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
 	BlockTrackerGraceTimeout() time.Duration

@@ -94,7 +94,7 @@ func TestCreateBlock_TimeRefOfLeaderShouldBeMonotonous_MaxOfLeaderManagementTime
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			h := newHarness(harness.Logger, false)
 			h.management.Reset()
-			leaderRef := primitives.TimestampSeconds(5000)
+			leaderRef := primitives.TimestampSeconds(5000) + primitives.TimestampSeconds(h.config.ManagementConsensusGraceTimeout()/time.Second)
 			prevRef := primitives.TimestampSeconds(5005)
 
 			setManagementValues(h.management, 1, leaderRef, primitives.TimestampSeconds(1000))

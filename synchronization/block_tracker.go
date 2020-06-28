@@ -68,7 +68,7 @@ func (t *BlockTracker) WaitForBlock(ctx context.Context, requestedHeight primiti
 
 	requestedHeightUint := uint64(requestedHeight)
 	currentHeight, currentLatch := t.readAtomicHeightAndLatch()
-
+	logger.Info("WaitForBlock ", log.Uint64("currentHeight", currentHeight), log.Uint64("requestedHeight", uint64(requestedHeight)))
 	if currentHeight >= requestedHeightUint { // requested block already committed
 		return nil
 	}

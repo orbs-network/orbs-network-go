@@ -72,7 +72,7 @@ func validateTxBlockProposer(ctx context.Context, vctx *txValidatorContext) erro
 	blockProposer := vctx.input.TransactionsBlock.Header.BlockProposerAddress()
 	if len(blockProposer) > 0 { // If tx block header - block proposer is len 0 this is older version and for backward compatibility validate check is skipped
 		if !bytes.Equal(blockProposer, expectedBlockProposer) {
-			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx Block: expected %v actual %v", expectedBlockProposer, blockProposer)
+			return errors.Wrapf(ErrMismatchedBlockProposer, "Tx block: expected %v actual %v", expectedBlockProposer, blockProposer)
 		}
 	}
 	return nil
@@ -150,12 +150,12 @@ func validateTxTransactionOrdering(ctx context.Context, cfg config.ConsensusCont
 }
 
 func validateProposeBlockReferenceTime(prevBlockReferenceTime primitives.TimestampSeconds, proposedBlockReferenceTime primitives.TimestampSeconds,
-	validatorCurrentReferenceTime primitives.TimestampSeconds, consensusGrace time.Duration) error {
+	validatorCurrentReferenceTime primitives.TimestampSeconds) error {
 	if proposedBlockReferenceTime < prevBlockReferenceTime {
 		return errors.Errorf("proposed block time reference %d cannot be smaller than previous block %d", proposedBlockReferenceTime, prevBlockReferenceTime)
 	}
 
-	if validatorCurrentReferenceTime + primitives.TimestampSeconds(consensusGrace / time.Second) < proposedBlockReferenceTime {
+	if validatorCurrentReferenceTime < proposedBlockReferenceTime {
 		return errors.Errorf("proposed block time reference %d is too far in the future compared to validator current time reference %d", proposedBlockReferenceTime, validatorCurrentReferenceTime)
 	}
 
@@ -236,7 +236,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		input:                  input,
 	}
 
-	ref, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+	ref, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{SystemTime: input.PrevBlockReferenceTime})
 	if err != nil {
 		s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
 		return nil, err
@@ -247,8 +247,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateTransactionsBlock failed genesis time %s", err)
 	}
 
-	if err2 := validateProposeBlockReferenceTime(prevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(),
-		ref.CurrentReference, s.config.ManagementConsensusGraceTimeout()); err2 != nil {
+	if err2 := validateProposeBlockReferenceTime(prevBlockReferenceTime, input.TransactionsBlock.Header.ReferenceTime(), ref.CurrentReference); err2 != nil {
 		return nil, err2
 	}
 

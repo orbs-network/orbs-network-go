@@ -27,7 +27,7 @@ import (
 )
 
 const ENABLE_LEAN_HELIX_IN_ACCEPTANCE_TESTS = true
-const DEFAULT_TEST_TIMEOUT_HARD_LIMIT = 10 * time.Second
+const DEFAULT_TEST_TIMEOUT_HARD_LIMIT = 15 * time.Second
 const DEFAULT_NODE_COUNT_FOR_ACCEPTANCE = 7
 const DEFAULT_ACCEPTANCE_MAX_TX_PER_BLOCK = 10
 const DEFAULT_ACCEPTANCE_REQUIRED_QUORUM_PERCENTAGE = 66
@@ -177,7 +177,6 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
 			ctx, cancel := context.WithTimeout(context.Background(), b.testTimeout)
 			defer cancel()
-
 			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.managementPollingInterval, b.configOverride)
 			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)

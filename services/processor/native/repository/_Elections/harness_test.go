@@ -189,7 +189,7 @@ func (f *harness) setupEthereumStateBeforeProcess(m Mockery) {
 	f.setupEthereumGuardiansDataBeforeProcess(m)
 
 	for _, d := range f.delegators {
-		mockStakedAndLockedInEthereum(m, f.electionBlock, d.address, d.stake, d.lockedStake)
+		f.mockStakedAndLockedInEthereum(m, f.electionBlock, d.address, d.stake, d.lockedStake)
 	}
 }
 
@@ -198,7 +198,7 @@ func (f *harness) setupEthereumGuardiansDataBeforeProcess(m Mockery) {
 		if a.isGuardian {
 			mockGuardianVoteInEthereum(m, f.electionBlock, a.address, a.votedValidators, a.voteBlock)
 			if a.voteBlock >= _getProcessCurrentElectionEarliestValidVoteBlockNumber() {
-				mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
+				f.mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
 			}
 		}
 	}
@@ -209,7 +209,7 @@ func (f *harness) setupEthereumValidatorsBeforeProcess(m Mockery) {
 		validatorAddresses := make([][20]byte, len(f.validators))
 		for i, a := range f.validators {
 			validatorAddresses[i] = a.address
-			mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
+			f.mockStakedAndLockedInEthereum(m, f.electionBlock, a.address, a.stake, a.lockedStake)
 			mockValidatorOrbsAddressInEthereum(m, f.electionBlock, a.address, a.orbsAddress)
 		}
 		mockValidatorsInEthereum(m, f.electionBlock, validatorAddresses)
@@ -296,8 +296,10 @@ func mockValidatorOrbsAddressInEthereum(m Mockery, blockNumber uint64, validator
 		}, validatorAddress)
 }
 
-func mockStakedAndLockedInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int, lockedStake int) {
-	mockStakeInEthereum(m, blockNumber, address, stake)
+func (f *harness) mockStakedAndLockedInEthereum(m Mockery, blockNumber uint64, address [20]byte, stake int, lockedStake int) {
+	if f.electionBlock <= DONT_USE_NON_LOCKED_AFTER_BLOCK {
+		mockStakeInEthereum(m, blockNumber, address, stake)
+	}
 	mockLockedStakeInEthereum(m, blockNumber, address, lockedStake)
 }
 

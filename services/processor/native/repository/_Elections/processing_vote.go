@@ -184,7 +184,11 @@ func _collectOneDelegatorStakeFromEthereum(i int) {
 	fmt.Printf("elections %10d: from ethereum delegator %x , unlocked-stake %d, locked stake %d\n", _getProcessCurrentElectionBlockNumber(), delegator, stake, lockedStake)
 }
 
+const DONT_USE_NON_LOCKED_AFTER_BLOCK = uint64(10368900)
 func _getStakeAtElection(ethAddr [20]byte) uint64 {
+	if _getProcessCurrentElectionBlockNumber() > DONT_USE_NON_LOCKED_AFTER_BLOCK {
+		return 0
+	}
 	stake := new(*big.Int)
 	ethereum.CallMethodAtBlock(_getProcessCurrentElectionBlockNumber(), getTokenEthereumContractAddress(), getTokenAbi(), "balanceOf", stake, ethAddr)
 	return ((*stake).Div(*stake, ETHEREUM_STAKE_FACTOR)).Uint64()
