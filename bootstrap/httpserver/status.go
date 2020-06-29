@@ -11,21 +11,15 @@ import (
 type StatusResponse struct {
 	Uptime int64
 
-	BlockHeight struct {
-		BlockStorage int64
-		StateStorage int64
-		Timestamp    int64
-	}
+	BlockStorage_BlockHeight    int64
+	StateStorage_BlockHeight    int64
+	BlockStorage_BlockTimestamp int64
 
-	Gossip struct {
-		IncomingConnections int64
-		OutgoingConnections int64
-	}
+	Gossip_IncomingConnections int64
+	Gossip_OutgoingConnections int64
 
-	Management struct {
-		LastUpdateTime int64
-		Subscription   string
-	}
+	Management_LastUpdateTime int64
+	Management_Subscription   string
 
 	Version config.Version
 }
@@ -38,31 +32,15 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	data, _ := json.MarshalIndent(StatusResponse{
 		Uptime: metricGetGaugeValue(s.logger, metrics, "Runtime.Uptime.Seconds"),
 
-		BlockHeight: struct {
-			BlockStorage int64
-			StateStorage int64
-			Timestamp    int64
-		}{
-			BlockStorage: metricGetGaugeValue(s.logger, metrics, "BlockStorage.BlockHeight"),
-			StateStorage: metricGetGaugeValue(s.logger, metrics, "StateStorage.BlockHeight"),
-			Timestamp:    metricGetGaugeValue(s.logger, metrics, "BlockStorage.LastCommitted.TimeNano"),
-		},
+		BlockStorage_BlockHeight:    metricGetGaugeValue(s.logger, metrics, "BlockStorage.BlockHeight"),
+		StateStorage_BlockHeight:    metricGetGaugeValue(s.logger, metrics, "StateStorage.BlockHeight"),
+		BlockStorage_BlockTimestamp: metricGetGaugeValue(s.logger, metrics, "BlockStorage.LastCommitted.TimeNano"),
 
-		Gossip: struct {
-			IncomingConnections int64
-			OutgoingConnections int64
-		}{
-			IncomingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.IncomingConnection.Active.Count"),
-			OutgoingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.OutgoingConnection.Active.Count"),
-		},
+		Gossip_IncomingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.IncomingConnection.Active.Count"),
+		Gossip_OutgoingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.OutgoingConnection.Active.Count"),
 
-		Management: struct {
-			LastUpdateTime int64
-			Subscription   string
-		}{
-			LastUpdateTime: metricGetGaugeValue(s.logger, metrics, "Management.LastUpdateTime"),
-			Subscription:   metricGetString(s.logger, metrics, "Management.Subscription.Current"),
-		},
+		Management_LastUpdateTime: metricGetGaugeValue(s.logger, metrics, "Management.LastUpdateTime"),
+		Management_Subscription:   metricGetString(s.logger, metrics, "Management.Subscription.Current"),
 
 		Version: config.GetVersion(),
 	}, "", "  ")
