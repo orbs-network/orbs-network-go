@@ -11,15 +11,15 @@ import (
 type StatusResponse struct {
 	Uptime int64
 
-	BlockStorage_BlockHeight    int64
-	StateStorage_BlockHeight    int64
-	BlockStorage_BlockTimestamp int64
+	BlockStorage_BlockHeight   int64
+	StateStorage_BlockHeight   int64
+	BlockStorage_LastCommitted int64
 
 	Gossip_IncomingConnections int64
 	Gossip_OutgoingConnections int64
 
-	Management_LastUpdateTime int64
-	Management_Subscription   string
+	Management_LastUpdated  int64
+	Management_Subscription string
 
 	Version config.Version
 }
@@ -32,15 +32,15 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	data, _ := json.MarshalIndent(StatusResponse{
 		Uptime: metricGetGaugeValue(s.logger, metrics, "Runtime.Uptime.Seconds"),
 
-		BlockStorage_BlockHeight:    metricGetGaugeValue(s.logger, metrics, "BlockStorage.BlockHeight"),
-		StateStorage_BlockHeight:    metricGetGaugeValue(s.logger, metrics, "StateStorage.BlockHeight"),
-		BlockStorage_BlockTimestamp: metricGetGaugeValue(s.logger, metrics, "BlockStorage.LastCommitted.TimeNano"),
+		BlockStorage_BlockHeight:   metricGetGaugeValue(s.logger, metrics, "BlockStorage.BlockHeight"),
+		StateStorage_BlockHeight:   metricGetGaugeValue(s.logger, metrics, "StateStorage.BlockHeight"),
+		BlockStorage_LastCommitted: metricGetGaugeValue(s.logger, metrics, "BlockStorage.LastCommitted.TimeNano"),
 
 		Gossip_IncomingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.IncomingConnection.Active.Count"),
 		Gossip_OutgoingConnections: metricGetGaugeValue(s.logger, metrics, "Gossip.OutgoingConnection.Active.Count"),
 
-		Management_LastUpdateTime: metricGetGaugeValue(s.logger, metrics, "Management.LastUpdateTime"),
-		Management_Subscription:   metricGetString(s.logger, metrics, "Management.Subscription.Current"),
+		Management_LastUpdated:  metricGetGaugeValue(s.logger, metrics, "Management.LastUpdateTime"),
+		Management_Subscription: metricGetString(s.logger, metrics, "Management.Subscription.Current"),
 
 		Version: config.GetVersion(),
 	}, "", "  ")

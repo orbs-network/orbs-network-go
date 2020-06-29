@@ -268,6 +268,40 @@ func TestHttpServer_NonPublicApiIsAvailableImmediately(t *testing.T) {
 	})
 }
 
+func TestHttpServer_PublicApiGetStatus(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		withServerHarness(parent, func(h *harness) {
+			h.server.metricRegistry.NewGauge("Runtime.Uptime.Seconds").Update(100)
+			h.server.metricRegistry.NewGauge("BlockStorage.BlockHeight").Update(200)
+			h.server.metricRegistry.NewGauge("StateStorage.BlockHeight").Update(300)
+			h.server.metricRegistry.NewGauge("BlockStorage.LastCommitted.TimeNano").Update(400)
+			h.server.metricRegistry.NewGauge("Gossip.IncomingConnection.Active.Count").Update(500)
+			h.server.metricRegistry.NewGauge("Gossip.OutgoingConnection.Active.Count").Update(600)
+			h.server.metricRegistry.NewGauge("Management.LastUpdateTime").Update(700)
+			h.server.metricRegistry.NewText("Management.Subscription.Current").Update("Active")
+
+			req, _ := http.NewRequest("Get", "/status", nil)
+			rec := httptest.NewRecorder()
+			h.server.getStatus(rec, req)
+
+			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
+
+			require.JSONEq(t, `{
+				"Uptime":                      100,
+				"BlockStorage_BlockHeight":    200,
+				"StateStorage_BlockHeight":    300,
+				"BlockStorage_LastCommitted":  400,
+				"Gossip_IncomingConnections":  500,
+				"Gossip_OutgoingConnections":  600,
+				"Management_LastUpdated":   700,
+				"Management_Subscription":     "Active",
+				"Version": {"Commit": "", "Semantic": ""}
+			}`, rec.Body.String())
+		})
+	})
+}
+
 func aCompletedResult() *client.RequestResultBuilder {
 	return &client.RequestResultBuilder{
 		RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
