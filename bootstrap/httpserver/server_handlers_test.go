@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -423,10 +424,14 @@ func withUnregisteredPublicApiServerHarness(parent *with.LoggingHarness, f func(
 	h := &harness{
 		LoggingHarness: parent,
 		publicApi:      papiMock,
-		server:         NewHttpServer(NewServerConfig(":0", false), parent.Logger, metric.NewRegistry()),
+		server:         NewHttpServer(generateConfig(), parent.Logger, metric.NewRegistry()),
 	}
 	defer h.shutdown()
 	f(h)
+}
+
+func generateConfig() config.OverridableConfig{
+	return config.TemplateForGamma(		nil, nil, ":0", false)
 }
 
 func withServerHarness(parent *with.LoggingHarness, f func(h *harness)) {

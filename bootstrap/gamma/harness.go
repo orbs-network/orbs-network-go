@@ -113,3 +113,12 @@ func Shutdown(t *testing.T, endpoint string) {
 func isNotHttp202Error(err error) bool {
 	return !strings.Contains(err.Error(), "http status 202 Accepted")
 }
+
+func generateServerConfigFromOverride(override string) ServerConfig {
+	return ServerConfig{
+		ServerAddress:      "",
+		Profiling:          false,
+		OverrideConfigJson: override,
+		Silent:             false,
+	}
+}
