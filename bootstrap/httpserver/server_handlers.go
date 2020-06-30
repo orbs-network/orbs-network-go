@@ -13,7 +13,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"net/http"
-	"time"
 )
 
 type IndexResponse struct {
@@ -81,27 +80,6 @@ func (s *HttpServer) filterOff(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("filter off"))
-}
-
-func (s *HttpServer) getStatusWarningMessage() string {
-	maxTimeSinceLastBlock := s.config.TransactionPoolTimeBetweenEmptyBlocks().Nanoseconds() * 10
-	if maxTimeSinceLastBlock < 600000000 { // ten minutes
-		maxTimeSinceLastBlock = 600000000
-	}
-	if s.metricRegistry.Get("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").Export().LogRow()[0].Value().(int64) + maxTimeSinceLastBlock <
-		time.Now().UnixNano() {
-		return "Last Successful Committed Block was too long ago"
-	}
-
-	if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
-		maxIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
-		if s.metricRegistry.Get("Management.Data.LastSuccessfulUpdateTime").Export().LogRow()[0].Value().(int64) + maxIntervalSinceLastSuccessfulManagementUpdate <
-			time.Now().Unix() {
-			return "Last Successful Management Update was too long ago"
-		}
-	}
-
-	return ""
 }
 
 func (s *HttpServer) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,7 @@ package httpserver
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -280,6 +281,7 @@ func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 			h.server.metricRegistry.NewGauge("Gossip.OutgoingConnection.Active.Count").Update(600)
 			h.server.metricRegistry.NewGauge("Management.LastUpdateTime").Update(700)
 			h.server.metricRegistry.NewText("Management.Subscription.Current").Update("Active")
+			h.server.metricRegistry.NewGauge("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").Update(1000)
 
 			req, _ := http.NewRequest("Get", "/status", nil)
 			rec := httptest.NewRecorder()
@@ -287,6 +289,15 @@ func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
+
+			res := make(map[string]interface{})
+			json.Unmarshal(rec.Body.Bytes(), &res)
+
+			require.Contains(t, res, "Timestamp")
+			require.Contains(t, res, "Error")
+			require.Equal(t, "Last Successful Committed Block was too long ago", res["Status"])
+
+			jsonPayload, _ := json.Marshal(res["Payload"])
 
 			require.JSONEq(t, `{
 				"Uptime":                      100,
@@ -298,7 +309,7 @@ func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 				"Management_LastUpdated":   700,
 				"Management_Subscription":     "Active",
 				"Version": {"Commit": "", "Semantic": ""}
-			}`, rec.Body.String())
+			}`, string(jsonPayload))
 		})
 	})
 }
@@ -430,8 +441,8 @@ func withUnregisteredPublicApiServerHarness(parent *with.LoggingHarness, f func(
 	f(h)
 }
 
-func generateConfig() config.OverridableConfig{
-	return config.TemplateForGamma(		nil, nil, ":0", false)
+func generateConfig() config.OverridableConfig {
+	return config.TemplateForGamma(nil, nil, ":0", false)
 }
 
 func withServerHarness(parent *with.LoggingHarness, f func(h *harness)) {
