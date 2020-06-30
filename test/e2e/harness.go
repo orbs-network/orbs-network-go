@@ -190,7 +190,7 @@ func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
-	require.True(t, test.Eventually(15*time.Second, func() bool {
+	require.True(t, test.Eventually(1*time.Minute, func() bool {
 
 		m := h.GetMetrics()
 		if m == nil {
