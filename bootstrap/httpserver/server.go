@@ -170,6 +170,7 @@ func (s *HttpServer) createRouter() *http.ServeMux {
 	s.registerHttpHandler(router, "/api/v1/get-transaction-status", true, s.getTransactionStatusHandler)
 	s.registerHttpHandler(router, "/api/v1/get-transaction-receipt-proof", true, s.getTransactionReceiptProofHandler)
 	s.registerHttpHandler(router, "/api/v1/get-block", true, s.getBlockHandler)
+	s.registerHttpHandler(router, "/status", true, s.getStatus)
 	s.registerHttpHandler(router, "/metrics", true, s.dumpMetricsAsJSON)
 	s.registerHttpHandler(router, "/metrics.json", true, s.dumpMetricsAsJSON)
 	s.registerHttpHandler(router, "/metrics.prometheus", true, s.dumpMetricsAsPrometheus)

@@ -8,8 +8,10 @@ package httpserver
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/go-mock"
+	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
@@ -268,6 +270,37 @@ func TestHttpServer_NonPublicApiIsAvailableImmediately(t *testing.T) {
 	})
 }
 
+func TestHttpServer_PublicApiGetStatus(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		withServerHarness(parent, func(h *harness) {
+			h.server.metricRegistry.NewGauge("Runtime.Uptime.Seconds").Update(100)
+			h.server.metricRegistry.NewGauge("BlockStorage.BlockHeight").Update(200)
+			h.server.metricRegistry.NewGauge("StateStorage.BlockHeight").Update(300)
+			h.server.metricRegistry.NewGauge("BlockStorage.LastCommitted.TimeNano").Update(400)
+			h.server.metricRegistry.NewGauge("Gossip.IncomingConnection.Active.Count").Update(500)
+			h.server.metricRegistry.NewGauge("Gossip.OutgoingConnection.Active.Count").Update(600)
+			h.server.metricRegistry.NewGauge("Management.LastUpdateTime").Update(700)
+			h.server.metricRegistry.NewText("Management.Subscription.Current").Update("Active")
+			h.server.metricRegistry.NewGauge("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").Update(1000)
+
+			req, _ := http.NewRequest("Get", "/status", nil)
+			rec := httptest.NewRecorder()
+			h.server.getStatus(rec, req)
+
+			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
+
+			res := make(map[string]interface{})
+			json.Unmarshal(rec.Body.Bytes(), &res)
+
+			require.Contains(t, res, "Timestamp")
+			require.Contains(t, res, "Error")
+			require.Equal(t, "Last Successful Committed Block was too long ago", res["Status"])
+			require.NotEmpty(t, res["Payload"])
+		})
+	})
+}
+
 func aCompletedResult() *client.RequestResultBuilder {
 	return &client.RequestResultBuilder{
 		RequestStatus:  protocol.REQUEST_STATUS_COMPLETED,
@@ -389,10 +422,14 @@ func withUnregisteredPublicApiServerHarness(parent *with.LoggingHarness, f func(
 	h := &harness{
 		LoggingHarness: parent,
 		publicApi:      papiMock,
-		server:         NewHttpServer(NewServerConfig(":0", false), parent.Logger, metric.NewRegistry()),
+		server:         NewHttpServer(generateConfig(), parent.Logger, metric.NewRegistry()),
 	}
 	defer h.shutdown()
 	f(h)
+}
+
+func generateConfig() config.OverridableConfig {
+	return config.TemplateForGamma(nil, nil, ":0", false)
 }
 
 func withServerHarness(parent *with.LoggingHarness, f func(h *harness)) {

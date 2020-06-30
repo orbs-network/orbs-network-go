@@ -21,7 +21,7 @@ import (
 func testSimpleTransfer(jsonConfig string) func(t *testing.T) {
 	return func(t *testing.T) {
 		with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
-			network := NewDevelopmentNetwork(ctx, harness.Logger, nil, jsonConfig)
+			network, _:= NewDevelopmentNetwork(ctx, harness.Logger, nil, generateServerConfigFromOverride(jsonConfig))
 			harness.Supervise(network)
 			contract := callcontract.NewContractClient(network)
 

@@ -192,6 +192,10 @@ github.com/orbs-network/gojay v1.3.0 h1:TDqmmbgwHum9oXq1iexd+J+IUBm4/gtlyoOP5HV8
 github.com/orbs-network/gojay v1.3.0/go.mod h1:xdSp1mz0+DL+c6OLsbZ5qB/Gtygikcr5NdSsU1GsRC0=
 github.com/orbs-network/govnr v0.2.0 h1:Txazgo4Jd29hiARXg6nMqK2pmJA85KeXR+ZjLNy9WZc=
 github.com/orbs-network/govnr v0.2.0/go.mod h1:kZctUOFclDbO3Z6w559++l4qh0FPb57XdE5IdOFCbI4=
+github.com/orbs-network/healthcheck v1.0.0 h1:LvJ7FANeYNnFVe+VmePr8k951Tuqg2XT1xXxVYdQCJ4=
+github.com/orbs-network/healthcheck v1.0.0/go.mod h1:tKp6O9i5wAxXJmvcztnZdW4tyMAR1wUlsyn1BAxu6lc=
+github.com/orbs-network/healthcheck v1.1.0 h1:E+pnz6jVXxTmk/UNuEmttE0ldJSlNYgyrkEfAwQgH6w=
+github.com/orbs-network/healthcheck v1.1.0/go.mod h1:tKp6O9i5wAxXJmvcztnZdW4tyMAR1wUlsyn1BAxu6lc=
 github.com/orbs-network/lean-helix-go v0.2.4 h1:n3e3PBM86ylQiiJUzOEFf00k6BWRWKCf8vk+yvSykN8=
 github.com/orbs-network/lean-helix-go v0.2.4/go.mod h1:9E/1sZEMZvNLHrP+nif36bio2zKbCkueji4R9e7vJnI=
 github.com/orbs-network/lean-helix-go v0.2.6 h1:9b7eGChry3Z18xtlvYHO0wTaj5HBOEwLTVYr61Xpa/Q=
@@ -325,6 +329,8 @@ github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJy
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.4.1-0.20191106224347-f1bd0923b832 h1:oun9LXpnh9ourZ6f+yQUGVg4g+Klumg+eFXQztqkHSY=
 github.com/stretchr/testify v1.4.1-0.20191106224347-f1bd0923b832/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H4=
+github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d h1:gZZadD8H+fF+n9CmNhYL1Y0dJB+kLOmKd7FbPJLeGHs=
 github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d/go.mod h1:9OrXJhf154huy1nPWmuSrkgjPUtUNhA+Zmy+6AESzuA=
 github.com/tallstoat/pbparser v0.2.0/go.mod h1:aUC6W9uQLeAXZkknve8ZDO6InhRYpYHlJ9kvsQh1i2k=

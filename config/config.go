@@ -253,6 +253,9 @@ type ValidatorNode interface {
 type HttpServerConfig interface {
 	HttpAddress() string
 	Profiling() bool
+	ManagementFilePath() string
+	ManagementPollingInterval() time.Duration
+	TransactionPoolTimeBetweenEmptyBlocks() time.Duration
 }
 
 type SignerConfig interface {

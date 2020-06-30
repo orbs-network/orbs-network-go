@@ -60,11 +60,10 @@ func StartGammaServer(config ServerConfig) *Server {
 
 	clock := adapter.NewAdjustableClock()
 
-	network := NewDevelopmentNetwork(ctx, rootLogger, clock, config.OverrideConfigJson)
+	network, cfg := NewDevelopmentNetwork(ctx, rootLogger, clock, config)
 	rootLogger.Info("finished creating development network")
 
-	httpServer := httpserver.NewHttpServer(httpserver.NewServerConfig(config.ServerAddress, config.Profiling),
-		rootLogger, network.MetricRegistry(0))
+	httpServer := httpserver.NewHttpServer(cfg,	rootLogger, network.MetricRegistry(0))
 	httpServer.RegisterPublicApi(network.PublicApi(0))
 
 	s := &Server{
