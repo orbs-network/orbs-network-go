@@ -23,7 +23,7 @@ type gaugeExport struct {
 	Value int64
 }
 
-func (g *Gauge) Export() exportedMetric {
+func (g *Gauge) Export() ExportedMetric {
 	return gaugeExport{
 		g.name,
 		atomic.LoadInt64(&g.value),

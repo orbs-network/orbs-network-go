@@ -25,7 +25,7 @@ func (h Histogram) String() string {
 	return "unimplemented - race detector active"
 }
 
-func (h Histogram) Export() exportedMetric {
+func (h Histogram) Export() ExportedMetric {
 	return &histogramExport{}
 }
 

@@ -2,33 +2,17 @@ package httpserver
 
 import (
 	"encoding/json"
-	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/scribe/log"
 	"net/http"
 	"time"
 )
 
-type Payload struct {
-	Uptime int64
-
-	BlockStorage_BlockHeight   int64
-	StateStorage_BlockHeight   int64
-	BlockStorage_LastCommitted int64
-
-	Gossip_IncomingConnections int64
-	Gossip_OutgoingConnections int64
-
-	Management_LastUpdated  int64
-	Management_Subscription string
-
-	Version config.Version
-}
-
 type StatusResponse struct {
 	Timestamp time.Time
 	Status    string
 	Error     string
-	Payload   Payload
+	Payload   map[string]metric.ExportedMetric
 }
 
 func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
@@ -37,21 +21,7 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	status := StatusResponse{
 		Timestamp: time.Now(),
 		Status:    s.getStatusWarningMessage(),
-		Payload: Payload{
-			Uptime: s.getGaugeValueFromMetrics("Runtime.Uptime.Seconds"),
-
-			BlockStorage_BlockHeight:   s.getGaugeValueFromMetrics("BlockStorage.BlockHeight"),
-			StateStorage_BlockHeight:   s.getGaugeValueFromMetrics("StateStorage.BlockHeight"),
-			BlockStorage_LastCommitted: s.getGaugeValueFromMetrics("BlockStorage.LastCommitted.TimeNano"),
-
-			Gossip_IncomingConnections: s.getGaugeValueFromMetrics("Gossip.IncomingConnection.Active.Count"),
-			Gossip_OutgoingConnections: s.getGaugeValueFromMetrics("Gossip.OutgoingConnection.Active.Count"),
-
-			Management_LastUpdated:  s.getGaugeValueFromMetrics("Management.LastUpdateTime"),
-			Management_Subscription: s.getStringValueFromMetrics("Management.Subscription.Current"),
-
-			Version: config.GetVersion(),
-		},
+		Payload:   s.metricRegistry.ExportAll(),
 	}
 
 	data, _ := json.MarshalIndent(status, "", "  ")

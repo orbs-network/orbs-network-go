@@ -36,7 +36,7 @@ func newText(name string, defaultValue ...string) *Text {
 	res.value.Store(value)
 	return res
 }
-func (t *Text) Export() exportedMetric {
+func (t *Text) Export() ExportedMetric {
 	return textExport{
 		t.name,
 		t.value.Load().(string),
