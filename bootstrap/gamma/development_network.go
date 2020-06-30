@@ -17,7 +17,28 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
-func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock adapter.Clock, overrideConfigJson string) *inmemory.Network {
+func createGammaConfig(cfg ServerConfig, validatorNodes map[string]config.ValidatorNode) config.OverridableConfig{
+	cfgTemplate := config.TemplateForGamma(
+		validatorNodes, // TODO V2 get rid of this
+		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
+		cfg.ServerAddress,
+		cfg.Profiling,
+	)
+
+	overrideConfigJson := "{}"
+	if cfg.OverrideConfigJson != "" {
+		overrideConfigJson = cfg.OverrideConfigJson
+	}
+
+	configWithOverrides, err := cfgTemplate.MergeWithFileConfig(overrideConfigJson)
+	if err != nil {
+		panic(err)
+	}
+
+	return configWithOverrides
+}
+
+func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock adapter.Clock, serverConfig ServerConfig) (*inmemory.Network, config.OverridableConfig) {
 	numNodes := 4 // Comfortable number for LeanHelix if we choose to use it
 	logger.Info("creating development network")
 
@@ -32,21 +53,10 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock ad
 		nodeOrder = append(nodeOrder, nodeAddress)
 	}
 	sharedTransport := gossipAdapter.NewTransport(ctx, logger, validatorNodes)
-	cfgTemplate := config.TemplateForGamma(
-		validatorNodes,
-		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
-	)
 
-	if overrideConfigJson == "" {
-		overrideConfigJson = "{}"
-	}
+	cfg := createGammaConfig(serverConfig, validatorNodes)
 
-	configWithOverrides, err := cfgTemplate.MergeWithFileConfig(overrideConfigJson)
-	if err != nil {
-		panic(err)
-	}
-
-	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, configWithOverrides, sharedTransport, maybeClock, nil)
+	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, cfg, sharedTransport, maybeClock, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
-	return network
+	return network, cfg
 }

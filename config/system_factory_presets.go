@@ -249,8 +249,14 @@ func ForAcceptanceTestNetwork(
 func TemplateForGamma(
 	genesisValidatorNodes map[string]ValidatorNode,
 	constantConsensusLeader primitives.NodeAddress,
+	serverAddress string,
+	profiling bool,
+
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
+
+	cfg.SetBool(PROFILING, profiling)
+	cfg.SetString(HTTP_ADDRESS, serverAddress)
 
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, time.Hour) // needs to be >> from TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 100*time.Millisecond)
