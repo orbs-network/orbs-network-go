@@ -46,7 +46,7 @@ func (s *HttpServer) getStatusWarningMessage() string {
 
 	if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
 		maxIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
-		if s.metricRegistry.Get("Management.Data.LastSuccessfulUpdateTime").Export().LogRow()[0].Value().(int64)+maxIntervalSinceLastSuccessfulManagementUpdate <
+		if s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")+maxIntervalSinceLastSuccessfulManagementUpdate <
 			time.Now().Unix() {
 			return "Last Successful Management Update was too long ago"
 		}
