@@ -34,7 +34,7 @@ type Factory interface {
 type Registry interface {
 	Factory
 	String() string
-	ExportAll() map[string]ExportedMetric
+	ExportAll() map[string]exportedMetric
 	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter
 	ExportPrometheus() string
 	WithVirtualChainId(id primitives.VirtualChainId) Registry
@@ -43,7 +43,7 @@ type Registry interface {
 	Get(metricName string) metric
 }
 
-type ExportedMetric interface {
+type exportedMetric interface {
 	LogRow() []*log.Field
 	PrometheusRow() []*prometheusRow
 	PrometheusType() string
@@ -53,7 +53,7 @@ type ExportedMetric interface {
 type metric interface {
 	fmt.Stringer
 	Name() string
-	Export() ExportedMetric
+	Export() exportedMetric
 }
 
 type namedMetric struct {
@@ -162,11 +162,11 @@ func (r *inMemoryRegistry) String() string {
 	return s
 }
 
-func (r *inMemoryRegistry) ExportAll() map[string]ExportedMetric {
+func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	all := make(map[string]ExportedMetric)
+	all := make(map[string]exportedMetric)
 	for _, m := range r.mu.metrics {
 		all[m.Name()] = m.Export()
 	}
@@ -210,7 +210,7 @@ func (r *inMemoryRegistry) labels() []prometheusKeyValuePair {
 	return labels
 }
 
-func MetricsToPrometheusStrings(metrics map[string]ExportedMetric, labels []prometheusKeyValuePair) []string {
+func MetricsToPrometheusStrings(metrics map[string]exportedMetric, labels []prometheusKeyValuePair) []string {
 	var rows []string
 	for _, v := range metrics {
 		if v.PrometheusType() != "" {

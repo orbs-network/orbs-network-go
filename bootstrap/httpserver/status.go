@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"encoding/json"
-	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/scribe/log"
 	"net/http"
 	"time"
@@ -12,7 +11,7 @@ type StatusResponse struct {
 	Timestamp time.Time
 	Status    string
 	Error     string
-	Payload   map[string]metric.ExportedMetric
+	Payload   interface{}
 }
 
 func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {

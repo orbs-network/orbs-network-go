@@ -63,7 +63,7 @@ func (h *Histogram) String() string {
 		errorRate)
 }
 
-func (h *Histogram) Export() ExportedMetric {
+func (h *Histogram) Export() exportedMetric {
 	histo := h.histo.Merge()
 
 	return &histogramExport{

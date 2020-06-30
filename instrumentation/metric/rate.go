@@ -43,7 +43,7 @@ func newRateWihStart(name string, start time.Time) *Rate {
 	}
 }
 
-func (r *Rate) Export() ExportedMetric {
+func (r *Rate) Export() exportedMetric {
 	return r.export()
 }
 
