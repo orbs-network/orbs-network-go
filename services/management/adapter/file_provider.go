@@ -19,7 +19,6 @@ import (
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -38,7 +37,7 @@ type FileProvider struct {
 }
 
 func NewFileProvider(config FileConfig, logger log.Logger) *FileProvider {
-	return &FileProvider{config: config, logger :logger}
+	return &FileProvider{config: config, logger: logger}
 }
 
 func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
@@ -105,60 +104,60 @@ func (mp *FileProvider) readFile(filePath string) ([]byte, error) {
 }
 
 type topologyNode struct {
-	EthAddress string
+	EthAddress  string
 	OrbsAddress string
-	Ip string
-	Port int
+	Ip          string
+	Port        int
 }
 
 type committee struct {
-	EthAddress string
-	OrbsAddress string
-	Weight uint64
+	EthAddress   string
+	OrbsAddress  string
+	Weight       uint64
 	IdentityType uint
 }
 
 type committeeEvent struct {
-	RefTime uint32
+	RefTime   uint32
 	Committee []committee
 }
 
 type subscription struct {
-	Status string
-	Tier string
+	Status       string
+	Tier         string
 	RolloutGroup string
 	IdentityType uint
 }
 
 type subscriptionEvent struct {
 	RefTime uint32
-	Data subscription
+	Data    subscription
 }
 
 type protocolVersion struct {
 	RolloutGroup string
-	Version uint64
+	Version      uint64
 }
 
 type protocolVersionEvent struct {
 	RefTime uint32
-	Data protocolVersion
+	Data    protocolVersion
 }
 
 type vc struct {
-	VirtualChainId  	  uint64
+	VirtualChainId        uint64
 	GenesisRefTime        uint32
-	CurrentTopology 	  []topologyNode
-	CommitteeEvents 	  []committeeEvent
-	SubscriptionEvents 	  []subscriptionEvent
+	CurrentTopology       []topologyNode
+	CommitteeEvents       []committeeEvent
+	SubscriptionEvents    []subscriptionEvent
 	ProtocolVersionEvents []protocolVersionEvent
 }
 
 type mgmt struct {
-	CurrentRefTime uint32
+	CurrentRefTime   uint32
 	PageStartRefTime uint64
-	PageEndRefTime uint64
-	VirtualChains map[string]vc
+	PageEndRefTime   uint64
+	VirtualChains    map[string]vc
 }
 
 func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainManagementData, error) {
@@ -191,14 +190,14 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	protocolVersions := parseProtocolVersion(vcData.ProtocolVersionEvents)
 
 	return &management.VirtualChainManagementData{
-		CurrentReference: primitives.TimestampSeconds(data.CurrentRefTime),
-		GenesisReference: primitives.TimestampSeconds(vcData.GenesisRefTime),
+		CurrentReference:   primitives.TimestampSeconds(data.CurrentRefTime),
+		GenesisReference:   primitives.TimestampSeconds(vcData.GenesisRefTime),
 		StartPageReference: primitives.TimestampSeconds(data.PageStartRefTime),
-		EndPageReference: primitives.TimestampSeconds(data.PageEndRefTime),
-		CurrentTopology:  topology,
-		Committees:       committeeTerms,
-		Subscriptions:    subscriptions,
-		ProtocolVersions: protocolVersions,
+		EndPageReference:   primitives.TimestampSeconds(data.PageEndRefTime),
+		CurrentTopology:    topology,
+		Committees:         committeeTerms,
+		Subscriptions:      subscriptions,
+		ProtocolVersions:   protocolVersions,
 	}, nil
 }
 
@@ -208,13 +207,11 @@ func parseTopology(currentTopology []topologyNode) ([]*services.GossipPeer, erro
 		hexAddress := item.OrbsAddress
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
 			return nil, errors.Wrapf(err, "cannot translate topology node address from hex %s", hexAddress)
-		} else if net.ParseIP(item.Ip) == nil {
-			return nil, errors.Wrapf(err, "topology node ip %s is not valid", item.Ip)
 		} else if item.Port < 1024 || item.Port > 65535 {
-			return nil, errors.Wrapf(err, "topology node port %d needs to be 1024-65535 range", item.Port)
+			return nil, errors.Errorf("topology node port %d needs to be 1024-65535 range", item.Port)
 		} else {
 			nodeAddress := primitives.NodeAddress(nodeAddress)
-			topology = append(topology, &services.GossipPeer{Address:nodeAddress, Endpoint:item.Ip, Port:uint32(item.Port)})
+			topology = append(topology, &services.GossipPeer{Address: nodeAddress, Endpoint: item.Ip, Port: uint32(item.Port)})
 		}
 	}
 	return topology, nil
@@ -254,7 +251,7 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 		if event.Data.Status == "active" {
 			isActive = true
 		}
-		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive:isActive})
+		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive: isActive})
 	}
 
 	return subscriptionPeriods, nil
@@ -267,7 +264,7 @@ func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []manage
 	}
 
 	if len(protocolVersionPeriods) == 0 {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version:config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version: config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
 	}
 
 	// TODO POSV2 consider if last PV is larger than config.maximalpv -> fail ?
