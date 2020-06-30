@@ -65,15 +65,3 @@ func (s *HttpServer) getGaugeValueFromMetrics(name string) (value int64) {
 	value = rows[len(rows)-1].Int
 	return value
 }
-
-func (s *HttpServer) getStringValueFromMetrics(name string) (value string) {
-	defer func() {
-		if r := recover(); r != nil {
-			s.logger.Error("could not retrieve metric", log.String("metric", name))
-		}
-	}()
-
-	rows := s.metricRegistry.Get(name).Export().LogRow()
-	value = rows[len(rows)-1].StringVal
-	return
-}
