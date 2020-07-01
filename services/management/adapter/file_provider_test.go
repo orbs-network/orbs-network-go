@@ -57,8 +57,11 @@ func Test_parseTopology(t *testing.T) {
 	_, encodingErr := parseTopology([]topologyNode{{OrbsAddress: "ZZZZZ"}})
 	require.EqualError(t, encodingErr, "cannot translate topology node address from hex ZZZZZ: encoding/hex: invalid byte: U+005A 'Z'")
 
-	_, portErr := parseTopology([]topologyNode{{OrbsAddress: "ffff", Port: 10000000}})
+	_, portErr := parseTopology([]topologyNode{{OrbsAddress: "ffff", Ip: "1.2.3.4", Port: 10000000}})
 	require.EqualError(t, portErr, "topology node port 10000000 needs to be 1024-65535 range")
+
+	_, emptyErr := parseTopology([]topologyNode{{OrbsAddress: "ffff", Ip: "", Port: 2048}})
+	require.EqualError(t, emptyErr, "empty ip address for node ffff")
 }
 
 func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp management.Provider) {

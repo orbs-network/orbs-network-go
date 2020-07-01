@@ -207,6 +207,8 @@ func parseTopology(currentTopology []topologyNode) ([]*services.GossipPeer, erro
 		hexAddress := item.OrbsAddress
 		if nodeAddress, err := hex.DecodeString(hexAddress); err != nil {
 			return nil, errors.Wrapf(err, "cannot translate topology node address from hex %s", hexAddress)
+		} else if item.Ip == "" {
+			return nil, errors.Errorf("empty ip address for node %s", hexAddress)
 		} else if item.Port < 1024 || item.Port > 65535 {
 			return nil, errors.Errorf("topology node port %d needs to be 1024-65535 range", item.Port)
 		} else {
