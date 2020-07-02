@@ -8,8 +8,6 @@ package virtualmachine
 
 import (
 	"context"
-	"github.com/orbs-network/crypto-lib-go/crypto/ethereum/digest"
-	elections_systemcontract "github.com/orbs-network/orbs-network-go/services/processor/native/repository/_Elections"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -99,68 +97,17 @@ func (s *service) handleSdkEnvGetBlockProposerAddress(executionContext *executio
 // outputArg0: value array of (bytes)
 func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionContext *executionContext, args []*protocol.Argument) ([][]byte, error) {
 	if len(args) != 0 {
-		return [][]byte{}, errors.Errorf("invalid SDK env getBlockProposerAddress args: %v", args)
+		return [][]byte{}, errors.Errorf("invalid SDK env getBlockCommittee args: %v", args)
 	}
 
-	var committeeNodeAddresses []primitives.NodeAddress
-	var err error
-	committeeNodeAddresses, err = s.callElectionsSystemContract(ctx, executionContext)
-
-	if err != nil || len(committeeNodeAddresses) == 0 {
-		output, err2 := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
-		if err2 != nil {
-			s.logger.Error("management.GetCommittee failed", log.Error(err2))
-			return [][]byte{}, err
-		}
-		committeeNodeAddresses = output.Members
+	res, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
+	if err != nil {
+		s.logger.Error("management.GetCommittee failed", log.Error(err))
+		return [][]byte{}, err
 	}
 	var committee [][]byte
-	for _, c := range committeeNodeAddresses {
+	for _, c := range res.Members {
 		committee = append(committee, c)
 	}
-	return committee, err
-}
-
-// TODO POSV2 remove this with death of election
-func (s *service) callElectionsSystemContract(ctx context.Context, executionContext *executionContext) ([]primitives.NodeAddress, error) {
-	systemContractName := primitives.ContractName(elections_systemcontract.CONTRACT_NAME)
-	systemMethodName := primitives.MethodName(elections_systemcontract.METHOD_GET_ELECTED_VALIDATORS)
-
-	// modify execution context
-	executionContext.serviceStackPush(systemContractName)
-	defer executionContext.serviceStackPop()
-
-	// execute the call
-	output, err := s.processors[protocol.PROCESSOR_TYPE_NATIVE].ProcessCall(ctx, &services.ProcessCallInput{
-		ContextId:              executionContext.contextId,
-		ContractName:           systemContractName,
-		MethodName:             systemMethodName,
-		InputArgumentArray:     protocol.ArgumentsArrayEmpty(),
-		AccessScope:            protocol.ACCESS_SCOPE_READ_ONLY,
-		CallingPermissionScope: protocol.PERMISSION_SCOPE_SERVICE,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-	if output.CallResult != protocol.EXECUTION_RESULT_SUCCESS {
-		return nil, errors.Errorf("%s.%s call result is %s", systemContractName, systemMethodName, output.CallResult)
-	}
-
-	argIterator := output.OutputArgumentArray.ArgumentsIterator()
-	if !argIterator.HasNext() {
-		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
-	}
-	arg0 := argIterator.NextArguments()
-	if !arg0.IsTypeBytesValue() {
-		return nil, errors.Errorf("call system %s.%s returned corrupt output value", systemContractName, systemMethodName)
-	}
-	joinedAddresses := arg0.BytesValue()
-
-	numAddresses := len(joinedAddresses) / digest.NODE_ADDRESS_SIZE_BYTES
-	res := make([]primitives.NodeAddress, numAddresses)
-	for i := 0; i < numAddresses; i++ {
-		res[i] = joinedAddresses[20*i : 20*(i+1)]
-	}
-	return res, nil
+	return committee, nil
 }
