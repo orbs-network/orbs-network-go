@@ -10,6 +10,8 @@ ADD ./_bin/orbs-node /opt/orbs/
 
 ADD ./_bin/healthcheck /opt/orbs/
 
+ADD ./entrypoint.sh /opt/orbs/service
+
 VOLUME /usr/local/var/orbs/
 
 VOLUME /opt/orbs/logs
