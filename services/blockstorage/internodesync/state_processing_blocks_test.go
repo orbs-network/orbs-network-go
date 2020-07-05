@@ -12,6 +12,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
+	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -58,9 +59,9 @@ func TestStateProcessingBlocksDescending_CommitsAccordinglyAndMovesToCollectingA
 			nextState := state.processState(ctx)
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
 
-			syncState := SyncState{InOrderHeight:10, TopHeight:10, LastSyncedHeight:10}
-			h.storage.When("GetSyncState").Return( syncState).Times(1)
-			h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
+			syncState := SyncState{InOrderHeight: 10, TopHeight: 10, LastSyncedHeight: 10}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
+			h.storage.When("GetBlock", mock.Any).Return(nil).Times(1)
 			h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(10)
 			h.expectBlockCommitsToStorage(10)
 
@@ -75,11 +76,32 @@ func TestStateProcessingBlocksDescending_CommitsAccordinglyAndMovesToCollectingA
 			nextState = state.processState(ctx)
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
 
-			syncState = SyncState{InOrderHeight:10, TopHeight:30, LastSyncedHeight:21}
-			h.storage.When("GetSyncState").Return( syncState).Times(1)
-			h.storage.When("GetBlock", mock.Any).Return( nil).Times(2)
+			syncState = SyncState{InOrderHeight: 10, TopHeight: 30, LastSyncedHeight: 21}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
+
+			var blocks []*protocol.BlockPairContainer
+			var prevBlock *protocol.BlockPairContainer
+			for i := 11; i <= 21; i++ {
+				blockPair := builders.BlockPair().
+					WithHeight(primitives.BlockHeight(i)).
+					WithPrevBlock(prevBlock).
+					Build()
+				prevBlock = blockPair
+				blocks = append(blocks, blockPair)
+			}
+			reverse(blocks)
+
+			h.storage.When("GetBlock", mock.Any).Return(blocks[0])
 			h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(10)
 			h.expectBlockCommitsToStorage(10)
+
+			message = builders.BlockSyncResponseInput().
+				WithBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING).
+				WithBlocks(blocks[1:]).
+				WithFirstBlockHeight(20).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(30).
+				Build().Message
 
 			state = h.factory.CreateProcessingBlocksState(message)
 			nextState = state.processState(ctx)
@@ -164,8 +186,8 @@ func TestStateProcessingBlocksDescending_ValidateBlockChunkRangeFailureReturnsTo
 				withDescendingEnabled(true)
 			harness.AllowErrorsMatching("failed to verify the blocks chunk range received via sync")
 
-			syncState := SyncState{InOrderHeight:10, TopHeight:10, LastSyncedHeight:10}
-			h.storage.When("GetSyncState").Return( syncState).Times(1)
+			syncState := SyncState{InOrderHeight: 10, TopHeight: 10, LastSyncedHeight: 10}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
 
 			message := builders.BlockSyncResponseInput().
 				WithBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING).
@@ -178,8 +200,8 @@ func TestStateProcessingBlocksDescending_ValidateBlockChunkRangeFailureReturnsTo
 			nextState := state.processState(ctx)
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after validation error should be collecting availability responses")
 
-			syncState = SyncState{InOrderHeight:10, TopHeight:30, LastSyncedHeight:20}
-			h.storage.When("GetSyncState").Return( syncState).Times(1)
+			syncState = SyncState{InOrderHeight: 10, TopHeight: 30, LastSyncedHeight: 20}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
 			message = builders.BlockSyncResponseInput().
 				WithBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING).
 				WithFirstBlockHeight(12).
@@ -194,6 +216,106 @@ func TestStateProcessingBlocksDescending_ValidateBlockChunkRangeFailureReturnsTo
 			h.verifyMocks(t)
 		})
 	})
+}
+
+func TestStateProcessingBlocksDescending_ValidatePosChainRefTimeFailure(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newBlockSyncHarness(harness.Logger).
+				withDescendingEnabled(true)
+			harness.AllowErrorsMatching("failed to verify the blocks chunk PoS received via sync")
+
+			syncState := SyncState{InOrderHeight: 10, TopHeight: 10, LastSyncedHeight: 10}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
+			h.storage.When("GetBlock", mock.Any).Return(nil)
+			h.storage.Never("ValidateBlockForCommit", mock.Any, mock.Any)
+			h.storage.Never("NodeSyncCommitBlock", mock.Any, mock.Any)
+
+
+			var blocks []*protocol.BlockPairContainer
+			var prevBlock *protocol.BlockPairContainer
+			currentTime := time.Now()
+			committeeValidityTime := 12*time.Hour
+			flakinessBuffer := 10*time.Second
+			// block chunk does pertain to PoS honesty assumption of 12hr committee
+			refTime := primitives.TimestampSeconds(currentTime.Add(-committeeValidityTime).Add(-flakinessBuffer).Unix())
+			for i := 11; i <= 20; i++ {
+				blockTime := time.Unix(currentTime.Unix() + int64(i), 0) // deterministic block creation
+				blockPair := builders.BlockPair().
+					WithHeight(primitives.BlockHeight(i)).
+					WithBlockCreated(blockTime).
+					WithReferenceTime(refTime).
+					WithPrevBlock(prevBlock).
+					Build()
+				prevBlock = blockPair
+				blocks = append(blocks, blockPair)
+			}
+			reverse(blocks)
+
+			message := builders.BlockSyncResponseInput().
+				WithBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING).
+				WithBlocks(blocks).
+				WithFirstBlockHeight(20).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(20).
+				Build().Message
+
+			state := h.factory.CreateProcessingBlocksState(message)
+			nextState := state.processState(ctx)
+			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after validation error should be collecting availability responses")
+			h.verifyMocks(t)
+		})
+	})
+}
+
+func TestStateProcessingBlocksDescending_ValidatePosChainPrevHashFailure(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			h := newBlockSyncHarness(harness.Logger).
+				withDescendingEnabled(true)
+			harness.AllowErrorsMatching("failed to verify the blocks chunk PoS received via sync")
+
+			syncState := SyncState{InOrderHeight: 10, TopHeight: 20, LastSyncedHeight: 20}
+			h.storage.When("GetSyncState").Return(syncState).Times(1)
+			h.storage.Never("ValidateBlockForCommit", mock.Any, mock.Any)
+			h.storage.Never("NodeSyncCommitBlock", mock.Any, mock.Any)
+
+			var blocks []*protocol.BlockPairContainer
+			var prevBlock *protocol.BlockPairContainer
+			for i := 11; i <= 20; i++ {
+				if i == 15 {
+					prevBlock = nil
+				}
+				blockPair := builders.BlockPair().
+					WithHeight(primitives.BlockHeight(i)).
+					WithPrevBlock(prevBlock).
+					Build()
+				prevBlock = blockPair
+				blocks = append(blocks, blockPair)
+			}
+			reverse(blocks)
+			h.storage.When("GetBlock", mock.Any).Return(blocks[0])
+
+			message := builders.BlockSyncResponseInput().
+				WithBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING).
+				WithBlocks(blocks[1:]).
+				WithFirstBlockHeight(19).
+				WithLastBlockHeight(11).
+				WithLastCommittedBlockHeight(20).
+				Build().Message
+
+			state := h.factory.CreateProcessingBlocksState(message)
+			nextState := state.processState(ctx)
+			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after validation error should be collecting availability responses")
+			h.verifyMocks(t)
+		})
+	})
+}
+
+func reverse(arr []*protocol.BlockPairContainer) {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
 }
 
 func TestStateProcessingBlocksAscending_CommitBlockFailureReturnsToCollectingAvailabilityResponses(t *testing.T) {
@@ -263,13 +385,13 @@ func TestStateProcessingBlocksAscending_TerminatesOnContextTermination(t *testin
 			Build().Message
 
 		cancel()
-		syncState := SyncState{InOrderHeight:9, TopHeight:9, LastSyncedHeight:9}
-		h.storage.When("GetSyncState").Return( syncState).Times(1)
+		syncState := SyncState{InOrderHeight: 9, TopHeight: 9, LastSyncedHeight: 9}
+		h.storage.When("GetSyncState").Return(syncState).Times(1)
 		h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 
 		state := h.factory.CreateProcessingBlocksState(message)
 		nextState := state.processState(ctx)
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 
 		require.Nil(t, nextState, "next state should be nil on context termination")
 	})
@@ -288,14 +410,14 @@ func TestStateProcessingBlocksDescending_TerminatesOnContextTermination(t *testi
 			Build().Message
 
 		cancel()
-		syncState := SyncState{InOrderHeight:9, TopHeight:9, LastSyncedHeight:9}
-		h.storage.When("GetSyncState").Return( syncState).Times(1)
+		syncState := SyncState{InOrderHeight: 9, TopHeight: 9, LastSyncedHeight: 9}
+		h.storage.When("GetSyncState").Return(syncState).Times(1)
 		h.storage.When("GetBlock", mock.Any).Return(nil)
 		h.storage.When("UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence", mock.Any)
 
 		state := h.factory.CreateProcessingBlocksState(message)
 		nextState := state.processState(ctx)
-		time.Sleep(5*time.Second)
+		time.Sleep(5 * time.Second)
 
 		require.Nil(t, nextState, "next state should be nil on context termination")
 	})

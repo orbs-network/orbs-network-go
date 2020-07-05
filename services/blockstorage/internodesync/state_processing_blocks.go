@@ -59,7 +59,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	lastBlockHeight := s.blocks.SignedChunkRange.LastBlockHeight()
 
 	numBlocks := len(s.blocks.BlockPairs)
-	logger.Info("committing blocks from sync",
+	logger.Info("processing blocks from sync",
 		log.Int("block-count", numBlocks),
 		log.Stringable("sender", s.blocks.Sender),
 		log.Uint64("first-block-height", uint64(firstBlockHeight)),
