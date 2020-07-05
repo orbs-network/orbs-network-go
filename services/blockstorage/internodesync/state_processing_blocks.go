@@ -131,7 +131,6 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 		return errors.New("received chunk with blocks order which does not match blockSync expected blocks order")
 
 	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
-		fmt.Println(syncState)
 		firstBlock := blocks[0]
 		firstBlockHeight := firstBlock.TransactionsBlock.Header.BlockHeight()
 		if syncState.InOrderHeight == syncState.TopHeight {
