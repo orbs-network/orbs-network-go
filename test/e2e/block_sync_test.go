@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+
+// The metrics-node (METRICS_NODE_INDEX in harness) did not load with blocks file and requires to sync.
+// Eventually, after fully syncing this node will act as leader and propose blocks
 func TestBlockSyncRecover(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping E2E tests in short mode")

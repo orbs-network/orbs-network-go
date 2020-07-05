@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const DEFAULT_MANAGEMENT_REFTIME_ONSET = 100
+const FAKE_BLOCKS_REFTIME_AGE_SECONDS = 100
 
 // There is no need to test more than one consensus algo, because the SUT here is the node-sync mechanism, not the consensus algo
 // (could have mocked the whole thing)
@@ -26,7 +26,7 @@ func TestInterNodeBlockSync_WithBenchmarkConsensusBlocks(t *testing.T) {
 	NewHarness().
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS).
 		WithSetup(func(ctx context.Context, network *Network) {
-			blocksReferenceTime := primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_MANAGEMENT_REFTIME_ONSET)
+			blocksReferenceTime := primitives.TimestampSeconds(time.Now().Unix() - FAKE_BLOCKS_REFTIME_AGE_SECONDS)
 			var prevBlock *protocol.BlockPairContainer
 			for i := 1; i <= 10; i++ {
 				blockPair := builders.BenchmarkConsensusBlockPair().
