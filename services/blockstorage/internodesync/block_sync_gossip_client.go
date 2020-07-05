@@ -130,6 +130,10 @@ func getClientSyncRange(syncState SyncState, syncBlocksOrder gossipmessages.Sync
 	topInOrder := syncState.InOrderHeight
 	lastSynced := syncState.LastSyncedHeight
 	logger.Info("GetClientSyncRange ", log.Uint64("topInOrder", uint64(topInOrder)), log.Uint64("lastSynced", uint64(lastSynced)), log.Uint64("top", uint64(syncState.TopHeight)))
+	if batchSize == 0 {
+		err = errors.New("invalid batch size")
+		return
+	}
 	if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		from = topInOrder + 1
 		to = from + batchSize - 1

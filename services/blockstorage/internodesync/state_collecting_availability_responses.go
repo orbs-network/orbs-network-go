@@ -23,7 +23,6 @@ type collectingAvailabilityResponsesState struct {
 	createTimer      func() *synchronization.Timer
 	logger           log.Logger
 	conduit          blockSyncConduit
-	syncBlocksOrder  gossipmessages.SyncBlocksOrder
 	metrics          collectingStateMetrics
 }
 
@@ -46,7 +45,7 @@ func (s *collectingAvailabilityResponsesState) processState(ctx context.Context)
 		defer cancel()
 		s.client.petitionerUpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(shortCtx)
 	})
-	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx, s.syncBlocksOrder)
+	err := s.client.petitionerBroadcastBlockAvailabilityRequest(ctx, s.factory.getSyncBlocksOrder())
 	if err != nil {
 		logger.Info("failed to broadcast block availability request", log.Error(err))
 		s.metrics.timesFailedSendingAvailabilityRequest.Inc()

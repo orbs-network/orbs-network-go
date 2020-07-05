@@ -21,9 +21,9 @@ type blockHeightIndex struct {
 	heightOffset         map[primitives.BlockHeight]int64
 	firstBlockInTsBucket map[uint32]primitives.BlockHeight
 	nextOffset           int64
-	inOrderBlock         *protocol.BlockPairContainer
+	sequentialTopBlock   *protocol.BlockPairContainer
 	topBlock             *protocol.BlockPairContainer
-	lastSyncedHeight     primitives.BlockHeight
+	lastWrittenHeight    primitives.BlockHeight
 	logger               log.Logger
 }
 
@@ -33,9 +33,9 @@ func newBlockHeightIndex(logger log.Logger, firstBlockOffset int64) *blockHeight
 		heightOffset:         map[primitives.BlockHeight]int64{},
 		firstBlockInTsBucket: map[uint32]primitives.BlockHeight{},
 		nextOffset:           firstBlockOffset,
-		inOrderBlock:         nil,
+		sequentialTopBlock:   nil,
 		topBlock:             nil,
-		lastSyncedHeight:     0,
+		lastWrittenHeight:    0,
 	}
 }
 
@@ -44,16 +44,16 @@ func (i *blockHeightIndex) getSyncState() internodesync.SyncState {
 	defer i.RUnlock()
 	return internodesync.SyncState{
 		TopHeight:        getBlockHeight(i.topBlock),
-		InOrderHeight:    getBlockHeight(i.inOrderBlock),
-		LastSyncedHeight: i.lastSyncedHeight,
+		InOrderHeight:    getBlockHeight(i.sequentialTopBlock),
+		LastSyncedHeight: i.lastWrittenHeight,
 	}
 }
 
-func (i *blockHeightIndex) getLastSyncedHeight() primitives.BlockHeight {
+func (i *blockHeightIndex) getLastWrittenHeight() primitives.BlockHeight {
 	i.RLock()
 	defer i.RUnlock()
 
-	return i.lastSyncedHeight
+	return i.lastWrittenHeight
 }
 
 func (i *blockHeightIndex) fetchNextOffset() int64 {
@@ -78,10 +78,10 @@ func (i *blockHeightIndex) getEarliestTxBlockInBucketForTsRange(rangeStart primi
 
 	fromBucket := blockTsBucketKey(rangeStart)
 	toBucket := blockTsBucketKey(rangeEnd)
-	inOrderHeight := getBlockHeight(i.inOrderBlock)
+	sequentialHeight := getBlockHeight(i.sequentialTopBlock)
 	for b := fromBucket; b <= toBucket; b++ {
 		blockHeight, exists := i.firstBlockInTsBucket[b]
-		if blockHeight > inOrderHeight {
+		if blockHeight > sequentialHeight {
 			return 0, false
 		} else if exists {
 			return blockHeight, true
@@ -96,13 +96,13 @@ func (i *blockHeightIndex) validateCandidateBlockHeight(candidateBlockHeight pri
 	defer i.RUnlock()
 
 	topHeight := getBlockHeight(i.topBlock)
-	inOrderHeight := getBlockHeight(i.inOrderBlock)
+	sequentialHeight := getBlockHeight(i.sequentialTopBlock)
 
-	if i.lastSyncedHeight > inOrderHeight && candidateBlockHeight != i.lastSyncedHeight-1 {
-		err = fmt.Errorf("sync session in progress, expected block height %d", i.lastSyncedHeight-1)
+	if i.lastWrittenHeight > sequentialHeight && candidateBlockHeight != i.lastWrittenHeight-1 {
+		err = fmt.Errorf("sync session in progress, expected block height %d", i.lastWrittenHeight-1)
 
-	} else if inOrderHeight == topHeight && candidateBlockHeight <= inOrderHeight {
-		err = fmt.Errorf("expected block height higher than current top %d",  inOrderHeight)
+	} else if sequentialHeight == topHeight && candidateBlockHeight <= sequentialHeight {
+		err = fmt.Errorf("expected block height higher than current top %d", sequentialHeight)
 	}
 
 	if err != nil {
@@ -120,30 +120,30 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 	i.Lock()
 	defer i.Unlock()
 	topHeight := getBlockHeight(i.topBlock)
-	inOrderHeight := getBlockHeight(i.inOrderBlock)
+	sequentialHeight := getBlockHeight(i.sequentialTopBlock)
 	numTxReceipts := newBlock.ResultsBlock.Header.NumTransactionReceipts()
 	blockTs := newBlock.ResultsBlock.Header.Timestamp()
 
 	i.heightOffset[newBlockHeight] = i.nextOffset
 	i.nextOffset = newOffset
 	// update indices
-	i.lastSyncedHeight = newBlockHeight
+	i.lastWrittenHeight = newBlockHeight
 	if newBlockHeight > topHeight {
 		i.topBlock = newBlock
 		topHeight = newBlockHeight
 	}
-	if i.lastSyncedHeight == inOrderHeight+1 {
-			for height := inOrderHeight + 1; height <= topHeight; height++ {
+	if i.lastWrittenHeight == sequentialHeight+1 {
+			for height := sequentialHeight + 1; height <= topHeight; height++ {
 				if _, ok := i.heightOffset[height]; !ok { // block does not exists
-					i.lastSyncedHeight = topHeight
-					return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(inOrderHeight+1), uint64(topHeight))
+					i.lastWrittenHeight = topHeight
+					return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(sequentialHeight+1), uint64(topHeight))
 				}
 				if blockTracker != nil {
 					blockTracker.IncrementTo(height)
 				}
 			}
-		i.lastSyncedHeight = topHeight
-		i.inOrderBlock = i.topBlock
+		i.lastWrittenHeight = topHeight
+		i.sequentialTopBlock = i.topBlock
 	}
 
 	if numTxReceipts > 0 {
@@ -160,13 +160,13 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 func (i *blockHeightIndex) getLastBlock() *protocol.BlockPairContainer {
 	i.RLock()
 	defer i.RUnlock()
-	return i.inOrderBlock
+	return i.sequentialTopBlock
 }
 
 func (i *blockHeightIndex) getLastBlockHeight() primitives.BlockHeight {
 	i.RLock()
 	defer i.RUnlock()
-	return getBlockHeight(i.inOrderBlock)
+	return getBlockHeight(i.sequentialTopBlock)
 }
 
 const minuteToNanoRatio = 60 * 1000 * 1000 * 1000

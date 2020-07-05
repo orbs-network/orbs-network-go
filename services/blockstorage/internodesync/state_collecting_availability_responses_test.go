@@ -32,7 +32,6 @@ func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnGossipError(t *test
 	})
 }
 
-// TODO: weird test remove
 func TestStateCollectingAvailabilityResponses_ReturnsToIdleOnInvalidRequestSizeConfig(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(harness *with.LoggingHarness) {

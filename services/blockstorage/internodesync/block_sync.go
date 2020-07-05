@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
@@ -107,14 +106,12 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 		config:  config,
 	}
 
-	setupSyncBlocksOrder(bs, config.BlockSyncDescendingEnabled())
-
 	logger.Info("Block sync init",
 		log.Stringable("no-commit-timeout", bs.factory.config.BlockSyncNoCommitInterval()),
 		log.Stringable("collect-responses-timeout", bs.factory.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
-		log.Stringable("blocks-order", bs.factory.syncBlocksOrder),
+		log.Stringable("blocks-order", bs.factory.getSyncBlocksOrder()),
 		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
@@ -122,14 +119,6 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 	}))
 
 	return bs
-}
-
-func setupSyncBlocksOrder(bs *BlockSync, descendingOrderEnabled bool) {
-	if descendingOrderEnabled {
-		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING)
-	} else {
-		bs.factory.SetSyncBlocksOrder(gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING)
-	}
 }
 
 func NewBlockSync(ctx context.Context, config blockSyncConfig, gossip gossiptopics.BlockSync, storage BlockSyncStorage, parentLogger log.Logger, metricFactory metric.Factory) *BlockSync {

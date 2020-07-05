@@ -52,7 +52,6 @@ func (n *Node) Destroy() {
 	n.nodeLogic = nil
 }
 
-// TODO: Gad change to accommodate out of order
 func (n *Node) ExtractBlocks() ([]*protocol.BlockPairContainer, error) {
 
 	lastBlock, err := n.blockPersistence.GetLastBlock()

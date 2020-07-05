@@ -105,7 +105,9 @@ func bootstrapE2ENetwork(logFilePrefix string, virtualChainId primitives.Virtual
 				experimentalExternalProcessorPluginPath,
 			)
 
-		if deployBlocksFile {
+		// workaround for checking block syn in e2e - require the metrics node to sync his blocks from his peers
+		// TODO: after topology mock control in e2e harness this should move
+		if deployBlocksFile && i != METRICS_NODE_INDEX{
 			deployBlockStorageFiles(net.cfg.BlockStorageFileSystemDataDir(), tl.logger)
 		}
 

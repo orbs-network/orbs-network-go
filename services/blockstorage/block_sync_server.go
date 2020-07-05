@@ -161,6 +161,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	syncState := s.persistence.GetSyncState()
 	responseFrom, responseTo, err := getServerSyncRange(syncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
 	if err != nil {
+		logger.Info("invalid sync range ", log.Error(err))
 		return err
 	}
 

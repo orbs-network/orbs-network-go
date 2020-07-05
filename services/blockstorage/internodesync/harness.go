@@ -14,7 +14,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
-	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
@@ -31,7 +30,6 @@ type blockSyncConfigForTests struct {
 	collectResponses  time.Duration
 	collectChunks     time.Duration
 	referenceDistance time.Duration
-	blocksOrder       gossipmessages.SyncBlocksOrder
 	descendingEnabled bool
 }
 
@@ -59,10 +57,6 @@ func (c *blockSyncConfigForTests) BlockSyncReferenceMaxAllowedDistance() time.Du
 	return c.referenceDistance
 }
 
-func (c *blockSyncConfigForTests) BlockSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
-	return c.blocksOrder
-}
-
 func (c *blockSyncConfigForTests) BlockSyncDescendingEnabled() bool {
 	return c.descendingEnabled
 }
@@ -75,7 +69,6 @@ func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 		collectResponses:  3 * time.Millisecond,
 		collectChunks:     3 * time.Millisecond,
 		referenceDistance: 100 * time.Second,
-		blocksOrder:       gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
 		descendingEnabled: true,
 	}
 }
@@ -104,7 +97,7 @@ func newBlockSyncHarnessWithTimers(
 
 	return &blockSyncHarness{
 		logger:        logger,
-		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, cfg.blocksOrder, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
+		factory:       NewStateFactoryWithTimers(cfg, gossip, storage, conduit, createCollectTimeoutTimer, createNoCommitTimeoutTimer, createWaitForChunksTimeoutTimer, logger, metricFactory),
 		config:        cfg,
 		gossip:        gossip,
 		storage:       storage,
@@ -219,15 +212,19 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBl
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
 }
 
-func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFirstBlockHeight primitives.BlockHeight) {
+func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFailedBlockHeight primitives.BlockHeight) {
 	h.storage.When("GetSyncState").Return( nil).Times(1)
 	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
-		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFirstBlockHeight + primitives.BlockHeight(numExpectedBlocks-1)) {
-			return nil, errors.Errorf("failed to validate block #%d", numExpectedBlocks)
+		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFailedBlockHeight) {
+			return nil, errors.Errorf("failed to validate block #%d", expectedFailedBlockHeight)
 		}
 		return nil, nil
 	}).Times(numExpectedBlocks)
+}
+
+func (h *blockSyncHarness) expectBlockChunkRangeValidationFailure(syncState SyncState, numValidations int) {
+	h.storage.When("GetSyncState").Return( syncState).Times(numValidations)
 }
 
 func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {
