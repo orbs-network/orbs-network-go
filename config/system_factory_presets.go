@@ -145,14 +145,14 @@ func ForE2E(
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
-	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
-	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 700*time.Millisecond)
+	// should be longer than tx_empty_block_time
+	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 2000*time.Millisecond)
 	cfg.SetBool(LEAN_HELIX_SHOW_DEBUG, true)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 
-	// 4*LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, if below TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS we'll constantly have syncs
+	// longer than tx_empty_block_time and consensus round time
 	cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 3*time.Second)
 
 	// 1MB blocks, 1KB per tx
@@ -166,7 +166,7 @@ func ForE2E(
 	cfg.SetDuration(BLOCK_TRACKER_GRACE_TIMEOUT, 1*time.Second)
 
 	// if above round time, we'll have leader changes when no traffic
-	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 3*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
+	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
 
 	// makes sync slower, 4*slow_network_latency
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 500*time.Millisecond)

@@ -13,17 +13,14 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
 	"github.com/orbs-network/scribe/log"
-	"sync"
 	"time"
 )
 
 type stateFactory struct {
 	config                          blockSyncConfig
 	gossip                          gossiptopics.BlockSync
-	syncBlocksOrder                 gossipmessages.SyncBlocksOrder
 	storage                         BlockSyncStorage
 	conduit                         blockSyncConduit
-	mutex                           sync.RWMutex
 	createCollectTimeoutTimer       func() *synchronization.Timer
 	createNoCommitTimeoutTimer      func() *synchronization.Timer
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer
@@ -44,7 +41,6 @@ func NewStateFactory(
 		gossip,
 		storage,
 		conduit,
-		gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING,
 		nil,
 		nil,
 		nil,
@@ -57,7 +53,6 @@ func NewStateFactoryWithTimers(
 	gossip gossiptopics.BlockSync,
 	storage BlockSyncStorage,
 	conduit blockSyncConduit,
-	blocksOrder gossipmessages.SyncBlocksOrder,
 	createCollectTimeoutTimer func() *synchronization.Timer,
 	createNoCommitTimeoutTimer func() *synchronization.Timer,
 	createWaitForChunksTimeoutTimer func() *synchronization.Timer,
@@ -72,7 +67,6 @@ func NewStateFactoryWithTimers(
 		conduit:         conduit,
 		logger:          logger,
 		metrics:         newStateMetrics(factory),
-		syncBlocksOrder: blocksOrder,
 	}
 
 	if createCollectTimeoutTimer == nil {
@@ -96,20 +90,14 @@ func NewStateFactoryWithTimers(
 	return f
 }
 
-func (f *stateFactory) GetSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
-
-	return f.syncBlocksOrder
+func (f *stateFactory) getSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
+	if f.config.BlockSyncDescendingEnabled() {
+		return gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING
+	} else {
+		return gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING
+	}
 }
 
-func (f *stateFactory) SetSyncBlocksOrder(order gossipmessages.SyncBlocksOrder) {
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-
-	f.syncBlocksOrder = order
-	f.logger.Info("set BlockSync blocks order ", log.Stringable("sync-blocks-order", f.syncBlocksOrder))
-}
 
 func (f *stateFactory) defaultCreateCollectTimeoutTimer() *synchronization.Timer {
 	return synchronization.NewTimer(f.config.BlockSyncCollectResponseTimeout())
@@ -125,23 +113,22 @@ func (f *stateFactory) defaultCreateWaitForChunksTimeoutTimer() *synchronization
 
 func (f *stateFactory) CreateIdleState() syncState {
 	return &idleState{
-		factory:                  f,
-		createTimer:              f.createNoCommitTimeoutTimer,
-		logger:                   f.logger,
-		conduit:                  f.conduit,
-		metrics:                  f.metrics.idleStateMetrics,
+		factory:     f,
+		createTimer: f.createNoCommitTimeoutTimer,
+		logger:      f.logger,
+		conduit:     f.conduit,
+		metrics:     f.metrics.idleStateMetrics,
 	}
 }
 
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
-		factory:          f,
-		client:           newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
-		createTimer:      f.createCollectTimeoutTimer,
-		logger:           f.logger,
-		conduit:          f.conduit,
-		syncBlocksOrder:  f.syncBlocksOrder,
-		metrics:          f.metrics.collectingStateMetrics,
+		factory:         f,
+		client:          newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
+		createTimer:     f.createCollectTimeoutTimer,
+		logger:          f.logger,
+		conduit:         f.conduit,
+		metrics:         f.metrics.collectingStateMetrics,
 	}
 }
 
@@ -162,20 +149,18 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 		createTimer:       f.createWaitForChunksTimeoutTimer,
 		logger:            f.logger,
 		conduit:           f.conduit,
-		syncBlocksOrder:   f.syncBlocksOrder,
 		metrics:           f.metrics.waitingStateMetrics,
 	}
 }
 
 func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.BlockSyncResponseMessage) syncState {
 	return &processingBlocksState{
-		blocks:                   message,
-		factory:                  f,
-		logger:                   f.logger,
-		storage:                  f.storage,
-		conduit:                  f.conduit,
-		syncBlocksOrder:          f.syncBlocksOrder,
-		metrics:                  f.metrics.processingStateMetrics,
+		blocks:          message,
+		factory:         f,
+		logger:          f.logger,
+		storage:         f.storage,
+		conduit:         f.conduit,
+		metrics:         f.metrics.processingStateMetrics,
 	}
 }
 

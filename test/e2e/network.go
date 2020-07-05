@@ -105,7 +105,7 @@ func bootstrapE2ENetwork(logFilePrefix string, virtualChainId primitives.Virtual
 				experimentalExternalProcessorPluginPath,
 			)
 
-		if deployBlocksFile {
+		if deployBlocksFile && i != METRICS_NODE_INDEX{
 			deployBlockStorageFiles(net.cfg.BlockStorageFileSystemDataDir(), tl.logger)
 		}
 

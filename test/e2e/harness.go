@@ -44,6 +44,7 @@ type StressTestConfig struct {
 
 const START_HTTP_PORT = 8090
 const START_GOSSIP_PORT = 8190
+const METRICS_NODE_INDEX = 2
 
 type Harness struct {
 	client     *orbsClient.OrbsClient
@@ -190,7 +191,7 @@ func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
-	require.True(t, test.Eventually(15*time.Second, func() bool {
+	require.True(t, test.Eventually(20*time.Second, func() bool {
 
 		m := h.GetMetrics()
 		if m == nil {
@@ -201,6 +202,19 @@ func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
 		return diff >= 0
 	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
+}
+
+func (h *Harness) WaitUntilReachBlockHeight(t *testing.T, targetBlockHeight primitives.BlockHeight, waitingTime time.Duration) {
+
+	require.True(t, test.Eventually(waitingTime, func() bool {
+		m := h.GetMetrics()
+		if m == nil {
+			return false
+		}
+
+		lastCommittedBlockHeight :=  primitives.BlockHeight(m["BlockStorage.BlockHeight"]["Value"].(float64))
+		return lastCommittedBlockHeight >= targetBlockHeight
+	}), "timed out waiting for blockHeight %d", uint64(targetBlockHeight))
 }
 
 func getE2ETransactionPoolNodeSyncRejectTime() time.Duration {
@@ -238,7 +252,7 @@ func GetConfig() E2EConfig {
 	}
 
 	shouldBootstrap := len(os.Getenv("API_ENDPOINT")) == 0
-	appChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+2) // 8090 is leader, 8082 is node-3
+	appChainUrl := fmt.Sprintf("http://localhost:%d", START_HTTP_PORT+METRICS_NODE_INDEX) // 8090 is leader, 8082 is node-3
 
 	isRemoteEnvironment := os.Getenv("REMOTE_ENV") == "true"
 

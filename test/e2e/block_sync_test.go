@@ -1,0 +1,37 @@
+// Copyright 2019 the orbs-network-go authors
+// This file is part of the orbs-network-go library in the Orbs project.
+//
+// This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
+// The above notice should be included in all copies or substantial portions of the software.
+
+package e2e
+
+import (
+	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
+)
+
+func TestBlockSyncRecover(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping E2E tests in short mode")
+	}
+
+	h := NewAppHarness()
+
+	if h.envSupportsTestingFileAssets() {
+		t.Skip("Running against remote network - skipping")
+	}
+
+	targetBlockHeight := uint64(CannedBlocksFileMinHeight + 20)
+	waitingDuration := 30*time.Second
+	h.WaitUntilReachBlockHeight(t, CannedBlocksFileMinHeight, waitingDuration)
+
+	var blockHeight uint64
+	test.Eventually(30*time.Second, func() bool {
+		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		return blockHeight >= targetBlockHeight
+	})
+	require.GreaterOrEqual(t, blockHeight, targetBlockHeight, "expected node in e2e network to sync and start closing blocks at block height greater than init blocks file")
+}

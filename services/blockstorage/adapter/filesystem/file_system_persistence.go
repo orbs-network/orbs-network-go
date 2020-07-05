@@ -253,20 +253,19 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 	bh := getBlockHeight(blockPair)
 
-	syncState := f.bhIndex.getSyncState()
 	if err := f.bhIndex.validateCandidateBlockHeight(bh); err != nil {
-		return false, syncState.InOrderHeight, nil
+		return false, f.bhIndex.getLastBlockHeight(), nil
 	}
 
 	n, err := f.blockWriter.writeBlock(blockPair)
 	if err != nil {
-		return false, syncState.InOrderHeight, err
+		return false, f.bhIndex.getLastBlockHeight(), err
 	}
 
 	startPos := f.bhIndex.fetchNextOffset()
 	err = f.bhIndex.appendBlock(startPos+int64(n), blockPair, f.blockTracker)
 	if err != nil {
-		return false, syncState.InOrderHeight, errors.Wrap(err, "failed to update index after writing block")
+		return false, f.bhIndex.getLastBlockHeight(), errors.Wrap(err, "failed to update index after writing block")
 	}
 
 	f.metrics.sizeOnDisk.Add(int64(n))
@@ -275,9 +274,9 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint8, cursor adapter.CursorFunc) error {
 
-	inOrderHeight := f.bhIndex.getLastBlockHeight()
-	if (inOrderHeight < from) || from == 0 {
-		return fmt.Errorf("requested unsupported block height %d. Supported range for scan is determined by inOrder(%d)", from, inOrderHeight)
+	sequentialHeight := f.bhIndex.getLastBlockHeight()
+	if (sequentialHeight < from) || from == 0 {
+		return fmt.Errorf("requested unsupported block height %d. Supported range for scan is determined by sequence top height (%d)", from, sequentialHeight)
 	}
 
 	file, err := os.Open(f.blockFileName())
@@ -289,13 +288,13 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 	fromHeight := from
 	wantsMore := true
 	eof := false
-	for fromHeight <= inOrderHeight && wantsMore && !eof {
+	for fromHeight <= sequentialHeight && wantsMore && !eof {
 		toHeight := fromHeight + primitives.BlockHeight(pageSize) - 1
-		if toHeight > inOrderHeight {
-			toHeight = inOrderHeight
+		if toHeight > sequentialHeight {
+			toHeight = sequentialHeight
 		}
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
-		// TODO: Gad allow update of inOrder inside page
+		// TODO: Gad allow update of sequence height inside page
 		for height := fromHeight; height <= toHeight; height++ {
 			aBlock, err := f.fetchBlockFromFile(height, file)
 			if err != nil {
@@ -310,7 +309,7 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		if len(page) > 0 {
 			wantsMore = cursor(page[0].ResultsBlock.Header.BlockHeight(), page)
 		}
-		inOrderHeight = f.bhIndex.getLastBlockHeight()
+		sequentialHeight = f.bhIndex.getLastBlockHeight()
 		fromHeight = toHeight + 1
 	}
 
