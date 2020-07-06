@@ -15,7 +15,7 @@ import (
 )
 
 const ToleranceLevel = uint32(2)
-const ReputationBottomCap = uint32(8)
+const ReputationBottomCap = uint32(6)
 
 func _formatMisses(addr []byte) []byte {
 	return []byte(fmt.Sprintf("Address_%s_Misses", hex.EncodeToString(addr)))

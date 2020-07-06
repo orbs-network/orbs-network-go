@@ -62,6 +62,17 @@ func (s *service) handleSdkEnvCall(ctx context.Context, executionContext *execut
 			BytesArrayValue: value,
 		}).Build()}, nil
 
+	case "getNextBlockCommittee":
+		value, err := s.handleSdkEnvGetNextBlockCommittee(ctx, executionContext, args)
+		if err != nil {
+			return nil, err
+		}
+		return []*protocol.Argument{(&protocol.ArgumentBuilder{
+			// value
+			Type:            protocol.ARGUMENT_TYPE_BYTES_ARRAY_VALUE,
+			BytesArrayValue: value,
+		}).Build()}, nil
+
 	default:
 		return nil, errors.Errorf("unknown SDK env call method: %s", methodName)
 	}
@@ -90,6 +101,9 @@ func (s *service) handleSdkEnvGetBlockProposerAddress(executionContext *executio
 	if len(args) != 0 {
 		return []byte{}, errors.Errorf("invalid SDK env getBlockProposerAddress args: %v", args)
 	}
+	if len(executionContext.transactionOrQuery.Signer().Raw()) != 0 {
+		return []byte{}, errors.New("invalid call to SDK env getBlockProposerAddress can only be called by system contract")
+	}
 
 	return executionContext.currentBlockProposerAddress, nil
 }
@@ -99,6 +113,9 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	if len(args) != 0 {
 		return [][]byte{}, errors.Errorf("invalid SDK env getBlockCommittee args: %v", args)
 	}
+	//if len(executionContext.transactionOrQuery.Signer().Raw()) != 0 {
+	//	return [][]byte{}, errors.New("invalid call to SDK env getBlockCommittee can only be called by system contract")
+	//}
 
 	res, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
 	if err != nil {
@@ -110,4 +127,25 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 		committee = append(committee, c)
 	}
 	return committee, nil
+}
+
+// outputArg0: value array of (bytes)
+func (s *service) handleSdkEnvGetNextBlockCommittee(ctx context.Context, executionContext *executionContext, args []*protocol.Argument) ([][]byte, error) {
+	if len(args) != 0 {
+		return [][]byte{}, errors.Errorf("invalid SDK env getNextBlockCommittee args: %v", args)
+	}
+	if len(executionContext.transactionOrQuery.Signer().Raw()) != 0 {
+		return [][]byte{}, errors.New("invalid call to SDK env getNextBlockCommittee can only be called by system contract")
+	}
+
+	res, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.currentBlockReferenceTime})
+	if err != nil {
+		s.logger.Error("management.GetCommittee failed", log.Error(err))
+		return [][]byte{}, err
+	}
+	var committee [][]byte
+	for _, c := range res.Members {
+		committee = append(committee, c)
+	}
+	return committee, err
 }

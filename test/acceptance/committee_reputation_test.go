@@ -16,8 +16,10 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/client"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
+	"github.com/orbs-network/scribe/log"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestCommitReputation_TransactionToElected(t *testing.T) {
@@ -61,7 +63,47 @@ func TestCommitReputation_TransactionToElected(t *testing.T) {
 
 			}
 			require.NotEqual(t, maxruns, i, "failed to clear misses after %d passes", maxruns)
+	})
+}
 
+func TestCommitReputation_LeavingCommitteeClearsMisses(t *testing.T) {
+	nodeTamperedIndex := 4
+	nodeTampered := testKeys.NodeAddressesForTests()[nodeTamperedIndex]
+
+	NewHarness().
+		WithNumNodes(5).
+		WithManagementPollingInterval(20*time.Millisecond).
+		WithLogFilters(log.DiscardAll()).
+		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
+		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
+			network.TransportTamperer().Fail(func(data *adapter.TransportData) bool {
+				return bytes.Equal(data.SenderNodeAddress, nodeTampered)
+			})
+
+			contract := callcontract.NewContractClient(network)
+			token := network.DeployBenchmarkTokenContract(ctx, 0)
+
+			for {
+				_, txHash := token.Transfer(ctx, 0, 10, 3, 4)
+				network.WaitForTransactionInNodeState(ctx, txHash, 0)
+				argsArray, err := protocol.PackedOutputArgumentsToNatives(contract.GetMisses(ctx, 0, nodeTamperedIndex).QueryResult().RawOutputArgumentArrayWithHeader())
+				require.NoError(t, err)
+				miss := argsArray[0].(uint32)
+				if miss == 1 {
+					break
+				}
+			}
+
+			// remove the "bad" validator from committee
+			newRefTime := GenerateNewManagementReferenceTime(0)
+			blockOfChange := setElectCommitteeAtAndWait(t, ctx, network, 0, newRefTime, 0, 1, 2, 3)
+			network.WaitForBlock(ctx, blockOfChange+1) // need to be able to run query on block closed AFTER change
+
+			// node still tampered, but now it is out of the committee for sure.
+			argsArray, err := protocol.PackedOutputArgumentsToNatives(contract.GetMisses(ctx, 0, nodeTamperedIndex).QueryResult().RawOutputArgumentArrayWithHeader())
+			require.NoError(t, err)
+			miss := argsArray[0].(uint32)
+			require.EqualValues(t, 0, miss, "should be cleared")
 	})
 }
 

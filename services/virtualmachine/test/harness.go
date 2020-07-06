@@ -56,6 +56,7 @@ func newHarness(logger log.Logger) *harness {
 
 	cfg := NewTestManagementProvider()
 	management := &services.MockManagement{}
+	management.When("GetCommittee", mock.Any, &services.GetCommitteeInput{Reference: 800}).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[1:5]}, nil)
 	management.When("GetCommittee", mock.Any, mock.Any).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[:4]}, nil)
 	management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive: true}, nil)
 
@@ -151,6 +152,18 @@ type contractAndMethod struct {
 
 func (h *harness) processTransactionSet(ctx context.Context, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {
 	return h.processTransactionSetWithBlockInfo(ctx, 12, 0x777, hash.Make32BytesWithFirstByte(5), contractAndMethods, additionalExpectedStateDiffContracts...)
+}
+
+func (h *harness) processTriggerTransaction(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockProposer primitives.NodeAddress) {
+	transactions := []*protocol.SignedTransaction{builders.TriggerTransaction().Build()}
+
+	h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
+		SignedTransactions:    transactions,
+		CurrentBlockHeight:    currentBlockHeight,
+		CurrentBlockTimestamp: currentBlockTimestamp,
+		BlockProposerAddress:  currentBlockProposer,
+		CurrentBlockReferenceTime: 800,
+	})
 }
 
 func (h *harness) processTransactionSetWithBlockInfo(ctx context.Context, currentBlockHeight primitives.BlockHeight, currentBlockTimestamp primitives.TimestampNano, currentBlockProposer primitives.NodeAddress, contractAndMethods []*contractAndMethod, additionalExpectedStateDiffContracts ...primitives.ContractName) ([]protocol.ExecutionResult, [][]byte, map[primitives.ContractName][]*keyValuePair, [][]byte) {

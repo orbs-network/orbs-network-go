@@ -87,3 +87,20 @@ func (s *service) SdkEnvGetBlockCommittee(executionContextId sdkContext.ContextI
 	}
 	return output.OutputArguments[0].BytesArrayValueCopiedToNative()
 }
+
+func (s *service) SdkEnvGetNextBlockCommittee(executionContextId sdkContext.ContextId, permissionScope sdkContext.PermissionScope) [][]byte {
+	output, err := s.sdkHandler.HandleSdkCall(context.TODO(), &handlers.HandleSdkCallInput{
+		ContextId:       primitives.ExecutionContextId(executionContextId),
+		OperationName:   SDK_OPERATION_NAME_ENV,
+		MethodName:      "getNextBlockCommittee",
+		InputArguments:  []*protocol.Argument{},
+		PermissionScope: protocol.ExecutionPermissionScope(permissionScope),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(output.OutputArguments) != 1 || !output.OutputArguments[0].IsTypeBytesArrayValue() {
+		panic("getNextBlockCommittee Sdk.Env returned corrupt output value")
+	}
+	return output.OutputArguments[0].BytesArrayValueCopiedToNative()
+}
