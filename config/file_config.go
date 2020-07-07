@@ -97,93 +97,72 @@ func parsePeers(value interface{}) (peers topologyProviderAdapter.TransportPeers
 
 func populateConfig(cfg mutableNodeConfig, data map[string]interface{}) error {
 	for key, value := range data {
-		var duration time.Duration
-		var numericValue uint32
 		var nodeAddress primitives.NodeAddress
-		var stringValue string
 		var err error
+		var processed bool
+
+		if key == "benchmark-consensus-constant-leader" {
+			nodeAddress, err = hex.DecodeString(value.(string))
+			cfg.SetBenchmarkConsensusConstantLeader(primitives.NodeAddress(nodeAddress))
+			processed = true
+		} else if key == "active-consensus-algo" {
+			var i uint32
+			i, err = parseUint32(value.(float64))
+			cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
+			processed = true
+		} else if key == "node-address" {
+			nodeAddress, err = hex.DecodeString(value.(string))
+			cfg.SetNodeAddress(nodeAddress)
+			processed = true
+		} else if key == "node-private-key" {
+			var privateKey primitives.EcdsaSecp256K1PrivateKey
+			privateKey, err = hex.DecodeString(value.(string))
+			cfg.SetNodePrivateKey(privateKey)
+			processed = true
+		} else if key == "ethereum-finality-blocks-component" {
+			var finalityBlocksComponent uint32
+			finalityBlocksComponent, err = parseUint32(value.(float64))
+			cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, finalityBlocksComponent)
+			processed = true
+		} else if key == "gossip-port" {
+			var gossipPort uint32
+			gossipPort, err = parseUint32(value.(float64))
+			cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipPort)
+			processed = true
+		} else if key == "genesis-validator-addresses" {
+			var nodes map[string]ValidatorNode
+			nodes, err = parseNodes(value)
+			cfg.SetGenesisValidatorNodes(nodes)
+			processed = true
+		} else if key == "federation-nodes" || key == "topology-nodes" { // note: "federation-nodes" is deprecated but kept for backwards-compatibility
+			var peers topologyProviderAdapter.TransportPeers
+			peers, err = parsePeers(value)
+			cfg.SetGossipPeers(peers)
+			processed = true
+		}
+
+		if err != nil {
+			return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+		} else if processed {
+			continue
+		}
 
 		switch value.(type) {
 		case bool:
 			cfg.SetBool(convertKeyName(key), value.(bool))
 		case float64:
-			numericValue, err = parseUint32(value.(float64))
+			numericValue, err := parseUint32(value.(float64))
+			if err != nil {
+				return fmt.Errorf("could not decode value for config key %s: %s", key, err)
+			}
+			cfg.SetUint32(convertKeyName(key), numericValue)
 		case string:
 			// Sometimes we try to parse duration, but sometimes it's not worth it, like with Ethereum endpoint
-			var decodeError error
-			if duration, decodeError = time.ParseDuration(value.(string)); decodeError != nil {
-				stringValue = value.(string)
+			if duration, decodeError := time.ParseDuration(value.(string)); decodeError != nil {
+				cfg.SetString(convertKeyName(key), value.(string))
+			} else {
+				cfg.SetDuration(convertKeyName(key), duration)
 			}
-		}
-
-		if numericValue != 0 {
-			cfg.SetUint32(convertKeyName(key), numericValue)
-		}
-
-		if duration != 0 {
-			cfg.SetDuration(convertKeyName(key), duration)
-		}
-
-		if key == "benchmark-consensus-constant-leader" {
-			nodeAddress, err = hex.DecodeString(value.(string))
-			cfg.SetBenchmarkConsensusConstantLeader(primitives.NodeAddress(nodeAddress))
-			continue
-		}
-
-		if key == "active-consensus-algo" {
-			var i uint32
-			i, err = parseUint32(value.(float64))
-			cfg.SetActiveConsensusAlgo(consensus.ConsensusAlgoType(i))
-			continue
-		}
-
-		if key == "node-address" {
-			nodeAddress, err = hex.DecodeString(value.(string))
-			cfg.SetNodeAddress(primitives.NodeAddress(nodeAddress))
-			continue
-		}
-
-		if key == "node-private-key" {
-			var privateKey primitives.EcdsaSecp256K1PrivateKey
-			privateKey, err = hex.DecodeString(value.(string))
-			cfg.SetNodePrivateKey(primitives.EcdsaSecp256K1PrivateKey(privateKey))
-			continue
-		}
-
-		if key == "ethereum-finality-blocks-component" {
-			var finalityBlocksComponent uint32
-			finalityBlocksComponent, err = parseUint32(value.(float64))
-			cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, finalityBlocksComponent)
-			continue
-		}
-
-		if key == "gossip-port" {
-			var gossipPort uint32
-			gossipPort, err = parseUint32(value.(float64))
-			cfg.SetUint32(GOSSIP_LISTEN_PORT, gossipPort)
-			continue
-		}
-
-		if key == "genesis-validator-addresses" {
-			var nodes map[string]ValidatorNode
-			nodes, err = parseNodes(value)
-			cfg.SetGenesisValidatorNodes(nodes)
-			continue
-		}
-
-		if key == "federation-nodes" || key == "topology-nodes" { // note: "federation-nodes" is deprecated but kept for backwards-compatibility
-			var peers topologyProviderAdapter.TransportPeers
-			peers, err = parsePeers(value)
-			cfg.SetGossipPeers(peers)
-			continue
-		}
-
-		if stringValue != "" {
-			cfg.SetString(convertKeyName(key), stringValue)
-		}
-
-		if err != nil {
-			return fmt.Errorf("could not decode value for config key %s: %s", key, err)
 		}
 	}
 

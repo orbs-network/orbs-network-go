@@ -93,14 +93,56 @@ func TestSetActiveConsensusAlgo(t *testing.T) {
 	require.EqualValues(t, 999, cfg.ActiveConsensusAlgo())
 }
 
+func TestParsesZeroValuesWhenDefultIsNot(t *testing.T) {
+	defaultConfig, err := newEmptyFileConfig(`{
+		"profiling": true,
+		"block-sync-collect-response-timeout": "1s",
+		"block-sync-num-blocks-in-batch": 1,
+		"ethereum-endpoint": "1"
+	}`)
+
+	require.NoError(t, err)
+	require.EqualValues(t, true, defaultConfig.Profiling())
+	require.EqualValues(t, 1*time.Second, defaultConfig.BlockSyncCollectResponseTimeout())
+	require.EqualValues(t, uint32(1), defaultConfig.BlockSyncNumBlocksInBatch())
+	require.EqualValues(t, "1", defaultConfig.EthereumEndpoint())
+
+	cfg, err := newFileConfig(defaultConfig, `{
+		"profiling": false,
+		"block-sync-collect-response-timeout": "0s",
+		"block-sync-num-blocks-in-batch": 0,
+		"ethereum-endpoint": ""
+	}`)
+
+	require.NotNil(t, cfg)
+	require.NoError(t, err)
+
+	require.EqualValues(t, false, cfg.Profiling())
+	require.EqualValues(t, 0, cfg.BlockSyncCollectResponseTimeout())
+	require.EqualValues(t, uint32(0), cfg.BlockSyncNumBlocksInBatch())
+	require.EqualValues(t, "", cfg.EthereumEndpoint())
+}
+
+func TestErrorWhenInvalidAddress(t *testing.T) {
+	cfg, err := newEmptyFileConfig(`{
+		"genesis-validator-addresses": [
+		"a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+		"gggggggggggggggggggggggggggggggggggggggg"
+		]
+	}`)
+
+	require.Nil(t, cfg)
+	require.Error(t, err)
+}
+
 func TestSetGenesisValidatorNodes(t *testing.T) {
 	cfg, err := newEmptyFileConfig(`{
-	"genesis-validator-addresses": [
-    "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
-    "d27e2e7398e2582f63d0800330010b3e58952ff6",
-    "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9"
-	]
-}`)
+		"genesis-validator-addresses": [
+		"a328846cd5b4979d68a8c58a9bdfeee657b34de7",
+		"d27e2e7398e2582f63d0800330010b3e58952ff6",
+		"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9"
+		]
+	}`)
 
 	require.NotNil(t, cfg)
 	require.NoError(t, err)
