@@ -28,6 +28,7 @@ func TestCommitReputation_TransactionToElected(t *testing.T) {
 
 	NewHarness().
 		WithNumNodes(5).
+		WithLogFilters(log.DiscardAll()).
 		WithConsensusAlgos(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			onGoingTamperer := network.TransportTamperer().Fail(func(data *adapter.TransportData) bool {
@@ -89,7 +90,7 @@ func TestCommitReputation_LeavingCommitteeClearsMisses(t *testing.T) {
 				argsArray, err := protocol.PackedOutputArgumentsToNatives(contract.GetMisses(ctx, 0, nodeTamperedIndex).QueryResult().RawOutputArgumentArrayWithHeader())
 				require.NoError(t, err)
 				miss := argsArray[0].(uint32)
-				if miss == 1 {
+				if miss > 0 {
 					break
 				}
 			}
