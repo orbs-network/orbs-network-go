@@ -69,10 +69,13 @@ func TestContract_SelfGettingIn(t *testing.T) {
 			t.UpdateTopology(ctx, network.topology)
 		}
 
+		time.Sleep(500 * time.Millisecond)
+
 		network.listeners[0].ExpectNotReceive()
 		network.listeners[1].ExpectReceive(data.Payloads)
 		network.listeners[2].ExpectReceive(data.Payloads)
 		network.listeners[3].ExpectReceive(data.Payloads)
+
 		require.True(t, network.eventuallySendAndVerify(ctx, network.transports[0], data))
 
 	})
