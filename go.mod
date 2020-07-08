@@ -27,7 +27,7 @@ require (
 	github.com/orbs-network/crypto-lib-go v1.2.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
-	github.com/orbs-network/healthcheck v1.1.0 // indirect
+	github.com/orbs-network/healthcheck v1.1.0
 	github.com/orbs-network/lean-helix-go v0.3.1
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.15.0

@@ -105,6 +105,17 @@ func (h *singleLhcNodeHarness) start(parent *with.ConcurrencyHarness, ctx contex
 	return h
 }
 
+// NOTICE in the test harness these values always exist so no checking of nil return values
+func (h *singleLhcNodeHarness) getMetrics() *metrics {
+	return &metrics{
+		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.Histogram),
+		timeSinceLastElectionMillis: h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis").(*metric.Histogram),
+		currentElectionCount:        h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentElection.Number").(*metric.Gauge),
+		currentLeaderMemberId:       h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Number").(*metric.Text),
+		lastCommittedTime:           h.metricRegistry.Get("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").(*metric.Gauge),
+	}
+}
+
 func (h *singleLhcNodeHarness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) []primitives.NodeAddress {
 	res := []primitives.NodeAddress{
 		testKeys.EcdsaSecp256K1KeyPairForTests(nodeIndex).NodeAddress(),

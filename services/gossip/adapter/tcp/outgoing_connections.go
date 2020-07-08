@@ -81,9 +81,7 @@ func (c *outgoingConnections) updateTopology(bgCtx context.Context, newTopology 
 	defer c.Unlock()
 	// If not in topology disconnect from outer world
 	if _, isInNewTopology := newTopology[c.nodeAddress.KeyForMap()]; !isInNewTopology {
-		if len(c.peerTopology) != 0 {
-			c.disconnectAllUnderLock(bgCtx, c.peerTopology)
-		}
+		c.disconnectAllUnderLock(bgCtx, c.peerTopology)
 		return
 	}
 
