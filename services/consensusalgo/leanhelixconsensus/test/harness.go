@@ -127,6 +127,13 @@ func (h *singleLhcNodeHarness) getCommitteeWithNodeIndexAsLeader(nodeIndex int) 
 	}
 	return res
 }
+func (h *singleLhcNodeHarness) getCommitteeWeights() []primitives.Weight {
+	var res []primitives.Weight
+	for i := 0; i < NETWORK_SIZE; i++ {
+		res = append(res, 1)
+	}
+	return res
+}
 
 func (h *singleLhcNodeHarness) dontBeFirstInCommitee() {
 	h.expectConsensusContextRequestOrderingCommittee((h.nodeIndex() + 1) % NETWORK_SIZE)
@@ -139,6 +146,7 @@ func (h *singleLhcNodeHarness) beFirstInCommittee() {
 func (h *singleLhcNodeHarness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
+		Weights: h.getCommitteeWeights(),
 	}, nil).Times(1)
 }
 

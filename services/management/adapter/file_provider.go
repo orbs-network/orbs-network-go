@@ -223,12 +223,14 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 	var committeeTerms []management.CommitteeTerm
 	for _, event := range committeeEvents {
 		var committee []primitives.NodeAddress
+		var weights   []primitives.Weight
 
-		for _, nodeAddress := range event.Committee {
-			if address, err := hex.DecodeString(nodeAddress.OrbsAddress); err != nil {
+		for _, member := range event.Committee {
+			if address, err := hex.DecodeString(member.OrbsAddress); err != nil {
 				return nil, errors.Wrapf(err, "cannot decode committee node address hex %s", address)
 			} else {
 				committee = append(committee, primitives.NodeAddress(address))
+				weights = append(weights, primitives.Weight(member.Weight))
 			}
 		}
 
@@ -236,7 +238,7 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 			return bytes.Compare(committee[i], committee[j]) > 0
 		})
 
-		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Members: committee})
+		committeeTerms = append(committeeTerms, management.CommitteeTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), Members: committee, Weights: weights})
 	}
 
 	return committeeTerms, nil

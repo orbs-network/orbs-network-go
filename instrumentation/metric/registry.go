@@ -74,14 +74,14 @@ type inMemoryRegistry struct {
 	vcid        primitives.VirtualChainId
 	nodeAddress primitives.NodeAddress
 	mu          struct {
-		sync.Mutex
+		sync.RWMutex
 		metrics map[string]metric
 	}
 }
 
 func (r *inMemoryRegistry) Get(metricName string) metric {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	for _, metric := range r.mu.metrics {
 		if metric.Name() == metricName {
 			return metric
@@ -142,8 +142,8 @@ func (r *inMemoryRegistry) NewText(name string, defaultValue ...string) *Text {
 }
 
 func (r *inMemoryRegistry) String() string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	var s string
 	for _, m := range r.mu.metrics {
@@ -154,8 +154,8 @@ func (r *inMemoryRegistry) String() string {
 }
 
 func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	all := make(map[string]exportedMetric)
 	for _, m := range r.mu.metrics {
