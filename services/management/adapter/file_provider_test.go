@@ -31,6 +31,58 @@ func TestManagementFileProvider_GeneratePath(t *testing.T) {
 	})
 }
 
+func TestManagementFileProvider_NoMatchVc(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		with.Context(func(ctx context.Context) {
+			cfg := newConfig(42, "")
+			fileProvider := NewFileProvider(cfg, parent.Logger)
+			_, err := fileProvider.parseData([]byte(`{
+	"CurrentRefTime": 3, 
+	"PageStartRefTime": 0, 
+	"PageEndRefTime": 2, 
+	"VirtualChains": { 
+		"44": { 
+		}
+	}
+}`))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "could not find current vc in data")
+		})
+	})
+}
+
+func TestManagementFileProvider_BadCurrentInPage(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		with.Context(func(ctx context.Context) {
+			cfg := newConfig(42, "")
+			fileProvider := NewFileProvider(cfg, parent.Logger)
+			_, err := fileProvider.parseData([]byte(`{
+	"CurrentRefTime": 3, 
+	"PageStartRefTime": 0, 
+	"PageEndRefTime": 2, 
+	"VirtualChains": { 
+		"42": { 
+		}
+	}
+}`))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "cannot be smaller than PageStartRefTime")
+
+			_, err = fileProvider.parseData([]byte(`{
+	"CurrentRefTime": 1, 
+	"PageStartRefTime": 2, 
+	"PageEndRefTime": 4, 
+	"VirtualChains": { 
+		"42": { 
+		}
+	}
+}`))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "cannot be smaller than PageStartRefTime")
+		})
+	})
+}
+
 func TestManagementFileProvider_ReadFile(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
@@ -53,7 +105,7 @@ func TestManagementFileProvider_ReadUrl(t *testing.T) {
 	})
 }
 
-func Test_parseTopology(t *testing.T) {
+func TestManagementFileProvider_parseTopology(t *testing.T) {
 	_, encodingErr := parseTopology([]topologyNode{{OrbsAddress: "ZZZZZ"}})
 	require.EqualError(t, encodingErr, "cannot translate topology node address from hex ZZZZZ: encoding/hex: invalid byte: U+005A 'Z'")
 
@@ -62,6 +114,16 @@ func Test_parseTopology(t *testing.T) {
 
 	_, emptyErr := parseTopology([]topologyNode{{OrbsAddress: "ffff", Ip: "", Port: 2048}})
 	require.EqualError(t, emptyErr, "empty ip address for node ffff")
+}
+
+func TestManagementFileProvider_parseCommittee(t *testing.T) {
+	_, encodingErr := parseCommittees([]committeeEvent{ {RefTime: 4, Committee: []committee{{OrbsAddress: "ZZZZZ"}} }} )
+	require.Error(t, encodingErr)
+	require.Contains(t, encodingErr.Error(), "cannot decode committee node address hex ")
+
+	_, weightErr := parseCommittees([]committeeEvent{ {RefTime: 4, Committee: []committee{{OrbsAddress: "ffff"}} }} )
+	require.Error(t, weightErr)
+	require.Contains(t, weightErr.Error(), "Weight of node")
 }
 
 func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp management.Provider) {
