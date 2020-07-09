@@ -57,7 +57,8 @@ func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.Timest
 		}
 	}
 
-	managementData, parseErr := mp.parseData(contents)
+	isHistoric := referenceTime != 0
+	managementData, parseErr := mp.parseData(contents, isHistoric)
 	if parseErr != nil {
 		mp.logger.Error("Provider file parsing error", log.Error(parseErr))
 		return nil, parseErr
@@ -160,7 +161,7 @@ type mgmt struct {
 	VirtualChains    map[string]vc
 }
 
-func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainManagementData, error) {
+func (mp *FileProvider) parseData(contents []byte, isHistoric bool) (*management.VirtualChainManagementData, error) {
 	var data mgmt
 	if err := json.Unmarshal(contents, &data); err != nil {
 		return nil, errors.Wrapf(err, "could not unmarshal vcs data")
@@ -173,9 +174,17 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	}
 
 	if data.CurrentRefTime != 0 {
-		if data.CurrentRefTime < data.PageStartRefTime || data.CurrentRefTime > data.PageEndRefTime {
-			return nil, errors.Errorf("CurrentRefTime %d cannot be smaller than PageStartRefTime %d or bigger than PageEndRefTime %d",
-				data.CurrentRefTime, data.PageStartRefTime, data.PageEndRefTime)
+		if isHistoric {
+			if data.CurrentRefTime < data.PageEndRefTime || data.PageEndRefTime < data.PageStartRefTime {
+				return nil, errors.Errorf("historic data : CurrentRefTime (%d) should be >= PageEndRefTime (%d) should be >= PageStartRefTime (%d)",
+					data.CurrentRefTime, data.PageEndRefTime, data.PageStartRefTime)
+			}
+		} else {
+			if data.CurrentRefTime != data.PageEndRefTime || data.PageEndRefTime < data.PageStartRefTime {
+				return nil, errors.Errorf("data: CurrentRefTime (%d) should be equal to PageEndRefTime (%d) and it should be >= PageStartRefTime (%d)",
+					data.CurrentRefTime, data.PageEndRefTime, data.PageStartRefTime)
+			}
+
 		}
 	}
 

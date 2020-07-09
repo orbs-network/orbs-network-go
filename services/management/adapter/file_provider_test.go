@@ -44,7 +44,7 @@ func TestManagementFileProvider_NoMatchVc(t *testing.T) {
 		"44": { 
 		}
 	}
-}`))
+}`), false)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "could not find current vc in data")
 		})
@@ -64,21 +64,45 @@ func TestManagementFileProvider_BadCurrentInPage(t *testing.T) {
 		"42": { 
 		}
 	}
-}`))
+}`), false)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "cannot be smaller than PageStartRefTime")
+			require.Contains(t, err.Error(), "data: CurrentRefTime (3) ")
 
 			_, err = fileProvider.parseData([]byte(`{
-	"CurrentRefTime": 1, 
-	"PageStartRefTime": 2, 
-	"PageEndRefTime": 4, 
+	"CurrentRefTime": 2, 
+	"PageStartRefTime": 3, 
+	"PageEndRefTime": 2, 
 	"VirtualChains": { 
 		"42": { 
 		}
 	}
-}`))
+}`), false)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "cannot be smaller than PageStartRefTime")
+			require.Contains(t, err.Error(), "data: CurrentRefTime (2) ")
+
+			_, err = fileProvider.parseData([]byte(`{
+	"CurrentRefTime": 4, 
+	"PageStartRefTime": 2, 
+	"PageEndRefTime": 5, 
+	"VirtualChains": { 
+		"42": { 
+		}
+	}
+}`), true)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "historic data : CurrentRefTime (4) ")
+
+			_, err = fileProvider.parseData([]byte(`{
+	"CurrentRefTime": 4, 
+	"PageStartRefTime": 2, 
+	"PageEndRefTime": 1, 
+	"VirtualChains": { 
+		"42": { 
+		}
+	}
+}`), true)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "historic data : CurrentRefTime (4) ")
 		})
 	})
 }
