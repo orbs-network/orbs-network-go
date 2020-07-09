@@ -105,6 +105,7 @@ func (h *singleLhcNodeHarness) start(parent *with.ConcurrencyHarness, ctx contex
 	return h
 }
 
+// NOTICE in the test harness these values always exist so no checking of nil return values
 func (h *singleLhcNodeHarness) getMetrics() *metrics {
 	return &metrics{
 		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.Histogram),

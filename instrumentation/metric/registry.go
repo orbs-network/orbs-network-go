@@ -65,7 +65,9 @@ func (m *namedMetric) Name() string {
 }
 
 func NewRegistry() *inMemoryRegistry {
-	return &inMemoryRegistry{}
+	r := &inMemoryRegistry{}
+	r.mu.metrics = make(map[string]metric)
+	return r
 }
 
 type inMemoryRegistry struct {
@@ -73,7 +75,7 @@ type inMemoryRegistry struct {
 	nodeAddress primitives.NodeAddress
 	mu          struct {
 		sync.Mutex
-		metrics []metric
+		metrics map[string]metric
 	}
 }
 
@@ -85,39 +87,28 @@ func (r *inMemoryRegistry) Get(metricName string) metric {
 			return metric
 		}
 	}
-	panic(errors.Errorf("a metric with the name of %s is not registered", metricName))
+	return nil
 }
 
 func (r *inMemoryRegistry) Remove(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s := r.mu.metrics
-	for i, existing := range s {
-		if existing.Name() == m.Name() {
-			lastMetric := len(s) - 1
-			s[i] = s[lastMetric]
-			s[lastMetric] = nil // so that it gets garbage-collected, see here https://stackoverflow.com/questions/28832016/re-slicing-and-garbage-collection
-			// We do not need to put s[i] at the end, as it will be discarded anyway
-			r.mu.metrics = s[:lastMetric]
-			return
-		}
+	key := fmt.Sprintf("%p", m)
+	if _, isMetricInMap := r.mu.metrics[key]; isMetricInMap {
+		delete(r.mu.metrics, key)
 	}
-
-	err := errors.Errorf("a metric with name %s cannot be removed as it is not registered", m.Name())
-	panic(err)
 }
 
 func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	for _, existing := range r.mu.metrics {
-		if existing.Name() == m.Name() {
-			err := errors.Errorf("a metric with name %s is already registered", m.Name())
-			panic(err)
-		}
+	key := fmt.Sprintf("%p", m)
+	if _, isMetricInMap := r.mu.metrics[key]; isMetricInMap {
+		err := errors.Errorf("a metric with name %s is already registered", m.Name())
+		panic(err)
 	}
 
-	r.mu.metrics = append(r.mu.metrics, m)
+	r.mu.metrics[key] = m
 }
 
 func (r *inMemoryRegistry) NewRate(name string) *Rate {

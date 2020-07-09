@@ -36,6 +36,52 @@ func TestContract_SendToList(t *testing.T) {
 	t.Run("MemoryTransport", sendToListTest(aMemoryTransport))
 }
 
+func TestContract_SelfGettingIn(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
+		network := aDirectTransport(ctx, harness)
+		defer network.shutdownAll(ctx)
+
+		topologyWithoutFirst := make(adapter.TransportPeers)
+		for i := 1; i < len(network.nodeAddresses); i++ {
+			topologyWithoutFirst[network.nodeAddresses[i].KeyForMap()] = network.topology[network.nodeAddresses[i].KeyForMap()]
+		}
+
+		// update which should disconnect node0 from topology
+		for _, t := range network.transports {
+			t.UpdateTopology(ctx, topologyWithoutFirst)
+		}
+
+		data := &adapter.TransportData{
+			SenderNodeAddress: network.nodeAddresses[0],
+			RecipientMode:     gossipmessages.RECIPIENT_LIST_MODE_BROADCAST,
+			Payloads:          [][]byte{{0x71, 0x72, 0x73}},
+		}
+
+		network.listeners[0].ExpectNotReceive()
+		network.listeners[1].ExpectNotReceive()
+		network.listeners[2].ExpectNotReceive()
+		network.listeners[3].ExpectNotReceive()
+
+		require.True(t, network.eventuallySendAndVerify(ctx, network.transports[0], data))
+
+		// reconnect
+		for _, t := range network.transports {
+			t.UpdateTopology(ctx, network.topology)
+		}
+
+		time.Sleep(500 * time.Millisecond)
+
+		network.listeners[0].ExpectNotReceive()
+		network.listeners[1].ExpectReceive(data.Payloads)
+		network.listeners[2].ExpectReceive(data.Payloads)
+		network.listeners[3].ExpectReceive(data.Payloads)
+
+		require.True(t, network.eventuallySendAndVerify(ctx, network.transports[0], data))
+
+	})
+}
+
+
 func TestContract_SendToAllButList(t *testing.T) {
 	t.Skipf("implement") // TODO(v1)
 }
@@ -89,6 +135,7 @@ type transportContractContext struct {
 	nodeAddresses []primitives.NodeAddress
 	transports    []adapter.Transport
 	listeners     []*testkit.MockTransportListener
+	topology      adapter.TransportPeers
 }
 
 func aMemoryTransport(ctx context.Context, harness *with.ConcurrencyHarness) *transportContractContext {
@@ -155,13 +202,13 @@ func aDirectTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 		testkit.ListenTo(transports[3], res.nodeAddresses[3]),
 	}
 
-	peers := make(adapter.TransportPeers)
+	res.topology = make(adapter.TransportPeers)
 	for i, transport := range transports {
-		peers[res.nodeAddresses[i].KeyForMap()] = adapter.NewGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
+		res.topology[res.nodeAddresses[i].KeyForMap()] = adapter.NewGossipPeer(transport.GetServerPort(), "127.0.0.1", hex.EncodeToString(res.nodeAddresses[i]))
 	}
 
 	for _, t1 := range transports {
-		t1.UpdateTopology(ctx, peers)
+		t1.UpdateTopology(ctx, res.topology)
 	}
 
 	for _, t := range transports {

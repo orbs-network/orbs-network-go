@@ -76,12 +76,27 @@ func (c *outgoingConnections) WaitUntilShutdown(shutdownContext context.Context)
 	}
 }
 
-// note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
-// the context is done
-func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddress string, peer adapter.TransportPeer) {
+func (c *outgoingConnections) updateTopology(bgCtx context.Context, newTopology adapter.TransportPeers) {
 	c.Lock()
 	defer c.Unlock()
+	// If not in topology disconnect from outer world
+	if _, isInNewTopology := newTopology[c.nodeAddress.KeyForMap()]; !isInNewTopology {
+		c.disconnectAllUnderLock(bgCtx, c.peerTopology)
+		return
+	}
 
+	peersToRemove, peersToAdd := adapter.PeerDiff(c.peerTopology, newTopology)
+
+	c.disconnectAllUnderLock(bgCtx, peersToRemove)
+
+	for peerNodeAddress, peer := range peersToAdd {
+		c.connectForeverUnderLock(bgCtx, peerNodeAddress, peer)
+	}
+}
+
+// note that bgCtx MUST be a long-running background context - if it's a short lived context, the new connection will die as soon as
+// the context is done
+func (c *outgoingConnections) connectForeverUnderLock(bgCtx context.Context, peerNodeAddress string, peer adapter.TransportPeer) {
 	if c.nodeAddress.KeyForMap() != peerNodeAddress {
 		c.peerTopology[peerNodeAddress] = peer
 		client := newOutgoingConnection(peer, c.logger, c.metricRegistry, c.metrics, c.config)
@@ -90,21 +105,7 @@ func (c *outgoingConnections) connectForever(bgCtx context.Context, peerNodeAddr
 	}
 }
 
-func (c *outgoingConnections) updateTopology(bgCtx context.Context, newPeers adapter.TransportPeers) {
-	c.RLock()
-	peersToRemove, peersToAdd := adapter.PeerDiff(c.peerTopology, newPeers)
-	c.RUnlock()
-
-	c.disconnectAll(bgCtx, peersToRemove)
-
-	for peerNodeAddress, peer := range peersToAdd {
-		c.connectForever(bgCtx, peerNodeAddress, peer)
-	}
-}
-
-func (c *outgoingConnections) disconnectAll(ctx context.Context, peersToDisconnect adapter.TransportPeers) {
-	c.Lock()
-	defer c.Unlock()
+func (c *outgoingConnections) disconnectAllUnderLock(ctx context.Context, peersToDisconnect adapter.TransportPeers) {
 	for key, peer := range peersToDisconnect {
 		delete(c.peerTopology, key)
 		if client, found := c.activeConnections[key]; found {
