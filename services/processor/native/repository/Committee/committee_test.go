@@ -115,13 +115,13 @@ func TestOrbsCommitteeContract_orderList_OneRepIsWorst(t *testing.T) {
 		}
 
 		// assert
-		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 64) / ((committeeSize-1) * 64 + 1))
-		requireCountToBeInRange(t, foundBadAddressInFirstPosition, max / ((committeeSize-1) * 64 + 1))
+		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 16) / ((committeeSize-1) * 16 + 1))
+		requireCountToBeInRange(t, foundBadAddressInFirstPosition, max / ((committeeSize-1) * 16 + 1))
 	})
 }
 
 func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
-	max := 10000
+	max := 40000
 	committeeSize := 20
 	addresses := makeNodeAddressArray(committeeSize)
 	badAddress := addresses[0]
@@ -151,8 +151,8 @@ func TestOrbsCommitteeContract_orderList_QuarterAreALittleBad(t *testing.T) {
 		}
 
 		// assert
-		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 64) / ((committeeSize-5) * 64 + 5 * 16))
-		requireCountToBeInRange(t, foundBadAddressInFirstPosition, (max * 16) / ((committeeSize-5) * 64 + 5 * 16))
+		requireCountToBeInRange(t, foundGoodAddressInFirstPosition, (max * 16) / ((committeeSize-5) * 16 + 5 * 4))
+		requireCountToBeInRange(t, foundBadAddressInFirstPosition, (max * 4) / ((committeeSize-5) * 16 + 5 * 4))
 	})
 }
 

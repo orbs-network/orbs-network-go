@@ -40,3 +40,14 @@ func (c *contractClient) GetAllCommitteeMisses(ctx context.Context, nodeIndex in
 
 	return c.API.RunQuery(ctx, tx, nodeIndex)
 }
+
+func (c *contractClient) GetMisses(ctx context.Context, nodeIndex int, addressIndex int) *client.RunQueryResponse {
+	tx := builders.Query().
+		WithVirtualChainId(c.API.GetVirtualChainId()).
+		WithMethod("_Committee", "getMisses").
+		WithArgs([]byte(keys.NodeAddressesForTests()[addressIndex])).
+		WithEd25519Signer(keys.Ed25519KeyPairForTests(0)).
+		Builder()
+
+	return c.API.RunQuery(ctx, tx, nodeIndex)
+}

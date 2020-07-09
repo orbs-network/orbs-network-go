@@ -29,6 +29,7 @@ func updateMisses() {
 		_clearMissAddEmitEvent(blockProposer)
 	} else {
 		_updateMissesByCommitteeOrder(ordered, blockProposer)
+		checkAndClearLeavingMembers()
 	}
 }
 
@@ -66,4 +67,22 @@ func _clearMissAddEmitEvent(address []byte) {
 func _addMissAddEmitEvent(address []byte) {
 	_addMiss(address)
 	events.EmitEvent(CommitteeMemberMissed, address)
+}
+
+func CommitteeMemberLeavesNextBlock(address []byte) {}
+func checkAndClearLeavingMembers() {
+	currentCommittee := env.GetBlockCommittee()
+	nextCommittee := env.GetNextBlockCommittee()
+
+	existenceMap := make(map[string]bool, len(nextCommittee))
+	for _, memberInNextCommittee := range nextCommittee {
+		existenceMap[string(memberInNextCommittee)] = true
+	}
+
+	for _, memberInCurrentCommittee := range currentCommittee {
+		if _, isMemberOfNextCommittee := existenceMap[string(memberInCurrentCommittee)]; !isMemberOfNextCommittee {
+			_clearMiss(memberInCurrentCommittee)
+			events.EmitEvent(CommitteeMemberLeavesNextBlock, memberInCurrentCommittee)
+		}
+	}
 }

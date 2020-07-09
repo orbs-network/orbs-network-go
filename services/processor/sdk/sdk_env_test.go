@@ -45,6 +45,20 @@ func TestSdkEnv_GetVirtualChainId(t *testing.T) {
 	require.EqualValues(t, vcid, 42, "virtual chain id should be returned")
 }
 
+func TestSdkEnv_GetBlockCommittee(t *testing.T) {
+	s := createEnvSdk()
+
+	addrs := s.SdkEnvGetBlockCommittee(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
+	require.EqualValues(t, [][]byte{{0x01, 0x02}, {0x03, 0x05}}, addrs, "block committee should be returned")
+}
+
+func TestSdkEnv_GetNextBlockCommittee(t *testing.T) {
+	s := createEnvSdk()
+
+	addrs := s.SdkEnvGetNextBlockCommittee(EXAMPLE_CONTEXT, sdkContext.PERMISSION_SCOPE_SERVICE)
+	require.EqualValues(t, [][]byte{{0x01, 0x02}, {0x04, 0x05}}, addrs, "next block committee should be returned")
+}
+
 func createEnvSdk() *service {
 	return &service{sdkHandler: &contractSdkEnvCallHandlerStub{}}
 }
@@ -63,6 +77,10 @@ func (c *contractSdkEnvCallHandlerStub) HandleSdkCall(ctx context.Context, input
 		envValue = uint64(12)
 	case "getBlockProposerAddress":
 		envValue = []byte{0x01, 0x02}
+	case "getBlockCommittee":
+		envValue = [][]byte{{0x01, 0x02}, {0x03, 0x05}}
+	case "getNextBlockCommittee":
+		envValue =[][]byte{{0x01, 0x02}, {0x04, 0x05}}
 	default:
 		return nil, errors.New("unknown method")
 	}

@@ -30,8 +30,8 @@ require (
 	github.com/orbs-network/healthcheck v1.1.0
 	github.com/orbs-network/lean-helix-go v0.3.1
 	github.com/orbs-network/membuffers v0.4.0
-	github.com/orbs-network/orbs-client-sdk-go v0.15.0
-	github.com/orbs-network/orbs-contract-sdk v1.5.0
+	github.com/orbs-network/orbs-client-sdk-go v0.18.0
+	github.com/orbs-network/orbs-contract-sdk v1.8.0
 	github.com/orbs-network/orbs-spec v0.0.0-20200617110800-c4c556472ce9
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect

@@ -24,6 +24,7 @@ func TestOrbsCommitteeContract_updateMisses_HappyFlow(t *testing.T) {
 		m.MockEnvBlockHeight(blockHeight)
 		m.MockCallContractAddress(TRIGGER_CONTRACT, callerAddress)
 		m.MockEnvGetBlockCommittee(addrs)
+		m.MockEnvGetNextBlockCommittee(addrs) // no one leaves
 		m.MockEnvBlockProposerAddress(addrs[0])
 		m.MockEmitEvent(CommitteeMemberClosedBlock, addrs[0])
 
@@ -170,6 +171,82 @@ func TestOrbsCommitteeContract_isMemberOfOrderedCommittee_notFound(t *testing.T)
 		// run & assert
 		for i := 2; i < 256; i++ {
 			require.False(t, _isMemberOfOrderedCommittee(addrs, makeNodeAddress(i)))
+		}
+	})
+}
+
+func TestOrbsCommitteeContract_checkAndCrear_NoOneLeftNothingDone(t *testing.T) {
+	committee := makeNodeAddressArray(3)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		blockHeight := 155
+
+		// prepare
+		m.MockEnvBlockHeight(blockHeight)
+		m.MockEnvGetBlockCommittee(committee)
+		m.MockEnvGetNextBlockCommittee(committee)
+		for _, addr := range committee {
+			_addMiss(addr)
+		}
+
+		// run
+		checkAndClearLeavingMembers()
+
+		// assert
+		for _, addr := range committee {
+			require.EqualValues(t, 1, getMisses(addr))
+		}
+	})
+}
+
+func TestOrbsCommitteeContract_checkAndCrear_OneLeaves(t *testing.T) {
+	committee := makeNodeAddressArray(3)
+	nextCommittee := makeNodeAddressArray(2)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		// prepare
+		m.MockEnvGetBlockCommittee(committee)
+		m.MockEnvGetNextBlockCommittee(nextCommittee)
+		m.MockEmitEvent(CommitteeMemberLeavesNextBlock, committee[2])
+		for _, addr := range committee {
+			_addMiss(addr)
+		}
+
+		// run
+		checkAndClearLeavingMembers()
+
+		// assert
+		require.EqualValues(t, 0, getMisses(committee[2]))
+		require.EqualValues(t, 1, getMisses(committee[1]))
+		require.EqualValues(t, 1, getMisses(committee[0]))
+	})
+}
+
+func TestOrbsCommitteeContract_checkAndCrear_OneJoinsNothingDone(t *testing.T) {
+	committee := makeNodeAddressArray(3)
+	nextCommittee := makeNodeAddressArray(4)
+
+	InServiceScope(nil, nil, func(m Mockery) {
+		_init()
+		blockHeight := 155
+
+		// prepare
+		m.MockEnvBlockHeight(blockHeight)
+		m.MockEnvGetBlockCommittee(committee)
+		m.MockEnvGetNextBlockCommittee(nextCommittee)
+		m.MockEnvGetNextBlockCommittee(committee)
+		for _, addr := range nextCommittee { // fill miss for the new guy to show it was not affected
+			_addMiss(addr)
+		}
+
+		// run
+		checkAndClearLeavingMembers()
+
+		// assert
+		for _, addr := range nextCommittee {
+			require.EqualValues(t, 1, getMisses(addr))
 		}
 	})
 }
