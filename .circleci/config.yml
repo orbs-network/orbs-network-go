@@ -163,7 +163,7 @@ jobs:
       - store_artifacts:
           path: _out
 
-# TODO Ethereum disconnect
+# TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
 #  ganache_related_tests:
 #    machine:
 #      image: ubuntu-1604:201903-01
@@ -202,7 +202,7 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-# TODO Ethereum disconnect
+# TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
 #      - ganache_related_tests:
 #          filters:
 #            tags:
