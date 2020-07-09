@@ -47,7 +47,7 @@ func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 	}
 
 	if !silent {
-		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewHumanReadableFormatter()))
+		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewJsonFormatter()))
 	}
 
 	if cfg.LoggerHttpEndpoint() != "" {
