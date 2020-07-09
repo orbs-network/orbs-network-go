@@ -163,19 +163,20 @@ jobs:
       - store_artifacts:
           path: _out
 
-  ganache_related_tests:
-    machine:
-      image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run: ./.circleci/install-go.sh
-      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
-      - run: ./docker/test/ganache-related-test.sh
-      - store_artifacts:
-          path: _out
-          destination: test-output
-      - store_test_results:
-          path: _reports
+# TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
+#  ganache_related_tests:
+#    machine:
+#      image: ubuntu-1604:201903-01
+#    steps:
+#      - checkout
+#      - run: ./.circleci/install-go.sh
+#      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
+#      - run: ./docker/test/ganache-related-test.sh
+#      - store_artifacts:
+#          path: _out
+#          destination: test-output
+#      - store_test_results:
+#          path: _reports
 
 workflows:
   version: 2
@@ -201,10 +202,11 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - ganache_related_tests:
-          filters:
-            tags:
-              only: /^v.*/
+# TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
+#      - ganache_related_tests:
+#          filters:
+#            tags:
+#              only: /^v.*/
       - node_docker_build:
           filters:
             tags:
