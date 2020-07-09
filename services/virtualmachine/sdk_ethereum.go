@@ -85,6 +85,7 @@ func (s *service) handleSdkEthereumCall(ctx context.Context, executionContext *e
 // inputArg4: ethereumABIPackedInputArguments ([]byte)
 // outputArg0: ethereumABIPackedOutput ([]byte)
 func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 5 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeUint64Value() || !args[3].IsTypeStringValue() || !args[4].IsTypeBytesValue() {
 		return nil, errors.Errorf("invalid SDK ethereum callMethod args: %v", args)
@@ -124,6 +125,7 @@ func (s *service) handleSdkEthereumCallMethod(ctx context.Context, executionCont
 // outputArg1: ethBlockNumber (uint64)
 // outputArg2: ethTxIndex (uint32)
 func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) ([]byte, uint64, uint32, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 4 || !args[0].IsTypeStringValue() || !args[1].IsTypeStringValue() || !args[2].IsTypeStringValue() || !args[3].IsTypeStringValue() {
 		return nil, 0, 0, errors.Errorf("invalid SDK ethereum getTransactionLog args: %v", args)
@@ -158,6 +160,7 @@ func (s *service) handleSdkEthereumGetTransactionLog(ctx context.Context, execut
 
 // outputArg0: ethBlockNumber (uint64)
 func (s *service) handleSdkEthereumGetBlockNumber(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 0 {
 		return 0, errors.Errorf("invalid SDK ethereum getBlockNumber args: %v", args)
@@ -182,6 +185,7 @@ func (s *service) handleSdkEthereumGetBlockNumber(ctx context.Context, execution
 // inputArg0: ethBlockTimestamp (uint64)
 // outputArg0: ethBlockNumber (uint64)
 func (s *service) handleSdkEthereumGetBlockNumberByTime(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 1 || !args[0].IsTypeUint64Value() {
 		return 0, errors.Errorf("invalid SDK ethereum getBlockNumberByTime args: %v", args)
@@ -207,6 +211,7 @@ func (s *service) handleSdkEthereumGetBlockNumberByTime(ctx context.Context, exe
 
 // outputArg0: ethBlockTimestamp (uint64)
 func (s *service) handleSdkEthereumGetBlockTime(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 0 {
 		return 0, errors.Errorf("invalid SDK ethereum getBlockTime args: %v", args)
@@ -231,6 +236,7 @@ func (s *service) handleSdkEthereumGetBlockTime(ctx context.Context, executionCo
 // inputArg0: ethBlockBlockNumber (uint64)
 // outputArg0: ethBlockTimestamp (uint64)
 func (s *service) handleSdkEthereumGetBlockTimeByNumber(ctx context.Context, executionContext *executionContext, args []*protocol.Argument, permissionScope protocol.ExecutionPermissionScope) (uint64, error) {
+	panic("Ethereum SDK Disabled") // TODO Ethereum Disconnect
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 	if len(args) != 1 || !args[0].IsTypeUint64Value() {
 		return 0, errors.Errorf("invalid SDK ethereum getBlockTimeByNumber args: %v", args)

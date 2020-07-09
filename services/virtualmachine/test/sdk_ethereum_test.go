@@ -19,6 +19,7 @@ import (
 )
 
 func TestSdkEthereum_CallMethod(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -46,6 +47,7 @@ func TestSdkEthereum_CallMethod(t *testing.T) {
 }
 
 func TestSdkEthereum_GetTransactionLog(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -75,6 +77,7 @@ func TestSdkEthereum_GetTransactionLog(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockNumber(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -102,6 +105,7 @@ func TestSdkEthereum_GetBlockNumber(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -129,6 +133,7 @@ func TestSdkEthereum_GetBlockNumberByTime(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockTime(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
@@ -156,6 +161,7 @@ func TestSdkEthereum_GetBlockTime(t *testing.T) {
 }
 
 func TestSdkEthereum_GetBlockTimeByNumber(t *testing.T) {
+	t.Skip() // TODO Ethereum Disconnect
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 
