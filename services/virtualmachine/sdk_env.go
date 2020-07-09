@@ -113,9 +113,6 @@ func (s *service) handleSdkEnvGetBlockCommittee(ctx context.Context, executionCo
 	if len(args) != 0 {
 		return [][]byte{}, errors.Errorf("invalid SDK env getBlockCommittee args: %v", args)
 	}
-	//if len(executionContext.transactionOrQuery.Signer().Raw()) != 0 {
-	//	return [][]byte{}, errors.New("invalid call to SDK env getBlockCommittee can only be called by system contract")
-	//}
 
 	res, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: executionContext.lastBlockReferenceTime})
 	if err != nil {
@@ -143,9 +140,10 @@ func (s *service) handleSdkEnvGetNextBlockCommittee(ctx context.Context, executi
 		s.logger.Error("management.GetCommittee failed", log.Error(err))
 		return [][]byte{}, err
 	}
+
 	var committee [][]byte
-	for _, c := range res.Members {
-		committee = append(committee, c)
+	for _, member := range res.Members {
+		committee = append(committee, member)
 	}
 	return committee, err
 }

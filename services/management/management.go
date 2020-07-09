@@ -30,6 +30,7 @@ type TopologyConsumer interface { // consumer that needs to get topology update 
 type CommitteeTerm struct {
 	AsOfReference primitives.TimestampSeconds
 	Members       []primitives.NodeAddress
+	Weights		  []primitives.Weight
 }
 
 type SubscriptionTerm struct {
@@ -217,8 +218,10 @@ func (s *service) GetCommittee(ctx context.Context, input *services.GetCommittee
 		return nil, err
 	}
 
+	committee := getCommittee(input.Reference, data.Committees)
 	return &services.GetCommitteeOutput{
-		Members: getCommittee(input.Reference, data.Committees).Members,
+		Members: committee.Members,
+		Weights: committee.Weights,
 	}, nil
 }
 

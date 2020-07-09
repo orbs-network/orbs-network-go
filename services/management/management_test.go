@@ -39,7 +39,7 @@ func TestManagement_getCurrentReference_NoRef(t *testing.T) {
 	s := &service{
 		data: &VirtualChainManagementData{
 			CurrentReference:   0,
-			Committees:         []CommitteeTerm{{now-5000, nil}, {now+5000, nil}},
+			Committees:         []CommitteeTerm{{now-5000, nil, nil}, {now+5000, nil, nil}},
 			Subscriptions:      []SubscriptionTerm{{now-40000, false}, {now-4000, false}, {now+100, false}},
 			ProtocolVersions:   []ProtocolVersionTerm{{now-200, 5} /*unreachable*/, {now-4500, 5}, {now+1000, 5}},
 		},
@@ -262,8 +262,12 @@ func TestManagement_GetCommitteeWithTwoHistoricCalls(t *testing.T) {
 func (s*service) addCommittee(ref primitives.TimestampSeconds, committee []primitives.NodeAddress) {
 	s.Lock()
 	defer s.Unlock()
+	weights := make([]primitives.Weight, len(committee))
+	for i := range weights {
+		weights[i] = 1
+	}
 	s.data.EndPageReference = ref + 1000
-	s.data.Committees = append (s.data.Committees, CommitteeTerm{ref, committee})
+	s.data.Committees = append (s.data.Committees, CommitteeTerm{ref, committee, weights})
 }
 
 func getCommitteeOrNil(m *service, ctx context.Context, reference primitives.TimestampSeconds) []primitives.NodeAddress {
@@ -278,12 +282,21 @@ type staticProvider struct {
 	sync.RWMutex
 	ref primitives.TimestampSeconds
 	committee []primitives.NodeAddress
+	weights []primitives.Weight
 	historicRef primitives.TimestampSeconds
 	historicCommittee []primitives.NodeAddress
+	historicWeights []primitives.Weight
 }
 
 func newStaticProvider() *staticProvider{
-	return &staticProvider{ ref: ACurrentRef, committee: testKeys.NodeAddressesForTests()[:4], historicRef: AHistoricRef, historicCommittee: testKeys.NodeAddressesForTests()[2:6] }
+	return &staticProvider{
+		ref: ACurrentRef,
+		committee: testKeys.NodeAddressesForTests()[:4],
+		weights: []primitives.Weight{1,2,3,4},
+		historicRef: AHistoricRef,
+		historicCommittee: testKeys.NodeAddressesForTests()[2:6],
+		historicWeights: []primitives.Weight{1,2,3,4},
+	}
 }
 
 func (sp *staticProvider) Get(ctx context.Context, ref primitives.TimestampSeconds) (*VirtualChainManagementData, error) {
@@ -295,7 +308,7 @@ func (sp *staticProvider) Get(ctx context.Context, ref primitives.TimestampSecon
 			StartPageReference: sp.ref - 1000,
 			EndPageReference:   sp.ref + 1000, // simulate the fact that endpage needs to be more current
 			CurrentTopology:    []*services.GossipPeer{},
-			Committees:         []CommitteeTerm{{sp.ref, sp.committee}},
+			Committees:         []CommitteeTerm{{sp.ref, sp.committee, sp.weights}},
 			Subscriptions:      nil,
 			ProtocolVersions:   nil,
 		}, nil
@@ -305,7 +318,7 @@ func (sp *staticProvider) Get(ctx context.Context, ref primitives.TimestampSecon
 			StartPageReference: sp.historicRef - 1000,
 			EndPageReference:   sp.historicRef + 1000, // simulate the fact that endpage needs to be more current
 			CurrentTopology:    []*services.GossipPeer{},
-			Committees:         []CommitteeTerm{{sp.historicRef, sp.historicCommittee}},
+			Committees:         []CommitteeTerm{{sp.historicRef, sp.historicCommittee, sp.historicWeights}},
 			Subscriptions:      nil,
 			ProtocolVersions:   nil,
 		}, nil

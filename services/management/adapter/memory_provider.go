@@ -42,30 +42,32 @@ type MemoryProvider struct {
 }
 
 func NewMemoryProvider(cfg MemoryConfig, logger log.Logger) *MemoryProvider {
-	committee := getCommitteeFromConfig(cfg)
+	committee, weights := getCommitteeFromConfig(cfg)
 	return &MemoryProvider{
 		logger:                logger,
 		currentReference:      primitives.TimestampSeconds(time.Now().Unix()),
 		genesisReference:      primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
 		topology:              getTopologyFromConfig(cfg, logger),
-		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee}},
+		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee, Weights: weights}},
 		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
 }
 
-func getCommitteeFromConfig(config MemoryConfig) []primitives.NodeAddress {
+func getCommitteeFromConfig(config MemoryConfig) ([]primitives.NodeAddress, []primitives.Weight) {
 	allNodes := config.GenesisValidatorNodes()
 	var committee []primitives.NodeAddress
+	var weights   []primitives.Weight
 
 	for _, nodeAddress := range allNodes {
 		committee = append(committee, nodeAddress.NodeAddress())
+		weights = append(weights, 1)
 	}
 
 	sort.SliceStable(committee, func(i, j int) bool {
 		return bytes.Compare(committee[i], committee[j]) > 0
 	})
-	return committee
+	return committee, weights
 }
 
 func getTopologyFromConfig(cfg MemoryConfig, logger log.Logger) []*services.GossipPeer {
@@ -107,8 +109,12 @@ func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, co
 	if mp.committees[len(mp.committees)-1].AsOfReference > reference {
 		return errors.Errorf("new committee cannot have an 'asOf' reference smaller than %d (and not %d)", mp.committees[len(mp.committees)-1].AsOfReference, reference)
 	}
+	weights := make([]primitives.Weight, len(committee))
+	for i := range weights {
+		weights[i] = 1
+	}
 
-	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee})
+	mp.committees = append(mp.committees, management.CommitteeTerm{AsOfReference: reference, Members: committee, Weights: weights})
 	mp.currentReference = reference
 	return nil
 }

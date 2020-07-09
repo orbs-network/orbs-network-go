@@ -8,6 +8,8 @@ package leanhelixconsensus
 
 import (
 	"context"
+	"fmt"
+	lh "github.com/orbs-network/lean-helix-go/services/interfaces"
 	lhprimitives "github.com/orbs-network/lean-helix-go/spec/types/go/primitives"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -36,19 +38,12 @@ func NewMembership(logger log.Logger, memberId primitives.NodeAddress, consensus
 		maxCommitteeSize: maxCommitteeSize,
 	}
 }
+
 func (m *membership) MyMemberId() lhprimitives.MemberId {
 	return lhprimitives.MemberId(m.memberId)
 }
 
-func nodeAddressesToCommaSeparatedString(nodeAddresses []primitives.NodeAddress) string {
-	addrs := make([]string, 0)
-	for _, nodeAddress := range nodeAddresses {
-		addrs = append(addrs, nodeAddress.String())
-	}
-	return strings.Join(addrs, ",")
-}
-
-func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lhprimitives.MemberId, error) {
+func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lhprimitives.BlockHeight, seed uint64, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lh.CommitteeMember, error) {
 	res, err := m.consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
 		CurrentBlockHeight: primitives.BlockHeight(blockHeight),
 		RandomSeed:         seed,
@@ -60,23 +55,15 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 		return nil, err
 	}
 
-	nodeAddresses := toMemberIds(res.NodeAddresses)
-	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
+	committeeMembers := toMembers(res.NodeAddresses, res.Weights)
+	committeeMembersStr := toMembersString(res.NodeAddresses, res.Weights)
 	// random-seed printed as string for logz.io, do not change it back to log.Uint64()
 	m.logger.Info("Received committee members", logfields.BlockHeight(primitives.BlockHeight(blockHeight)), log.Uint32("prev-block-ref-time", uint32(prevBlockReferenceTime)), log.String("random-seed", strconv.FormatUint(seed, 10)), log.String("committee-members", committeeMembersStr))
 
-	return nodeAddresses, nil
+	return committeeMembers, nil
 }
 
-func toMemberIds(nodeAddresses []primitives.NodeAddress) []lhprimitives.MemberId {
-	memberIds := make([]lhprimitives.MemberId, 0, len(nodeAddresses))
-	for _, nodeAddress := range nodeAddresses {
-		memberIds = append(memberIds, lhprimitives.MemberId(nodeAddress))
-	}
-	return memberIds
-}
-
-func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lhprimitives.MemberId, error) {
+func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lh.CommitteeMember, error) {
 	res, err := m.consensusContext.RequestBlockProofOrderingCommittee(ctx, &services.RequestBlockProofCommitteeInput{
 		PrevBlockReferenceTime: primitives.TimestampSeconds(prevBlockReferenceTime),
 	})
@@ -85,9 +72,28 @@ func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBloc
 		return nil, err
 	}
 
-	nodeAddresses := toMemberIds(res.NodeAddresses)
-	committeeMembersStr := nodeAddressesToCommaSeparatedString(res.NodeAddresses)
+	committeeMembers := toMembers(res.NodeAddresses, res.Weights)
+	committeeMembersStr := toMembersString(res.NodeAddresses, res.Weights)
 	m.logger.Info("Received committee members for block proof", log.Uint32("prev-block-ref-time", uint32(prevBlockReferenceTime)), log.String("committee-members", committeeMembersStr))
 
-	return nodeAddresses, nil
+	return committeeMembers, nil
 }
+
+func toMembers(nodeAddresses []primitives.NodeAddress, weights []primitives.Weight) []lh.CommitteeMember {
+	members := make([]lh.CommitteeMember, len(nodeAddresses))
+	for i := range nodeAddresses {
+		members[i].Id = lhprimitives.MemberId(nodeAddresses[i])
+		members[i].Weight = lhprimitives.MemberWeight(weights[i])
+	}
+	return members
+}
+
+func toMembersString(nodeAddresses []primitives.NodeAddress, weights []primitives.Weight) string {
+	members := make([]string, len(nodeAddresses))
+	for i := range nodeAddresses {
+		members[i] = fmt.Sprintf("{\"Address:\": \"%v\", \"Weight\": %d}", nodeAddresses[i], weights[i])  // %v is because NodeAddress has .String()
+	}
+	return strings.Join(members, ",")
+}
+
+

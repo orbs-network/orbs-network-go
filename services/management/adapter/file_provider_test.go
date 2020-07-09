@@ -86,13 +86,18 @@ func requireTopologyToBeSameAsStatic(t *testing.T, peers []*services.GossipPeer)
 
 func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm) {
 	committee := []primitives.NodeAddress{testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress()}
+	weights := []primitives.Weight{16578000, 828363}
+	weights2 := []primitives.Weight{16578435, 828363}
 	// notice order of ref from small to big.
 	require.EqualValues(t, 1582613000, c[0].AsOfReference)
 	require.ElementsMatch(t, committee, c[0].Members)
+	require.ElementsMatch(t, weights, c[0].Weights)
 	require.EqualValues(t, 1582614000, c[1].AsOfReference)
 	require.ElementsMatch(t, committee, c[1].Members)
+	require.ElementsMatch(t, weights2, c[1].Weights)
 	require.EqualValues(t, 1582616000, c[2].AsOfReference)
 	require.ElementsMatch(t, committee, c[2].Members)
+	require.ElementsMatch(t, weights, c[2].Weights)
 }
 
 type fconfig struct {

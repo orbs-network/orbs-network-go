@@ -9,10 +9,9 @@ package consensuscontext
 import (
 	"context"
 	"fmt"
-	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
-	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -26,12 +25,20 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 		return nil, err
 	}
 
-	s.logger.Info("committee size", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("elected-validators-count", len(committee)), log.Uint32("max-committee-size", input.MaxCommitteeSize), trace.LogFieldFrom(ctx))
+	// get data of weights but need to order it. possible future move the weights into the ordering.
+	managementCommitteeData, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: input.PrevBlockReferenceTime})
+	if err != nil {
+		return nil, err
+	}
+	orderedWeights, err := orderCommitteeWeights(committee, managementCommitteeData.Members, managementCommitteeData.Weights)
+	if err != nil {
+		return nil, err
+	}
 
 	s.metrics.committeeSize.Update(int64(len(committee)))
 	committeeStringArray := make([]string, len(committee))
 	for j, nodeAddress := range committee {
-		committeeStringArray[j] = fmt.Sprintf("\"%v\"", nodeAddress)  // %v is because NodeAddress has .String()
+		committeeStringArray[j] = fmt.Sprintf("{\"Address:\": \"%v\", \"Weight\": %d}", nodeAddress, orderedWeights[j])  // %v is because NodeAddress has .String()
 	}
 	s.metrics.committeeMembers.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 	s.metrics.committeeRefTime.Update(int64(input.PrevBlockReferenceTime))
@@ -39,8 +46,32 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	res := &services.RequestCommitteeOutput{
 		NodeAddresses:            committee,
 		NodeRandomSeedPublicKeys: nil,
+		Weights:                  orderedWeights,
 	}
 	return res, nil
+}
+
+func orderCommitteeWeights(orderedCommittee []primitives.NodeAddress, committeeMembers []primitives.NodeAddress, committeeWeights []primitives.Weight) ([]primitives.Weight, error) {
+	if len(orderedCommittee) != len(committeeMembers) || len(orderedCommittee) != len(committeeWeights) {
+		return nil, errors.Errorf("order weights failed sizes don't match %v, %v, %v", orderedCommittee, committeeMembers, committeeWeights)
+	}
+
+	tempMap := make(map[string]primitives.Weight, len(orderedCommittee))
+	orderedWeights := make([]primitives.Weight, len(orderedCommittee))
+
+	for i := range committeeMembers {
+		tempMap[committeeMembers[i].KeyForMap()] = committeeWeights[i]
+	}
+
+	for i := range orderedCommittee {
+		if weight, ok := tempMap[orderedCommittee[i].KeyForMap()]; !ok {
+			return nil, errors.Errorf("order weights failed committee and ordered don't have same addresses: %v, %v", orderedCommittee, committeeMembers)
+		} else {
+			orderedWeights[i] = weight
+		}
+	}
+
+	return orderedWeights, nil
 }
 
 
@@ -53,10 +84,9 @@ func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, inpu
 	if err != nil {
 		return nil, err
 	}
-	committee := out.Members
-	s.logger.Info("committee size", log.Int("elected-validators-count", len(committee)), trace.LogFieldFrom(ctx))
 	res := &services.RequestBlockProofCommitteeOutput{
-		NodeAddresses:            committee,
+		NodeAddresses: out.Members,
+		Weights:       out.Weights,
 	}
 	return res, nil
 }
