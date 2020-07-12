@@ -292,7 +292,7 @@ func TemplateForGamma(
 	// Around plugins the problem usually is a version mismatch for the warmup compilation for orbs-contract-sdk
 	// The reason being the race detector is instrumenting the code of the package thus causing it to not be the same binary result
 	// As the version of the package within the compiled plugin therefore the warmup compilation fails.
-	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
+	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
 
 	return cfg
 }
