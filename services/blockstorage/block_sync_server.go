@@ -52,7 +52,7 @@ func (s *Service) sourceHandleBlockAvailabilityRequest(ctx context.Context, mess
 	syncState := s.persistence.GetSyncState()
 	responseFrom, responseTo, err := getServerSyncRange(syncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
 	if err != nil {
-		logger.Info("invalid sync range ", log.Error(err))
+		logger.Info("server does not hold requested range")
 		return nil
 	}
 
@@ -161,7 +161,7 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 	syncState := s.persistence.GetSyncState()
 	responseFrom, responseTo, err := getServerSyncRange(syncState, requestFrom, requestTo, requestSyncBlocksOrder, batchSize)
 	if err != nil {
-		logger.Info("invalid sync range ", log.Error(err))
+		logger.Info("server does not hold requested range")
 		return err
 	}
 
@@ -209,7 +209,11 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		}
 
 		logger.Info("sending blocks to another node via block sync",
-			log.Stringable("chunk-response-message", response))
+			log.Stringable("petitioner", senderNodeAddress),
+			log.Uint64("first-block-height", uint64(response.Message.SignedChunkRange.FirstBlockHeight())),
+			log.Uint64("last-block-height", uint64(response.Message.SignedChunkRange.LastBlockHeight())),
+			log.Stringable("blocks-order", response.Message.SignedChunkRange.BlocksOrder()),
+			log.Uint("chunk-size", chunkSize))
 
 		_, err = s.gossip.SendBlockSyncResponse(ctx, response)
 		if err != nil {

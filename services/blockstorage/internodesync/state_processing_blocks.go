@@ -68,10 +68,12 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 	receivedSyncBlocksOrder := s.blocks.SignedChunkRange.BlocksOrder()
 	syncState := s.storage.GetSyncState()
 	if err := s.validateBlocksRange(s.blocks.BlockPairs, syncState, receivedSyncBlocksOrder); err != nil {
+		s.metrics.failedValidationBlocks.Inc()
 		logger.Info("failed to verify the blocks chunk range received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	}
 	if err := s.validatePosChain(s.blocks.BlockPairs, syncState, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder); err != nil {
+		s.metrics.failedValidationBlocks.Inc()
 		logger.Info("failed to verify the blocks chunk PoS received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	}
@@ -86,7 +88,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
 		if err != nil {
 			s.metrics.failedValidationBlocks.Inc()
-			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block", blockPair.TransactionsBlock)) // may be a valid failure if height isn't the next height
+			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block-header", blockPair.TransactionsBlock.Header)) // may be a valid failure if height isn't the next height
 			break
 		}
 		_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
