@@ -58,6 +58,18 @@ func (g *Gauge) Update(i int64) {
 	atomic.StoreInt64(&g.value, i)
 }
 
+func (g *Gauge) UpdateMax(i int64) {
+	for { // retry indefinitely (?!) if optimistic lock fails
+		old := g.Value()
+		if old >= i {
+			return
+		}
+		if atomic.CompareAndSwapInt64(&g.value, old, i) { // optimistic lock
+			return
+		}
+	}
+}
+
 func (g *Gauge) UpdateUInt32(i int32) {
 	atomic.StoreInt64(&g.value, int64(i))
 }

@@ -50,8 +50,8 @@ type singleLhcNodeHarness struct {
 }
 
 type metrics struct {
-	timeSinceLastCommitMillis   *metric.Histogram
-	timeSinceLastElectionMillis *metric.Histogram
+	timeSinceLastCommitMillis   *metric.HistogramTimeDiff
+	timeSinceLastElectionMillis *metric.HistogramTimeDiff
 	currentLeaderMemberId       *metric.Text
 	currentElectionCount        *metric.Gauge
 	lastCommittedTime           *metric.Gauge
@@ -108,8 +108,8 @@ func (h *singleLhcNodeHarness) start(parent *with.ConcurrencyHarness, ctx contex
 // NOTICE in the test harness these values always exist so no checking of nil return values
 func (h *singleLhcNodeHarness) getMetrics() *metrics {
 	return &metrics{
-		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.Histogram),
-		timeSinceLastElectionMillis: h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis").(*metric.Histogram),
+		timeSinceLastCommitMillis:   h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastCommit.Millis").(*metric.HistogramTimeDiff),
+		timeSinceLastElectionMillis: h.metricRegistry.Get("ConsensusAlgo.LeanHelix.TimeSinceLastElection.Millis").(*metric.HistogramTimeDiff),
 		currentElectionCount:        h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentElection.Number").(*metric.Gauge),
 		currentLeaderMemberId:       h.metricRegistry.Get("ConsensusAlgo.LeanHelix.CurrentLeaderMemberId.Number").(*metric.Text),
 		lastCommittedTime:           h.metricRegistry.Get("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano").(*metric.Gauge),
@@ -146,7 +146,7 @@ func (h *singleLhcNodeHarness) beFirstInCommittee() {
 func (h *singleLhcNodeHarness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
-		Weights: h.getCommitteeWeights(),
+		Weights:       h.getCommitteeWeights(),
 	}, nil).Times(1)
 }
 

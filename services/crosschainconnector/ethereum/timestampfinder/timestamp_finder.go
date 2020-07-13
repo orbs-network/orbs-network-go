@@ -37,7 +37,7 @@ type finder struct {
 }
 
 type timestampBlockFinderMetrics struct {
-	timeToFindBlock     *metric.Histogram
+	timeToFindBlock     *metric.HistogramTimeDiff
 	stepsRequired       *metric.Rate
 	totalTimesCalled    *metric.Gauge
 	cacheHits           *metric.Gauge

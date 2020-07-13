@@ -14,13 +14,13 @@ import (
 	"time"
 )
 
-// This does NOT test correctness of Histogram
+// This does NOT test correctness of NewHistogramInt64
 // (e.g. that calculation of quantiles for given values is correct)
 // It only verifies the accurate conversion of metric values into Prometheus format.
 func Test_PrometheusFormatterForHistogramWithLabels(t *testing.T) {
 	r := NewRegistry().WithVirtualChainId(100000)
 	const SEC = int64(time.Second)
-	histo := r.NewHistogram("Some.Latency", 1000*SEC)
+	histo := r.NewHistogramInt64("Some.Latency", 1000*SEC)
 
 	for i := 0; i < 1000; i++ {
 		histo.Record(int64(i) * SEC)

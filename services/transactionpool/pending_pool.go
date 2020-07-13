@@ -42,8 +42,8 @@ type pendingPoolMetrics struct {
 	transactionCountGauge    *metric.Gauge
 	poolSizeInBytesGauge     *metric.Gauge
 	transactionRatePerSecond *metric.Rate
-	transactionSpentInQueue  *metric.Histogram
-	transactionServiceTime   *metric.Histogram
+	transactionSpentInQueue  *metric.HistogramTimeDiff
+	transactionServiceTime   *metric.HistogramTimeDiff
 }
 
 func newPendingPoolMetrics(factory metric.Factory) *pendingPoolMetrics {

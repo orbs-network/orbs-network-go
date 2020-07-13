@@ -37,11 +37,11 @@ var LogTag = log.String("adapter", "processor-native")
 
 type nativeCompilerMetrics struct {
 	lastWarmUpTimeMs *metric.Gauge
-	totalCompileTime *metric.Histogram
-	writeToDiskTime  *metric.Histogram
-	buildTime        *metric.Histogram
-	loadTime         *metric.Histogram
-	sourceSize       *metric.Histogram
+	totalCompileTime *metric.HistogramTimeDiff
+	writeToDiskTime  *metric.HistogramTimeDiff
+	buildTime        *metric.HistogramTimeDiff
+	loadTime         *metric.HistogramTimeDiff
+	sourceSize       *metric.HistogramInt64
 }
 
 type nativeCompiler struct {
@@ -57,7 +57,7 @@ func createNativeCompilerMetrics(factory metric.Factory) *nativeCompilerMetrics 
 		loadTime:         factory.NewLatency("Processor.Native.Compiler.LoadObject.Time.Millis", 60*time.Minute),
 		lastWarmUpTimeMs: factory.NewGauge("Processor.Native.Compiler.LastWarmUp.Time.Millis"),
 		writeToDiskTime:  factory.NewLatency("Processor.Native.Compiler.WriteToDisk.Time.Millis", 60*time.Minute),
-		sourceSize:       factory.NewHistogram("Processor.Native.Compiler.Source.Size.Bytes", 1024*1024), // megabyte
+		sourceSize:       factory.NewHistogramInt64("Processor.Native.Compiler.Source.Size.Bytes", 1024*1024), // megabyte
 	}
 }
 

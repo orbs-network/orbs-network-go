@@ -28,14 +28,26 @@ import (
 )
 
 type metrics struct {
-	sizeOnDisk *metric.Gauge
+	sizeOnDisk        *metric.Gauge
+	readBlockSize     *metric.HistogramInt64
+	writeBlockSize    *metric.HistogramInt64
+	readRate          *metric.Rate
+	writeRate         *metric.Rate
+	readMaxBlockSize  *metric.Gauge
+	writeMaxBlockSize *metric.Gauge
 }
 
 const blocksFilename = "blocks"
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		sizeOnDisk: m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		sizeOnDisk:        m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		readBlockSize:     m.NewHistogramInt64("BlockStorage.Block.Read.Size", 10*1024*1024),  // rolling window analysis of block sizes up to 10MB
+		writeBlockSize:    m.NewHistogramInt64("BlockStorage.Block.Write.Size", 10*1024*1024), // rolling window analysis of block sizes up to 10MB
+		readRate:          m.NewRate("BlockStorage.Block.Read.Rate"),
+		writeRate:         m.NewRate("BlockStorage.Block.Write.Rate"),
+		readMaxBlockSize:  m.NewGauge("BlockStorage.Block.Read.Max.Bytes"),
+		writeMaxBlockSize: m.NewGauge("BlockStorage.Block.Write.Max.Bytes"),
 	}
 }
 
@@ -227,7 +239,7 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 
 func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec) (*blockHeightIndex, error) {
 	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
-	offset := int64(firstBlockOffset)
+	offset := firstBlockOffset
 	for {
 		aBlock, blockSize, err := c.decode(r)
 		if err != nil {
@@ -269,6 +281,10 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 	}
 
 	f.metrics.sizeOnDisk.Add(int64(n))
+	f.metrics.writeBlockSize.Record(int64(n))
+	f.metrics.writeMaxBlockSize.UpdateMax(int64(n))
+	f.metrics.writeRate.Measure(1)
+
 	return true, f.bhIndex.getLastBlockHeight(), nil
 }
 
@@ -295,6 +311,7 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 		}
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
 		// TODO: Gad allow update of sequence height inside page
+		// TODO extract this loop to a fetchBlocksFromFile method that will not seek every time
 		for height := fromHeight; height <= toHeight; height++ {
 			aBlock, err := f.fetchBlockFromFile(height, file)
 			if err != nil {
@@ -319,14 +336,22 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 func (f *BlockPersistence) fetchBlockFromFile(height primitives.BlockHeight, file *os.File) (*protocol.BlockPairContainer, error) {
 	initialOffset, ok := f.bhIndex.fetchBlockOffset(height)
 	if !ok {
-		return nil, fmt.Errorf("failed to find requested block %d", uint64(height))
+		return nil, fmt.Errorf("failed to find requested block %d", height)
 	}
 	newOffset, err := file.Seek(initialOffset, io.SeekStart)
 	if newOffset != initialOffset || err != nil {
 		return nil, errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
 	}
-	aBlock, _, err := f.codec.decode(file)
-	return aBlock, err
+
+	aBlock, bytes, err := f.codec.decode(file)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode block %d at position %v", height, initialOffset)
+	}
+
+	f.metrics.readBlockSize.Record(int64(bytes))
+	f.metrics.readRate.Measure(1)
+	f.metrics.readMaxBlockSize.UpdateMax(int64(bytes))
+	return aBlock, nil
 }
 
 func (f *BlockPersistence) GetLastBlockHeight() (primitives.BlockHeight, error) {
