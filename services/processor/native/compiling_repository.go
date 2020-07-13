@@ -61,8 +61,8 @@ type CompilingRepository struct {
 	sanitizer *sanitizer.Sanitizer
 
 	deployedContracts       *metric.Gauge
-	processCallTime         *metric.Histogram
-	contractCompilationTime *metric.Histogram
+	processCallTime         *metric.HistogramTimeDiff
+	contractCompilationTime *metric.HistogramTimeDiff
 	config                  config.NativeProcessorConfig
 }
 

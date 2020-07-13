@@ -34,9 +34,9 @@ type service struct {
 }
 
 type metrics struct {
-	sendTransactionTime                *metric.Histogram
-	getTransactionStatusTime           *metric.Histogram
-	runQueryTime                       *metric.Histogram
+	sendTransactionTime                *metric.HistogramTimeDiff
+	getTransactionStatusTime           *metric.HistogramTimeDiff
+	runQueryTime                       *metric.HistogramTimeDiff
 	totalTransactionsFromClients       *metric.Gauge
 	totalTransactionsErrNilRequest     *metric.Gauge
 	totalTransactionsErrInvalidRequest *metric.Gauge

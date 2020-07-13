@@ -23,9 +23,14 @@ import (
 const ROTATE_INTERVAL = 30 * time.Second
 const AGGREGATION_SPAN = 10 * time.Minute
 
+type rotator interface {
+	Rotate()
+}
+
 type Factory interface {
-	NewHistogram(name string, maxValue int64) *Histogram
-	NewLatency(name string, maxDuration time.Duration) *Histogram
+	NewHistogramTimeDiff(name string, maxValue int64) *HistogramTimeDiff
+	NewHistogramInt64(name string, maxValue int64) *HistogramInt64
+	NewLatency(name string, maxDuration time.Duration) *HistogramTimeDiff
 	NewGauge(name string) *Gauge
 	NewRate(name string) *Rate
 	NewText(name string, defaultValue ...string) *Text
@@ -123,14 +128,20 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 	return g
 }
 
-func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
-	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/ROTATE_INTERVAL))
+func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *HistogramTimeDiff {
+	h := newHistogramTimeDiff(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
 
-func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) *Histogram {
-	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
+func (r *inMemoryRegistry) NewHistogramTimeDiff(name string, maxValue int64) *HistogramTimeDiff {
+	h := newHistogramTimeDiff(name, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
+	r.register(h)
+	return h
+}
+
+func (r *inMemoryRegistry) NewHistogramInt64(name string, maxValue int64) *HistogramInt64 {
+	h := newHistogramInt64(name, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
@@ -170,9 +181,8 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		for _, m := range r.mu.metrics {
-			switch m.(type) {
-			case *Histogram: // only Histograms currently require rotating
-				m.(*Histogram).Rotate()
+			if rotator, ok := m.(rotator); ok { // TODO check how much faster it is to check for concrete types
+				rotator.Rotate()
 			}
 		}
 	}, nil)

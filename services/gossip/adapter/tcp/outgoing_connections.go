@@ -18,7 +18,7 @@ type outgoingConnectionMetrics struct {
 	sendQueueErrors *metric.Gauge
 	activeCount     *metric.Gauge
 
-	messageSize *metric.Histogram
+	messageSize *metric.HistogramInt64
 }
 
 type outgoingConnections struct {
@@ -52,7 +52,7 @@ func createOutgoingConnectionMetrics(registry metric.Registry) *outgoingConnecti
 		KeepaliveErrors: registry.NewGauge("Gossip.OutgoingConnection.KeepaliveErrors.Count"),
 		sendQueueErrors: registry.NewGauge("Gossip.OutgoingConnection.SendQueueErrors.Count"),
 		activeCount:     registry.NewGauge("Gossip.OutgoingConnection.Active.Count"),
-		messageSize:     registry.NewHistogram("Gossip.OutgoingConnection.MessageSize.Bytes", MAX_PAYLOAD_SIZE_BYTES),
+		messageSize:     registry.NewHistogramInt64("Gossip.OutgoingConnection.MessageSize.Bytes", MAX_PAYLOAD_SIZE_BYTES),
 	}
 }
 

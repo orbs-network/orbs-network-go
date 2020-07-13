@@ -47,7 +47,7 @@ type service struct {
 }
 
 type metrics struct {
-	processCallTime *metric.Histogram
+	processCallTime *metric.HistogramTimeDiff
 }
 
 func getMetrics(m metric.Factory) *metrics {
