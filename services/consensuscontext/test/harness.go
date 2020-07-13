@@ -8,7 +8,6 @@ package test
 
 import (
 	"context"
-	"encoding/hex"
 	"github.com/orbs-network/crypto-lib-go/crypto/hash"
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
@@ -134,11 +133,6 @@ func newHarness(logger log.Logger, enableTriggers bool) *harness {
 	txPool := &services.MockTransactionPool{}
 	machine := &services.MockVirtualMachine{}
 	state := &services.MockStateStorage{}
-	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	for _, nodeAddress := range validatorNodeAddressesForTest {
-		bytes, _ := hex.DecodeString(nodeAddress)
-		genesisValidatorNodes[nodeAddress] = config.NewHardCodedValidatorNode(bytes)
-	}
 
 	cfg := config.ForConsensusContextTests(enableTriggers)
 

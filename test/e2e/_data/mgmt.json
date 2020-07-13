@@ -1,0 +1,45 @@
+{
+  "CurrentRefTime": 1492983000,
+
+  "PageStartRefTime": 0,
+  "PageEndRefTime": 1492983000,
+
+  "VirtualChains":
+  {
+    "42":
+    {
+      "VirtualChainId": 42,
+      "GenesisRefTime": 0,
+      "CurrentTopology":
+      [
+        {"OrbsAddress":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"127.0.0.1","port":8190},
+        {"OrbsAddress":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"127.0.0.1","port":8191},
+        {"OrbsAddress":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"127.0.0.1","port":8192},
+        {"OrbsAddress":"c056dfc0d1fbc7479db11e61d1b0b57612bf7f17","ip":"127.0.0.1","port":8193}
+      ],
+
+      "CommitteeEvents":
+      [
+        {
+          "RefTime": 0,
+          "Committee":
+          [
+            { "EthAddress": "034320222c534e8be4cd3bf8d70cb66ddda59e32", "OrbsAddress": "a328846cd5b4979d68a8c58a9bdfeee657b34de7", "Weight": 1, "IdentityType": 0 },
+            { "EthAddress": "e79489c84518abe2f9b91607734e81fa13c28826", "OrbsAddress": "d27e2e7398e2582f63d0800330010b3e58952ff6", "Weight": 1, "IdentityType": 0 },
+            { "EthAddress": "024320222c534e8be4cd3bf8d70cb66ddda59e32", "OrbsAddress": "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9", "Weight": 1, "IdentityType": 0 },
+            { "EthAddress": "e39489c84518abe2f9b91607734e81fa13c28826", "OrbsAddress": "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17", "Weight": 1, "IdentityType": 0 }
+          ]
+        }
+      ],
+
+      "SubscriptionEvents":
+      [
+        {
+          "RefTime": 1492982500,
+          "Data": { "Status": "active", "Tier": "B0", "RolloutGroup": "ga", "IdentityType": 0, "Params": {} }
+        }
+      ]
+
+    }
+  }
+}

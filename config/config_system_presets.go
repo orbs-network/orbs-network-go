@@ -7,7 +7,6 @@
 package config
 
 import (
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"path/filepath"
@@ -132,8 +131,7 @@ func ForE2E(
 	gossipListenPort int,
 	nodeAddress primitives.NodeAddress,
 	nodePrivateKey primitives.EcdsaSecp256K1PrivateKey,
-	gossipPeers topologyProviderAdapter.TransportPeers,
-	genesisValidatorNodes map[string]ValidatorNode,
+	managementFilePath string,
 	blockStorageDataDirPrefix string,
 	processorArtifactPath string,
 	ethereumEndpoint string,
@@ -145,6 +143,11 @@ func ForE2E(
 
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
+	cfg.SetString(MANAGEMENT_FILE_PATH, managementFilePath)
+	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 0)
+	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 100*365*24*time.Hour)
+
+	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)
 	// should be longer than tx_empty_block_time
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 2000*time.Millisecond)
@@ -179,8 +182,6 @@ func ForE2E(
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 500*time.Millisecond)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 4*time.Second)
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 500*time.Millisecond)
-	cfg.SetGossipPeers(gossipPeers)
-	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
 
@@ -202,7 +203,8 @@ func ForE2E(
 }
 
 func ForAcceptanceTestNetwork(
-	genesisValidatorNodes map[string]ValidatorNode,
+	nodeAddress primitives.NodeAddress,
+	privateKey primitives.EcdsaSecp256K1PrivateKey,
 	constantConsensusLeader primitives.NodeAddress,
 	activeConsensusAlgo consensus.ConsensusAlgoType,
 	maxTxPerBlock uint32,
@@ -210,6 +212,7 @@ func ForAcceptanceTestNetwork(
 	virtualChainId primitives.VirtualChainId,
 	emptyBlockTime time.Duration,
 	managementPollingInterval time.Duration,
+	overrides ...NodeConfigKeyValue,
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
@@ -217,6 +220,8 @@ func ForAcceptanceTestNetwork(
 		emptyBlockTime = 50 * time.Millisecond
 	}
 
+	cfg.SetNodeAddress(nodeAddress)
+	cfg.SetNodePrivateKey(privateKey)
 	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, managementPollingInterval)
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 0)
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 50*time.Millisecond)
@@ -239,22 +244,28 @@ func ForAcceptanceTestNetwork(
 	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 0)
 	cfg.SetUint32(VIRTUAL_CHAIN_ID, uint32(virtualChainId))
 
-	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(activeConsensusAlgo)
+
+	cfg.Modify(overrides...)
+
 	return cfg
 }
 
 // config for gamma dev network that runs with in-memory adapters except for contract compilation
 func TemplateForGamma(
-	genesisValidatorNodes map[string]ValidatorNode,
+	nodeAddress primitives.NodeAddress,
+	privateKey primitives.EcdsaSecp256K1PrivateKey,
 	constantConsensusLeader primitives.NodeAddress,
 	serverAddress string,
 	profiling bool,
+	overrideJsonAsString string,
 
 ) mutableNodeConfig {
 	cfg := defaultProductionConfig()
 
+	cfg.SetNodeAddress(nodeAddress)
+	cfg.SetNodePrivateKey(privateKey)
 	cfg.SetBool(PROFILING, profiling)
 	cfg.SetString(HTTP_ADDRESS, serverAddress)
 
@@ -282,7 +293,6 @@ func TemplateForGamma(
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(ETHEREUM_ENDPOINT, "http://host.docker.internal:7545")
 
-	cfg.SetGenesisValidatorNodes(genesisValidatorNodes)
 	cfg.SetBenchmarkConsensusConstantLeader(constantConsensusLeader)
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
@@ -293,6 +303,12 @@ func TemplateForGamma(
 	// The reason being the race detector is instrumenting the code of the package thus causing it to not be the same binary result
 	// As the version of the package within the compiled plugin therefore the warmup compilation fails.
 	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, false)
+
+	if overrideJsonAsString != "" {
+		if err := modifyFromJson(cfg, overrideJsonAsString); err != nil {
+			return nil
+		}
+	}
 
 	return cfg
 }

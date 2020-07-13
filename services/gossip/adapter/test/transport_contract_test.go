@@ -142,13 +142,9 @@ func aMemoryTransport(ctx context.Context, harness *with.ConcurrencyHarness) *tr
 	res := &transportContractContext{}
 	res.nodeAddresses = []primitives.NodeAddress{{0x01}, {0x02}, {0x03}, {0x04}}
 
-	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	for _, address := range res.nodeAddresses {
-		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
-	}
 	logger := harness.Logger.WithTags(log.String("adapter", "transport"))
 
-	transport := memory.NewTransport(ctx, logger, genesisValidatorNodes)
+	transport := memory.NewTransport(ctx, logger, res.nodeAddresses)
 	res.transports = []adapter.Transport{transport, transport, transport, transport}
 	res.listeners = []*testkit.MockTransportListener{
 		testkit.ListenTo(res.transports[0], res.nodeAddresses[0]),

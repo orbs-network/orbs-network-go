@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/signer"
 	"github.com/orbs-network/govnr"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -31,7 +30,6 @@ var LogTag = log.Service("consensus-algo-benchmark")
 
 type Config interface {
 	NodeAddress() primitives.NodeAddress
-	GenesisValidatorNodes() map[string]config.ValidatorNode
 	BenchmarkConsensusConstantLeader() primitives.NodeAddress
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
 	BenchmarkConsensusRetryInterval() time.Duration
@@ -46,6 +44,7 @@ type Service struct {
 	signer           signer.Signer
 	logger           log.Logger
 	config           Config
+	network          []primitives.NodeAddress
 
 	isLeader                bool
 	successfullyVotedBlocks chan primitives.BlockHeight // leader only
@@ -82,6 +81,7 @@ func NewBenchmarkConsensusAlgo(
 	gossip gossiptopics.BenchmarkConsensus,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
+	network []primitives.NodeAddress,
 	signer signer.Signer,
 	parentLogger log.Logger,
 	config Config,
@@ -97,6 +97,7 @@ func NewBenchmarkConsensusAlgo(
 		signer:           signer,
 		logger:           logger,
 		config:           config,
+		network:          network,
 
 		isLeader:                   config.BenchmarkConsensusConstantLeader().Equal(config.NodeAddress()),
 		successfullyVotedBlocks:    make(chan primitives.BlockHeight), // leader only

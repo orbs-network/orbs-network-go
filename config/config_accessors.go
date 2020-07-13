@@ -7,15 +7,17 @@
 package config
 
 import (
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
 	"time"
 )
 
-type hardCodedValidatorNode struct {
-	nodeAddress primitives.NodeAddress
+type NodeConfigMap map[string]NodeConfigValue
+
+type NodeConfigKeyValue struct {
+	Key   string
+	Value NodeConfigValue
 }
 
 type NodeConfigValue struct {
@@ -26,13 +28,17 @@ type NodeConfigValue struct {
 }
 
 type config struct {
-	kv                      map[string]NodeConfigValue
-	genesisValidatorNodes   map[string]ValidatorNode
-	gossipPeers             topologyProviderAdapter.TransportPeers
+	kv                      NodeConfigMap
 	nodeAddress             primitives.NodeAddress
 	nodePrivateKey          primitives.EcdsaSecp256K1PrivateKey
 	constantConsensusLeader primitives.NodeAddress
 	activeConsensusAlgo     consensus.ConsensusAlgoType
+}
+
+func emptyConfig() mutableNodeConfig {
+	return &config{
+		kv: make(NodeConfigMap),
+	}
 }
 
 const (
@@ -119,12 +125,6 @@ const (
 	EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH = "EXPERIMENTAL_EXTERNAL_PROCESSOR_PLUGIN_PATH"
 )
 
-func NewHardCodedValidatorNode(nodeAddress primitives.NodeAddress) ValidatorNode {
-	return &hardCodedValidatorNode{
-		nodeAddress: nodeAddress,
-	}
-}
-
 func (c *config) Set(key string, value NodeConfigValue) mutableNodeConfig {
 	c.kv[key] = value
 	return c
@@ -170,20 +170,6 @@ func (c *config) SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mu
 	return c
 }
 
-func (c *config) SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig {
-	c.genesisValidatorNodes = nodes
-	return c
-}
-
-func (c *config) SetGossipPeers(gossipPeers topologyProviderAdapter.TransportPeers) mutableNodeConfig {
-	c.gossipPeers = gossipPeers
-	return c
-}
-
-func (c *hardCodedValidatorNode) NodeAddress() primitives.NodeAddress {
-	return c.nodeAddress
-}
-
 func (c *config) NodeAddress() primitives.NodeAddress {
 	return c.nodeAddress
 }
@@ -218,10 +204,6 @@ func (c *config) ManagementConsensusGraceTimeout() time.Duration {
 
 func (c *config) ManagementNetworkLivenessTimeout() time.Duration {
 	return c.kv[MANAGEMENT_NETWORK_LIVENESS_TIMEOUT].DurationValue
-}
-
-func (c *config) GenesisValidatorNodes() map[string]ValidatorNode {
-	return c.genesisValidatorNodes
 }
 
 func (c *config) BenchmarkConsensusConstantLeader() primitives.NodeAddress {
@@ -354,10 +336,6 @@ func (c *config) ProcessorPerformWarmUpCompilation() bool {
 
 func (c *config) GossipListenPort() uint16 {
 	return uint16(c.kv[GOSSIP_LISTEN_PORT].Uint32Value)
-}
-
-func (c *config) GossipPeers() topologyProviderAdapter.TransportPeers {
-	return c.gossipPeers
 }
 
 func (c *config) GossipConnectionKeepAliveInterval() time.Duration {

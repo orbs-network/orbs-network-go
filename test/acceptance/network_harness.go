@@ -41,7 +41,7 @@ type networkHarness struct {
 	consensusAlgos           []consensus.ConsensusAlgoType
 	testId                   string
 	setupFunc                func(ctx context.Context, network *Network)
-	configOverride           func(config config.OverridableConfig) config.OverridableConfig
+	configOverrides		     []config.NodeConfigKeyValue
 	logFilters               []log.Filter
 	maxTxPerBlock            uint32
 	allowedErrors            []string
@@ -177,7 +177,7 @@ func (b *networkHarness) runTest(tb testing.TB, consensusAlgo consensus.Consensu
 		govnr.Recover(logfields.GovnrErrorer(logger), func() {
 			ctx, cancel := context.WithTimeout(context.Background(), b.testTimeout)
 			defer cancel()
-			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.managementPollingInterval, b.configOverride)
+			network := newAcceptanceTestNetwork(ctx, logger, consensusAlgo, b.blockChain, b.numNodes, b.maxTxPerBlock, b.requiredQuorumPercentage, b.virtualChainId, b.emptyBlockTime, b.managementPollingInterval, b.configOverrides)
 			parentHarness.Supervise(startHeartbeat(ctx, logger))
 			parentHarness.Supervise(network)
 			defer dumpStateOnFailure(tb, network)
@@ -248,8 +248,8 @@ func (b *networkHarness) WithEmptyBlockTime(emptyBlockTime time.Duration) *netwo
 	return b
 }
 
-func (b *networkHarness) WithConfigOverride(f func(cfg config.OverridableConfig) config.OverridableConfig) *networkHarness {
-	b.configOverride = f
+func (b *networkHarness) WithConfigOverride(newValues ...config.NodeConfigKeyValue) *networkHarness {
+	b.configOverrides = newValues
 	return b
 }
 

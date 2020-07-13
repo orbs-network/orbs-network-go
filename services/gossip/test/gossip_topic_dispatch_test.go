@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip"
@@ -38,11 +37,7 @@ func TestDifferentTopicsDoNotBlockEachOtherForSamePeer(t *testing.T) {
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
 
-		genesisValidatorNodes := make(map[string]config.ValidatorNode)
-		for _, address := range nodeAddresses {
-			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
-		}
-		transport := memory.NewTransport(ctx, harness.Logger, genesisValidatorNodes)
+		transport := memory.NewTransport(ctx, harness.Logger, nodeAddresses)
 		g := gossip.NewGossip(ctx, transport, cfg, harness.Logger, metric.NewRegistry())
 
 		harness.Supervise(transport)
@@ -88,11 +83,7 @@ func TestGossipDispatcherPropagatesTracingContext(t *testing.T) {
 		nodeAddresses := []primitives.NodeAddress{{0x01}, {0x02}}
 		cfg := &conf{}
 
-		genesisValidatorNodes := make(map[string]config.ValidatorNode)
-		for _, address := range nodeAddresses {
-			genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(primitives.NodeAddress(address))
-		}
-		transport := memory.NewTransport(ctx, harness.Logger, genesisValidatorNodes)
+		transport := memory.NewTransport(ctx, harness.Logger, nodeAddresses)
 		defer transport.GracefulShutdown(ctx)
 
 		g := gossip.NewGossip(ctx, transport, cfg, harness.Logger, metric.NewRegistry())

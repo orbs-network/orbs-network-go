@@ -88,8 +88,7 @@ func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 		return err
 	}
 
-	networkSize := len(s.config.GenesisValidatorNodes())
-	if networkSize == 1 {
+	if len(s.network) == 1 {
 		s.successfullyVotedBlocks <- lastCommittedBlockHeight
 	}
 
@@ -255,7 +254,14 @@ func (s *Service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 	}
 
 	// approved signer
-	if _, found := s.config.GenesisValidatorNodes()[sender.SenderNodeAddress().KeyForMap()]; !found {
+	found := false
+	for i := range s.network {
+		if s.network[i].Equal(sender.SenderNodeAddress()) {
+			found = true;
+			break;
+		}
+	}
+	if !found {
 		return errors.Errorf("signer with public key %s is not a valid validator", sender.SenderNodeAddress())
 	}
 

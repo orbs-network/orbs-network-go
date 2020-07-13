@@ -14,13 +14,7 @@ import (
 
 func TestStaleManagementRef(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(func(cfg config.OverridableConfig) config.OverridableConfig {
-			c, err := cfg.MergeWithFileConfig(`{
-			"management-network-liveness-timeout": "1s"
-			}`)
-			require.NoError(t, err)
-			return c
-		}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 1*time.Second}}).
 		WithNumNodes(6).
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
