@@ -63,8 +63,9 @@ func (m *membership) RequestOrderedCommittee(ctx context.Context, blockHeight lh
 	return committeeMembers, nil
 }
 
-func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lh.CommitteeMember, error) {
+func (m *membership) RequestCommitteeForBlockProof(ctx context.Context, blockHeight lhprimitives.BlockHeight, prevBlockReferenceTime lhprimitives.TimestampSeconds) ([]lh.CommitteeMember, error) {
 	res, err := m.consensusContext.RequestBlockProofOrderingCommittee(ctx, &services.RequestBlockProofCommitteeInput{
+		CurrentBlockHeight: primitives.BlockHeight(blockHeight),
 		PrevBlockReferenceTime: primitives.TimestampSeconds(prevBlockReferenceTime),
 	})
 	if err != nil {
