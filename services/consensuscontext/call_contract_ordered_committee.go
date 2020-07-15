@@ -32,14 +32,9 @@ func (s *service) getOrderedCommittee(ctx context.Context, currentBlockHeight pr
 	return orderedCommittee, nil
 }
 
-func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, proposedPrevBlockReferenceTime primitives.TimestampSeconds) ([]primitives.NodeAddress, error) {
+func (s *service) callGetOrderedCommitteeSystemContract(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) ([]primitives.NodeAddress, error) {
 	systemContractName := primitives.ContractName(committee_systemcontract.CONTRACT_NAME)
 	systemMethodName := primitives.MethodName(committee_systemcontract.METHOD_GET_ORDERED_COMMITTEE)
-
-	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, blockHeight, proposedPrevBlockReferenceTime)
-	if err != nil {
-		return nil, errors.Wrap(err, "GetOrderedCommittee")
-	}
 
 	output, err := s.virtualMachine.CallSystemContract(ctx, &services.CallSystemContractInput{
 		BlockHeight:               blockHeight,
