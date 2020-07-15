@@ -20,13 +20,19 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 }
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
-	committee, err := s.getOrderedCommittee(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	// both committee and weights needs same block height and prevRefTime, and refTime might be adjusted to genesis if blockHeight is 1
+	adjustedPrevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "GetOrderedCommittee")
+	}
+
+	committee, err := s.getOrderedCommittee(ctx, input.CurrentBlockHeight, adjustedPrevBlockReferenceTime)
 	if err != nil {
 		return nil, err
 	}
 
 	// get data of weights but need to order it. possible future move the weights into the ordering.
-	managementCommitteeData, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: input.PrevBlockReferenceTime})
+	managementCommitteeData, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: adjustedPrevBlockReferenceTime})
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +86,13 @@ func (s *service) RequestBlockProofOrderingCommittee(ctx context.Context, input 
 }
 
 func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
-	out, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference:input.PrevBlockReferenceTime})
+	// refTime might be adjusted to genesis if block height is 1
+	adjustedPrevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "GetOrderedCommittee")
+	}
+
+	out, err := s.management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: adjustedPrevBlockReferenceTime})
 	if err != nil {
 		return nil, err
 	}
