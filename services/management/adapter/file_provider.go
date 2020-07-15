@@ -57,7 +57,8 @@ func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.Timest
 		}
 	}
 
-	managementData, parseErr := mp.parseData(contents)
+	isHistoric := referenceTime != 0
+	managementData, parseErr := mp.parseData(contents, isHistoric)
 	if parseErr != nil {
 		mp.logger.Error("Provider file parsing error", log.Error(parseErr))
 		return nil, parseErr
@@ -118,7 +119,7 @@ type committee struct {
 }
 
 type committeeEvent struct {
-	RefTime   uint32
+	RefTime   uint64
 	Committee []committee
 }
 
@@ -130,7 +131,7 @@ type subscription struct {
 }
 
 type subscriptionEvent struct {
-	RefTime uint32
+	RefTime uint64
 	Data    subscription
 }
 
@@ -140,13 +141,13 @@ type protocolVersion struct {
 }
 
 type protocolVersionEvent struct {
-	RefTime uint32
+	RefTime uint64
 	Data    protocolVersion
 }
 
 type vc struct {
 	VirtualChainId        uint64
-	GenesisRefTime        uint32
+	GenesisRefTime        uint64
 	CurrentTopology       []topologyNode
 	CommitteeEvents       []committeeEvent
 	SubscriptionEvents    []subscriptionEvent
@@ -154,13 +155,13 @@ type vc struct {
 }
 
 type mgmt struct {
-	CurrentRefTime   uint32
+	CurrentRefTime   uint64
 	PageStartRefTime uint64
 	PageEndRefTime   uint64
 	VirtualChains    map[string]vc
 }
 
-func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainManagementData, error) {
+func (mp *FileProvider) parseData(contents []byte, isHistoric bool) (*management.VirtualChainManagementData, error) {
 	var data mgmt
 	if err := json.Unmarshal(contents, &data); err != nil {
 		return nil, errors.Wrapf(err, "could not unmarshal vcs data")
@@ -169,7 +170,22 @@ func (mp *FileProvider) parseData(contents []byte) (*management.VirtualChainMana
 	vcString := fmt.Sprintf("%d", mp.config.VirtualChainId())
 	vcData, ok := data.VirtualChains[vcString]
 	if !ok {
-		return nil, errors.Errorf("could not find current vc in data")
+		return nil, errors.Errorf("could not find current vc in data (%d)", mp.config.VirtualChainId())
+	}
+
+	if data.CurrentRefTime != 0 {
+		if isHistoric {
+			if data.CurrentRefTime < data.PageEndRefTime || data.PageEndRefTime < data.PageStartRefTime {
+				return nil, errors.Errorf("historic data : CurrentRefTime (%d) should be >= PageEndRefTime (%d) should be >= PageStartRefTime (%d)",
+					data.CurrentRefTime, data.PageEndRefTime, data.PageStartRefTime)
+			}
+		} else {
+			if data.CurrentRefTime != data.PageEndRefTime || data.PageEndRefTime < data.PageStartRefTime {
+				return nil, errors.Errorf("data: CurrentRefTime (%d) should be equal to PageEndRefTime (%d) and it should be >= PageStartRefTime (%d)",
+					data.CurrentRefTime, data.PageEndRefTime, data.PageStartRefTime)
+			}
+
+		}
 	}
 
 	topology, err := parseTopology(vcData.CurrentTopology)
@@ -228,6 +244,8 @@ func parseCommittees(committeeEvents []committeeEvent) ([]management.CommitteeTe
 		for _, member := range event.Committee {
 			if address, err := hex.DecodeString(member.OrbsAddress); err != nil {
 				return nil, errors.Wrapf(err, "cannot decode committee node address hex %s", address)
+			} else if member.Weight == 0 {
+				return nil, errors.Errorf("Weight of node %s is 0 or missing", address)
 			} else {
 				committee = append(committee, primitives.NodeAddress(address))
 				weights = append(weights, primitives.Weight(member.Weight))
