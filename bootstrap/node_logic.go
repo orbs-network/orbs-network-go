@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/instrumentation/reporters"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	blockStorageAdapter "github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
@@ -106,11 +107,11 @@ func NewNodeLogic(parentCtx context.Context,
 	node.Supervise(gossipService)
 	node.Supervise(blockStorageService)
 	node.Supervise(consensusAlgo)
-	node.Supervise(metric.NewSystemReporter(ctx, metricRegistry, logger))
-	node.Supervise(metric.NewRuntimeReporter(ctx, metricRegistry, logger))
+	node.Supervise(reporters.NewSystemReporter(ctx, metricRegistry, logger))
+	node.Supervise(reporters.NewRuntimeReporter(ctx, metricRegistry, logger))
 	node.Supervise(metricRegistry.PeriodicallyRotate(ctx, logger))
 	if nodeConfig.NTPEndpoint() != "" {
-		node.Supervise(metric.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
+		node.Supervise(reporters.NewNtpReporter(ctx, metricRegistry, logger, nodeConfig.NTPEndpoint()))
 	}
 
 	return node

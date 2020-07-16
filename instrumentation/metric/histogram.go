@@ -10,21 +10,37 @@ package metric
 import (
 	"fmt"
 	"github.com/codahale/hdrhistogram"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
 
 type Histogram struct {
-	namedMetric
+	name 		  string
 	histo         *hdrhistogram.WindowedHistogram
 	overflowCount int64
 }
 
+type histogramExport struct {
+	Name    string
+	Min     float64
+	P50     float64
+	P95     float64
+	P99     float64
+	Max     float64
+	Avg     float64
+	Samples int64
+}
+
 func newHistogram(name string, max int64, n int) *Histogram {
 	return &Histogram{
-		namedMetric: namedMetric{name: name},
-		histo:       hdrhistogram.NewWindowed(n, 0, max, 1),
+		name:  name,
+		histo: hdrhistogram.NewWindowed(n, 0, max, 1),
 	}
+}
+
+func (h *Histogram) Name() string {
+	return h.name
 }
 
 func (h *Histogram) RecordSince(t time.Time) {
@@ -40,27 +56,13 @@ func (h *Histogram) Record(measurement int64) {
 	}
 }
 
-func (h *Histogram) String() string {
-	var errorRate float64
+func (h *Histogram) CurrentSamples() int64 {
 	histo := h.histo.Current
+	return histo.TotalCount()
+}
 
-	if h.overflowCount > 0 {
-		errorRate = float64(histo.TotalCount()) / float64(h.overflowCount)
-	} else {
-		errorRate = 0
-	}
-
-	return fmt.Sprintf(
-		"metric %s: [min=%f, p50=%f, p95=%f, p99=%f, max=%f, avg=%f, samples=%d, error rate=%f]\n",
-		h.name,
-		toMillis(histo.Min()),
-		toMillis(histo.ValueAtQuantile(50)),
-		toMillis(histo.ValueAtQuantile(95)),
-		toMillis(histo.ValueAtQuantile(99)),
-		toMillis(histo.Max()),
-		floatToMillis(histo.Mean()),
-		histo.TotalCount(),
-		errorRate)
+func (h *Histogram) Value() interface{} {
+	return nil
 }
 
 func (h *Histogram) Export() exportedMetric {
@@ -80,4 +82,27 @@ func (h *Histogram) Export() exportedMetric {
 
 func (h *Histogram) Rotate() {
 	h.histo.Rotate()
+}
+
+// Note: in real life we have labels
+// this is here because there is a different implementation for races
+func (h *Histogram) exportPrometheus(labelString string) string {
+	histo := h.histo.Merge()
+	typeRow := prometheusType(prometheusName(h.name), "histogram")
+	valueMinRow := fmt.Sprintf("%s{%s,aggregation=\"min\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(toMillis(histo.Min()), 'f', -1, 64))
+	valueMeanRow := fmt.Sprintf("%s{%s,aggregation=\"median\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(toMillis(histo.ValueAtQuantile(50)), 'f', -1, 64))
+	value95Row := fmt.Sprintf("%s{%s,aggregation=\"95p\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(toMillis(histo.ValueAtQuantile(95)), 'f', -1, 64))
+	value99Row := fmt.Sprintf("%s{%s,aggregation=\"99p\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(toMillis(histo.ValueAtQuantile(99)), 'f', -1, 64))
+	valueMaxRow := fmt.Sprintf("%s{%s,aggregation=\"max\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(toMillis(histo.Max()), 'f', -1, 64))
+	valueAvgRow := fmt.Sprintf("%s{%s,aggregation=\"avg\"} %s\n", prometheusName(h.name), labelString, strconv.FormatFloat(floatToMillis(histo.Mean()), 'f', -1, 64))
+	valueCountRow := fmt.Sprintf("%s{%s,aggregation=\"count\"} %s\n", prometheusName(h.name), labelString, strconv.FormatInt(histo.TotalCount(), 10))
+	return typeRow + valueMinRow + valueMeanRow + value95Row + value99Row + valueMaxRow + valueAvgRow + valueCountRow
+}
+
+func toMillis(nanoseconds int64) float64 {
+	return floatToMillis(float64(nanoseconds))
+}
+
+func floatToMillis(nanoseconds float64) float64 {
+	return nanoseconds / 1e+6
 }

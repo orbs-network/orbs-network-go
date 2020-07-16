@@ -100,7 +100,7 @@ func TestE2EStress(t *testing.T) {
 
 	// Commenting out until we get reliable rates
 
-	//ratePerSecond := m["TransactionPool.RatePerSecond"]["Rate"].(float64)
+	//ratePerSecond := m["TransactionPool.RatePerSecond"]["RatePerSecond"].(float64)
 
 	//require.Condition(t, func() (success bool) {
 	//	return ratePerSecond >= config.targetTPS

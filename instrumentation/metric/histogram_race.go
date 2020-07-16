@@ -15,14 +15,13 @@ type Histogram struct {
 	namedMetric
 }
 
+type histogramExport struct {
+}
+
 func newHistogram(name string, max int64, n int) *Histogram {
 	return &Histogram{
 		namedMetric: namedMetric{name: name},
 	}
-}
-
-func (h Histogram) String() string {
-	return "unimplemented - race detector active"
 }
 
 func (h Histogram) Export() exportedMetric {
@@ -36,4 +35,9 @@ func (h *Histogram) RecordSince(t time.Time) {
 }
 
 func (h *Histogram) Record(measurement int64) {
+}
+
+// Note: in real life we have labels
+func (h *Histogram) exportPrometheus(labelString string) string {
+	return ""
 }

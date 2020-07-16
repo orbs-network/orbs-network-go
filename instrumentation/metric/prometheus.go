@@ -7,49 +7,38 @@
 package metric
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
 
-type prometheusRow struct {
-	name            string
-	aggregationType string
-	value           string
+/**
+Format reference: https://prometheus.io/docs/instrumenting/exposition_formats/
+*/
+
+// Note: in real life we have labels
+func (g *Gauge) exportPrometheus(labelString string) string {
+	typeRow := prometheusType(prometheusName(g.name), "gauge")
+	if len(labelString) > 0 {
+		return typeRow + fmt.Sprintf("%s{%s} %s\n", prometheusName(g.name), labelString, strconv.FormatInt(g.IntValue(), 10))
+	}
+	return typeRow + fmt.Sprintf("%s %s\n", prometheusName(g.name), strconv.FormatInt(g.IntValue(), 10))
 }
 
-type prometheusKeyValuePair struct {
-	name  string
-	value string
+// Note: rate is not exported
+func (r *Rate) exportPrometheus(labelString string) string {
+	return ""
+}
+
+// Note: text is not exported
+func (t *Text) exportPrometheus(labelString string) string {
+	return ""
 }
 
 func prometheusName(name string) string {
 	return strings.Replace(name, ".", "_", -1)
 }
 
-// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
-func (r *prometheusRow) wrapLabels(pairs ...prometheusKeyValuePair) string {
-	var labels []string
-	pairsCopy := pairs[:]
-
-	if len(r.aggregationType) > 0 {
-		pairsCopy = append(pairsCopy, prometheusKeyValuePair{"aggregation", r.aggregationType})
-	}
-
-	for _, p := range pairsCopy {
-		labels = append(labels, p.name+`="`+p.value+`"`)
-	}
-
-	if len(labels) > 0 {
-		return `{` + strings.Join(labels, ",") + `}`
-	}
-
-	return ""
-}
-
-func quantileAsStr(quantile float64) string {
-	return strconv.FormatFloat(quantile, 'f', -1, 64)
-}
-
-func (r *prometheusRow) String(labelKeyValues ...prometheusKeyValuePair) string {
-	return r.name + r.wrapLabels(labelKeyValues...) + " " + r.value
+func prometheusType(name string, typeString string) string {
+	return fmt.Sprintf("# TYPE %s %s\n", prometheusName(name), typeString)
 }

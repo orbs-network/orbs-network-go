@@ -4,11 +4,12 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package metric
+package reporters
 
 import (
 	"context"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
 	"runtime"
@@ -16,16 +17,16 @@ import (
 )
 
 type runtimeMetrics struct {
-	heapAlloc       *Gauge
-	heapSys         *Gauge
-	heapIdle        *Gauge
-	heapReleased    *Gauge
-	heapInuse       *Gauge
-	heapObjects     *Gauge
-	gcCpuPercentage *Gauge
-	numGc           *Gauge
-	numGoroutine    *Gauge
-	uptime          *Gauge
+	heapAlloc       *metric.Gauge
+	heapSys         *metric.Gauge
+	heapIdle        *metric.Gauge
+	heapReleased    *metric.Gauge
+	heapInuse       *metric.Gauge
+	heapObjects     *metric.Gauge
+	gcCpuPercentage *metric.Gauge
+	numGc           *metric.Gauge
+	numGoroutine    *metric.Gauge
+	uptime          *metric.Gauge
 }
 
 type runtimeReporter struct {
@@ -35,7 +36,7 @@ type runtimeReporter struct {
 
 const RUNTIME_QUERY_INTERVAL = 5 * time.Second
 
-func NewRuntimeReporter(ctx context.Context, metricFactory Factory, logger log.Logger) govnr.ShutdownWaiter {
+func NewRuntimeReporter(ctx context.Context, metricFactory metric.Factory, logger log.Logger) govnr.ShutdownWaiter {
 	r := &runtimeReporter{
 		metrics: runtimeMetrics{
 			heapAlloc:       metricFactory.NewGauge("Runtime.HeapAlloc.Bytes"),
