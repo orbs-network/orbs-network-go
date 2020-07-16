@@ -11,8 +11,6 @@ require (
 	github.com/c9s/goprocinfo v0.0.0-20190309065803-0b2ad9ac246b
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd
-	github.com/coreos/etcd v3.3.13+incompatible
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
