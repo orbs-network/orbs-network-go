@@ -54,6 +54,7 @@ services:
         - 8080:8080
     volumes:
         - ../../_tmp/blocks/node1/:/usr/local/var/orbs/
+        - ../../_tmp/management/:/usr/local/var/orbs/management/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node1.json --log /opt/orbs/logs/node1.log
     networks:
       orbs-network:
@@ -67,6 +68,7 @@ services:
         - 8081:8080
     volumes:
         - ../../_tmp/blocks/node2/:/usr/local/var/orbs/
+        - ../../_tmp/management/:/usr/local/var/orbs/management/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node2.json --log /opt/orbs/logs/node2.log
     networks:
       orbs-network:
@@ -80,6 +82,7 @@ services:
       - 8082:8080
     volumes:
       - ../../_tmp/blocks/node3/:/usr/local/var/orbs/
+      - ../../_tmp/management/:/usr/local/var/orbs/management/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node3.json --log /opt/orbs/logs/node3.log
     networks:
       orbs-network:
@@ -93,6 +96,7 @@ services:
         - 8083:8080
     volumes:
         - ../../_tmp/blocks/node4/:/usr/local/var/orbs/
+        - ../../_tmp/management/:/usr/local/var/orbs/management/
     command: /opt/orbs/orbs-node --silent --config /opt/orbs/config/node4.json --log /opt/orbs/logs/node4.log
     networks:
       orbs-network:

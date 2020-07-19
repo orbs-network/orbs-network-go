@@ -33,6 +33,9 @@ export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
+mkdir -p _tmp/management
+cp ./test/e2e/_data/mgmt.json _tmp/management/mgmt.json
+
 # prepare persistent blocks for docker tests
 # skip on Mac
 if [[ $(uname) == "Linux" ]]; then
