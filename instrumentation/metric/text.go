@@ -7,13 +7,11 @@
 package metric
 
 import (
-	"fmt"
-	"github.com/orbs-network/scribe/log"
 	"sync/atomic"
 )
 
 type Text struct {
-	namedMetric
+	name  string
 	value atomic.Value
 }
 
@@ -30,12 +28,17 @@ func newText(name string, defaultValue ...string) *Text {
 	}
 
 	res := &Text{
-		namedMetric: namedMetric{name: name},
-		value:       atomic.Value{},
+		name:  name,
+		value: atomic.Value{},
 	}
 	res.value.Store(value)
 	return res
 }
+
+func (t *Text) Name() string {
+	return t.name
+}
+
 func (t *Text) Export() exportedMetric {
 	return textExport{
 		t.name,
@@ -47,30 +50,6 @@ func (t *Text) Update(value string) {
 	t.value.Store(value)
 }
 
-func (t *Text) String() string {
-	return fmt.Sprintf("metric %s: %s\n", t.name, t.value)
-}
-
-func (t *Text) Value() string {
+func (t *Text) Value() interface{} {
 	return t.value.Load().(string)
-}
-
-func (t textExport) LogRow() []*log.Field {
-	return []*log.Field{
-		log.String("metric", t.Name),
-		log.String("metric-type", "text"),
-		log.String("text", t.Value),
-	}
-}
-
-func (t textExport) PrometheusRow() []*prometheusRow {
-	return nil
-}
-
-func (t textExport) PrometheusType() string {
-	return ""
-}
-
-func (t textExport) PrometheusName() string {
-	return ""
 }

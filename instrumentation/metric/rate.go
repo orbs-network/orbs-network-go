@@ -7,9 +7,7 @@
 package metric
 
 import (
-	"fmt"
 	"github.com/VividCortex/ewma"
-	"github.com/orbs-network/scribe/log"
 	"sync"
 	"time"
 )
@@ -17,7 +15,7 @@ import (
 var hardCodedTickInterval = 1 * time.Second // this cannot really be changed as the EWMA library doesn't work well with sub-second intervals
 
 type Rate struct {
-	namedMetric
+	name 		  string
 	movingAverage ewma.MovingAverage
 
 	m          sync.Mutex
@@ -26,9 +24,8 @@ type Rate struct {
 }
 
 type rateExport struct {
-	Name     string
-	Rate     float64
-	Interval float64
+	Name          string
+	RatePerSecond float64
 }
 
 func newRate(name string) *Rate {
@@ -37,30 +34,33 @@ func newRate(name string) *Rate {
 
 func newRateWihStart(name string, start time.Time) *Rate {
 	return &Rate{
-		namedMetric:   namedMetric{name: name},
+		name:          name,
 		movingAverage: ewma.NewMovingAverage(),
 		nextTick:      start.Add(hardCodedTickInterval),
 	}
 }
 
-func (r *Rate) Export() exportedMetric {
-	return r.export()
+func (r *Rate) Name() string {
+	return r.name
 }
 
-func (r *Rate) export() rateExport {
+func (r *Rate) Value() interface{} {
+	return r.movingAverage.Value()
+}
+
+func (r *Rate) Rate() float64 {
+	return r.movingAverage.Value()
+}
+
+func (r *Rate) Export() exportedMetric {
 	r.m.Lock()
 	defer r.m.Unlock()
 	r.maybeRotate()
 
 	return rateExport{
 		r.name,
-		r.movingAverage.Value(),
-		toMillis(hardCodedTickInterval.Nanoseconds()),
+		r.Rate(),
 	}
-}
-
-func (r *Rate) String() string {
-	return fmt.Sprintf("metric %s: %f per %s\n", r.name, r.movingAverage.Value(), hardCodedTickInterval)
 }
 
 func (r *Rate) Measure(eventCount int64) {
@@ -87,25 +87,4 @@ func (r *Rate) Reset() {
 	defer r.m.Unlock()
 
 	r.movingAverage = ewma.NewMovingAverage()
-}
-
-func (r rateExport) LogRow() []*log.Field {
-	return []*log.Field{
-		log.String("metric", r.Name),
-		log.String("metric-type", "rate"),
-		log.Float64("rate", r.Rate),
-		log.Float64("interval", r.Interval),
-	}
-}
-
-func (r rateExport) PrometheusRow() []*prometheusRow {
-	return nil
-}
-
-func (r rateExport) PrometheusType() string {
-	return ""
-}
-
-func (r rateExport) PrometheusName() string {
-	return ""
 }

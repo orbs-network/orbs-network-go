@@ -60,12 +60,14 @@ func (s *HttpServer) getStatusWarningMessage() string {
 	return "OK"
 }
 
-func (s *HttpServer) getGaugeValueFromMetrics(name string) (value int64) {
-	metric := s.metricRegistry.Get(name)
-	if metric == nil {
+func (s *HttpServer) getGaugeValueFromMetrics(name string) int64 {
+	metricObj := s.metricRegistry.Get(name)
+	if metricObj == nil {
 		return 0
 	}
-	rows := metric.Export().LogRow()
-	value = rows[len(rows)-1].Int
-	return value
+	if value, ok := metricObj.Value().(int64); !ok {
+		return 0
+	} else {
+		return value
+	}
 }

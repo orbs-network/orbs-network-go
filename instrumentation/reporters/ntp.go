@@ -4,19 +4,20 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package metric
+package reporters
 
 import (
 	"context"
 	"github.com/beevik/ntp"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
 	"time"
 )
 
 type ntpMetrics struct {
-	drift *Gauge
+	drift *metric.Gauge
 }
 
 type ntpReporter struct {
@@ -26,7 +27,7 @@ type ntpReporter struct {
 
 const NTP_QUERY_INTERVAL = 30 * time.Second
 
-func NewNtpReporter(ctx context.Context, metricFactory Factory, logger log.Logger, ntpServerAddress string) govnr.ShutdownWaiter {
+func NewNtpReporter(ctx context.Context, metricFactory metric.Factory, logger log.Logger, ntpServerAddress string) govnr.ShutdownWaiter {
 	r := &ntpReporter{
 		metrics: ntpMetrics{
 			drift: metricFactory.NewGauge("OS.Time.Drift.Millis"),

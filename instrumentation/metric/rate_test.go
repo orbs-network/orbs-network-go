@@ -16,19 +16,19 @@ func testRateMeasure(t *testing.T, measure func(rate *Rate)) {
 	start := time.Now()
 	rate := newRateWihStart("tps", start)
 
-	require.EqualValues(t, 0, rate.export().Rate)
+	require.EqualValues(t, 0, rate.Rate())
 	measure(rate)
 
 	rate.maybeRotateAsOf(start.Add(1100 * time.Millisecond))
 
-	require.EqualValues(t, 100, rate.export().Rate)
+	require.EqualValues(t, 100, rate.Rate())
 
 	for i := 1; i < 10; i++ {
 		rate.maybeRotateAsOf(start.Add(time.Duration(i) * time.Second))
 	}
 
 	require.Condition(t, func() bool {
-		return rate.export().Rate < 100
+		return rate.Rate() < 100
 	}, "rate did not decay")
 }
 

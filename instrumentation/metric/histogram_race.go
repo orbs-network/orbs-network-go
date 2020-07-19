@@ -12,21 +12,30 @@ import (
 )
 
 type Histogram struct {
-	namedMetric
+	name 		  string
+}
+
+type histogramExport struct {
 }
 
 func newHistogram(name string, max int64, n int) *Histogram {
-	return &Histogram{
-		namedMetric: namedMetric{name: name},
-	}
+	return &Histogram{name: name}
 }
 
-func (h Histogram) String() string {
-	return "unimplemented - race detector active"
+func (h *Histogram) Name() string {
+	return h.name
 }
 
 func (h Histogram) Export() exportedMetric {
 	return &histogramExport{}
+}
+
+func (h *Histogram) CurrentSamples() int64 {
+	return 0
+}
+
+func (h *Histogram) Value() interface{} {
+	return nil
 }
 
 func (h *Histogram) Rotate() {
@@ -36,4 +45,9 @@ func (h *Histogram) RecordSince(t time.Time) {
 }
 
 func (h *Histogram) Record(measurement int64) {
+}
+
+// Note: in real life we have labels
+func (h *Histogram) exportPrometheus(labelString string) string {
+	return ""
 }

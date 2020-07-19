@@ -4,13 +4,14 @@
 // This source code is licensed under the MIT license found in the LICENSE file in the root directory of this source tree.
 // The above notice should be included in all copies or substantial portions of the software.
 
-package metric
+package reporters
 
 import (
 	"context"
 	"fmt"
 	"github.com/c9s/goprocinfo/linux"
 	"github.com/orbs-network/govnr"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/scribe/log"
 	"os"
@@ -18,15 +19,15 @@ import (
 )
 
 type systemMetrics struct {
-	rssBytes       *Gauge
-	cpuUtilization *Gauge
+	rssBytes       *metric.Gauge
+	cpuUtilization *metric.Gauge
 }
 
 type systemReporter struct {
 	metrics systemMetrics
 }
 
-func NewSystemReporter(ctx context.Context, metricFactory Factory, logger log.Logger) govnr.ShutdownWaiter {
+func NewSystemReporter(ctx context.Context, metricFactory metric.Factory, logger log.Logger) govnr.ShutdownWaiter {
 	r := &systemReporter{
 		metrics: systemMetrics{
 			rssBytes:       metricFactory.NewGauge("OS.Process.Memory.Bytes"),

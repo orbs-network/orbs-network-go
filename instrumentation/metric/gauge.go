@@ -7,14 +7,11 @@
 package metric
 
 import (
-	"fmt"
-	"github.com/orbs-network/scribe/log"
-	"strconv"
 	"sync/atomic"
 )
 
 type Gauge struct {
-	namedMetric
+	name  string
 	value int64
 }
 
@@ -23,15 +20,23 @@ type gaugeExport struct {
 	Value int64
 }
 
+func newGauge(name string) *Gauge {
+	return &Gauge{name: name}
+}
+
+func (g *Gauge) Name() string {
+	return g.name
+}
+
+func (g *Gauge) Value() interface{} {
+	return g.IntValue()
+}
+
 func (g *Gauge) Export() exportedMetric {
 	return gaugeExport{
 		g.name,
 		atomic.LoadInt64(&g.value),
 	}
-}
-
-func (g *Gauge) String() string {
-	return fmt.Sprintf("metric %s: %d\n", g.name, atomic.LoadInt64(&g.value))
 }
 
 func (g *Gauge) Inc() {
@@ -62,28 +67,6 @@ func (g *Gauge) UpdateUInt32(i int32) {
 	atomic.StoreInt64(&g.value, int64(i))
 }
 
-func (g *Gauge) Value() int64 {
+func (g *Gauge) IntValue() int64 {
 	return atomic.LoadInt64(&g.value)
-}
-
-func (g gaugeExport) LogRow() []*log.Field {
-	return []*log.Field{
-		log.String("metric", g.Name),
-		log.String("metric-type", "gauge"),
-		log.Int64("gauge", g.Value),
-	}
-}
-
-func (g gaugeExport) PrometheusRow() []*prometheusRow {
-	return []*prometheusRow{
-		{g.PrometheusName(), "", strconv.FormatInt(g.Value, 10)},
-	}
-}
-
-func (g gaugeExport) PrometheusType() string {
-	return "gauge"
-}
-
-func (g gaugeExport) PrometheusName() string {
-	return prometheusName(g.Name)
 }

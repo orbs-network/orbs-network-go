@@ -6,10 +6,11 @@
 
 //+build manual linux
 
-package metric
+package reporters
 
 import (
 	"context"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/scribe/log"
 	"io/ioutil"
 	"os"
@@ -27,7 +28,7 @@ func TestSystemMetrics(t *testing.T) {
 		ioutil.ReadFile("/dev/random")
 	}()
 
-	m := NewRegistry()
+	m := metric.NewRegistry()
 	l := log.GetLogger().WithOutput(log.NewFormattingOutput(os.Stderr, log.NewHumanReadableFormatter()))
 	NewSystemReporter(context.Background(), m, l)
 	m.PeriodicallyRotate(context.Background(), l)

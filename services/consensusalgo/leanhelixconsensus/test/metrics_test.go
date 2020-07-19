@@ -15,8 +15,6 @@ import (
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
-	"regexp"
-	"strings"
 	"testing"
 	"time"
 )
@@ -38,19 +36,15 @@ func TestMetricsAreUpdatedOnElectionTrigger(t *testing.T) {
 		metrics := h.getMetrics()
 
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return metrics.currentElectionCount.Value() > 0
+			return metrics.currentElectionCount.IntValue() > 0
 		}), "expected currentElectionCount metric to update")
 
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return metrics.currentLeaderMemberId.Value() != ""
+			return metrics.currentLeaderMemberId.Value().(string) != ""
 		}), "expected currentLeaderMemberId metric to update")
 
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			matched, err := regexp.MatchString("samples=[1-9]", metrics.timeSinceLastElectionMillis.String())
-			if err != nil {
-				panic(err)
-			}
-			return matched
+			return metrics.timeSinceLastElectionMillis.CurrentSamples() != 0
 		}), "expected timeSinceLastElectionMillis metric to update")
 	})
 
@@ -88,13 +82,13 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		// At this point the first block should be committed, lastCommitTime should update
 		now := time.Now()
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return abs(now.UnixNano()-metrics.lastCommittedTime.Value()) < int64(time.Minute)
+			return abs(now.UnixNano()-metrics.lastCommittedTime.IntValue()) < int64(time.Minute)
 		}), "expected lastCommittedTime metric not to update on first commit")
 
 		// timeSinceLastCommitMillis will NOT update because this is the first commit
-		require.True(t, strings.Contains(metrics.timeSinceLastCommitMillis.String(), "samples=0"), "expected lastCommittedTime to not update on first commit")
+		require.EqualValues(t, 0, metrics.timeSinceLastCommitMillis.CurrentSamples(), "expected lastCommittedTime to not update on first commit")
 
-		firstTermCommitTime := metrics.lastCommittedTime.Value()
+		firstTermCommitTime := metrics.lastCommittedTime.IntValue()
 
 		// Starting the second term
 
@@ -105,15 +99,11 @@ func TestMetricsAreUpdatedOnCommit(t *testing.T) {
 		// A second commit should take place now and this time timeSinceLastCommitMillis should update
 
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			matched, err := regexp.MatchString("samples=[1-9]", metrics.timeSinceLastCommitMillis.String())
-			if err != nil {
-				panic(err)
-			}
-			return matched
+			return metrics.timeSinceLastCommitMillis.CurrentSamples() != 0
 		}), "expected timeSinceLastCommitMillis metric to update")
 
 		require.True(t, test.Eventually(1*time.Second, func() bool {
-			return metrics.lastCommittedTime.Value() > firstTermCommitTime
+			return metrics.lastCommittedTime.IntValue() > firstTermCommitTime
 		}), "expected lastCommittedTime to increase after the second commit")
 
 	})
@@ -141,11 +131,11 @@ func advanceConsesnsusToNextBlock(t *testing.T, ctx context.Context, h *singleLh
 	// At this point the first block should be committed, lastCommitTime should update
 	now := time.Now()
 	require.True(t, test.Eventually(1*time.Second, func() bool {
-		return abs(now.UnixNano()-metrics.lastCommittedTime.Value()) < int64(time.Minute)
+		return abs(now.UnixNano()-metrics.lastCommittedTime.IntValue()) < int64(time.Minute)
 	}), "expected lastCommittedTime metric not to update on first commit")
 
 	// timeSinceLastCommitMillis will NOT update because this is the first commit
-	require.True(t, strings.Contains(metrics.timeSinceLastCommitMillis.String(), "samples=0"), "expected lastCommittedTime to not update on first commit")
+	require.EqualValues(t, 0, metrics.timeSinceLastCommitMillis.CurrentSamples(), "expected lastCommittedTime to not update on first commit")
 
 	// Use commits from previous term to calculate the random seed for the next term
 	proof := blockproof.GenerateLeanHelixBlockProof(h.keyManagerForNode(h.nodeIndex()), commitMessages)
