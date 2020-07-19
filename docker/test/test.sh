@@ -34,7 +34,7 @@ export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
 mkdir -p _tmp/management
-cp ./test/e2e/_data/mgmt.json _tmp/management/mgmt.json
+cp ./docker/test/mgmt.json _tmp/management/mgmt.json
 
 # prepare persistent blocks for docker tests
 # skip on Mac
@@ -78,9 +78,6 @@ echo "The network has started with pre-existing (ancient) 500-some blocks"
 
 echo "Polling the app network for liveness.."
 ./.circleci/check-e2e-network-liveness.js 42 10
-
-#echo "Polling the management network for liveness.."
-#./.circleci/check-e2e-network-liveness.js 40 10
 
 echo "Running E2E tests (AND a humble stress-test) w/consensus algo: ${CONSENSUSALGO}"
 time go_test_junit_report e2e -timeout 10m -count=1 ./test/e2e/...
