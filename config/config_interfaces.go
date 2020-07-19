@@ -7,7 +7,6 @@
 package config
 
 import (
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/consensus"
@@ -20,7 +19,6 @@ type NodeConfig interface {
 	NetworkType() protocol.SignerNetworkType
 	NodeAddress() primitives.NodeAddress
 	NodePrivateKey() primitives.EcdsaSecp256K1PrivateKey
-	GenesisValidatorNodes() map[string]ValidatorNode // TODO POSV2 remove this ?
 	TransactionExpirationWindow() time.Duration
 
 	// Management
@@ -80,7 +78,6 @@ type NodeConfig interface {
 
 	// gossip
 	GossipListenPort() uint16
-	GossipPeers() topologyProviderAdapter.TransportPeers // TODO POSV2 remove this ?
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
 	GossipReconnectInterval() time.Duration
@@ -123,8 +120,7 @@ type NodeConfig interface {
 
 type OverridableConfig interface {
 	NodeConfig
-	ForNode(nodeAddress primitives.NodeAddress, privateKey primitives.EcdsaSecp256K1PrivateKey) NodeConfig
-	MergeWithFileConfig(source string) (mutableNodeConfig, error)
+	Modify(newValues ...NodeConfigKeyValue)
 }
 
 type mutableNodeConfig interface {
@@ -134,13 +130,10 @@ type mutableNodeConfig interface {
 	SetUint32(key string, value uint32) mutableNodeConfig
 	SetString(key string, value string) mutableNodeConfig
 	SetBool(key string, value bool) mutableNodeConfig
-	SetGenesisValidatorNodes(nodes map[string]ValidatorNode) mutableNodeConfig
-	SetGossipPeers(peers topologyProviderAdapter.TransportPeers) mutableNodeConfig
 	SetNodeAddress(key primitives.NodeAddress) mutableNodeConfig
 	SetNodePrivateKey(key primitives.EcdsaSecp256K1PrivateKey) mutableNodeConfig
 	SetBenchmarkConsensusConstantLeader(key primitives.NodeAddress) mutableNodeConfig
 	SetActiveConsensusAlgo(algoType consensus.ConsensusAlgoType) mutableNodeConfig
-	Clone() mutableNodeConfig
 }
 
 type BlockStorageConfig interface {
@@ -165,7 +158,6 @@ type FilesystemBlockPersistenceConfig interface {
 
 type GossipTransportConfig interface {
 	NodeAddress() primitives.NodeAddress
-	GossipPeers() topologyProviderAdapter.TransportPeers
 	GossipListenPort() uint16
 	GossipConnectionKeepAliveInterval() time.Duration
 	GossipNetworkTimeout() time.Duration
@@ -180,10 +172,6 @@ type ConsensusContextConfig interface {
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
 	ManagementConsensusGraceTimeout() time.Duration
-}
-
-type CommitteeProviderConfig interface {
-	GenesisValidatorNodes() map[string]ValidatorNode
 }
 
 type PublicApiConfig interface {

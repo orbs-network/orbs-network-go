@@ -43,16 +43,6 @@ func ValidateNodeLogic(cfg NodeConfig) error {
 	return nil
 }
 
-func ValidateInMemoryManagement(cfg NodeConfig) error {
-	if len(cfg.GossipPeers()) == 0 {
-		return errors.New("gossip peer list must not be empty")
-	}
-	if len(cfg.GenesisValidatorNodes()) == 0 {
-		return errors.New("genesis validator list must not be empty")
-	}
-	return nil
-}
-
 func requireCorrectNodeAddressAndPrivateKey(address primitives.NodeAddress, key primitives.EcdsaSecp256K1PrivateKey) error {
 	msg := []byte{
 		0, 0, 0, 0, 0, 0, 0, 0,

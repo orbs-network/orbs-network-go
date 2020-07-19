@@ -93,7 +93,7 @@ func NewNodeLogic(parentCtx context.Context,
 	publicApiService := publicapi.NewPublicApi(nodeConfig, transactionPoolService, virtualMachineService, blockStorageService, logger, metricRegistry)
 	consensusContextService := consensuscontext.NewConsensusContext(transactionPoolService, virtualMachineService, stateStorageService, management, nodeConfig, logger, metricRegistry)
 
-	consensusAlgo := createConsensusAlgo(nodeConfig)(ctx, gossipService, blockStorageService, consensusContextService, signer, logger, metricRegistry)
+	consensusAlgo := createConsensusAlgo(nodeConfig)(ctx, gossipService, blockStorageService, consensusContextService, management, signer, logger, metricRegistry)
 
 	logger.Info("Node started")
 
@@ -125,16 +125,26 @@ func createConsensusAlgo(nodeConfig config.NodeConfig) func(ctx context.Context,
 	gossip services.Gossip,
 	blockStorage services.BlockStorage,
 	consensusContext services.ConsensusContext,
+	management services.Management,
 	signer signer.Signer,
 	parentLogger log.Logger,
 	metricFactory metric.Factory) consensusAlgo {
 
-	return func(ctx context.Context, gossip services.Gossip, blockStorage services.BlockStorage, consensusContext services.ConsensusContext, signer signer.Signer, parentLogger log.Logger, metricFactory metric.Factory) consensusAlgo {
+	return func(ctx context.Context, gossip services.Gossip, blockStorage services.BlockStorage, consensusContext services.ConsensusContext, management services.Management, signer signer.Signer, parentLogger log.Logger, metricFactory metric.Factory) consensusAlgo {
 		switch nodeConfig.ActiveConsensusAlgo() {
 		case consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX:
 			return leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossip, blockStorage, consensusContext, signer, parentLogger, nodeConfig, metricFactory)
 		case consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS:
-			return benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, signer, parentLogger, nodeConfig, metricFactory)
+			// TODO https://github.com/orbs-network/orbs-network-go/issues/1602 improve connection between benchmark and management
+			ref, err := management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+			if err != nil {
+				panic(errors.Errorf("benchmark cannot start with no current ref %s", err))
+			}
+			committee, err := management.GetCommittee(ctx, &services.GetCommitteeInput{Reference: ref.CurrentReference})
+			if err != nil {
+				panic(errors.Errorf("benchmark cannot start with no committee %s", err))
+			}
+			return benchmarkconsensus.NewBenchmarkConsensusAlgo(ctx, gossip, blockStorage, consensusContext, committee.Members, signer, parentLogger, nodeConfig, metricFactory)
 		default:
 			panic(errors.Errorf("unknown consensus algo type %s", nodeConfig.ActiveConsensusAlgo()))
 		}

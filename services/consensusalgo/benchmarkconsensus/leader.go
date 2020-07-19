@@ -88,8 +88,7 @@ func (s *Service) leaderConsensusRoundTick(ctx context.Context) error {
 		return err
 	}
 
-	networkSize := len(s.config.GenesisValidatorNodes())
-	if networkSize == 1 {
+	if len(s.network) == 1 {
 		s.successfullyVotedBlocks <- lastCommittedBlockHeight
 	}
 
@@ -254,8 +253,15 @@ func (s *Service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, lastCommittedBlockHeight)
 	}
 
-	// approved signer
-	if _, found := s.config.GenesisValidatorNodes()[sender.SenderNodeAddress().KeyForMap()]; !found {
+	// approved signer TODO https://github.com/orbs-network/orbs-network-go/issues/1602 make aware of committes changes and better signature checking
+	found := false
+	for i := range s.network {
+		if s.network[i].Equal(sender.SenderNodeAddress()) {
+			found = true;
+			break;
+		}
+	}
+	if !found {
 		return errors.Errorf("signer with public key %s is not a valid validator", sender.SenderNodeAddress())
 	}
 

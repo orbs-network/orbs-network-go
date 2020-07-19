@@ -34,8 +34,8 @@ func main() {
 		pathToLog := flag.String("log", "", "path/to/node.log")
 		version := flag.Bool("version", false, "returns information about version")
 
-		var configFiles config.ArrayFlags
-		flag.Var(&configFiles, "config", "path/to/config.json")
+		var filePaths config.FilesPaths
+		flag.Var(&filePaths, "config", "path/to/config.json")
 
 		flag.Parse()
 
@@ -44,7 +44,7 @@ func main() {
 			os.Exit(0)
 		}
 
-		cfg, err := config.GetNodeConfigFromFiles(configFiles, *httpAddress)
+		cfg, err := config.GetNodeConfigFromFiles(filePaths, *httpAddress)
 		if err != nil {
 			logger.Error("error reading configuration", log.Error(err))
 			os.Exit(1)

@@ -15,19 +15,11 @@ import (
 	"time"
 )
 
-func genesisValidators() map[string]ValidatorNode {
-	return map[string]ValidatorNode{
-		"v1": NewHardCodedValidatorNode([]byte{0x0}),
-		"v2": NewHardCodedValidatorNode([]byte{0x1}),
-	}
-}
-
 func TestValidateConfig(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
 		cfg.SetNodeAddress(defaultNodeAddress())
 		cfg.SetNodePrivateKey(defaultPrivateKey())
-		cfg.SetGenesisValidatorNodes(genesisValidators())
 
 		require.NoError(t, ValidateNodeLogic(cfg), "if this test fails check the min/max values of protocol version are defined correctly.")
 	})
@@ -36,7 +28,6 @@ func TestValidateConfig(t *testing.T) {
 func TestValidateConfig_ErrorOnInvalidValue(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
-		cfg.SetGenesisValidatorNodes(genesisValidators())
 		cfg.SetDuration(BLOCK_SYNC_NO_COMMIT_INTERVAL, 1*time.Millisecond)
 
 		require.Error(t, ValidateNodeLogic(cfg))
@@ -46,7 +37,6 @@ func TestValidateConfig_ErrorOnInvalidValue(t *testing.T) {
 func TestValidateConfig_DoesNotErrorOnProperKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
-		cfg.SetGenesisValidatorNodes(genesisValidators())
 		cfg.SetNodeAddress(defaultNodeAddress())
 		cfg.SetNodePrivateKey(defaultPrivateKey())
 
@@ -57,7 +47,6 @@ func TestValidateConfig_DoesNotErrorOnProperKeys(t *testing.T) {
 func TestValidateConfig_ErrorOnInvalidKeys(t *testing.T) {
 	with.Logging(t, func(harness *with.LoggingHarness) {
 		cfg := defaultProductionConfig()
-		cfg.SetGenesisValidatorNodes(genesisValidators())
 		cfg.SetNodeAddress(defaultNodeAddress())
 		cfg.SetNodePrivateKey(wrongPrivateKey())
 

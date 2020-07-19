@@ -13,7 +13,6 @@ package memory
 import (
 	"context"
 	"github.com/orbs-network/govnr"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
@@ -41,7 +40,7 @@ type memoryTransport struct {
 	transmit adapter.TransmitFunc
 }
 
-func NewTransport(ctx context.Context, logger log.Logger, validators map[string]config.ValidatorNode) *memoryTransport {
+func NewTransport(ctx context.Context, logger log.Logger, nodes []primitives.NodeAddress) *memoryTransport {
 	transport := &memoryTransport{
 		peers:    make(map[string]*peer),
 		transmit: nil,
@@ -52,10 +51,9 @@ func NewTransport(ctx context.Context, logger log.Logger, validators map[string]
 
 	transport.Lock()
 	defer transport.Unlock()
-	for _, node := range validators {
-		nodeAddress := node.NodeAddress().KeyForMap()
-		peer := newPeer(ctx, node.NodeAddress(), logger.WithTags(LogTag, log.Stringable("node", node.NodeAddress())), len(validators))
-		transport.peers[nodeAddress] = peer
+	for _, node := range nodes {
+		peer := newPeer(ctx, node, logger.WithTags(LogTag, log.Stringable("node", node)), len(nodes))
+		transport.peers[node.KeyForMap()] = peer
 		transport.Supervise(peer)
 	}
 

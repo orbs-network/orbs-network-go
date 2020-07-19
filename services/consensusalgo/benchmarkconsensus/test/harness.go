@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/consensusalgo/benchmarkconsensus"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-network-go/test/with"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/orbs-spec/types/go/services/gossiptopics"
@@ -33,6 +34,7 @@ type harness struct {
 	signer           signer.Signer
 	config           benchmarkconsensus.Config
 	service          *benchmarkconsensus.Service
+	nodes            []primitives.NodeAddress
 	registry         metric.Registry
 }
 
@@ -50,10 +52,9 @@ func otherNonLeaderKeyPair() *testKeys.TestEcdsaSecp256K1KeyPair {
 
 func newHarness(parent *with.ConcurrencyHarness, isLeader bool) *harness {
 
-	genesisValidatorNodes := make(map[string]config.ValidatorNode)
+	var nodes []primitives.NodeAddress
 	for i := 0; i < NETWORK_SIZE; i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
+		nodes = append(nodes, testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress())
 	}
 
 	nodeKeyPair := leaderKeyPair()
@@ -61,7 +62,7 @@ func newHarness(parent *with.ConcurrencyHarness, isLeader bool) *harness {
 		nodeKeyPair = nonLeaderKeyPair()
 	}
 
-	cfg := config.ForBenchmarkConsensusTests(nodeKeyPair, leaderKeyPair(), genesisValidatorNodes)
+	cfg := config.ForBenchmarkConsensusTests(nodeKeyPair, leaderKeyPair())
 
 	gossip := &gossiptopics.MockBenchmarkConsensus{}
 	gossip.When("RegisterBenchmarkConsensusHandler", mock.Any).Return().Times(1)
@@ -82,6 +83,7 @@ func newHarness(parent *with.ConcurrencyHarness, isLeader bool) *harness {
 		signer:             signer,
 		config:             cfg,
 		service:            nil,
+		nodes:              nodes,
 		registry:           metric.NewRegistry(),
 	}
 }
@@ -92,6 +94,7 @@ func (h *harness) createService(ctx context.Context) {
 		h.gossip,
 		h.blockStorage,
 		h.consensusContext,
+		h.nodes,
 		h.signer,
 		h.Logger,
 		h.config,

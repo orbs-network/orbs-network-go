@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/orbs-network/go-mock"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test/rand"
@@ -35,20 +34,20 @@ type tamperingHarness struct {
 
 func newTamperingHarness(t *testing.T, parent *with.ConcurrencyHarness, ctx context.Context, numListeners int) *tamperingHarness {
 	senderAddress := "sender"
-	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	genesisValidatorNodes[senderAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(senderAddress))
-	listeners := []*MockTransportListener{}
-	addresses := []string{}
+	var nodeAddresses []primitives.NodeAddress
+	nodeAddresses = append(nodeAddresses, primitives.NodeAddress(senderAddress))
+	var listeners []*MockTransportListener
+	var addresses []string
 
 	for i := 0; i < numListeners; i++ {
 		listenerAddress := fmt.Sprintf("listener%d", i)
 		addresses = append(addresses, listenerAddress)
 		listener := &MockTransportListener{}
 		listeners = append(listeners, listener)
-		genesisValidatorNodes[listenerAddress] = config.NewHardCodedValidatorNode(primitives.NodeAddress(listenerAddress))
+		nodeAddresses = append(nodeAddresses, primitives.NodeAddress(listenerAddress))
 	}
 
-	memoryTransport := memory.NewTransport(ctx, parent.Logger, genesisValidatorNodes)
+	memoryTransport := memory.NewTransport(ctx, parent.Logger, nodeAddresses)
 	transport := NewTamperingTransport(parent.Logger, memoryTransport)
 	for ind, listener := range listeners {
 		transport.RegisterListener(listener, primitives.NodeAddress(addresses[ind]))

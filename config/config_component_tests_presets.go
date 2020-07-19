@@ -7,7 +7,6 @@
 package config
 
 import (
-	topologyProviderAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	testKeys "github.com/orbs-network/orbs-network-go/test/crypto/keys"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -15,10 +14,9 @@ import (
 	"time"
 )
 
-func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers topologyProviderAdapter.TransportPeers, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
+func ForDirectTransportTests(nodeAddress primitives.NodeAddress, keepAliveInterval time.Duration, networkTimeout time.Duration) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(gossipPeers)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, keepAliveInterval)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, networkTimeout)
@@ -31,7 +29,6 @@ func ForDirectTransportTests(nodeAddress primitives.NodeAddress, gossipPeers top
 func ForGossipAdapterTests(nodeAddress primitives.NodeAddress) GossipTransportConfig {
 	cfg := emptyConfig()
 	cfg.SetNodeAddress(nodeAddress)
-	cfg.SetGossipPeers(make(topologyProviderAdapter.TransportPeers))
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, uint32(0))
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 20*time.Millisecond)
@@ -111,9 +108,8 @@ func ForLeanHelixConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, aud
 	return cfg
 }
 
-func ForBenchmarkConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, leaderKeyPair *testKeys.TestEcdsaSecp256K1KeyPair, validators map[string]ValidatorNode) NodeConfig {
+func ForBenchmarkConsensusTests(keyPair *testKeys.TestEcdsaSecp256K1KeyPair, leaderKeyPair *testKeys.TestEcdsaSecp256K1KeyPair) NodeConfig {
 	cfg := emptyConfig()
-	cfg.SetGenesisValidatorNodes(validators)
 	cfg.SetBenchmarkConsensusConstantLeader(leaderKeyPair.NodeAddress())
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 	cfg.SetUint32(CONSENSUS_CONTEXT_MAXIMUM_TRANSACTIONS_IN_BLOCK, 1)

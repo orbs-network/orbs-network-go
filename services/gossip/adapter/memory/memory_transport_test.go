@@ -8,7 +8,6 @@ package memory
 
 import (
 	"context"
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
@@ -106,10 +105,9 @@ func TestMemoryTransport_DoesNotGetStuckWhenSendBufferIsFull(t *testing.T) {
 	})
 }
 
-func makeNetwork(addresses ...primitives.NodeAddress) map[string]config.ValidatorNode {
-	genesisValidatorNodes := make(map[string]config.ValidatorNode)
-	for _, address := range addresses {
-		genesisValidatorNodes[address.KeyForMap()] = config.NewHardCodedValidatorNode(address)
+func makeNetwork(addresses ...primitives.NodeAddress) []primitives.NodeAddress {
+	if len(addresses) == 1 {
+		return []primitives.NodeAddress{addresses[0]}
 	}
-	return genesisValidatorNodes
+	return addresses
 }

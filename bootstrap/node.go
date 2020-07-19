@@ -24,6 +24,7 @@ import (
 	txPoolAdapter "github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
 type Node struct {
@@ -63,12 +64,9 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 
 	var managementProvider management.Provider
 	if nodeConfig.ManagementFilePath() == "" {
-		err := config.ValidateInMemoryManagement(nodeConfig)
-		if err != nil {
-			nodeLogger.Error("InMemory parmerters error cannot start", log.Error(err))
-			panic(err)
-		}
-		managementProvider = managementAdapter.NewMemoryProvider(nodeConfig, nodeLogger)
+		err := errors.New("ManagementFilePath is empty")
+		nodeLogger.Error("Cannot start node without a ManagementFilePath", log.Error(err))
+		panic(err)
 	} else {
 		managementProvider = managementAdapter.NewFileProvider(nodeConfig, nodeLogger)
 	}

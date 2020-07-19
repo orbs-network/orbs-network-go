@@ -3,21 +3,13 @@
   "node-address": "d27e2e7398e2582f63d0800330010b3e58952ff6",
   "active-consensus-algo": 2,
   "lean-helix-show-debug": true,
-  "genesis-validator-addresses": [
-    "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
-    "d27e2e7398e2582f63d0800330010b3e58952ff6",
-    "6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9",
-    "c056dfc0d1fbc7479db11e61d1b0b57612bf7f17"
-  ],
-  "topology-nodes": [
-    {"address":"a328846cd5b4979d68a8c58a9bdfeee657b34de7","ip":"192.168.199.2","port":4400},
-    {"address":"d27e2e7398e2582f63d0800330010b3e58952ff6","ip":"192.168.199.3","port":4400},
-    {"address":"6e2cb55e4cbe97bf5b1e731d51cc2c285d83cbf9","ip":"192.168.199.4","port":4400},
-    {"address":"c056dfc0d1fbc7479db11e61d1b0b57612bf7f17","ip":"192.168.199.5","port":4400}
-  ],
   "ethereum-endpoint": "http://192.168.199.6:8545",
   "logger-full-log": true,
   "processor-sanitize-deployed-contracts": false,
   "signer-endpoint": "http://192.168.199.10:7777",
-  "profiling": true
+  "profiling": true,
+  "management-file-path": "/usr/local/var/orbs/management/mgmt.json",
+  "management-consensus-grace-timeout": "0s",
+  "management-network-liveness-timeout": "876000h",
+  "block-sync-reference-max-allowed-distance": "10000h"
 }

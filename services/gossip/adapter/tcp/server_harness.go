@@ -12,7 +12,6 @@ import (
 	"github.com/orbs-network/go-mock"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
-	"github.com/orbs-network/orbs-network-go/services/gossip/adapter"
 	"github.com/orbs-network/orbs-network-go/services/gossip/adapter/testkit"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
@@ -41,7 +40,7 @@ type directHarness struct {
 
 func newDirectHarnessWithConnectedPeers(t *testing.T, ctx context.Context, parent *with.ConcurrencyHarness) *directHarness {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(adapter.TransportPeers), TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this gossipPeers is just a stub, it's mostly a client gossipPeers and this is a server harness
+	cfg := config.ForDirectTransportTests(address, TEST_KEEP_ALIVE_INTERVAL, TEST_NETWORK_TIMEOUT) // this gossipPeers is just a stub, it's mostly a client gossipPeers and this is a server harness
 	transport := makeTransport(ctx, parent.Logger, cfg)
 
 	peerTalkerConnection := establishPeerClient(t, transport.GetServerPort()) // establish connection from test to server port ( test harness ==> SUT )

@@ -27,7 +27,7 @@ import (
 
 func TestDirectTransport_HandlesStartupWithEmptyPeerList(t *testing.T) {
 	address := keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress()
-	cfg := config.ForDirectTransportTests(address, make(adapter.TransportPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	cfg := config.ForDirectTransportTests(address, 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	with.Concurrency(t, func(ctx context.Context, harness *with.ConcurrencyHarness) {
 		transport := NewDirectTransport(ctx, cfg, harness.Logger, metric.NewRegistry())
 		harness.Supervise(transport)
@@ -284,7 +284,7 @@ func aVeryLargeMessage() [][]byte {
 
 func aNode(ctx context.Context, logger log.Logger) *nodeHarness {
 	address := aKey()
-	cfg := config.ForDirectTransportTests(address, make(adapter.TransportPeers), 20*time.Hour /*disable keep alive*/, 1*time.Second)
+	cfg := config.ForDirectTransportTests(address, 20*time.Hour /*disable keep alive*/, 1*time.Second)
 	transport := NewDirectTransport(ctx, cfg, logger, metric.NewRegistry())
 	listener := &testkit.MockTransportListener{}
 	transport.RegisterListener(listener, address)

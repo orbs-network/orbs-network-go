@@ -16,25 +16,6 @@ import (
 	"testing"
 )
 
-func TestLeaderQuorum(t *testing.T) {
-	nodes := make(map[string]config.ValidatorNode)
-
-	for i := 0; i < 6; i++ {
-		nodes[fmt.Sprintf("fake-key-node%d", i)] = nil
-	}
-
-	cfg := config.ForProduction("")
-	cfg.SetGenesisValidatorNodes(nodes)
-
-	require.NotZero(t, len(cfg.GenesisValidatorNodes()))
-
-	s := &Service{
-		config: cfg,
-	}
-
-	require.NotZero(t, s.requiredQuorumSize())
-}
-
 type fakeFed struct{}
 
 func (f *fakeFed) NodeAddress() primitives.NodeAddress {
@@ -52,7 +33,6 @@ func TestLeaderBadKey(t *testing.T) {
 		nodes["fake-key-node0"] = fake
 
 		cfg := config.ForProduction("")
-		cfg.SetGenesisValidatorNodes(nodes)
 
 		s := &Service{
 			config: cfg,

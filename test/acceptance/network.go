@@ -65,41 +65,32 @@ func usingABenchmarkConsensusNetwork(tb testing.TB, f func(ctx context.Context, 
 
 func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consensusAlgo consensus.ConsensusAlgoType, preloadedBlocks []*protocol.BlockPairContainer,
 	numNodes int, maxTxPerBlock uint32, requiredQuorumPercentage uint32, vcid primitives.VirtualChainId, emptyBlockTime time.Duration, managementPollingInterval time.Duration,
-	configOverride func(cfg config.OverridableConfig) config.OverridableConfig) *Network {
+	configOverrides []config.NodeConfigKeyValue) *Network {
 
 	testLogger.Info("===========================================================================")
 	testLogger.Info("creating acceptance test network", log.String("consensus", consensusAlgo.String()), log.Int("num-nodes", numNodes))
 
 	leaderKeyPair := testKeys.EcdsaSecp256K1KeyPairForTests(0)
 
-	genesisValidatorNodes := map[string]config.ValidatorNode{}
-	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
-	var nodeOrder []primitives.NodeAddress
-	for i := 0; i < int(numNodes); i++ {
-		nodeAddress := testKeys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		genesisValidatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		privateKeys[nodeAddress.KeyForMap()] = testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
-		nodeOrder = append(nodeOrder, nodeAddress)
+	nodeOrder := testKeys.NodeAddressesForTests()[:numNodes]
+	var nodeConfigs []config.NodeConfig
+	for i, nodeAddress := range nodeOrder {
+		nodeConfigs = append(nodeConfigs, config.ForAcceptanceTestNetwork(
+			nodeAddress,
+			testKeys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey(),
+			leaderKeyPair.NodeAddress(),
+			consensusAlgo,
+			maxTxPerBlock,
+			requiredQuorumPercentage,
+			vcid,
+			emptyBlockTime,
+			managementPollingInterval,
+			configOverrides...
+		))
 	}
 
-	var cfgTemplate config.OverridableConfig
-	cfgTemplate = config.ForAcceptanceTestNetwork(
-		genesisValidatorNodes,
-		leaderKeyPair.NodeAddress(),
-		consensusAlgo,
-		maxTxPerBlock,
-		requiredQuorumPercentage,
-		vcid,
-		emptyBlockTime,
-		managementPollingInterval,
-	)
-
-	if configOverride != nil {
-		cfgTemplate = configOverride(cfgTemplate)
-	}
-
-	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, genesisValidatorNodes))
-	sharedManagementProvider := managementAdapter.NewMemoryProvider(cfgTemplate, testLogger)
+	sharedTamperingTransport := gossipTestAdapter.NewTamperingTransport(testLogger, memoryGossip.NewTransport(ctx, testLogger, nodeOrder))
+	sharedManagementProvider := managementAdapter.NewMemoryProvider(nodeOrder, nil /*with memory transport we don't need a topology*/, testLogger)
 	sharedCompiler := nativeProcessorAdapter.NewCompiler()
 	sharedEthereumSimulator := &ethereumAdapter.NopEthereumAdapter{}
 
@@ -125,14 +116,13 @@ func newAcceptanceTestNetwork(ctx context.Context, testLogger log.Logger, consen
 			StatePersistence:                   dumpingStateStorage,
 			EtherConnection:                    sharedEthereumSimulator,
 			Compiler:                           sharedCompiler,
-			ManagementProvider:                 sharedManagementProvider,
 			TransactionPoolBlockHeightReporter: txPoolHeightTracker,
 			StateBlockHeightReporter:           stateHeightTracker,
 		}
 	}
 
 	harness := &Network{
-		Network:                            *inmemory.NewNetworkWithNumOfNodes(genesisValidatorNodes, nodeOrder, privateKeys, testLogger, cfgTemplate, sharedTamperingTransport, nil, provider),
+		Network:                            *inmemory.NewNetworkWithNumOfNodes(nodeOrder, nodeConfigs, testLogger, sharedTamperingTransport, sharedManagementProvider, nil, provider),
 		tamperingTransport:                 sharedTamperingTransport,
 		committeeProvider:                  sharedManagementProvider,
 		ethereumConnection:                 sharedEthereumSimulator,

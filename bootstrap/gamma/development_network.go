@@ -11,52 +11,39 @@ import (
 	"github.com/orbs-network/orbs-network-go/bootstrap/inmemory"
 	"github.com/orbs-network/orbs-network-go/config"
 	gossipAdapter "github.com/orbs-network/orbs-network-go/services/gossip/adapter/memory"
+	managementAdapter "github.com/orbs-network/orbs-network-go/services/management/adapter"
 	"github.com/orbs-network/orbs-network-go/services/transactionpool/adapter"
 	"github.com/orbs-network/orbs-network-go/test/crypto/keys"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 )
 
-func createGammaConfig(cfg ServerConfig, validatorNodes map[string]config.ValidatorNode) config.OverridableConfig{
-	cfgTemplate := config.TemplateForGamma(
-		validatorNodes, // TODO V2 get rid of this
-		keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
-		cfg.ServerAddress,
-		cfg.Profiling,
-	)
-
-	overrideConfigJson := "{}"
-	if cfg.OverrideConfigJson != "" {
-		overrideConfigJson = cfg.OverrideConfigJson
-	}
-
-	configWithOverrides, err := cfgTemplate.MergeWithFileConfig(overrideConfigJson)
-	if err != nil {
-		panic(err)
-	}
-
-	return configWithOverrides
-}
-
-func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock adapter.Clock, serverConfig ServerConfig) (*inmemory.Network, config.OverridableConfig) {
+func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock adapter.Clock, serverConfig ServerConfig) (*inmemory.Network, config.NodeConfig) {
 	numNodes := 4 // Comfortable number for LeanHelix if we choose to use it
 	logger.Info("creating development network")
 
-	validatorNodes := map[string]config.ValidatorNode{}
-	privateKeys := map[string]primitives.EcdsaSecp256K1PrivateKey{}
-
-	var nodeOrder []primitives.NodeAddress
-	for i := 0; i < int(numNodes); i++ {
-		nodeAddress := keys.EcdsaSecp256K1KeyPairForTests(i).NodeAddress()
-		validatorNodes[nodeAddress.KeyForMap()] = config.NewHardCodedValidatorNode(nodeAddress)
-		privateKeys[nodeAddress.KeyForMap()] = keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey()
-		nodeOrder = append(nodeOrder, nodeAddress)
+	nodeOrder := keys.NodeAddressesForTests()[:numNodes]
+	var nodeConfigs []config.NodeConfig
+	for i, nodeAddress := range nodeOrder {
+		cfg := config.ForGamma(
+			nodeAddress,
+			keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey(),
+			keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),
+			serverConfig.ServerAddress,
+			serverConfig.Profiling,
+			serverConfig.OverrideConfigJson,
+		)
+		if cfg == nil {
+			error := errors.Errorf("could not create gamma config with override string '%s'", serverConfig.OverrideConfigJson)
+			logger.Error("cannot start", log.Error(error))
+			panic(error)
+		}
+		nodeConfigs = append(nodeConfigs, cfg)
 	}
-	sharedTransport := gossipAdapter.NewTransport(ctx, logger, validatorNodes)
+	sharedTransport := gossipAdapter.NewTransport(ctx, logger, nodeOrder)
+	sharedManagementProvider := managementAdapter.NewMemoryProvider(nodeOrder, nil /* with memory transport we don't need topology */, logger)
 
-	cfg := createGammaConfig(serverConfig, validatorNodes)
-
-	network := inmemory.NewNetworkWithNumOfNodes(validatorNodes, nodeOrder, privateKeys, logger, cfg, sharedTransport, maybeClock, nil)
+	network := inmemory.NewNetworkWithNumOfNodes(nodeOrder, nodeConfigs, logger, sharedTransport, sharedManagementProvider, maybeClock, nil)
 	network.CreateAndStartNodes(ctx, numNodes)
-	return network, cfg
+	return network, nodeConfigs[0]
 }
