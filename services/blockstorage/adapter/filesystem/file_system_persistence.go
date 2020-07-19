@@ -282,7 +282,7 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 
 	f.metrics.sizeOnDisk.Add(int64(n))
 	f.metrics.writeBlockSize.Record(int64(n))
-	f.metrics.writeMaxBlockSize.UpdateMax(int64(n))
+	f.metrics.writeMaxBlockSize.UpdateMaxAsync(int64(n))
 	f.metrics.writeRate.Measure(1)
 
 	return true, f.bhIndex.getLastBlockHeight(), nil
@@ -350,7 +350,7 @@ func (f *BlockPersistence) fetchBlockFromFile(height primitives.BlockHeight, fil
 
 	f.metrics.readBlockSize.Record(int64(bytes))
 	f.metrics.readRate.Measure(1)
-	f.metrics.readMaxBlockSize.UpdateMax(int64(bytes))
+	f.metrics.readMaxBlockSize.UpdateMaxAsync(int64(bytes))
 	return aBlock, nil
 }
 
