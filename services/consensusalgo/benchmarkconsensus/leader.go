@@ -253,7 +253,7 @@ func (s *Service) leaderValidateVote(sender *gossipmessages.SenderSignature, sta
 		return errors.Errorf("committed message with wrong block height %d, expecting %d", blockHeight, lastCommittedBlockHeight)
 	}
 
-	// approved signer
+	// approved signer TODO https://github.com/orbs-network/orbs-network-go/issues/1602 make aware of committes changes and better signature checking
 	found := false
 	for i := range s.network {
 		if s.network[i].Equal(sender.SenderNodeAddress()) {

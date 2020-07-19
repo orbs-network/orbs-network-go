@@ -25,7 +25,7 @@ func NewDevelopmentNetwork(ctx context.Context, logger log.Logger, maybeClock ad
 	nodeOrder := keys.NodeAddressesForTests()[:numNodes]
 	var nodeConfigs []config.NodeConfig
 	for i, nodeAddress := range nodeOrder {
-		cfg := config.TemplateForGamma(
+		cfg := config.ForGamma(
 			nodeAddress,
 			keys.EcdsaSecp256K1KeyPairForTests(i).PrivateKey(),
 			keys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(),

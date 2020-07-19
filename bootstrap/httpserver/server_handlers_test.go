@@ -429,7 +429,7 @@ func withUnregisteredPublicApiServerHarness(parent *with.LoggingHarness, f func(
 }
 
 func generateConfig() config.OverridableConfig {
-	return config.TemplateForGamma(nil, nil, nil, ":0", false, "")
+	return config.ForGamma(nil, nil, nil, ":0", false, "")
 }
 
 func withServerHarness(parent *with.LoggingHarness, f func(h *harness)) {

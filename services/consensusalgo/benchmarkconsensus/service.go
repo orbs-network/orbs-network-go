@@ -44,7 +44,7 @@ type Service struct {
 	signer           signer.Signer
 	logger           log.Logger
 	config           Config
-	network          []primitives.NodeAddress
+	network          []primitives.NodeAddress // TODO https://github.com/orbs-network/orbs-network-go/issues/1602 lock
 
 	isLeader                bool
 	successfullyVotedBlocks chan primitives.BlockHeight // leader only

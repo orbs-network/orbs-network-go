@@ -106,22 +106,20 @@ func (i *FilesPaths) Set(value string) error {
 func GetNodeConfigFromFiles(configFiles FilesPaths, httpAddress string) (NodeConfig, error) {
 	cfg := ForProduction("")
 
-	if len(configFiles) != 0 {
-		for _, configFile := range configFiles {
-			if _, err := os.Stat(configFile); os.IsNotExist(err) {
-				return nil, errors.Errorf("could not open config file: %s", err)
-			}
+	for _, configFile := range configFiles {
+		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+			return nil, errors.Errorf("could not open config file: %s", err)
+		}
 
-			contents, err := ioutil.ReadFile(configFile)
-			if err != nil {
-				return nil, err
-			}
+		contents, err := ioutil.ReadFile(configFile)
+		if err != nil {
+			return nil, err
+		}
 
-			err = modifyFromJson(cfg, string(contents))
+		err = modifyFromJson(cfg, string(contents))
 
-			if err != nil {
-				return nil, err
-			}
+		if err != nil {
+			return nil, err
 		}
 	}
 

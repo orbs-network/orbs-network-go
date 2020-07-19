@@ -135,6 +135,7 @@ func createConsensusAlgo(nodeConfig config.NodeConfig) func(ctx context.Context,
 		case consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX:
 			return leanhelixconsensus.NewLeanHelixConsensusAlgo(ctx, gossip, blockStorage, consensusContext, signer, parentLogger, nodeConfig, metricFactory)
 		case consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS:
+			// TODO https://github.com/orbs-network/orbs-network-go/issues/1602 improve connection between benchmark and management
 			ref, err := management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
 			if err != nil {
 				panic(errors.Errorf("benchmark cannot start with no current ref %s", err))
