@@ -12,20 +12,26 @@ import (
 )
 
 type Histogram struct {
-	namedMetric
+	name 		  string
 }
 
 type histogramExport struct {
 }
 
 func newHistogram(name string, max int64, n int) *Histogram {
-	return &Histogram{
-		namedMetric: namedMetric{name: name},
-	}
+	return &Histogram{name: name}
+}
+
+func (h *Histogram) Name() string {
+	return h.name
 }
 
 func (h Histogram) Export() exportedMetric {
 	return &histogramExport{}
+}
+
+func (h *Histogram) CurrentSamples() int64 {
+	return 0
 }
 
 func (h *Histogram) Rotate() {
