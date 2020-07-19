@@ -34,6 +34,10 @@ func (h *Histogram) CurrentSamples() int64 {
 	return 0
 }
 
+func (h *Histogram) Value() interface{} {
+	return nil
+}
+
 func (h *Histogram) Rotate() {
 }
 
