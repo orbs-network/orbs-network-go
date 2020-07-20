@@ -314,6 +314,7 @@ type blockPairBuilder struct {
 	currentBlockHeight primitives.BlockHeight
 	blockProposer      primitives.NodeAddress
 	tiggerEnabled      bool
+	referenceTime      primitives.TimestampSeconds
 }
 
 func BlockPairBuilder() *blockPairBuilder {
@@ -323,6 +324,7 @@ func BlockPairBuilder() *blockPairBuilder {
 		currentBlockHeight: 1000,
 		blockProposer:      hash.Make32EmptyBytes(),
 		tiggerEnabled:      true,
+		referenceTime:      primitives.TimestampSeconds(time.Now().Unix()),
 	}
 }
 
@@ -351,6 +353,7 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 		WithBlockProposerAddress(b.blockProposer).
 		WithTransactionsRootHash(txRootHashForValidBlock).
 		WithTimestamp(blockTime).
+		WithReferenceTime(b.referenceTime).
 		Build()
 
 	txBlockHashPtr := digest.CalcTransactionsBlockHash(block.TransactionsBlock)
@@ -377,6 +380,11 @@ func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder
 	b.protocolVersion = config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
+	return b
+}
+
+func (b *blockPairBuilder) WithReferenceTime(refTime primitives.TimestampSeconds) *blockPairBuilder {
+	b.referenceTime = refTime
 	return b
 }
 

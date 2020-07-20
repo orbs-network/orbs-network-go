@@ -58,12 +58,12 @@ type metrics struct {
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		lastCommittedBlockHeight: m.NewGauge("BlockStorage.LastCommittedBlock.BlockHeight"),
-		lastCommittedBlockTime:   m.NewGauge("BlockStorage.LastCommittedBlock.TimeNano"),
+		lastCommittedBlockHeight: m.NewGauge("BlockStorage.BlockHeight"),            // TODO: name change affects consumer services such as nebula
+		lastCommittedBlockTime:   m.NewGauge("BlockStorage.LastCommitted.TimeNano"), // TODO: name change affects consumer services such as nebula
 		inOrderBlockHeight:       m.NewGauge("BlockStorage.InOrderBlock.BlockHeight"),
-		inOrderBlockTime:         m.NewGauge("BlockStorage.InOrderBlock.TimeNano"),
+		inOrderBlockTime:         m.NewGauge("BlockStorage.InOrderBlock.BlockTime.TimeNano"),
 		topBlockHeight:           m.NewGauge("BlockStorage.TopBlock.BlockHeight"),
-		topBlockTime:             m.NewGauge("BlockStorage.TopBlock.TimeNano"),
+		topBlockTime:             m.NewGauge("BlockStorage.TopBlock.BlockTime.TimeNano"),
 		lastCommitTime:           m.NewGauge("BlockStorage.LastCommit.TimeNano"),
 	}
 }

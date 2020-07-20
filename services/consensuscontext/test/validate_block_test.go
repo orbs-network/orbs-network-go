@@ -19,8 +19,8 @@ import (
 	"time"
 )
 
-func txInputs(cfg config.ConsensusContextConfig) *services.ValidateTransactionsBlockInput {
-	block := builders.BlockPairBuilder().WithCfg(cfg).Build()
+func txInputs(cfg config.ConsensusContextConfig, refTime primitives.TimestampSeconds) *services.ValidateTransactionsBlockInput {
+	block := builders.BlockPairBuilder().WithCfg(cfg).WithReferenceTime(refTime).Build()
 
 	input := &services.ValidateTransactionsBlockInput{
 		CurrentBlockHeight:   block.TransactionsBlock.Header.BlockHeight(),
@@ -38,7 +38,8 @@ func TestValidateTransactionsBlockOnValidBlock(t *testing.T) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, true)
 			s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
-			input := txInputs(s.config)
+			refTime := primitives.TimestampSeconds(time.Now().Unix() - 1) // ensures block refTime < (validator.refTime <- time.now())
+			input := txInputs(s.config, refTime)
 
 			_, err := s.service.ValidateTransactionsBlock(ctx, input)
 			require.NoError(t, err, "validation should succeed on valid block")
@@ -51,7 +52,8 @@ func TestValidateTransactionsBlockOnValidBlockWithoutTrigger(t *testing.T) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, false)
 			s.transactionPool.When("ValidateTransactionsForOrdering", mock.Any, mock.Any).Return(nil, nil)
-			input := txInputs(s.config)
+			refTime := primitives.TimestampSeconds(time.Now().Unix() - 1) // ensures block refTime < (validator.refTime <- time.now())
+			input := txInputs(s.config, refTime)
 
 			_, err := s.service.ValidateTransactionsBlock(ctx, input)
 			require.NoError(t, err, "validation should fail when missing trigger")
@@ -104,11 +106,11 @@ func TestValidateResultsBlockFailsOnBadGenesis(t *testing.T) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, false)
 			s.management.Reset()
-			setManagementValues(s.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+			setManagementValues(s.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix()+5000))
 
 			input := &services.ValidateResultsBlockInput{
 				CurrentBlockHeight:     1,
-				PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Unix() -1000),
+				PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Unix() - 1000),
 			}
 
 			_, err := s.service.ValidateResultsBlock(ctx, input)
@@ -116,4 +118,3 @@ func TestValidateResultsBlockFailsOnBadGenesis(t *testing.T) {
 		})
 	})
 }
-

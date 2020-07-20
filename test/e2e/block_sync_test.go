@@ -32,7 +32,7 @@ func TestBlockSyncRecover(t *testing.T) {
 
 	var blockHeight uint64
 	test.Eventually(30*time.Second, func() bool {
-		blockHeight = uint64(h.GetMetrics()["BlockStorage.LastCommittedBlock.BlockHeight"]["Value"].(float64))
+		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
 		return blockHeight >= targetBlockHeight
 	})
 	require.GreaterOrEqual(t, blockHeight, targetBlockHeight, "expected node in e2e network to sync and start closing blocks at block height greater than init blocks file")
