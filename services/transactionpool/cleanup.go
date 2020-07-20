@@ -20,9 +20,9 @@ type cleaner interface {
 	clearTransactionsOlderThan(ctx context.Context, timestamp primitives.TimestampNano)
 }
 
-func startCleaningProcess(ctx context.Context, poolName string, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, lastBlockHeightAndTime func() (primitives.BlockHeight, primitives.TimestampNano), logger log.Logger) govnr.ShutdownWaiter {
+func startCleaningProcess(ctx context.Context, poolName string, tickInterval func() time.Duration, expiration func() time.Duration, c cleaner, lastBlockInfo func() (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds), logger log.Logger) govnr.ShutdownWaiter {
 	return synchronization.NewPeriodicalTrigger(ctx, fmt.Sprintf("%s cleaner trigger", poolName), synchronization.NewTimeTicker(tickInterval()), logger, func() {
-		_, lastCommittedBlockTime := lastBlockHeightAndTime()
+		_, lastCommittedBlockTime, _ := lastBlockInfo()
 		c.clearTransactionsOlderThan(ctx, lastCommittedBlockTime-primitives.TimestampNano(expiration().Nanoseconds()))
 	}, nil)
 }

@@ -34,7 +34,7 @@ func ForE2E(
 
 	cfg.SetString(MANAGEMENT_FILE_PATH, managementFilePath)
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 0)
-	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 100*365*24*time.Hour)
+	cfg.SetDuration(COMMITTEE_VALIDITY_TIMEOUT, 100*365*24*time.Hour)
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time = 700ms
 	cfg.SetDuration(BENCHMARK_CONSENSUS_RETRY_INTERVAL, 700*time.Millisecond)

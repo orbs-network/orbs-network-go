@@ -30,7 +30,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync(t *testing.T) {
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withBlockSyncDescendingEnabled(false) // ascending order
 
-			testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
+		testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
 	})
 }
 
@@ -42,7 +42,7 @@ func TestSyncPetitioner_Stress_CommitsDuringSync_Descending(t *testing.T) {
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withBlockSyncDescendingEnabled(true) // descending order
 
-			testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
+		testSyncPetitionerStressCommitsDuringSync(ctx, t, harness)
 	})
 }
 
@@ -62,7 +62,7 @@ func testSyncPetitionerStressCommitsDuringSync(ctx context.Context, t *testing.T
 		toBlock := input.Message.SignedChunkRange.LastBlockHeight()
 
 		if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
-			if toBlock == 1 && fromBlock > internodesync.UNKNOWN_BLOCK_HEIGHT  {
+			if toBlock == 1 && fromBlock > internodesync.UNKNOWN_BLOCK_HEIGHT {
 				done <- struct{}{}
 			}
 		} else if toBlock >= NUM_BLOCKS {
@@ -93,8 +93,6 @@ func testSyncPetitionerStressCommitsDuringSync(ctx context.Context, t *testing.T
 	}
 }
 
-
-
 // this would attempt to commit the same blocks at the same time from the sync flow and directly (simulating blocks arriving from consensus)
 func respondToBlockSyncRequestWithConcurrentCommit(t testing.TB, ctx context.Context, harness *harness, input *gossiptopics.BlockSyncRequestInput, blockChainSlice []*protocol.BlockPairContainer) {
 	response := createBlockSyncResponse(input, blockChainSlice, harness.config.syncBatchSize)
@@ -107,13 +105,17 @@ func respondToBlockSyncRequestWithConcurrentCommit(t testing.TB, ctx context.Con
 
 	go func() {
 		time.Sleep(time.Duration(rand.Intn(1000)) * time.Nanosecond)
-		_, err := harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
-			BlockPair: response.Message.BlockPairs[0],
-		})
-		require.NoError(t, err, "failed committing first block in parallel to sync")
-		_, err = harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
-			BlockPair: response.Message.BlockPairs[1],
-		})
-		require.NoError(t, err, "failed committing second block in parallel to sync")
+		if len(response.Message.BlockPairs) > 0 {
+			_, err := harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
+				BlockPair: response.Message.BlockPairs[0],
+			})
+			require.NoError(t, err, "failed committing first block in parallel to sync")
+		}
+		if len(response.Message.BlockPairs) > 1 {
+			_, err := harness.blockStorage.CommitBlock(ctx, &services.CommitBlockInput{
+				BlockPair: response.Message.BlockPairs[1],
+			})
+			require.NoError(t, err, "failed committing second block in parallel to sync")
+		}
 	}()
 }

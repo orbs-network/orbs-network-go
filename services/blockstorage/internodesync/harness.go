@@ -24,13 +24,13 @@ import (
 )
 
 type blockSyncConfigForTests struct {
-	nodeAddress       primitives.NodeAddress
-	batchSize         uint32
-	noCommit          time.Duration
-	collectResponses  time.Duration
-	collectChunks     time.Duration
-	referenceDistance time.Duration
-	descendingEnabled bool
+	nodeAddress              primitives.NodeAddress
+	batchSize                uint32
+	noCommit                 time.Duration
+	collectResponses         time.Duration
+	collectChunks            time.Duration
+	committeeValidityTimeout time.Duration
+	descendingEnabled        bool
 }
 
 func (c *blockSyncConfigForTests) NodeAddress() primitives.NodeAddress {
@@ -53,8 +53,8 @@ func (c *blockSyncConfigForTests) BlockSyncCollectChunksTimeout() time.Duration 
 	return c.collectChunks
 }
 
-func (c *blockSyncConfigForTests) BlockSyncReferenceMaxAllowedDistance() time.Duration {
-	return c.referenceDistance
+func (c *blockSyncConfigForTests) CommitteeValidityTimeout() time.Duration {
+	return c.committeeValidityTimeout
 }
 
 func (c *blockSyncConfigForTests) BlockSyncDescendingEnabled() bool {
@@ -63,13 +63,13 @@ func (c *blockSyncConfigForTests) BlockSyncDescendingEnabled() bool {
 
 func newDefaultBlockSyncConfigForTests() *blockSyncConfigForTests {
 	return &blockSyncConfigForTests{
-		nodeAddress:       testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
-		batchSize:         10,
-		noCommit:          3 * time.Millisecond,
-		collectResponses:  3 * time.Millisecond,
-		collectChunks:     3 * time.Millisecond,
-		referenceDistance: 100 * time.Second,
-		descendingEnabled: true,
+		nodeAddress:              testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(),
+		batchSize:                10,
+		noCommit:                 3 * time.Millisecond,
+		collectResponses:         3 * time.Millisecond,
+		collectChunks:            3 * time.Millisecond,
+		committeeValidityTimeout: 100 * time.Second,
+		descendingEnabled:        true,
 	}
 }
 
@@ -136,8 +136,8 @@ func (h *blockSyncHarness) withBatchSize(size uint32) *blockSyncHarness {
 	return h
 }
 
-func (h *blockSyncHarness) withReferenceDistance(d time.Duration) *blockSyncHarness {
-	h.config.referenceDistance = d
+func (h *blockSyncHarness) withCommitteeValidityTimeout(d time.Duration) *blockSyncHarness {
+	h.config.committeeValidityTimeout = d
 	return h
 }
 
@@ -207,14 +207,14 @@ func (h *blockSyncHarness) verifyBroadcastOfBlockAvailabilityRequest(t *testing.
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorage(numExpectedBlocks int) {
-	h.storage.When("GetSyncState").Return( nil).Times(1)
-	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
+	h.storage.When("GetSyncState").Return(nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return(nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(numExpectedBlocks)
 }
 
 func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastValidation(numExpectedBlocks int, expectedFailedBlockHeight primitives.BlockHeight) {
-	h.storage.When("GetSyncState").Return( nil).Times(1)
-	h.storage.When("GetBlock", mock.Any).Return( nil).Times(1)
+	h.storage.When("GetSyncState").Return(nil).Times(1)
+	h.storage.When("GetBlock", mock.Any).Return(nil).Times(1)
 	h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
 		if input.BlockPair.ResultsBlock.Header.BlockHeight().Equal(expectedFailedBlockHeight) {
 			return nil, errors.Errorf("failed to validate block #%d", expectedFailedBlockHeight)
@@ -224,7 +224,7 @@ func (h *blockSyncHarness) expectBlockValidationQueriesFromStorageAndFailLastVal
 }
 
 func (h *blockSyncHarness) expectBlockChunkRangeValidationFailure(syncState SyncState, numValidations int) {
-	h.storage.When("GetSyncState").Return( syncState).Times(numValidations)
+	h.storage.When("GetSyncState").Return(syncState).Times(numValidations)
 }
 
 func (h *blockSyncHarness) expectBlockCommitsToStorage(numExpectedBlocks int) {

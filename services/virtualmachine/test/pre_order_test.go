@@ -64,7 +64,7 @@ func TestPreOrder_SubscriptionNotApproved(t *testing.T) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			h := newHarness(parent.Logger)
 			h.management.Reset()
-			h.management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive:false}, nil)
+			h.management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive: false}, nil)
 
 			txs := []*protocol.SignedTransaction{}
 			txs = append(txs, builders.TransferTransaction().Build())
@@ -92,7 +92,7 @@ func TestPreOrder_NetworkTimeReferenceTooOld(t *testing.T) {
 				SignedTransactions:        txs,
 				CurrentBlockHeight:        12,
 				CurrentBlockTimestamp:     primitives.TimestampNano(time.Now().UnixNano()),
-				CurrentBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-h.cfg.ManagementNetworkLivenessTimeout()).Add(- 1*time.Hour).Unix()),
+				CurrentBlockReferenceTime: primitives.TimestampSeconds(time.Now().Add(-h.cfg.CommitteeValidityTimeout()).Add(-1 * time.Hour).Unix()),
 			})
 
 			require.NoError(t, err, "transaction set pre order should fail")

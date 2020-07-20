@@ -8,6 +8,7 @@ package internodesync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -37,13 +38,32 @@ type blockSyncConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	BlockSyncReferenceMaxAllowedDistance() time.Duration
+	CommitteeValidityTimeout() time.Duration
 }
 
 type SyncState struct {
-	TopHeight        primitives.BlockHeight
-	InOrderHeight    primitives.BlockHeight
-	LastSyncedHeight primitives.BlockHeight
+	TopBlock        *protocol.BlockPairContainer
+	InOrderBlock    *protocol.BlockPairContainer
+	LastSyncedBlock *protocol.BlockPairContainer
+}
+
+func (s *SyncState) GetSyncStateBlockHeights() (topHeight primitives.BlockHeight, inOrderHeight primitives.BlockHeight, lastSyncedHeight primitives.BlockHeight) {
+	return getBlockHeight(s.TopBlock), getBlockHeight(s.InOrderBlock), getBlockHeight(s.LastSyncedBlock)
+}
+
+func (s *SyncState) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+	topHeight, inOrderHeight, lastSyncedHeight := s.GetSyncStateBlockHeights()
+	return fmt.Sprintf("{TopBlockHeight:%d,InOrderBlockHeight:%d,LastSyncedBlockHeight:%d}", uint64(topHeight), uint64(inOrderHeight), uint64(lastSyncedHeight))
+}
+
+func getBlockHeight(block *protocol.BlockPairContainer) primitives.BlockHeight {
+	if block == nil {
+		return 0
+	}
+	return block.TransactionsBlock.Header.BlockHeight()
 }
 
 type BlockSyncStorage interface {
@@ -74,13 +94,13 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 
 type BlockSync struct {
 	govnr.TreeSupervisor
-	logger                     log.Logger
-	factory                    *stateFactory
-	gossip                     gossiptopics.BlockSync
-	storage                    BlockSyncStorage
-	conduit                    blockSyncConduit
-	metrics                    *stateMachineMetrics
-	config                     blockSyncConfig
+	logger  log.Logger
+	factory *stateFactory
+	gossip  gossiptopics.BlockSync
+	storage BlockSyncStorage
+	conduit blockSyncConduit
+	metrics *stateMachineMetrics
+	config  blockSyncConfig
 }
 
 type stateMachineMetrics struct {
@@ -112,7 +132,7 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
 		log.Stringable("blocks-order", bs.factory.getSyncBlocksOrder()),
-		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()))
+		log.Stringable("committee-validity-time", bs.factory.config.CommitteeValidityTimeout()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)

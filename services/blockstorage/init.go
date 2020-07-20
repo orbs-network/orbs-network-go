@@ -29,11 +29,11 @@ var LogTag = log.Service("block-storage")
 
 type Service struct {
 	govnr.TreeSupervisor
-	persistence  adapter.BlockPersistence
-	stateStorage services.StateStorage
-	gossip       gossiptopics.BlockSync
-	txPool       services.TransactionPool
-	config config.BlockStorageConfig
+	persistence             adapter.BlockPersistence
+	stateStorage            services.StateStorage
+	gossip                  gossiptopics.BlockSync
+	txPool                  services.TransactionPool
+	config                  config.BlockStorageConfig
 	logger                  log.Logger
 	consensusBlocksHandlers struct {
 		sync.RWMutex
@@ -47,14 +47,24 @@ type Service struct {
 }
 
 type metrics struct {
-	blockHeight       *metric.Gauge
-	lastCommittedTime *metric.Gauge
+	lastCommittedBlockHeight *metric.Gauge
+	lastCommittedBlockTime   *metric.Gauge
+	inOrderBlockHeight       *metric.Gauge
+	inOrderBlockTime         *metric.Gauge
+	topBlockHeight           *metric.Gauge
+	topBlockTime             *metric.Gauge
+	lastCommitTime           *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		blockHeight:       m.NewGauge("BlockStorage.BlockHeight"),
-		lastCommittedTime: m.NewGauge("BlockStorage.LastCommitted.TimeNano"),
+		lastCommittedBlockHeight: m.NewGauge("BlockStorage.LastCommittedBlock.BlockHeight"),
+		lastCommittedBlockTime:   m.NewGauge("BlockStorage.LastCommittedBlock.TimeNano"),
+		inOrderBlockHeight:       m.NewGauge("BlockStorage.InOrderBlock.BlockHeight"),
+		inOrderBlockTime:         m.NewGauge("BlockStorage.InOrderBlock.TimeNano"),
+		topBlockHeight:           m.NewGauge("BlockStorage.TopBlock.BlockHeight"),
+		topBlockTime:             m.NewGauge("BlockStorage.TopBlock.TimeNano"),
+		lastCommitTime:           m.NewGauge("BlockStorage.LastCommit.TimeNano"),
 	}
 }
 
@@ -87,22 +97,7 @@ func NewBlockStorage(
 	}
 	s.Supervise(s.nodeSync)
 	s.Supervise(s.startNotifyNodeSync(ctx))
-
-	lastBlock, err := persistence.GetLastBlock()
-	if err != nil {
-		logger.Error("could not read block from adapter", log.Error(err))
-	}
-	var height int64
-	var lastCommittedTime int64
-
-	if lastBlock != nil {
-		height = int64(lastBlock.TransactionsBlock.Header.BlockHeight())
-		lastCommittedTime = int64(lastBlock.TransactionsBlock.Header.Timestamp())
-	}
-
-	s.metrics.blockHeight.Update(height)
-	s.metrics.lastCommittedTime.Update(lastCommittedTime)
-
+	s.updateMetrics(0)
 	return s
 }
 
@@ -118,6 +113,34 @@ func getBlockTimestamp(block *protocol.BlockPairContainer) primitives.TimestampN
 		return 0
 	}
 	return block.TransactionsBlock.Header.Timestamp()
+}
+
+func (s *Service) updateMetrics(now int64) {
+	syncState := s.persistence.GetSyncState()
+	var lastSyncedBlockHeight, lastSyncedBlockTime, inOrderBlockHeight, inOrderBlockTime, topBlockHeight, topBlockTime int64
+
+	if syncState.LastSyncedBlock != nil {
+		lastSyncedBlockHeight = int64(getBlockHeight(syncState.LastSyncedBlock))
+		lastSyncedBlockTime = int64(syncState.LastSyncedBlock.TransactionsBlock.Header.Timestamp())
+	}
+	s.metrics.lastCommittedBlockHeight.Update(lastSyncedBlockHeight)
+	s.metrics.lastCommittedBlockTime.Update(lastSyncedBlockTime)
+
+	if syncState.InOrderBlock != nil {
+		inOrderBlockHeight = int64(getBlockHeight(syncState.InOrderBlock))
+		inOrderBlockTime = int64(syncState.InOrderBlock.TransactionsBlock.Header.Timestamp())
+	}
+	s.metrics.inOrderBlockHeight.Update(inOrderBlockHeight)
+	s.metrics.inOrderBlockTime.Update(inOrderBlockTime)
+
+	if syncState.TopBlock != nil {
+		topBlockHeight = int64(getBlockHeight(syncState.TopBlock))
+		topBlockTime = int64(syncState.TopBlock.TransactionsBlock.Header.Timestamp())
+	}
+	s.metrics.topBlockHeight.Update(topBlockHeight)
+	s.metrics.topBlockTime.Update(topBlockTime)
+
+	s.metrics.lastCommitTime.Update(now)
 }
 
 func (s *Service) RegisterConsensusBlocksHandler(handler handlers.ConsensusBlocksHandler) {

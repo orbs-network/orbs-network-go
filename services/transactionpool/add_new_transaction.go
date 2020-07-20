@@ -29,7 +29,7 @@ func (s *service) AddNewTransaction(ctx context.Context, input *services.AddNewT
 	logger := s.logger.WithTags(logfields.Transaction(txHash), trace.LogFieldFrom(ctx), log.Stringable("transaction", input.SignedTransaction))
 
 	currentTime := time.Now()
-	lastCommittedBlockHeight, lastCommittedBlockTimestamp := s.lastCommittedBlockHeightAndTime()
+	lastCommittedBlockHeight, lastCommittedBlockTimestamp, _ := s.lastCommittedBlockInfo()
 
 	if err := s.validationContext.ValidateAddedTransaction(input.SignedTransaction, currentTime, lastCommittedBlockTimestamp); err != nil {
 		logger.Info("transaction is invalid", log.Error(err), logfields.BlockHeight(lastCommittedBlockHeight), logfields.TimestampNano("last-committed", lastCommittedBlockTimestamp))
@@ -80,16 +80,17 @@ func (s *service) addToPendingPoolAfterCheckingCommitted(tx *protocol.SignedTran
 }
 
 func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, transaction *protocol.SignedTransaction) error {
-	lastCommittedBlockHeight, _ := s.lastCommittedBlockHeightAndTime()
+	lastCommittedBlockHeight, _, estimatedCurrentBlockReferenceTime := s.lastCommittedBlockInfo()
 
 	// the real pre order checks will run during consensus on some future new block, try to estimate its height and timestamp as closely as possible
 	estimatedCurrentBlockHeight := lastCommittedBlockHeight + 1
 	estimatedCurrentBlockTimestamp := primitives.TimestampNano(time.Now().UnixNano())
 
 	preOrderCheckResults, err := s.virtualMachine.TransactionSetPreOrder(ctx, &services.TransactionSetPreOrderInput{
-		SignedTransactions:    Transactions{transaction},
-		CurrentBlockHeight:    estimatedCurrentBlockHeight,
-		CurrentBlockTimestamp: estimatedCurrentBlockTimestamp,
+		SignedTransactions:        Transactions{transaction},
+		CurrentBlockHeight:        estimatedCurrentBlockHeight,
+		CurrentBlockTimestamp:     estimatedCurrentBlockTimestamp,
+		CurrentBlockReferenceTime: estimatedCurrentBlockReferenceTime,
 	})
 	if err != nil {
 		return err
@@ -107,7 +108,7 @@ func (s *service) validateSingleTransactionForPreOrder(ctx context.Context, tran
 }
 
 func (s *service) addTransactionOutputFor(maybeReceipt *protocol.TransactionReceipt, status protocol.TransactionStatus) *services.AddNewTransactionOutput {
-	bh, ts := s.lastCommittedBlockHeightAndTime()
+	bh, ts, _ := s.lastCommittedBlockInfo()
 	return &services.AddNewTransactionOutput{
 		TransactionReceipt: maybeReceipt,
 		TransactionStatus:  status,

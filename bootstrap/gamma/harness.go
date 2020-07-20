@@ -36,7 +36,7 @@ func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) fun
 		m := make(metrics)
 		json.Unmarshal(readBytes, &m)
 
-		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
+		blockHeight := m["BlockStorage.LastCommittedBlock.BlockHeight"]["Value"].(float64)
 		if primitives.BlockHeight(blockHeight) < targetBlockHeight {
 			return errors.Errorf("block %d is less than target block %d", int(blockHeight), targetBlockHeight)
 		}

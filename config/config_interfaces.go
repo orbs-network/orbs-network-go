@@ -26,7 +26,7 @@ type NodeConfig interface {
 	ManagementMaxFileSize() uint32
 	ManagementPollingInterval() time.Duration
 	ManagementConsensusGraceTimeout() time.Duration
-	ManagementNetworkLivenessTimeout() time.Duration
+	CommitteeValidityTimeout() time.Duration
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -49,7 +49,6 @@ type NodeConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	BlockSyncReferenceMaxAllowedDistance() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	BlockStorageFileSystemDataDir() string
 	BlockStorageFileSystemMaxBlockSizeInBytes() uint32
@@ -143,7 +142,8 @@ type BlockStorageConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	BlockSyncReferenceMaxAllowedDistance() time.Duration
+	CommitteeValidityTimeout() time.Duration
+
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
 	BlockTrackerGraceTimeout() time.Duration

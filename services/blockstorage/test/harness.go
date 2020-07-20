@@ -31,17 +31,17 @@ import (
 )
 
 type configForBlockStorageTests struct {
-	nodeAddress           primitives.NodeAddress
-	syncBatchSize         uint32
-	syncNoCommit          time.Duration
-	syncCollectResponses  time.Duration
-	syncCollectChunks     time.Duration
-	syncReferenceDistance time.Duration
-	syncBlocksOrder       gossipmessages.SyncBlocksOrder
-	descendingEnabled     bool
-	queryGrace            time.Duration
-	queryExpirationWindow time.Duration
-	blockTrackerGrace     time.Duration
+	nodeAddress              primitives.NodeAddress
+	syncBatchSize            uint32
+	syncNoCommit             time.Duration
+	syncCollectResponses     time.Duration
+	syncCollectChunks        time.Duration
+	committeeValidityTimeout time.Duration
+	syncBlocksOrder          gossipmessages.SyncBlocksOrder
+	descendingEnabled        bool
+	queryGrace               time.Duration
+	queryExpirationWindow    time.Duration
+	blockTrackerGrace        time.Duration
 }
 
 func (c *configForBlockStorageTests) NodeAddress() primitives.NodeAddress {
@@ -64,8 +64,8 @@ func (c *configForBlockStorageTests) BlockSyncCollectChunksTimeout() time.Durati
 	return c.syncCollectChunks
 }
 
-func (c *configForBlockStorageTests) BlockSyncReferenceMaxAllowedDistance() time.Duration {
-	return c.syncReferenceDistance
+func (c *configForBlockStorageTests) CommitteeValidityTimeout() time.Duration {
+	return c.committeeValidityTimeout
 }
 
 func (c *configForBlockStorageTests) BlockSyncDescendingEnabled() bool {
@@ -251,7 +251,7 @@ func createConfig(nodeAddress primitives.NodeAddress) *configForBlockStorageTest
 	cfg.syncCollectResponses = 5 * time.Millisecond
 	cfg.syncCollectChunks = 20 * time.Millisecond
 	cfg.descendingEnabled = true
-	cfg.syncReferenceDistance = 1 * time.Minute
+	cfg.committeeValidityTimeout = 1 * time.Minute
 
 	cfg.queryGrace = 5 * time.Second
 	cfg.queryExpirationWindow = 30 * time.Minute

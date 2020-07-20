@@ -28,7 +28,7 @@ func TestInitialBlockHeight(t *testing.T) {
 
 	var blockHeight uint64
 	test.Eventually(5*time.Second, func() bool {
-		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		blockHeight = uint64(h.GetMetrics()["BlockStorage.LastCommittedBlock.BlockHeight"]["Value"].(float64))
 		return blockHeight >= CannedBlocksFileMinHeight
 	})
 	require.GreaterOrEqual(t, blockHeight, uint64(CannedBlocksFileMinHeight), "expected e2e network to start closing blocks at block height greater than init blocks file")

@@ -212,7 +212,7 @@ func (h *Harness) WaitUntilReachBlockHeight(t *testing.T, targetBlockHeight prim
 			return false
 		}
 
-		lastCommittedBlockHeight :=  primitives.BlockHeight(m["BlockStorage.BlockHeight"]["Value"].(float64))
+		lastCommittedBlockHeight := primitives.BlockHeight(m["BlockStorage.LastCommittedBlock.BlockHeight"]["Value"].(float64))
 		return lastCommittedBlockHeight >= targetBlockHeight
 	}), "timed out waiting for blockHeight %d", uint64(targetBlockHeight))
 }

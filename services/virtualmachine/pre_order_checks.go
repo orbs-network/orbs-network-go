@@ -48,6 +48,6 @@ func (s *service) verifySubscription(ctx context.Context, reference primitives.T
 	return res.SubscriptionStatusIsActive
 }
 
-func (s *service) verifyLiveness(blockTime primitives.TimestampNano, referenceTime primitives.TimestampSeconds) bool {
-	return time.Duration(referenceTime)*time.Second+s.cfg.ManagementNetworkLivenessTimeout() >= time.Duration(blockTime)
+func (s *service) verifyCommitteeValidity(blockTime primitives.TimestampNano, referenceTime primitives.TimestampSeconds) bool {
+	return time.Duration(referenceTime)*time.Second+s.cfg.CommitteeValidityTimeout() >= time.Duration(blockTime)
 }

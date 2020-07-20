@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *Service) NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error) {
@@ -55,8 +56,7 @@ func (s *Service) commitBlock(ctx context.Context, input *services.CommitBlockIn
 		return nil, detectForks(input.BlockPair, storedTxBlock.Header, storedRsBlock.Header, logger)
 	}
 
-	s.metrics.blockHeight.Update(int64(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
-	s.metrics.lastCommittedTime.Update(int64(input.BlockPair.TransactionsBlock.Header.Timestamp()))
+	s.updateMetrics(time.Now().UnixNano())
 
 	if notifyNodeSync {
 		select {

@@ -13,7 +13,6 @@ import (
 	"time"
 )
 
-
 // The metrics-node (METRICS_NODE_INDEX in harness) did not load with blocks file and requires to sync.
 // Eventually, after fully syncing this node will act as leader and propose blocks
 func TestBlockSyncRecover(t *testing.T) {
@@ -28,12 +27,12 @@ func TestBlockSyncRecover(t *testing.T) {
 	}
 
 	targetBlockHeight := uint64(CannedBlocksFileMinHeight + 20)
-	waitingDuration := 30*time.Second
+	waitingDuration := 30 * time.Second
 	h.WaitUntilReachBlockHeight(t, CannedBlocksFileMinHeight, waitingDuration)
 
 	var blockHeight uint64
 	test.Eventually(30*time.Second, func() bool {
-		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		blockHeight = uint64(h.GetMetrics()["BlockStorage.LastCommittedBlock.BlockHeight"]["Value"].(float64))
 		return blockHeight >= targetBlockHeight
 	})
 	require.GreaterOrEqual(t, blockHeight, targetBlockHeight, "expected node in e2e network to sync and start closing blocks at block height greater than init blocks file")
