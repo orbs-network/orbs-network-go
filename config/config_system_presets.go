@@ -74,7 +74,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
 	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
 
-	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
+	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux

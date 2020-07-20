@@ -73,7 +73,6 @@ func ForE2E(
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 500*time.Millisecond)
 
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
-	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_BENCHMARK_CONSENSUS)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
