@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -33,7 +34,7 @@ func TestStaleManagementRef(t *testing.T) {
 
 			t.Log("set RefTime To Now")
 			now := time.Now()
-			refTime := primitives.TimestampSeconds(now.Unix() + 1)
+			refTime := primitives.TimestampSeconds(now.Unix())
 			err = network.committeeProvider.AddSubscription(refTime, true)
 			require.NoError(t, err)
 
@@ -44,6 +45,7 @@ func TestStaleManagementRef(t *testing.T) {
 			waitForBlockTime(ctx, network, primitives.TimestampNano(now.UnixNano()+int64(3*time.Second)), changedBlock)
 
 			response, _ = token.Transfer(ctx, 0, 17, 5, 6)
+			fmt.Println(response.TransactionStatus())
 			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER) // rejected because of liveness
 			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6))
 			txs, err3 := network.BlockPersistence(0).GetTransactionsBlock(response.RequestResult().BlockHeight())
