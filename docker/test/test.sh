@@ -33,8 +33,8 @@ export GIT_BRANCH=$(source ./docker/tag.sh)
 export GIT_COMMIT=$(git rev-parse HEAD)
 export SRC=/go/src/github.com/orbs-network/orbs-network-go
 
-mkdir -p _data/management
-cp ./docker/test/mgmt.json _data/management/mgmt.json
+mkdir -p _tmp/management
+cp ./docker/test/mgmt.json _tmp/management/mgmt.json
 
 # prepare persistent blocks for docker tests
 # skip on Mac
