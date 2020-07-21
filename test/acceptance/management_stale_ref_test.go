@@ -14,7 +14,7 @@ import (
 
 func TestStaleManagementRef(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(config.NodeConfigKeyValue{Key: config.COMMITTEE_VALIDITY_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 1 * time.Second}}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.COMMITTEE_VALIDITY_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 2 * time.Second}}).
 		WithNumNodes(6).
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
@@ -24,6 +24,7 @@ func TestStaleManagementRef(t *testing.T) {
 
 			response, txHash := token.Transfer(ctx, 0, 17, 5, 6)
 			network.WaitForTransactionInNodeState(ctx, txHash, 0)
+
 			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_COMMITTED)
 			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6))
 			txs, err := network.BlockPersistence(0).GetTransactionsBlock(response.RequestResult().BlockHeight())

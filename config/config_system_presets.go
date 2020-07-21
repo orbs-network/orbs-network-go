@@ -18,9 +18,6 @@ import (
 func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
-	cfg.SetUint32(VIRTUAL_CHAIN_ID, 42)
-	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
-
 	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
 	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50*(1<<20)) // 50 MB
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
@@ -74,15 +71,10 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Second)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 
-	// 10 minutes + 60 blocks is about 25 minutes
-	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 10*time.Minute)
-	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 60)
-
 	cfg.SetBool(PROCESSOR_SANITIZE_DEPLOYED_CONTRACTS, true)
 	cfg.SetBool(PROCESSOR_PERFORM_WARM_UP_COMPILATION, true)
 
 	cfg.SetActiveConsensusAlgo(consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)
-	cfg.SetString(ETHEREUM_ENDPOINT, "http://localhost:8545")
 	cfg.SetString(PROCESSOR_ARTIFACT_PATH, filepath.Join(GetProjectSourceTmpPath(), "processor-artifacts"))
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, "/usr/local/var/orbs") // TODO V1 use build tags to replace with /var/lib/orbs for linux
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)

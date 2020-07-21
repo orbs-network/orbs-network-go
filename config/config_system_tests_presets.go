@@ -59,7 +59,8 @@ func ForE2E(
 
 	// if above round time, we'll have leader changes when no traffic
 	cfg.SetDuration(TRANSACTION_POOL_TIME_BETWEEN_EMPTY_BLOCKS, 1*time.Second) // this is the time between empty blocks when no transactions, need to be large so we don't close infinite blocks on idle
-
+	cfg.SetDuration(PUBLIC_API_NODE_SYNC_WARNING_TIME, 30*time.Second)
+	cfg.SetDuration(TRANSACTION_POOL_NODE_SYNC_REJECT_TIME, 1*time.Minute)
 	// makes sync slower, 4*slow_network_latency
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_RESPONSE_TIMEOUT, 500*time.Millisecond)
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 2*time.Second)
@@ -73,6 +74,8 @@ func ForE2E(
 	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 500*time.Millisecond)
 
 	cfg.SetString(ETHEREUM_ENDPOINT, ethereumEndpoint)
+	cfg.SetDuration(ETHEREUM_FINALITY_TIME_COMPONENT, 1*time.Minute)
+	cfg.SetUint32(ETHEREUM_FINALITY_BLOCKS_COMPONENT, 1)
 
 	cfg.SetUint32(BLOCK_STORAGE_FILE_SYSTEM_MAX_BLOCK_SIZE_IN_BYTES, 64*1024*1024)
 	cfg.SetString(BLOCK_STORAGE_FILE_SYSTEM_DATA_DIR, filepath.Join(blockStorageDataDirPrefix, nodeAddress.String()))
