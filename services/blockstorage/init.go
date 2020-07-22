@@ -51,9 +51,11 @@ type metrics struct {
 	lastCommittedTime *metric.Gauge
 }
 
+const MetricBlockHeight = "BlockStorage.BlockHeight" // Never user the string literal directly
+
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		blockHeight:       m.NewGauge("BlockStorage.BlockHeight"),
+		blockHeight:       m.NewGauge(MetricBlockHeight),
 		lastCommittedTime: m.NewGauge("BlockStorage.LastCommitted.TimeNano"),
 	}
 }

@@ -1,17 +1,17 @@
 package gamma
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -20,24 +20,16 @@ import (
 
 const WAIT_FOR_BLOCK_TIMEOUT = 20 * time.Second
 
-type metrics map[string]map[string]interface{}
-
 func waitForBlock(endpoint string, targetBlockHeight primitives.BlockHeight) func() error {
 	return func() error {
-		res, err := http.Get(endpoint + "/metrics")
+		metricReader, err := metric.NewReader(endpoint + "/metrics")
 		if err != nil {
 			return err
 		}
 
-		readBytes, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		m := make(metrics)
-		json.Unmarshal(readBytes, &m)
-
-		blockHeight := m["BlockStorage.BlockHeight"]["Value"].(float64)
-		if primitives.BlockHeight(blockHeight) < targetBlockHeight {
+		if blockHeight, found := metricReader.GetAsInt(blockstorage.MetricBlockHeight); !found {
+			return errors.Errorf("field value for key %s is not found", blockstorage.MetricBlockHeight)
+		} else if primitives.BlockHeight(blockHeight) < targetBlockHeight {
 			return errors.Errorf("block %d is less than target block %d", int(blockHeight), targetBlockHeight)
 		}
 
@@ -55,7 +47,6 @@ func RunOnRandomPort(t testing.TB, overrideConfig string) string {
 }
 
 func SendTransaction(t testing.TB, orbs *orbsClient.OrbsClient, sender *orbsClient.OrbsAccount, contractName string, method string, args ...interface{}) *codec.SendTransactionResponse {
-
 	tx, txId, err := orbs.CreateTransaction(sender.PublicKey, sender.PrivateKey, contractName, method, args...)
 	require.NoError(t, err, "failed creating tx %s.%s", contractName, method)
 	res, err := orbs.SendTransaction(tx)

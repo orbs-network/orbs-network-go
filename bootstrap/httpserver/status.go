@@ -20,10 +20,10 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	status := StatusResponse{
 		Timestamp: time.Now(),
 		Status:    s.getStatusWarningMessage(),
-		Payload:   s.metricRegistry.ExportAll(),
+		Payload:   s.metricRegistry.ExportAllNested(),
 	}
 
-	data, _ := json.MarshalIndent(status, "", "  ")
+	data, _ := json.MarshalIndent(status, "", "\t")
 
 	_, err := w.Write(data)
 	if err != nil {

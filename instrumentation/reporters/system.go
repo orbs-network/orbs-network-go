@@ -31,7 +31,7 @@ func NewSystemReporter(ctx context.Context, metricFactory metric.Factory, logger
 	r := &systemReporter{
 		metrics: systemMetrics{
 			rssBytes:       metricFactory.NewGauge("OS.Process.Memory.Bytes"),
-			cpuUtilization: metricFactory.NewGauge("OS.Process.CPU.PerCent"),
+			cpuUtilization: metricFactory.NewGaugeWithPrometheusName("OS.Process.CPU.PerCent", "OS.Process.CPU.Percent"),
 		},
 	}
 

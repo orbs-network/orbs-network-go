@@ -26,8 +26,8 @@ func (h *Histogram) Name() string {
 	return h.name
 }
 
-func (h Histogram) Export() exportedMetric {
-	return &histogramExport{}
+func (h Histogram) Export() interface{} {
+	return nil
 }
 
 func (h *Histogram) CurrentSamples() int64 {

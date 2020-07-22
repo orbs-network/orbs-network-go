@@ -52,12 +52,12 @@ type nativeCompiler struct {
 
 func createNativeCompilerMetrics(factory metric.Factory) *nativeCompilerMetrics {
 	return &nativeCompilerMetrics{
-		buildTime:        factory.NewLatency("Processor.Native.Compiler.Build.Time.Millis", 60*time.Minute),
-		totalCompileTime: factory.NewLatency("Processor.Native.Compiler.Total.Compile.Time.Millis", 60*time.Minute),
-		loadTime:         factory.NewLatency("Processor.Native.Compiler.LoadObject.Time.Millis", 60*time.Minute),
-		lastWarmUpTimeMs: factory.NewGauge("Processor.Native.Compiler.LastWarmUp.Time.Millis"),
-		writeToDiskTime:  factory.NewLatency("Processor.Native.Compiler.WriteToDisk.Time.Millis", 60*time.Minute),
-		sourceSize:       factory.NewHistogram("Processor.Native.Compiler.Source.Size.Bytes", 1024*1024), // megabyte
+		buildTime:        factory.NewLatencyWithPrometheusName("Processor.Native.Compiler.BuildTime.Millis", "Processor.Native.Compiler.Build.Time.Millis", 60*time.Minute),
+		totalCompileTime: factory.NewLatencyWithPrometheusName("Processor.Native.Compiler.TotalCompileTime.Millis", "Processor.Native.Compiler.Total.Compile.Time.Millis", 60*time.Minute),
+		loadTime:         factory.NewLatencyWithPrometheusName("Processor.Native.Compiler.LoadObjectTime.Millis", "Processor.Native.Compiler.LoadObject.Time.Millis", 60*time.Minute),
+		lastWarmUpTimeMs: factory.NewGaugeWithPrometheusName("Processor.Native.Compiler.LastWarmUpTime.Millis", "Processor.Native.Compiler.LastWarmUp.Time.Millis"),
+		writeToDiskTime:  factory.NewLatencyWithPrometheusName("Processor.Native.Compiler.WriteToDiskTime.Millis", "Processor.Native.Compiler.WriteToDisk.Time.Millis", 60*time.Minute),
+		sourceSize:       factory.NewHistogramWithPrometheusName("Processor.Native.Compiler.SourceSize.Bytes", "Processor.Native.Compiler.Source.Size.Bytes", 1024*1024), // megabyte
 	}
 }
 

@@ -231,7 +231,7 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 		},
 		processingStateMetrics: processingStateMetrics{
 			timeSpentInState:       factory.NewLatency("BlockSync.ProcessingBlocksState.Duration.Millis", 24*30*time.Hour),
-			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived.PerSecond"),
+			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived"),
 			committedBlocks:        factory.NewGauge("BlockSync.ProcessingBlocksState.CommittedBlocks.Count"),
 			failedCommitBlocks:     factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToCommitBlocks.Count"),
 			failedValidationBlocks: factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToValidateBlocks.Count"),

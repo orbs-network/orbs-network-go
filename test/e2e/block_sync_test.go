@@ -8,6 +8,7 @@ package e2e
 
 import (
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -27,14 +28,14 @@ func TestBlockSyncRecover(t *testing.T) {
 		t.Skip("Running against remote network - skipping")
 	}
 
-	targetBlockHeight := uint64(CannedBlocksFileMinHeight + 20)
+	targetBlockHeight := CannedBlocksFileMinHeight + 20
 	waitingDuration := 30*time.Second
 	h.WaitUntilReachBlockHeight(t, CannedBlocksFileMinHeight, waitingDuration)
 
-	var blockHeight uint64
+	var blockHeight primitives.BlockHeight
 	test.Eventually(30*time.Second, func() bool {
-		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		blockHeight = h.GetBlockHeight()
 		return blockHeight >= targetBlockHeight
 	})
-	require.GreaterOrEqual(t, blockHeight, targetBlockHeight, "expected node in e2e network to sync and start closing blocks at block height greater than init blocks file")
+	require.GreaterOrEqual(t, uint64(blockHeight), uint64(targetBlockHeight), "expected node in e2e network to sync and start closing blocks at block height greater than init blocks file")
 }

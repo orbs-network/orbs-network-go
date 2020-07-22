@@ -72,7 +72,7 @@ func TestE2EStress(t *testing.T) {
 
 	wg.Wait()
 
-	txCount := getTransactionCount(t, h) - baseTxCount
+	txCount := float64(getTransactionCount(t, h) - baseTxCount)
 
 	expectedNumberOfTx := float64(100-config.acceptableFailureRate) / 100 * float64(config.numberOfTransactions)
 
@@ -107,15 +107,15 @@ func TestE2EStress(t *testing.T) {
 	//}, "actual tps (%f) is less than target tps (%f)", ratePerSecond, config.targetTPS)
 }
 
-func getTransactionCount(t *testing.T, h *Harness) float64 {
-	var m metrics
+func getTransactionCount(t *testing.T, h *Harness) int64 {
+	var txCount int64
 
 	require.True(t, test.Eventually(1*time.Minute, func() bool {
-		m = h.GetMetrics()
-		return m != nil
+		txCount = h.GetTranactionCount()
+		return txCount != 0
 	}), "could not retrieve metrics")
 
-	return m["TransactionPool.CommittedPool.Transactions.Count"]["Value"].(float64)
+	return txCount
 }
 
 func groupErrors(errors []error) map[string]int {

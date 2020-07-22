@@ -18,7 +18,8 @@ func NewLoggerRandomer() *loggerRandomer {
 		log.String("_test", "e2e"),
 		log.String("_branch", os.Getenv("GIT_BRANCH")),
 		log.String("_commit", os.Getenv("GIT_COMMIT"))).
-		WithOutput(console)
+		WithOutput(console).
+	    WithFilters(log.DiscardAll())
 	tl := &loggerRandomer{logger: logger, console: console}
 
 	// this is yuckie - it's a circular dependency, but it's ok since we're in a test situation and it's better than passing two arguments
