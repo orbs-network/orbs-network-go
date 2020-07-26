@@ -25,7 +25,7 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
-	github.com/orbs-network/crypto-lib-go v1.2.0
+	github.com/orbs-network/crypto-lib-go v1.5.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/healthcheck v1.1.0
