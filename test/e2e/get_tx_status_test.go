@@ -23,7 +23,7 @@ func TestGetTxStatus(t *testing.T) {
 
 		PrintTestTime(t, "send deploy - start", &lt)
 
-		res, err := h.GetTransactionStatus("0xC0058950d1Bdde15d06C2d7354C3Cb15Dae02CFC6BF5934b358D43dEf1DFE1a0C420Da72e541bd6e")
+		res, err := h.GetTransactionStatus("0xc0058950D1bDDe15D06C2d7354C3CB15daE02CFC6Bf5934B358D43def1Dfe1a0c420da72E541Bd6e")
 		require.NoError(t, err, "expected polling for the status of an unsent transaction to return status without error")
 		require.EqualValues(t, codec.TRANSACTION_STATUS_NO_RECORD_FOUND, res.TransactionStatus)
 	})
