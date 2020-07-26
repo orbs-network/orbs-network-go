@@ -23,7 +23,9 @@ func TestTicksOnSchedule(t *testing.T) {
 		ts := primitives.TimestampNano(time.Now().UnixNano())
 
 		m := aCleaner()
-		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano) { return 0, ts }, harness.Logger))
+		harness.Supervise(startCleaningProcess(ctx, "", tickInterval, expiration, m, func() (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds) {
+			return 0, ts, 0
+		}, harness.Logger))
 
 		// waiting multiple times to assert that ticker is looping :)
 		for i := 0; i < 3; i++ {

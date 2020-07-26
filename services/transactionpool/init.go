@@ -44,11 +44,11 @@ func NewTransactionPool(ctx context.Context,
 	txForwarder := NewTransactionForwarder(ctx, logger, signer, config, gossip)
 
 	s := &service{
-		clock:           createClockIfNeeded(maybeClock),
-		gossip:          gossip,
-		virtualMachine:  virtualMachine,
-		config:          config,
-		logger:          logger,
+		clock:          createClockIfNeeded(maybeClock),
+		gossip:         gossip,
+		virtualMachine: virtualMachine,
+		config:         config,
+		logger:         logger,
 
 		pendingPool:                         pendingPool,
 		committedPool:                       committedPool,
@@ -61,6 +61,7 @@ func NewTransactionPool(ctx context.Context,
 
 	s.validationContext = s.createValidationContext()
 	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
+	s.lastCommitted.referenceTime = primitives.TimestampSeconds(0)
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
 	s.metrics.lastCommittedTimestamp = metricFactory.NewGauge("TransactionPool.LastCommitted.TimeNano")
 	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate.PerSecond")
@@ -69,8 +70,8 @@ func NewTransactionPool(ctx context.Context,
 	gossip.RegisterTransactionRelayHandler(s)
 	pendingPool.onTransactionRemoved = s.onTransactionError
 
-	s.Supervise(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockHeightAndTime, logger))
-	s.Supervise(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockHeightAndTime, logger))
+	s.Supervise(startCleaningProcess(ctx, "committed pool", config.TransactionPoolCommittedPoolClearExpiredInterval, config.TransactionExpirationWindow, s.committedPool, s.lastCommittedBlockInfo, logger))
+	s.Supervise(startCleaningProcess(ctx, "pending pool", config.TransactionPoolPendingPoolClearExpiredInterval, config.TransactionExpirationWindow, s.pendingPool, s.lastCommittedBlockInfo, logger))
 	s.Supervise(txForwarder)
 
 	return s
@@ -85,7 +86,7 @@ func createClockIfNeeded(maybeClock adapter.Clock) adapter.Clock {
 }
 
 func (s *service) onTransactionError(ctx context.Context, txHash primitives.Sha256, removalReason protocol.TransactionStatus) {
-	bh, ts := s.lastCommittedBlockHeightAndTime()
+	bh, ts, _ := s.lastCommittedBlockInfo()
 	if removalReason != protocol.TRANSACTION_STATUS_COMMITTED {
 		s.transactionResultsHandlers.RLock()
 		defer s.transactionResultsHandlers.RUnlock()
