@@ -43,8 +43,9 @@ type service struct {
 
 	lastCommitted struct {
 		sync.RWMutex
-		blockHeight primitives.BlockHeight
-		timestamp   primitives.TimestampNano
+		blockHeight   primitives.BlockHeight
+		timestamp     primitives.TimestampNano
+		referenceTime primitives.TimestampSeconds
 	}
 
 	pendingPool                         *pendingTxPool
@@ -65,10 +66,10 @@ type service struct {
 	addCommitLock sync.RWMutex
 }
 
-func (s *service) lastCommittedBlockHeightAndTime() (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) lastCommittedBlockInfo() (primitives.BlockHeight, primitives.TimestampNano, primitives.TimestampSeconds) {
 	s.lastCommitted.RLock()
 	defer s.lastCommitted.RUnlock()
-	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp
+	return s.lastCommitted.blockHeight, s.lastCommitted.timestamp, s.lastCommitted.referenceTime
 }
 
 func (s *service) createValidationContext() *validationContext {
