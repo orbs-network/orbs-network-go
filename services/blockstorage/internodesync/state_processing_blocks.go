@@ -15,7 +15,6 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
-	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -174,10 +173,10 @@ func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairCon
 				return err
 			}
 		} else if firstBlockHeight > syncState.TopHeight { // verify the first block reference complies with committee PoS honesty assumption
-			topBlockReference := firstBlock.TransactionsBlock.Header.ReferenceTime()
-			now := primitives.TimestampSeconds(time.Now().Unix())
-			if topBlockReference+primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second) < now {
-				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, primitives.TimestampSeconds(committeeValidityGraceTimeout/time.Second)))
+			topBlockReference := time.Duration(firstBlock.TransactionsBlock.Header.ReferenceTime()) * time.Second
+			now := time.Duration(time.Now().Unix()) * time.Second
+			if topBlockReference+committeeValidityGraceTimeout < now {
+				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, committeeValidityGraceTimeout))
 			}
 		} else {
 			return errors.New(fmt.Sprintf("blocks chunk received (firstHeight %d) does not match current syncState (%v)", firstBlockHeight, syncState))
@@ -227,4 +226,3 @@ func (s *processingBlocksState) getPrevBlock(index int, receivedSyncBlocksOrder 
 	}
 	return
 }
-
