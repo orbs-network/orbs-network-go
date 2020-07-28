@@ -10,16 +10,23 @@ import (
 type StatusResponse struct {
 	Timestamp time.Time
 	Status    string
-	Error     string
+	Error     string `json:",omitempty"`
 	Payload   interface{}
 }
 
 func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	statusString := s.getStatusWarningMessage()
+	var errorString string
+	if statusString != "OK" {
+		errorString = statusString
+	}
+
 	status := StatusResponse{
 		Timestamp: time.Now(),
-		Status:    s.getStatusWarningMessage(),
+		Status:    statusString,
+		Error:     errorString,
 		Payload:   s.metricRegistry.ExportAllNested(),
 	}
 
