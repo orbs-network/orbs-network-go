@@ -33,6 +33,7 @@ func TestDeploymentOfNativeContract(t *testing.T) {
 
 		counterStart := uint64(time.Now().UnixNano())
 		contractName := fmt.Sprintf("CounterFrom%d", counterStart)
+		fmt.Println("Will attempt to deploy contract with name: ", contractName)
 
 		PrintTestTime(t, "send deploy - start", &lt)
 

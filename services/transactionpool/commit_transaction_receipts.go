@@ -21,7 +21,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
-	if bh, _ := s.lastCommittedBlockHeightAndTime(); input.LastCommittedBlockHeight != bh+1 {
+	if bh, _, _ := s.lastCommittedBlockInfo(); input.LastCommittedBlockHeight != bh+1 {
 		return &services.CommitTransactionReceiptsOutput{
 			NextDesiredBlockHeight:   bh + 1,
 			LastCommittedBlockHeight: bh,
@@ -32,7 +32,7 @@ func (s *service) CommitTransactionReceipts(ctx context.Context, input *services
 	s.addCommitLock.Lock()
 	defer s.addCommitLock.Unlock()
 
-	newBh, ts := s.updateBlockHeightAndTimestamp(ctx, input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
+	newBh, ts := s.updateLastCommittedInfo(ctx, input.ResultsBlockHeader) //TODO(v1): should this be updated separately from blockTracker? are we updating block height too early?
 
 	c := &committer{logger: logger, adder: s.committedPool, remover: s.pendingPool, nodeAddress: s.config.NodeAddress(), blockHeight: newBh, blockTime: ts}
 
@@ -62,7 +62,7 @@ func (s *service) notifyHandlers(ctx context.Context, c *committer) {
 	c.notify(ctx, s.transactionResultsHandlers.handlers...)
 }
 
-func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
+func (s *service) updateLastCommittedInfo(ctx context.Context, header *protocol.ResultsBlockHeader) (primitives.BlockHeight, primitives.TimestampNano) {
 	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
 
 	s.lastCommitted.Lock()
@@ -70,6 +70,8 @@ func (s *service) updateBlockHeightAndTimestamp(ctx context.Context, header *pro
 
 	s.lastCommitted.blockHeight = header.BlockHeight()
 	s.lastCommitted.timestamp = header.Timestamp()
+	s.lastCommitted.referenceTime = header.ReferenceTime()
+
 	s.metrics.blockHeight.Update(int64(header.BlockHeight()))
 	s.metrics.lastCommittedTimestamp.Update(int64(header.Timestamp()))
 

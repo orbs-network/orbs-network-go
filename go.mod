@@ -17,6 +17,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.6
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/google/go-cmp v0.3.1
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
@@ -24,7 +25,7 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
-	github.com/orbs-network/crypto-lib-go v1.2.0
+	github.com/orbs-network/crypto-lib-go v1.5.0
 	github.com/orbs-network/go-mock v1.1.0
 	github.com/orbs-network/govnr v0.2.0
 	github.com/orbs-network/healthcheck v1.1.0
