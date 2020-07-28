@@ -14,7 +14,7 @@ import (
 
 func TestStaleManagementRef(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 1*time.Second}}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 2*time.Second}}).
 		WithNumNodes(6).
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
