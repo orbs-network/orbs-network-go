@@ -18,7 +18,7 @@ type Histogram struct {
 type histogramExport struct {
 }
 
-func newHistogram(name string, max int64, n int) *Histogram {
+func newHistogram(name string, pNname string, max int64, n int) *Histogram {
 	return &Histogram{name: name}
 }
 

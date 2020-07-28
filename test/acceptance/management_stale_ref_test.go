@@ -14,7 +14,7 @@ import (
 
 func TestStaleManagementRef(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 2*time.Second}}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 1*time.Second}}).
 		WithNumNodes(6).
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
@@ -39,8 +39,8 @@ func TestStaleManagementRef(t *testing.T) {
 			changedBlock, err2 := network.WaitForManagementChange(ctx, 0, refTime)
 			require.NoError(t, err2)
 
-			// Wait for time to pass livness
-			waitForBlockTime(ctx, network, primitives.TimestampNano(now.UnixNano() + int64(3 * time.Second)), changedBlock)
+			// Wait for time to pass liveness
+			waitForBlockTime(ctx, network, primitives.TimestampNano(now.UnixNano() + int64(4 * time.Second)), changedBlock)
 
 			response, _ = token.Transfer(ctx, 0, 17, 5, 6)
 			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER) // rejected because of liveness
