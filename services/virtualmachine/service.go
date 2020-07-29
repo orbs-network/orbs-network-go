@@ -22,7 +22,7 @@ import (
 var LogTag = log.Service("virtual-machine")
 
 type ManagementConfig interface {
-	ManagementNetworkLivenessTimeout() time.Duration
+	CommitteeGracePeriod() time.Duration
 }
 
 type service struct {
@@ -36,7 +36,7 @@ type service struct {
 	contexts *executionContextProvider
 }
 
-func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, management services.Management, cfg ManagementConfig, logger log.Logger, ) services.VirtualMachine {
+func NewVirtualMachine(stateStorage services.StateStorage, processors map[protocol.ProcessorType]services.Processor, crosschainConnectors map[protocol.CrosschainConnectorType]services.CrosschainConnector, management services.Management, cfg ManagementConfig, logger log.Logger) services.VirtualMachine {
 	s := &service{
 		processors:           processors,
 		crosschainConnectors: crosschainConnectors,
@@ -114,10 +114,10 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 	// all statuses start as protocol.TRANSACTION_STATUS_RESERVED (zero)
 	statuses := make([]protocol.TransactionStatus, len(input.SignedTransactions))
 
-	// Check Subscription and Network Live during pre-order execution to allow empty (rejected status) yet "valid" blocks when either of them fail
+	// Check Subscription and Committee during pre-order execution to allow empty (rejected status) yet "valid" blocks when either of them fail
 	isSubscriptionActive := s.verifySubscription(ctx, input.CurrentBlockReferenceTime)
-	isNetworkLive := s.verifyLiveness(input.CurrentBlockTimestamp, input.CurrentBlockReferenceTime)
-	if !isSubscriptionActive || !isNetworkLive {
+	isCommitteeActive := s.verifyCommitteeStatus(input.CurrentBlockTimestamp, input.CurrentBlockReferenceTime)
+	if !isSubscriptionActive || !isCommitteeActive {
 		for i := 0; i < len(input.SignedTransactions); i++ {
 			statuses[i] = protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER
 		}
@@ -128,7 +128,7 @@ func (s *service) TransactionSetPreOrder(ctx context.Context, input *services.Tr
 
 	if !isSubscriptionActive {
 		logger.Info("performed pre order checks", log.Error(errors.New("Subscription Expired")), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
-	} else if !isNetworkLive {
+	} else if !isCommitteeActive {
 		logger.Error("performed pre order checks", log.Error(errors.New("Network has lost live connection to management")), logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))
 	} else {
 		logger.Info("performed pre order checks", logfields.BlockHeight(input.CurrentBlockHeight), log.Int("num-statuses", len(statuses)))

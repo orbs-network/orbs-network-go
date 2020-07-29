@@ -158,10 +158,10 @@ func (h *harness) processTriggerTransaction(ctx context.Context, currentBlockHei
 	transactions := []*protocol.SignedTransaction{builders.TriggerTransaction().Build()}
 
 	h.service.ProcessTransactionSet(ctx, &services.ProcessTransactionSetInput{
-		SignedTransactions:    transactions,
-		CurrentBlockHeight:    currentBlockHeight,
-		CurrentBlockTimestamp: currentBlockTimestamp,
-		BlockProposerAddress:  currentBlockProposer,
+		SignedTransactions:        transactions,
+		CurrentBlockHeight:        currentBlockHeight,
+		CurrentBlockTimestamp:     currentBlockTimestamp,
+		BlockProposerAddress:      currentBlockProposer,
 		CurrentBlockReferenceTime: 800,
 	})
 }
@@ -228,6 +228,6 @@ func NewTestManagementProvider() *managementConfig {
 	return &managementConfig{liveTime: 1 * time.Minute}
 }
 
-func (mp *managementConfig) ManagementNetworkLivenessTimeout() time.Duration {
+func (mp *managementConfig) CommitteeGracePeriod() time.Duration {
 	return mp.liveTime
 }

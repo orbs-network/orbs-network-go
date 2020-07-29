@@ -37,7 +37,7 @@ type blockSyncConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	BlockSyncReferenceMaxAllowedDistance() time.Duration
+	CommitteeGracePeriod() time.Duration
 }
 
 type SyncState struct {
@@ -74,13 +74,13 @@ func (c blockSyncConduit) drainAndCheckForShutdown(ctx context.Context) bool {
 
 type BlockSync struct {
 	govnr.TreeSupervisor
-	logger                     log.Logger
-	factory                    *stateFactory
-	gossip                     gossiptopics.BlockSync
-	storage                    BlockSyncStorage
-	conduit                    blockSyncConduit
-	metrics                    *stateMachineMetrics
-	config                     blockSyncConfig
+	logger  log.Logger
+	factory *stateFactory
+	gossip  gossiptopics.BlockSync
+	storage BlockSyncStorage
+	conduit blockSyncConduit
+	metrics *stateMachineMetrics
+	config  blockSyncConfig
 }
 
 type stateMachineMetrics struct {
@@ -112,7 +112,7 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
 		log.Stringable("blocks-order", bs.factory.getSyncBlocksOrder()),
-		log.Stringable("max-reference-distance", bs.factory.config.BlockSyncReferenceMaxAllowedDistance()))
+		log.Stringable("committee-grace-period", bs.factory.config.CommitteeGracePeriod()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)

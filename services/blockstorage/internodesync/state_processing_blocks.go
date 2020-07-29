@@ -71,7 +71,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		logger.Info("failed to verify the blocks chunk range received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	}
-	if err := s.validatePosChain(s.blocks.BlockPairs, syncState, s.factory.config.BlockSyncReferenceMaxAllowedDistance(), receivedSyncBlocksOrder); err != nil {
+	if err := s.validatePosChain(s.blocks.BlockPairs, syncState, s.factory.config.CommitteeGracePeriod(), receivedSyncBlocksOrder); err != nil {
 		s.metrics.failedValidationBlocks.Inc()
 		logger.Info("failed to verify the blocks chunk PoS received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
@@ -157,7 +157,7 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 }
 
 // assumes blocks range is correct. Specifically in descending (blockStorage.lastSynced.height - 1 == blocks[0].height ) or ( blocks[0].height > blockStorage.top.height)
-func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairContainer, syncState SyncState, committeeValidityGraceTimeout time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairContainer, syncState SyncState, committeeGraePeriod time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	syncBlocksOrder := s.factory.getSyncBlocksOrder()
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		return nil
@@ -175,8 +175,8 @@ func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairCon
 		} else if firstBlockHeight > syncState.TopHeight { // verify the first block reference complies with committee PoS honesty assumption
 			topBlockReference := time.Duration(firstBlock.TransactionsBlock.Header.ReferenceTime()) * time.Second
 			now := time.Duration(time.Now().Unix()) * time.Second
-			if topBlockReference+committeeValidityGraceTimeout < now {
-				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, committeeValidityGraceTimeout))
+			if topBlockReference+committeeGraePeriod < now {
+				return errors.New(fmt.Sprintf("block reference is not included in committee valid reference grace:  block reference (%d), now (%d), grace (%d)", topBlockReference, now, committeeGraePeriod))
 			}
 		} else {
 			return errors.New(fmt.Sprintf("blocks chunk received (firstHeight %d) does not match current syncState (%v)", firstBlockHeight, syncState))

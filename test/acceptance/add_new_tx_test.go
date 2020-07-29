@@ -15,7 +15,7 @@ import (
 
 func TestDeployContractTransactionToNode(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 12 * time.Hour}}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.COMMITTEE_GRACE_PERIOD, Value: config.NodeConfigValue{DurationValue: 12 * time.Hour}}).
 		Start(t, func(t testing.TB, ctx context.Context, network *Network) {
 			network.DeployBenchmarkTokenContract(ctx, 1)
 		})
