@@ -23,7 +23,7 @@ type blockHeightIndex struct {
 	nextOffset           int64
 	sequentialTopBlock   *protocol.BlockPairContainer
 	topBlock             *protocol.BlockPairContainer
-	lastWrittenHeight    primitives.BlockHeight
+	lastWrittenBlock     *protocol.BlockPairContainer
 	logger               log.Logger
 }
 
@@ -35,7 +35,7 @@ func newBlockHeightIndex(logger log.Logger, firstBlockOffset int64) *blockHeight
 		nextOffset:           firstBlockOffset,
 		sequentialTopBlock:   nil,
 		topBlock:             nil,
-		lastWrittenHeight:    0,
+		lastWrittenBlock:     nil,
 	}
 }
 
@@ -43,17 +43,10 @@ func (i *blockHeightIndex) getSyncState() internodesync.SyncState {
 	i.RLock()
 	defer i.RUnlock()
 	return internodesync.SyncState{
-		TopHeight:        getBlockHeight(i.topBlock),
-		InOrderHeight:    getBlockHeight(i.sequentialTopBlock),
-		LastSyncedHeight: i.lastWrittenHeight,
+		TopBlock:        i.topBlock,
+		InOrderBlock:    i.sequentialTopBlock,
+		LastSyncedBlock: i.lastWrittenBlock,
 	}
-}
-
-func (i *blockHeightIndex) getLastWrittenHeight() primitives.BlockHeight {
-	i.RLock()
-	defer i.RUnlock()
-
-	return i.lastWrittenHeight
 }
 
 func (i *blockHeightIndex) fetchNextOffset() int64 {
@@ -97,9 +90,10 @@ func (i *blockHeightIndex) validateCandidateBlockHeight(candidateBlockHeight pri
 
 	topHeight := getBlockHeight(i.topBlock)
 	sequentialHeight := getBlockHeight(i.sequentialTopBlock)
+	lastWrittenHeight := getBlockHeight(i.lastWrittenBlock)
 
-	if i.lastWrittenHeight > sequentialHeight && candidateBlockHeight != i.lastWrittenHeight-1 {
-		err = fmt.Errorf("sync session in progress, expected block height %d", i.lastWrittenHeight-1)
+	if lastWrittenHeight > sequentialHeight && candidateBlockHeight != lastWrittenHeight-1 {
+		err = fmt.Errorf("sync session in progress, expected block height %d", lastWrittenHeight-1)
 
 	} else if sequentialHeight == topHeight && candidateBlockHeight <= sequentialHeight {
 		err = fmt.Errorf("expected block height higher than current top %d", sequentialHeight)
@@ -127,22 +121,24 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 	i.heightOffset[newBlockHeight] = i.nextOffset
 	i.nextOffset = newOffset
 	// update indices
-	i.lastWrittenHeight = newBlockHeight
+	i.lastWrittenBlock = newBlock
+	lastWrittenHeight := newBlockHeight
 	if newBlockHeight > topHeight {
 		i.topBlock = newBlock
 		topHeight = newBlockHeight
 	}
-	if i.lastWrittenHeight == sequentialHeight+1 {
-			for height := sequentialHeight + 1; height <= topHeight; height++ {
-				if _, ok := i.heightOffset[height]; !ok { // block does not exists
-					i.lastWrittenHeight = topHeight
-					return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(sequentialHeight+1), uint64(topHeight))
-				}
-				if blockTracker != nil {
-					blockTracker.IncrementTo(height)
-				}
+
+	if lastWrittenHeight == sequentialHeight+1 {
+		for height := sequentialHeight + 1; height <= topHeight; height++ {
+			if _, ok := i.heightOffset[height]; !ok { // block does not exists
+				i.lastWrittenBlock = i.topBlock
+				return fmt.Errorf("offset missing for blockHeight (%d), in range (%d - %d) assumed to exist in file storage", uint64(height), uint64(sequentialHeight+1), uint64(topHeight))
 			}
-		i.lastWrittenHeight = topHeight
+			if blockTracker != nil {
+				blockTracker.IncrementTo(height)
+			}
+		}
+		i.lastWrittenBlock = i.topBlock
 		i.sequentialTopBlock = i.topBlock
 	}
 
@@ -150,7 +146,7 @@ func (i *blockHeightIndex) appendBlock(newOffset int64, newBlock *protocol.Block
 		bucketKey := blockTsBucketKey(blockTs)
 		firstBlockHeightInBucket, exists := i.firstBlockInTsBucket[bucketKey]
 		if !exists || newBlockHeight < firstBlockHeightInBucket {
-				i.firstBlockInTsBucket[bucketKey] = newBlockHeight
+			i.firstBlockInTsBucket[bucketKey] = newBlockHeight
 		}
 	}
 

@@ -8,6 +8,7 @@ package internodesync
 
 import (
 	"context"
+	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
@@ -41,9 +42,28 @@ type blockSyncConfig interface {
 }
 
 type SyncState struct {
-	TopHeight        primitives.BlockHeight
-	InOrderHeight    primitives.BlockHeight
-	LastSyncedHeight primitives.BlockHeight
+	TopBlock        *protocol.BlockPairContainer
+	InOrderBlock    *protocol.BlockPairContainer
+	LastSyncedBlock *protocol.BlockPairContainer
+}
+
+func (s *SyncState) GetSyncStateBlockHeights() (topHeight primitives.BlockHeight, inOrderHeight primitives.BlockHeight, lastSyncedHeight primitives.BlockHeight) {
+	return getBlockHeight(s.TopBlock), getBlockHeight(s.InOrderBlock), getBlockHeight(s.LastSyncedBlock)
+}
+
+func (s *SyncState) String() string {
+	if s == nil {
+		return "<nil>"
+	}
+	topHeight, inOrderHeight, lastSyncedHeight := s.GetSyncStateBlockHeights()
+	return fmt.Sprintf("{TopBlockHeight:%d,InOrderBlockHeight:%d,LastSyncedBlockHeight:%d}", uint64(topHeight), uint64(inOrderHeight), uint64(lastSyncedHeight))
+}
+
+func getBlockHeight(block *protocol.BlockPairContainer) primitives.BlockHeight {
+	if block == nil {
+		return 0
+	}
+	return block.TransactionsBlock.Header.BlockHeight()
 }
 
 type BlockSyncStorage interface {
@@ -148,7 +168,6 @@ func (bs *BlockSync) syncLoop(parent context.Context) {
 
 func (bs *BlockSync) HandleBlockCommitted(ctx context.Context) {
 	logger := bs.logger.WithTags(trace.LogFieldFrom(ctx))
-	//bs.UpdateStorageSyncState()
 	select {
 	case bs.conduit <- idleResetMessage{}:
 	case <-ctx.Done():

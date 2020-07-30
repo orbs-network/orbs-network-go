@@ -88,7 +88,7 @@ func getServerSyncRange(syncState internodesync.SyncState,
 	batchSize primitives.BlockHeight,
 ) (responseFrom primitives.BlockHeight, responseTo primitives.BlockHeight, err error) {
 
-	inOrder := syncState.InOrderHeight
+	inOrderHeight := getBlockHeight(syncState.InOrderBlock)
 	responseFrom = requestFrom
 	responseTo = requestTo
 
@@ -97,11 +97,11 @@ func getServerSyncRange(syncState internodesync.SyncState,
 			err = errors.New("Invalid requested range ascending order with from > to")
 			return
 		}
-		if requestFrom > inOrder { // server does not hold range beginning
-			err = fmt.Errorf("server does not hold requested ascending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+		if requestFrom > inOrderHeight { // server does not hold range beginning
+			err = fmt.Errorf("server does not hold requested ascending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrderHeight))
 			return
 		}
-		responseTo = min(requestFrom+batchSize-1, requestTo, inOrder)
+		responseTo = min(requestFrom+batchSize-1, requestTo, inOrderHeight)
 
 	} else if requestSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		// assert range - either (from=unknown or from > to ) and to > 0
@@ -109,13 +109,13 @@ func getServerSyncRange(syncState internodesync.SyncState,
 			err = errors.New("Invalid requested range descending order with from < to")
 			return
 		}
-		if requestFrom > inOrder || requestTo > inOrder { // server does not hold range
-			err = fmt.Errorf("server does not hold requested descending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrder))
+		if requestFrom > inOrderHeight || requestTo > inOrderHeight { // server does not hold range
+			err = fmt.Errorf("server does not hold requested descending range: from(%d) - to(%d) where storage inOrder blockHeight is (%d)", uint64(requestFrom), uint64(requestTo), uint64(inOrderHeight))
 			return
 		}
 
 		if requestFrom == UNKNOWN_BLOCK_HEIGHT { // open ended request
-			responseFrom = inOrder
+			responseFrom = inOrderHeight
 		}
 		if (responseFrom >= batchSize) && (responseFrom-batchSize+1 > responseTo) {
 			responseTo = responseFrom - batchSize + 1
@@ -230,4 +230,3 @@ func (s *Service) sourceHandleBlockSyncRequest(ctx context.Context, message *gos
 		return nil
 	}
 }
-
