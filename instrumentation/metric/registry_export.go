@@ -10,18 +10,6 @@ import (
 	"strings"
 )
 
-func (r *inMemoryRegistry) ExportAllFlat() exportedMap {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	all := make(exportedMap)
-	for _, m := range r.mu.metrics {
-		all[m.Name()] = m.Export()
-	}
-
-	return all
-}
-
 /*
  * Assumptions:
  * 1) Nested names seperated by '.'
@@ -105,5 +93,8 @@ func objectifyKnownTypes(value interface{}, potentialType string) interface{} {
 	if actualType == nil {
 		return value
 	}
-	return &typedObject{Value: value, Type: actualType}
+	res := make(exportedMap)
+	res["Value"] = value
+	res["Type"] = actualType
+	return res//&typedObject{Value: value, Type: actualType}
 }

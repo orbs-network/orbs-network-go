@@ -39,7 +39,6 @@ type Registry interface {
 	Remove(metric metric)
 	Get(metricName string) metric
 	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter
-	ExportAllFlat() exportedMap
 	ExportAllNested() exportedMap
 	ExportPrometheus() string
 }

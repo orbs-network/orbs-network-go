@@ -168,7 +168,7 @@ func (h *Harness) GetBlockHeight() primitives.BlockHeight {
 	}
 }
 
-func (h *Harness) GetTranactionCount() int64 {
+func (h *Harness) GetTransactionCount() int64 {
 	metricReader, err := metric.NewReader(h.metricsUrl)
 	if err != nil || len(metricReader) == 0 {
 		return 0

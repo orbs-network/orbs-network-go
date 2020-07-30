@@ -96,6 +96,6 @@ func (h *harness) process(ctx context.Context, txs ...*protocol.SignedTransactio
 
 type vmCfg struct{}
 
-func (c *vmCfg) ManagementNetworkLivenessTimeout() time.Duration {
+func (c *vmCfg) CommitteeGracePeriod() time.Duration {
 	return 10 * time.Minute
 }

@@ -18,13 +18,19 @@ class Metrics {
         }
     }
 
-    _get(name) {
-        return this._metrics[name];
+    _get(names){
+        let curr = this._metrics.Payload;
+        for (let i = 0;i < names.length; i++) {
+            if (curr[names[i]]) {
+                curr = curr[names[i]];
+            } else {
+                return 0;
+            }
+        }
+        return curr;
     }
 
-    getBlockHeight() { return this._get("BlockStorage.BlockHeight") || 0}
-    getVersion() { return this._get("Version.Semantic") || ""}
-    getCommit() { return this._get("Version.Commit") || ""}
+    getBlockHeight() { return this._get(["BlockStorage", "LastCommitted", "BlockHeight"]) || 0}
 }
 
 async function eventuallyClosingBlocks(endpoint, pollingIntervalSeconds) {
@@ -44,6 +50,7 @@ async function eventuallyClosingBlocks(endpoint, pollingIntervalSeconds) {
         await metrics.refresh();
         let currentBlockHeight = metrics.getBlockHeight();
         if (currentBlockHeight >= startBlockHeight + 5) {
+            console.log(`got to ${currentBlockHeight} - yay!`);
             return true;
         }
         if (counter % 5 === 0) {

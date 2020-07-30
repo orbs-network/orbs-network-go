@@ -12,9 +12,11 @@ import (
 	"time"
 )
 
+const committeeGracePeriod = 2 * time.Second
+
 func TestStaleManagementRef(t *testing.T) {
 	NewHarness().
-		WithConfigOverride(config.NodeConfigKeyValue{Key: config.MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, Value: config.NodeConfigValue{DurationValue: 1*time.Second}}).
+		WithConfigOverride(config.NodeConfigKeyValue{Key: config.COMMITTEE_GRACE_PERIOD, Value: config.NodeConfigValue{DurationValue: committeeGracePeriod}}).
 		WithNumNodes(6).
 		WithManagementPollingInterval(20*time.Millisecond).
 		WithLogFilters(log.DiscardAll()).
@@ -39,11 +41,15 @@ func TestStaleManagementRef(t *testing.T) {
 			changedBlock, err2 := network.WaitForManagementChange(ctx, 0, refTime)
 			require.NoError(t, err2)
 
-			// Wait for time to pass liveness
-			waitForBlockTime(ctx, network, primitives.TimestampNano(now.UnixNano() + int64(4 * time.Second)), changedBlock)
+			// Wait for time to pass committee grace
+			blockTimeDiff := committeeGracePeriod * 2
+			blockTime := primitives.TimestampNano(now.UnixNano() + int64(blockTimeDiff))
+			limit := blockTimeDiff * 2
+			blockHeight := waitForBlockTime(t, ctx, network, changedBlock, blockTime, limit)
+			t.Log("reached target blockTime passed committee grace period ", uint64(blockHeight))
 
 			response, _ = token.Transfer(ctx, 0, 17, 5, 6)
-			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER) // rejected because of liveness
+			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER) // rejected because committee is no longer active
 			require.EqualValues(t, 17, token.GetBalance(ctx, 0, 6))
 			txs, err3 := network.BlockPersistence(0).GetTransactionsBlock(response.RequestResult().BlockHeight())
 			require.NoError(t, err3)
@@ -53,15 +59,25 @@ func TestStaleManagementRef(t *testing.T) {
 		})
 }
 
-func waitForBlockTime(ctx context.Context, network *Network, blockTime primitives.TimestampNano, startBlock primitives.BlockHeight) primitives.BlockHeight {
+func waitForBlockTime(t testing.TB, ctx context.Context, network *Network,
+	startBlock primitives.BlockHeight, blockTime primitives.TimestampNano,
+	limit time.Duration) primitives.BlockHeight {
 	waitingBlock := startBlock + 1
-	for waitingBlock < startBlock+50 {
-		network.WaitForBlock(ctx, waitingBlock)
-		bp, _ := network.BlockPersistence(0).GetLastBlock()
-		if bp.TransactionsBlock.Header.Timestamp() >= blockTime {
-			return bp.TransactionsBlock.Header.BlockHeight()
+	targetBlockTimedOut := time.After(limit)
+	for {
+		select {
+		case <-targetBlockTimedOut:
+			t.FailNow()
+		case <-ctx.Done():
+			return 0
+		default:
+			network.WaitForBlock(ctx, waitingBlock)
+			bp, _ := network.BlockPersistence(0).GetLastBlock()
+			if bp.TransactionsBlock.Header.Timestamp() >= blockTime {
+				return bp.TransactionsBlock.Header.BlockHeight()
+			}
+			waitingBlock = bp.TransactionsBlock.Header.BlockHeight() + 1
 		}
-		waitingBlock = bp.TransactionsBlock.Header.BlockHeight()+1
 	}
 	return 0
 }

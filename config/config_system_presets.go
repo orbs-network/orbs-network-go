@@ -21,9 +21,10 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 
 	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
-	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50 * (1<<20)) // 50 MB
+	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50*(1<<20)) // 50 MB
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
-	cfg.SetDuration(MANAGEMENT_NETWORK_LIVENESS_TIMEOUT, 100*365*24*time.Hour) // TODO v2 POSV2 temp value that is private 2^62 nanos (100 years)
+	// for private consider changing this to 2^62 nanos (100 years) for PoS v2
+	cfg.SetDuration(COMMITTEE_GRACE_PERIOD, 12*time.Hour)
 
 	// 2*slow_network_latency + avg_network_latency + 2*execution_time \  + empty block time
 	cfg.SetDuration(LEAN_HELIX_CONSENSUS_ROUND_TIMEOUT_INTERVAL, 14*time.Second)
@@ -62,8 +63,6 @@ func defaultProductionConfig() mutableNodeConfig {
 
 	cfg.SetDuration(BLOCK_SYNC_COLLECT_CHUNKS_TIMEOUT, 5*time.Second)
 
-	// TODO: merging with management liveness config failed tests
-	cfg.SetDuration(BLOCK_SYNC_REFERENCE_MAX_ALLOWED_DISTANCE, 12*time.Hour)
 	// have block sync use descending order of blocks from top
 	cfg.SetBool(BLOCK_SYNC_DESCENDING_ENABLED, true)
 
