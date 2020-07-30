@@ -61,12 +61,12 @@ func NewStateFactoryWithTimers(
 ) *stateFactory {
 
 	f := &stateFactory{
-		config:          config,
-		gossip:          gossip,
-		storage:         storage,
-		conduit:         conduit,
-		logger:          logger,
-		metrics:         newStateMetrics(factory),
+		config:  config,
+		gossip:  gossip,
+		storage: storage,
+		conduit: conduit,
+		logger:  logger,
+		metrics: newStateMetrics(factory),
 	}
 
 	if createCollectTimeoutTimer == nil {
@@ -98,7 +98,6 @@ func (f *stateFactory) getSyncBlocksOrder() gossipmessages.SyncBlocksOrder {
 	}
 }
 
-
 func (f *stateFactory) defaultCreateCollectTimeoutTimer() *synchronization.Timer {
 	return synchronization.NewTimer(f.config.BlockSyncCollectResponseTimeout())
 }
@@ -123,12 +122,12 @@ func (f *stateFactory) CreateIdleState() syncState {
 
 func (f *stateFactory) CreateCollectingAvailabilityResponseState() syncState {
 	return &collectingAvailabilityResponsesState{
-		factory:         f,
-		client:          newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
-		createTimer:     f.createCollectTimeoutTimer,
-		logger:          f.logger,
-		conduit:         f.conduit,
-		metrics:         f.metrics.collectingStateMetrics,
+		factory:     f,
+		client:      newBlockSyncGossipClient(f.gossip, f.storage, f.logger, f.config.BlockSyncNumBlocksInBatch, f.config.NodeAddress),
+		createTimer: f.createCollectTimeoutTimer,
+		logger:      f.logger,
+		conduit:     f.conduit,
+		metrics:     f.metrics.collectingStateMetrics,
 	}
 }
 
@@ -155,12 +154,12 @@ func (f *stateFactory) CreateWaitingForChunksState(sourceNodeAddress primitives.
 
 func (f *stateFactory) CreateProcessingBlocksState(message *gossipmessages.BlockSyncResponseMessage) syncState {
 	return &processingBlocksState{
-		blocks:          message,
-		factory:         f,
-		logger:          f.logger,
-		storage:         f.storage,
-		conduit:         f.conduit,
-		metrics:         f.metrics.processingStateMetrics,
+		blocks:  message,
+		factory: f,
+		logger:  f.logger,
+		storage: f.storage,
+		conduit: f.conduit,
+		metrics: f.metrics.processingStateMetrics,
 	}
 }
 
@@ -231,7 +230,7 @@ func newStateMetrics(factory metric.Factory) *stateMetrics {
 		},
 		processingStateMetrics: processingStateMetrics{
 			timeSpentInState:       factory.NewLatency("BlockSync.ProcessingBlocksState.Duration.Millis", 24*30*time.Hour),
-			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived.PerSecond"),
+			blocksRate:             factory.NewRate("BlockSync.ProcessingBlocksState.BlocksReceived"),
 			committedBlocks:        factory.NewGauge("BlockSync.ProcessingBlocksState.CommittedBlocks.Count"),
 			failedCommitBlocks:     factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToCommitBlocks.Count"),
 			failedValidationBlocks: factory.NewGauge("BlockSync.ProcessingBlocksState.FailedToValidateBlocks.Count"),

@@ -15,6 +15,7 @@ import (
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/instrumentation/logfields"
 	"github.com/orbs-network/orbs-network-go/instrumentation/trace"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
 	"github.com/orbs-network/orbs-spec/types/go/services"
@@ -86,8 +87,13 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		prevBlockPair := s.getPrevBlock(index, receivedSyncBlocksOrder)
 		_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: blockPair, PrevBlockPair: prevBlockPair})
 		if err != nil {
-			s.metrics.failedValidationBlocks.Inc()
-			logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block-header", blockPair.TransactionsBlock.Header)) // may be a valid failure if height isn't the next height
+			blockHeight := getBlockHeight(blockPair)
+			if prevBlockPair == nil && (blockHeight > primitives.BlockHeight(1)) {
+				logger.Info("dropping last block in the batch (node does not hold previous block for consensus validation)", logfields.BlockHeight(blockHeight))
+			} else {
+				s.metrics.failedValidationBlocks.Inc()
+				logger.Info("failed to validate block received via sync", log.Error(err), logfields.BlockHeight(blockPair.TransactionsBlock.Header.BlockHeight()), log.Stringable("tx-block-header", blockPair.TransactionsBlock.Header)) // may be a valid failure if height isn't the next height
+			}
 			break
 		}
 		_, err = s.storage.NodeSyncCommitBlock(ctx, &services.CommitBlockInput{BlockPair: blockPair})
@@ -117,8 +123,10 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 
 func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPairContainer, syncState SyncState, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	syncBlocksOrder := s.factory.getSyncBlocksOrder()
+	topHeight, inOrderHeight, lastSyncedHeight := syncState.GetSyncStateBlockHeights()
+
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
-		prevHeight := syncState.InOrderHeight
+		prevHeight := inOrderHeight
 		for _, blockPair := range s.blocks.BlockPairs {
 			currentHeight := blockPair.TransactionsBlock.Header.BlockHeight()
 			if currentHeight != prevHeight+1 {
@@ -134,13 +142,13 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		firstBlock := blocks[0]
 		firstBlockHeight := firstBlock.TransactionsBlock.Header.BlockHeight()
-		if syncState.InOrderHeight == syncState.TopHeight {
-			if firstBlockHeight <= syncState.InOrderHeight {
-				return fmt.Errorf("invalid blocks chunk where first block height (%d) < syncState.inOrderHeight (%d)", firstBlockHeight, syncState.InOrderHeight)
+		if inOrderHeight == topHeight {
+			if firstBlockHeight <= inOrderHeight {
+				return fmt.Errorf("invalid blocks chunk where first block height (%d) < syncState.inOrderHeight (%d)", firstBlockHeight, inOrderHeight)
 			}
-		} else if syncState.InOrderHeight < syncState.TopHeight { // blocks chunk should range from lastSynced-1 down
-			if firstBlockHeight != syncState.LastSyncedHeight-1 {
-				return fmt.Errorf("invalid blocks chunk where first block height (%d) != syncState.LastSyncedHeight(%d) -1, inorder(%d), top(%d) ", firstBlockHeight, syncState.LastSyncedHeight, syncState.InOrderHeight, syncState.TopHeight)
+		} else if inOrderHeight < topHeight { // blocks chunk should range from lastSynced-1 down
+			if firstBlockHeight != lastSyncedHeight-1 {
+				return fmt.Errorf("invalid blocks chunk where first block height (%d) != lastSynced(%d) -1, inorder(%d), top(%d) ", firstBlockHeight, lastSyncedHeight, inOrderHeight, topHeight)
 			}
 		}
 		prevHeight := firstBlockHeight + 1
@@ -159,20 +167,22 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 // assumes blocks range is correct. Specifically in descending (blockStorage.lastSynced.height - 1 == blocks[0].height ) or ( blocks[0].height > blockStorage.top.height)
 func (s *processingBlocksState) validatePosChain(blocks []*protocol.BlockPairContainer, syncState SyncState, committeeGraePeriod time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	syncBlocksOrder := s.factory.getSyncBlocksOrder()
+	topHeight, _, lastSyncedHeight := syncState.GetSyncStateBlockHeights()
+
 	if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_RESERVED && syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
 		return nil
 
 	} else if receivedSyncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		firstBlock := blocks[0]
 		firstBlockHeight := firstBlock.TransactionsBlock.Header.BlockHeight()
-		if firstBlockHeight == syncState.LastSyncedHeight-1 { // will verify hash pointer to block
+		if firstBlockHeight == lastSyncedHeight-1 { // will verify hash pointer to block
 			if nextBlock, err := s.storage.GetBlock(firstBlock.TransactionsBlock.Header.BlockHeight() + 1); err == nil && nextBlock != nil {
 				// prepend
 				blocks = append([]*protocol.BlockPairContainer{nextBlock}, blocks...)
 			} else {
 				return err
 			}
-		} else if firstBlockHeight > syncState.TopHeight { // verify the first block reference complies with committee PoS honesty assumption
+		} else if firstBlockHeight > topHeight { // verify the first block reference complies with committee PoS honesty assumption
 			topBlockReference := time.Duration(firstBlock.TransactionsBlock.Header.ReferenceTime()) * time.Second
 			now := time.Duration(time.Now().Unix()) * time.Second
 			if topBlockReference+committeeGraePeriod < now {

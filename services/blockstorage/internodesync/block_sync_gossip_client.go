@@ -33,7 +33,7 @@ func newBlockSyncGossipClient(
 	l log.Logger,
 	batchSize func() uint32,
 	na func() primitives.NodeAddress,
-	) *blockSyncClient {
+) *blockSyncClient {
 
 	return &blockSyncClient{
 		gossip:      g,
@@ -76,7 +76,7 @@ func (c *blockSyncClient) petitionerBroadcastBlockAvailabilityRequest(ctx contex
 				FirstBlockHeight:         from,
 				LastBlockHeight:          to,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
-				BlocksOrder: syncBlocksOrder,
+				BlocksOrder:              syncBlocksOrder,
 			}).Build(),
 		},
 	}
@@ -114,7 +114,7 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 				FirstBlockHeight:         from,
 				LastBlockHeight:          to,
 				LastCommittedBlockHeight: lastCommittedBlockHeight,
-				BlocksOrder: syncBlocksOrder,
+				BlocksOrder:              syncBlocksOrder,
 			}).Build(),
 		},
 	}
@@ -123,30 +123,28 @@ func (c *blockSyncClient) petitionerSendBlockSyncRequest(ctx context.Context, sy
 	return err
 }
 
-
 // inclusive range
 func getClientSyncRange(syncState SyncState, syncBlocksOrder gossipmessages.SyncBlocksOrder, batchSize primitives.BlockHeight, logger log.Logger) (from primitives.BlockHeight, to primitives.BlockHeight, err error) {
+	topHeight, inOrderHeight, lastSyncedHeight := syncState.GetSyncStateBlockHeights()
+	logger.Info("GetClientSyncRange ", log.Uint64("inOrderHeight", uint64(inOrderHeight)), log.Uint64("lastSyncedHeight", uint64(lastSyncedHeight)), log.Uint64("top", uint64(topHeight)))
 
-	topInOrder := syncState.InOrderHeight
-	lastSynced := syncState.LastSyncedHeight
-	logger.Info("GetClientSyncRange ", log.Uint64("topInOrder", uint64(topInOrder)), log.Uint64("lastSynced", uint64(lastSynced)), log.Uint64("top", uint64(syncState.TopHeight)))
 	if batchSize == 0 {
 		err = errors.New("invalid batch size")
 		return
 	}
 	if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_ASCENDING {
-		from = topInOrder + 1
+		from = inOrderHeight + 1
 		to = from + batchSize - 1
 		if from > to {
 			err = errors.New("calculated -descending- range instead of -ascending-")
 		}
 	} else if syncBlocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		from = UNKNOWN_BLOCK_HEIGHT
-		to = topInOrder + 1
-		if lastSynced > topInOrder+1 {
-			from = lastSynced - 1
-			if (lastSynced > batchSize) && (lastSynced - batchSize > topInOrder + 1) {
-				to = lastSynced - batchSize
+		to = inOrderHeight + 1
+		if lastSyncedHeight > inOrderHeight+1 {
+			from = lastSyncedHeight - 1
+			if (lastSyncedHeight > batchSize) && (lastSyncedHeight-batchSize > inOrderHeight+1) {
+				to = lastSyncedHeight - batchSize
 			}
 			if from < to {
 				err = errors.New("calculated -ascending- range instead of -descending-")
