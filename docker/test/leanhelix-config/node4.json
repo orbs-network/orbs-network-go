@@ -10,6 +10,5 @@
   "profiling": true,
   "management-file-path": "/usr/local/var/orbs/management/mgmt.json",
   "management-consensus-grace-timeout": "0s",
-  "committee-grace-period": "876000h",
-  "block-sync-reference-max-allowed-distance": "10000h"
+  "committee-grace-period": "876000h"
 }
