@@ -7,20 +7,17 @@
 package metric
 
 import (
+	"encoding/json"
 	"sync/atomic"
 )
 
 type Text struct {
 	name  string
+	pName string
 	value atomic.Value
 }
 
-type textExport struct {
-	Name  string
-	Value string
-}
-
-func newText(name string, defaultValue ...string) *Text {
+func newText(name string, pName string, defaultValue ...string) *Text {
 	value := ""
 
 	if len(defaultValue) == 1 {
@@ -29,6 +26,7 @@ func newText(name string, defaultValue ...string) *Text {
 
 	res := &Text{
 		name:  name,
+		pName: prometheusName(pName),
 		value: atomic.Value{},
 	}
 	res.value.Store(value)
@@ -39,10 +37,14 @@ func (t *Text) Name() string {
 	return t.name
 }
 
-func (t *Text) Export() exportedMetric {
-	return textExport{
-		t.name,
-		t.value.Load().(string),
+func (t *Text) Export() interface{} {
+	value := t.value.Load().(string)
+	// in case the string value of the metric is actually a serialized json we try to unmarshal
+	var x []interface{}
+	if err := json.Unmarshal([]byte(value), &x); err == nil {
+		return x
+	} else {
+		return value
 	}
 }
 

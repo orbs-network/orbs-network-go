@@ -46,7 +46,7 @@ Useful to app developers and node operators.
 
 ### Transactions per second (block storage)
 Retrieved from:
-* `TransactionPool.CommitRate.PerSecond` (since `v1.0.0`)
+* `TransactionPool.CommitRate` (since `v2.0.1`) (was `TransactionPool.CommitRate.PerSecond` since `v1.0.0`)
 
 Meaning:
 * Amount of transactions from committed blocks that were moved from pending pool to committed pool.
@@ -55,7 +55,7 @@ Useful to app developers and node operators.
 
 ### Transactions per second (public API)
 Retrieved from:
-* `PublicAPI.Transactions.PerSecond` (since `v1.1.0`)
+* `PublicA[i].Transactions` (since `v2.0.1`) (was `PublicAPI.Transactions.PerSecond` since `v1.1.0`)
 
 Meaning:
 * Indicates the number of transactions received by virtual chain public API.
@@ -64,7 +64,7 @@ Useful to app developers and node operators.
 
 ### Queries per second (public API)
 Retrieved from:
-* `PublicAPI.Queries.PerSecond` (since `v1.1.0`)
+* `PublicApi.Queries` (since `v2.0.1`) (was `PublicAPI.Queries.PerSecond` since `v1.1.0`)
 
 Meaning:
 * Indicates the number of queries received by virtual chain public API. Queries differ from transactions because they only use read-only methods of the smart contract and does not alter the state, therefore the node can serve many more queries than it can process transactions.
@@ -100,7 +100,7 @@ Useful to node operators.
 
 ### Resources metrics
 Retrieved from:
-* `OS.Process.CPU.PerCent` (since `v1.0.0`)
+* `OS.Process.CPU.Percent` (since `v2.0.1`) (was `OS.Process.CPU.PerCent` since `v1.0.0`)
 * `OS.Process.Memory.Bytes` (since `v1.0.0`)
 * `BlockStorage.FileSystemSize.Bytes` (since `v1.0.0`)
 

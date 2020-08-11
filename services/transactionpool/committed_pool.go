@@ -29,9 +29,11 @@ type committedPoolMetrics struct {
 	poolSizeInBytes  *metric.Gauge
 }
 
+const MetricCommittedPoolTransactions = "TransactionPool.CommittedPool.Transactions.Count" // Never user literal directly only use the const
+
 func newCommittedPoolMetrics(factory metric.Factory) *committedPoolMetrics {
 	return &committedPoolMetrics{
-		transactionCount: factory.NewGauge("TransactionPool.CommittedPool.Transactions.Count"),
+		transactionCount: factory.NewGauge(MetricCommittedPoolTransactions),
 		poolSizeInBytes:  factory.NewGauge("TransactionPool.CommittedPool.PoolSize.Bytes"),
 	}
 }

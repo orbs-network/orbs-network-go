@@ -309,16 +309,16 @@ func (s *service) initMetrics(metricFactory metric.Factory) {
 	s.metrics.lastSuccessfulUpdateTime = metricFactory.NewGauge("Management.Data.LastSuccessfulUpdateTime")
 	s.metrics.pageCachedStartRefTime = metricFactory.NewGauge("Management.Data.CachedStartRefTime")
 	s.metrics.pageCachedEndRefTime = metricFactory.NewGauge("Management.Data.CashedEndRefTime")
-	s.metrics.numCommitteeEvents = metricFactory.NewGauge("Management.Committee.Count")
+	s.metrics.numCommitteeEvents = metricFactory.NewGauge("Management.CommitteeEvents")
 	s.metrics.currentCommittee = metricFactory.NewText("Management.Committee.Current")
-	s.metrics.currentCommitteeRefTime = metricFactory.NewGauge("Management.Committee.CurrentRefTime")
-	s.metrics.numSubscriptionEvents = metricFactory.NewGauge("Management.Subscription.Count")
+	s.metrics.currentCommitteeRefTime = metricFactory.NewGauge("Management.Committee.RefTime")
+	s.metrics.numSubscriptionEvents = metricFactory.NewGauge("Management.SubscriptionEvents")
 	s.metrics.currentSubscription = metricFactory.NewText("Management.Subscription.Current")
-	s.metrics.currentSubscriptionRefTime = metricFactory.NewGauge("Management.Subscription.CurrentRefTime")
-	s.metrics.numProtocolEvents = metricFactory.NewGauge("Management.Protocol.Count")
+	s.metrics.currentSubscriptionRefTime = metricFactory.NewGauge("Management.Subscription.RefTime")
+	s.metrics.numProtocolEvents = metricFactory.NewGauge("Management.ProtocolEvents")
 	s.metrics.currentProtocol = metricFactory.NewGauge("Management.Protocol.Current")
-	s.metrics.currentProtocolRefTime = metricFactory.NewGauge("Management.Protocol.CurrentRefTime")
-	s.metrics.currentTopology = metricFactory.NewText("Management.Topology.Current")
+	s.metrics.currentProtocolRefTime = metricFactory.NewGauge("Management.Protocol.RefTime")
+	s.metrics.currentTopology = metricFactory.NewText("Management.Topology")
 }
 
 func (s *service) updateMetrics(isSuccessful bool) {

@@ -16,6 +16,7 @@ var hardCodedTickInterval = 1 * time.Second // this cannot really be changed as 
 
 type Rate struct {
 	name 		  string
+	pName         string
 	movingAverage ewma.MovingAverage
 
 	m          sync.Mutex
@@ -23,18 +24,14 @@ type Rate struct {
 	nextTick   time.Time
 }
 
-type rateExport struct {
-	Name          string
-	RatePerSecond float64
+func newRate(name string, pName string) *Rate {
+	return newRateWithStartTime(name, pName, time.Now())
 }
 
-func newRate(name string) *Rate {
-	return newRateWihStart(name, time.Now())
-}
-
-func newRateWihStart(name string, start time.Time) *Rate {
+func newRateWithStartTime(name string, pName string, start time.Time) *Rate {
 	return &Rate{
 		name:          name,
+		pName:         prometheusName(pName),
 		movingAverage: ewma.NewMovingAverage(),
 		nextTick:      start.Add(hardCodedTickInterval),
 	}
@@ -52,15 +49,14 @@ func (r *Rate) Rate() float64 {
 	return r.movingAverage.Value()
 }
 
-func (r *Rate) Export() exportedMetric {
+func (r *Rate) Export() interface{} {
 	r.m.Lock()
 	defer r.m.Unlock()
 	r.maybeRotate()
 
-	return rateExport{
-		r.name,
-		r.Rate(),
-	}
+	return &struct{
+		RatePerSecond float64
+	}{r.Rate()	}
 }
 
 func (r *Rate) Measure(eventCount int64) {

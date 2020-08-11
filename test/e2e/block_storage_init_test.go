@@ -8,6 +8,7 @@ package e2e
 
 import (
 	"github.com/orbs-network/orbs-network-go/test"
+	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -26,10 +27,10 @@ func TestInitialBlockHeight(t *testing.T) {
 
 	h.WaitUntilTransactionPoolIsReady(t)
 
-	var blockHeight uint64
+	var blockHeight primitives.BlockHeight
 	test.Eventually(5*time.Second, func() bool {
-		blockHeight = uint64(h.GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64))
+		blockHeight = h.GetBlockHeight()
 		return blockHeight >= CannedBlocksFileMinHeight
 	})
-	require.GreaterOrEqual(t, blockHeight, uint64(CannedBlocksFileMinHeight), "expected e2e network to start closing blocks at block height greater than init blocks file")
+	require.GreaterOrEqual(t, uint64(blockHeight), uint64(CannedBlocksFileMinHeight), "expected e2e network to start closing blocks at block height greater than init blocks file")
 }

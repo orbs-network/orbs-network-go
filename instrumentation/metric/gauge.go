@@ -12,16 +12,12 @@ import (
 
 type Gauge struct {
 	name  string
+	pName string
 	value int64
 }
 
-type gaugeExport struct {
-	Name  string
-	Value int64
-}
-
-func newGauge(name string) *Gauge {
-	return &Gauge{name: name}
+func newGauge(name string, pName string) *Gauge {
+	return &Gauge{name: name, pName: prometheusName(pName)}
 }
 
 func (g *Gauge) Name() string {
@@ -32,11 +28,8 @@ func (g *Gauge) Value() interface{} {
 	return g.IntValue()
 }
 
-func (g *Gauge) Export() exportedMetric {
-	return gaugeExport{
-		g.name,
-		atomic.LoadInt64(&g.value),
-	}
+func (g *Gauge) Export() interface{} {
+	return g.Value()
 }
 
 func (g *Gauge) Inc() {

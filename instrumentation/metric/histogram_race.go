@@ -18,7 +18,7 @@ type Histogram struct {
 type histogramExport struct {
 }
 
-func newHistogram(name string, max int64, n int) *Histogram {
+func newHistogram(name string, pNname string, max int64, n int) *Histogram {
 	return &Histogram{name: name}
 }
 
@@ -26,8 +26,8 @@ func (h *Histogram) Name() string {
 	return h.name
 }
 
-func (h Histogram) Export() exportedMetric {
-	return &histogramExport{}
+func (h Histogram) Export() interface{} {
+	return nil
 }
 
 func (h *Histogram) CurrentSamples() int64 {

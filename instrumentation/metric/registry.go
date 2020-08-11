@@ -14,8 +14,6 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -25,8 +23,11 @@ const AGGREGATION_SPAN = 10 * time.Minute
 
 type Factory interface {
 	NewHistogram(name string, maxValue int64) *Histogram
+	NewHistogramWithPrometheusName(name string, pName string, maxValue int64) *Histogram
 	NewLatency(name string, maxDuration time.Duration) *Histogram
+	NewLatencyWithPrometheusName(name string, pName string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
+	NewGaugeWithPrometheusName(name string, pName string) *Gauge
 	NewRate(name string) *Rate
 	NewText(name string, defaultValue ...string) *Text
 }
@@ -38,19 +39,18 @@ type Registry interface {
 	Remove(metric metric)
 	Get(metricName string) metric
 	PeriodicallyRotate(ctx context.Context, logger log.Logger) govnr.ShutdownWaiter
-	ExportAll() map[string]exportedMetric
+	ExportAllNested() exportedMap
 	ExportPrometheus() string
 }
 
 type metric interface {
 	Name() string
-	Export() exportedMetric
+	Export() interface{}
 	Value() interface{}
 	exportPrometheus(labelString string) string
 }
 
-type exportedMetric interface {
-}
+type exportedMap map[string]interface{}
 
 type inMemoryRegistry struct {
 	vcid        primitives.VirtualChainId
@@ -110,31 +110,43 @@ func (r *inMemoryRegistry) register(m metric) {
 }
 
 func (r *inMemoryRegistry) NewRate(name string) *Rate {
-	m := newRate(name)
+	m := newRate(name, name)
 	r.register(m)
 	return m
 }
 
 func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
-	g := newGauge(name)
+	return r.NewGaugeWithPrometheusName(name, name)
+}
+
+func (r *inMemoryRegistry) NewGaugeWithPrometheusName(name string, pName string) *Gauge {
+	g := newGauge(name, pName)
 	r.register(g)
 	return g
 }
 
 func (r *inMemoryRegistry) NewLatency(name string, maxDuration time.Duration) *Histogram {
-	h := newHistogram(name, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/ROTATE_INTERVAL))
+	return r.NewLatencyWithPrometheusName(name, name, maxDuration)
+}
+
+func (r *inMemoryRegistry) NewLatencyWithPrometheusName(name string, pName string, maxDuration time.Duration) *Histogram {
+	h := newHistogram(name, pName, maxDuration.Nanoseconds(), int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
 
 func (r *inMemoryRegistry) NewHistogram(name string, maxValue int64) *Histogram {
-	h := newHistogram(name, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
+	return r.NewHistogramWithPrometheusName(name, name, maxValue)
+}
+
+func (r *inMemoryRegistry) NewHistogramWithPrometheusName(name string, pName string, maxValue int64) *Histogram {
+	h := newHistogram(name, pName, maxValue, int(AGGREGATION_SPAN/ROTATE_INTERVAL))
 	r.register(h)
 	return h
 }
 
 func (r *inMemoryRegistry) NewText(name string, defaultValue ...string) *Text {
-	m := newText(name, defaultValue...)
+	m := newText(name, name, defaultValue...)
 	r.register(m)
 	return m
 }
@@ -150,42 +162,4 @@ func (r *inMemoryRegistry) PeriodicallyRotate(ctx context.Context, logger log.Lo
 			}
 		}
 	}, nil)
-}
-
-func (r *inMemoryRegistry) ExportAll() map[string]exportedMetric {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	all := make(map[string]exportedMetric)
-	for _, m := range r.mu.metrics {
-		all[m.Name()] = m.Export()
-	}
-
-	return all
-}
-
-// For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
-func (r *inMemoryRegistry) ExportPrometheus() string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	labelsString := r.labelsString()
-
-	var rows []string
-	for _, metric := range r.mu.metrics {
-		rows = append(rows, metric.exportPrometheus(labelsString))
-	}
-
-	return strings.Join(rows, "")
-}
-
-func (r *inMemoryRegistry) labelsString() string {
-	var lables []string
-	if r.vcid > 0 {
-		lables = append(lables, fmt.Sprintf("vcid=\"%s\"", strconv.FormatUint(uint64(r.vcid), 10)))
-	}
-	if r.nodeAddress != nil {
-		lables = append(lables, fmt.Sprintf("node=\"%s\"", r.nodeAddress.String()))
-	}
-	return strings.Join(lables, ",")
 }

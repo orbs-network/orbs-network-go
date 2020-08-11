@@ -7,18 +7,18 @@
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/orbs-network/crypto-lib-go/crypto/keys"
 	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	orbsClient "github.com/orbs-network/orbs-client-sdk-go/orbs"
 	"github.com/orbs-network/orbs-network-go/config"
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage"
+	"github.com/orbs-network/orbs-network-go/services/transactionpool"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -155,24 +155,30 @@ func (h *Harness) GetTransactionReceiptProof(txId string) (response *codec.GetTr
 	return
 }
 
-type metrics map[string]map[string]interface{}
-
-func (h *Harness) GetMetrics() metrics {
-	res, err := http.Get(h.metricsUrl)
-
-	if err != nil {
-		fmt.Println(h.metricsUrl, err)
+func (h *Harness) GetBlockHeight() primitives.BlockHeight {
+	metricReader, err := metric.NewReader(h.metricsUrl)
+	if err != nil || len(metricReader) == 0 {
+		return 0
 	}
 
-	if res == nil {
-		return nil
+	if blockHeight, found := metricReader.GetAsInt(blockstorage.MetricBlockHeight); !found {
+		return 0
+	} else  {
+		return primitives.BlockHeight(blockHeight)
+	}
+}
+
+func (h *Harness) GetTransactionCount() int64 {
+	metricReader, err := metric.NewReader(h.metricsUrl)
+	if err != nil || len(metricReader) == 0 {
+		return 0
 	}
 
-	readBytes, _ := ioutil.ReadAll(res.Body)
-	m := make(metrics)
-	_ = json.Unmarshal(readBytes, &m)
-
-	return m
+	if txCount, found := metricReader.GetAsInt(transactionpool.MetricCommittedPoolTransactions); !found {
+		return 0
+	} else  {
+		return txCount
+	}
 }
 
 func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed25519KeyPair, contractName string, contractBytes ...[]byte) uint64 {
@@ -189,31 +195,25 @@ func (h *Harness) DeployContractAndRequireSuccess(t *testing.T, keyPair *keys.Ed
 }
 
 func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
-
 	recentBlockTimeDiff := getE2ETransactionPoolNodeSyncRejectTime() / 2
 	require.True(t, test.Eventually(20*time.Second, func() bool {
-
-		m := h.GetMetrics()
-		if m == nil {
+		metricReader, err := metric.NewReader(h.metricsUrl)
+		if err != nil {
 			return false
 		}
 
-		lastCommittedTimestamp := int64(m["TransactionPool.LastCommitted.TimeNano"]["Value"].(float64))
-		diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
-		return diff >= 0
+		if lastCommittedTimestamp, found := metricReader.GetAsInt(transactionpool.MetricLastCommittedTime); !found {
+			return false
+		} else  {
+			diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
+			return diff >= 0
+		}
 	}), "timed out waiting for a transaction pool to sync a recent block and begin accepting new tx")
 }
 
 func (h *Harness) WaitUntilReachBlockHeight(t *testing.T, targetBlockHeight primitives.BlockHeight, waitingTime time.Duration) {
-
 	require.True(t, test.Eventually(waitingTime, func() bool {
-		m := h.GetMetrics()
-		if m == nil {
-			return false
-		}
-
-		lastCommittedBlockHeight :=  primitives.BlockHeight(m["BlockStorage.BlockHeight"]["Value"].(float64))
-		return lastCommittedBlockHeight >= targetBlockHeight
+		return h.GetBlockHeight() >= targetBlockHeight
 	}), "timed out waiting for blockHeight %d", uint64(targetBlockHeight))
 }
 

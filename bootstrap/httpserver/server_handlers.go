@@ -82,15 +82,6 @@ func (s *HttpServer) filterOff(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("filter off"))
 }
 
-func (s *HttpServer) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	bytes, _ := json.Marshal(s.metricRegistry.ExportAll())
-	_, err := w.Write(bytes)
-	if err != nil {
-		s.logger.Info("error writing response", log.Error(err))
-	}
-}
-
 func (s *HttpServer) dumpMetricsAsPrometheus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	prometheusMetrics := s.metricRegistry.ExportPrometheus()

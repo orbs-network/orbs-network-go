@@ -34,7 +34,7 @@ func newMetrics(factory metric.Factory) *metrics {
 		createTxBlockTime:                         factory.NewLatency("ConsensusContext.CreateTransactionsBlockTime.Millis", 10*time.Second),
 		createResultsBlockTime:                    factory.NewLatency("ConsensusContext.CreateResultsBlockTime.Millis", 10*time.Second),
 		processTransactionsSeInCreateResultsBlock: factory.NewLatency("ConsensusContext.ProcessTransactionsSetInCreateResultsBlock.Millis", 10*time.Second),
-		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock.PerSecond"),
+		transactionsRate:                          factory.NewRate("ConsensusContext.TransactionsEnteringBlock"),
 		committeeSize:                             factory.NewGauge("ConsensusContext.Committee.Size"),
 		committeeMembers:                          factory.NewText("ConsensusContext.Committee.Members", ""),
 		committeeRefTime:                          factory.NewGauge("ConsensusContext.Committee.PrevBlockReferenceTime"),

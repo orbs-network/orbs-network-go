@@ -56,8 +56,8 @@ func newMetrics(factory metric.Factory, sendTransactionTimeout time.Duration, ge
 		totalTransactionsErrInvalidRequest: factory.NewGauge("PublicApi.TotalTransactionsErrInvalidRequest.Count"),
 		totalTransactionsErrAddingToTxPool: factory.NewGauge("PublicApi.TotalTransactionsErrAddingToTxPool.Count"),
 		totalTransactionsErrDuplicate:      factory.NewGauge("PublicApi.TotalTransactionsErrDuplicate.Count"),
-		queriesPerSecond:                   factory.NewRate("PublicAPI.Queries.PerSecond"),
-		transactionsPerSecond:              factory.NewRate("PublicAPI.Transactions.PerSecond"),
+		queriesPerSecond:                   factory.NewRate("PublicApi.Queries"),
+		transactionsPerSecond:              factory.NewRate("PublicApi.Transactions"),
 	}
 }
 

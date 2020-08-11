@@ -21,6 +21,8 @@ import (
 	"github.com/orbs-network/scribe/log"
 )
 
+const MetricLastCommittedTime = "TransactionPool.LastCommitted.TimeNano" // never use the literal only the const
+
 func NewTransactionPool(ctx context.Context,
 	maybeClock adapter.Clock,
 	gossip gossiptopics.TransactionRelay,
@@ -63,8 +65,8 @@ func NewTransactionPool(ctx context.Context,
 	s.lastCommitted.timestamp = primitives.TimestampNano(0) // this is so that we reject transactions on startup, before any block has been committed
 	s.lastCommitted.referenceTime = primitives.TimestampSeconds(0)
 	s.metrics.blockHeight = metricFactory.NewGauge("TransactionPool.BlockHeight")
-	s.metrics.lastCommittedTimestamp = metricFactory.NewGauge("TransactionPool.LastCommitted.TimeNano")
-	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate.PerSecond")
+	s.metrics.lastCommittedTimestamp = metricFactory.NewGauge(MetricLastCommittedTime)
+	s.metrics.commitRate = metricFactory.NewRate("TransactionPool.CommitRate")
 	s.metrics.commitCount = metricFactory.NewGauge("TransactionPool.TotalCommits.Count")
 
 	gossip.RegisterTransactionRelayHandler(s)

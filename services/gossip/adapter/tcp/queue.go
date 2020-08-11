@@ -39,7 +39,8 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	}
 	q.protected.bytesLeft = maxSizeBytes
 
-	q.usagePercentageMetric = metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
+	q.usagePercentageMetric =
+		metricFactory.NewGaugeWithPrometheusName(fmt.Sprintf("Gossip.OutgoingConnection.QueueUsage.%s.Percent", peerNodeAddress), fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
 
 	return q
 }

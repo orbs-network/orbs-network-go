@@ -14,15 +14,40 @@ import (
 
 /**
 Format reference: https://prometheus.io/docs/instrumenting/exposition_formats/
+For info on Prometheus labels, see: https://prometheus.io/docs/practices/naming/#labels
 */
+func (r *inMemoryRegistry) ExportPrometheus() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	labelsString := r.labelsString()
+
+	var rows []string
+	for _, metric := range r.mu.metrics {
+		rows = append(rows, metric.exportPrometheus(labelsString))
+	}
+
+	return strings.Join(rows, "")
+}
+
+func (r *inMemoryRegistry) labelsString() string {
+	var lables []string
+	if r.vcid > 0 {
+		lables = append(lables, fmt.Sprintf("vcid=\"%s\"", strconv.FormatUint(uint64(r.vcid), 10)))
+	}
+	if r.nodeAddress != nil {
+		lables = append(lables, fmt.Sprintf("node=\"%s\"", r.nodeAddress.String()))
+	}
+	return strings.Join(lables, ",")
+}
 
 // Note: in real life we have labels
 func (g *Gauge) exportPrometheus(labelString string) string {
-	typeRow := prometheusType(prometheusName(g.name), "gauge")
+	typeRow := prometheusType(g.pName, "gauge")
 	if len(labelString) > 0 {
-		return typeRow + fmt.Sprintf("%s{%s} %s\n", prometheusName(g.name), labelString, strconv.FormatInt(g.IntValue(), 10))
+		return typeRow + fmt.Sprintf("%s{%s} %s\n", g.pName, labelString, strconv.FormatInt(g.IntValue(), 10))
 	}
-	return typeRow + fmt.Sprintf("%s %s\n", prometheusName(g.name), strconv.FormatInt(g.IntValue(), 10))
+	return typeRow + fmt.Sprintf("%s %s\n", g.pName, strconv.FormatInt(g.IntValue(), 10))
 }
 
 // Note: rate is not exported

@@ -29,7 +29,7 @@ func main() {
 	var reachedTargetHeight bool
 	for !reachedTargetHeight {
 		time.Sleep(time.Second)
-		reachedTargetHeight = e2e.CannedBlocksFileMinHeight < e2e.NewAppHarness().GetMetrics()["BlockStorage.BlockHeight"]["Value"].(float64)
+		reachedTargetHeight = e2e.CannedBlocksFileMinHeight < e2e.NewAppHarness().GetBlockHeight()
 	}
 
 	extractBlocksFile()
