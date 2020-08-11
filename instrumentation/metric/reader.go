@@ -60,7 +60,7 @@ func deconstructNesting(name string) []string {
 	nameLen := len(nameParts)
 
 	knownType := isNameAKnownType(nameParts[nameLen-1])
-	if nameLen > 0 && knownType {
+	if nameLen > 1 && knownType {
 		nameParts = nameParts[:nameLen-1]
 	}
 	return nameParts

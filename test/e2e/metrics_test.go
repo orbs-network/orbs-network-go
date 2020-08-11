@@ -1,13 +1,11 @@
 package e2e
 
 import (
-	"github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
 	"testing"
 )
 
@@ -46,7 +44,7 @@ func TestE2E_Metrics(t *testing.T) {
 }
 
 func localWrite(t *testing.T, data []byte, filename string) {
-	// uncomment to save the values to a file for testing
-	err := ioutil.WriteFile(filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", filename), data, 0666)
-	require.NoError(t, err, "should be able to w")
+	// uncomment to save the values to a file for visual testing
+	//err := ioutil.WriteFile(filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", filename), data, 0666)
+	//require.NoError(t, err, "should be able to write a file")
 }

@@ -25,10 +25,10 @@ type Rate struct {
 }
 
 func newRate(name string, pName string) *Rate {
-	return newRateWihStart(name, pName, time.Now())
+	return newRateWithStartTime(name, pName, time.Now())
 }
 
-func newRateWihStart(name string, pName string, start time.Time) *Rate {
+func newRateWithStartTime(name string, pName string, start time.Time) *Rate {
 	return &Rate{
 		name:          name,
 		pName:         prometheusName(pName),

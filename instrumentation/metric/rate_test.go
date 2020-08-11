@@ -14,7 +14,7 @@ import (
 
 func testRateMeasure(t *testing.T, measure func(rate *Rate)) {
 	start := time.Now()
-	rate := newRateWihStart("tps", "tps", start)
+	rate := newRateWithStartTime("tps", "tps", start)
 
 	require.EqualValues(t, 0, rate.Rate())
 	measure(rate)

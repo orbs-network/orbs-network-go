@@ -39,6 +39,7 @@ func (t *Text) Name() string {
 
 func (t *Text) Export() interface{} {
 	value := t.value.Load().(string)
+	// in case the string value of the metric is actually a serialized json we try to unmarshal
 	var x []interface{}
 	if err := json.Unmarshal([]byte(value), &x); err == nil {
 		return x
