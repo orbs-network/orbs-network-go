@@ -1,5 +1,6 @@
 {
   "virtual-chain-id": 42,
+  "gossip-listen-port": 4400,
   "node-address": "d27e2e7398e2582f63d0800330010b3e58952ff6",
   "active-consensus-algo": 2,
   "lean-helix-show-debug": true,
@@ -10,6 +11,5 @@
   "profiling": true,
   "management-file-path": "/usr/local/var/orbs/management/mgmt.json",
   "management-consensus-grace-timeout": "0s",
-  "committee-grace-period": "876000h",
-  "block-sync-reference-max-allowed-distance": "10000h"
+  "committee-grace-period": "876000h"
 }
