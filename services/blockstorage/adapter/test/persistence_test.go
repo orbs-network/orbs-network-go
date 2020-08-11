@@ -7,7 +7,9 @@
 package test
 
 import (
+	"github.com/orbs-network/orbs-network-go/instrumentation/metric"
 	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter"
+	"github.com/orbs-network/orbs-network-go/services/blockstorage/adapter/memory"
 	"github.com/orbs-network/orbs-network-go/test"
 	"github.com/orbs-network/orbs-network-go/test/builders"
 	"github.com/orbs-network/orbs-network-go/test/rand"
@@ -67,4 +69,72 @@ func readOneBlock(fsa adapter.BlockPersistence, h primitives.BlockHeight) (*prot
 		return false
 	})
 	return block, err
+}
+
+func testBlockPersistenceWriteLogicWithAdapter(t *testing.T, persistence adapter.BlockPersistence, blocks []*protocol.BlockPairContainer) {
+	var wroteBlock bool
+	var err error
+	var lastBlockHeight primitives.BlockHeight
+	var block *protocol.BlockPairContainer
+
+	for i := 0; i < 10; i++ {
+		block = blocks[i]
+		wroteBlock, lastBlockHeight, err = persistence.WriteNextBlock(block)
+		require.NoError(t, err)
+		require.EqualValues(t, wroteBlock, true, "expected write to succeed")
+		require.EqualValues(t, lastBlockHeight, block.TransactionsBlock.Header.BlockHeight(), "expected last block height to match written block height to match")
+	}
+	block = blocks[5]
+	wroteBlock, lastBlockHeight, _ = persistence.WriteNextBlock(block)
+	require.EqualValues(t, wroteBlock, false, "expected write logic protection to prevent writing on already existing block height")
+	require.EqualValues(t, lastBlockHeight, primitives.BlockHeight(10), "expected sequential top block height to pertain")
+
+	for i := 98; i >= 40; i-- {
+		block = blocks[i]
+		wroteBlock, lastBlockHeight, err = persistence.WriteNextBlock(block)
+		require.NoError(t, err)
+		require.EqualValues(t, wroteBlock, true, "expected write to succeed")
+		require.EqualValues(t, lastBlockHeight, primitives.BlockHeight(10), "expected last block height to match written sequential top block height")
+	}
+
+	block = blocks[20]
+	wroteBlock, lastBlockHeight, _ = persistence.WriteNextBlock(block)
+	require.EqualValues(t, wroteBlock, false, "expected write logic protection to prevent writing not according to last written progress")
+	require.EqualValues(t, lastBlockHeight, primitives.BlockHeight(10), "expected sequential top block height to pertain")
+
+	for i := 39; i >= 10; i-- {
+		block = blocks[i]
+		wroteBlock, lastBlockHeight, err = persistence.WriteNextBlock(block)
+		require.NoError(t, err)
+		require.EqualValues(t, wroteBlock, true, "expected write to succeed")
+	}
+	require.EqualValues(t, lastBlockHeight, primitives.BlockHeight(99), "expected last block height to close gap and reach top height")
+
+	block = blocks[99]
+	wroteBlock, lastBlockHeight, _ = persistence.WriteNextBlock(block)
+	require.NoError(t, err)
+	require.EqualValues(t, wroteBlock, true, "expected write to succeed")
+	require.EqualValues(t, lastBlockHeight, primitives.BlockHeight(100), "expected sequential top block height to progress")
+}
+
+func TestBlockPersistence_WriteLogic(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping Integration tests in short mode")
+	}
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		ctrlRand := rand.NewControlledRand(t)
+		numBlocks := int32(100)
+		blocks := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+
+		conf := newTempFileConfig()
+		defer conf.cleanDir()
+
+		fsa, closeAdapter, err := NewFilesystemAdapterDriver(harness.Logger, conf)
+		require.NoError(t, err)
+		defer closeAdapter()
+		testBlockPersistenceWriteLogicWithAdapter(t, fsa, blocks)
+
+		fsa = memory.NewBlockPersistence(harness.Logger, metric.NewRegistry())
+		testBlockPersistenceWriteLogicWithAdapter(t, fsa, blocks)
+	})
 }
