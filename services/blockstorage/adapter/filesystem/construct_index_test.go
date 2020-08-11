@@ -52,6 +52,103 @@ func TestConstructIndexFromReader(t *testing.T) {
 
 }
 
+// constructing index from block stream with mixed blockHeight order: 1-10, 20-11, 21-40, 100-41
+func TestConstructIndexFromReaderInterleavedOrder(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		numBlocks := int32(100)
+		ctrlRand := rand.NewControlledRand(t)
+		const maxTransactions = 20
+		const maxStateDiffs = 20
+		blocksQueue := make([]*protocol.BlockPairContainer, 0, numBlocks)
+		blocks := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+
+		blocksQueue = append(blocksQueue, blocks[0:10]...)
+		for i := 19; i >= 10; i-- {
+			blocksQueue = append(blocksQueue, blocks[i])
+		}
+		blocksQueue = append(blocksQueue, blocks[20:40]...)
+		for i := 99; i >= 40; i-- {
+			blocksQueue = append(blocksQueue, blocks[i])
+		}
+
+		lastBlockInChain := blocks[len(blocks)-1]
+
+		rw := new(bytes.Buffer)
+		codec := &mockCodec{}
+
+		totalBytesRead := 0
+		codec.When("decode", mock.Any).Call(func(r io.Reader) (*protocol.BlockPairContainer, int, error) {
+			if len(blocksQueue) == 0 {
+				return nil, 0, io.EOF
+			}
+			randBlockSize := ctrlRand.Intn(500) + 1
+			totalBytesRead += randBlockSize
+			block, bytes := blocksQueue[0], randBlockSize
+			blocksQueue = blocksQueue[1:]
+			return block, bytes, nil
+		})
+
+		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected index to construct with no error")
+		require.EqualValues(t, numBlocks, blockHeightIndex.getLastBlockHeight(), "expected index to reach topHeight block height")
+		test.RequireCmpEqual(t, blockHeightIndex.getLastBlock(), lastBlockInChain, "expected index to cache last block")
+		test.RequireCmpEqual(t, blockHeightIndex.topBlock, blockHeightIndex.sequentialTopBlock, "expected index topBlock to match sequentialTopBlock")
+		test.RequireCmpEqual(t, blockHeightIndex.topBlock, blockHeightIndex.lastWrittenBlock, "expected index topBlock to match lastWrittenBlock")
+		require.EqualValues(t, totalBytesRead, blockHeightIndex.fetchNextOffset(), "expected next block offset to be the buffer size")
+	})
+
+}
+
+// constructing index from block stream with mixed blockHeight order and a gap: 1-10, 100-90
+// blockHeightIndex indices should depict the following state: {top:100, lastWritten:90, sequentialTop: 10}
+func TestConstructIndexFromReaderInterleavedOrderWithGap(t *testing.T) {
+	with.Logging(t, func(harness *with.LoggingHarness) {
+		numBlocks := int32(100)
+		ctrlRand := rand.NewControlledRand(t)
+		const maxTransactions = 20
+		const maxStateDiffs = 20
+		blocksQueue := make([]*protocol.BlockPairContainer, 0, numBlocks)
+		blocks := builders.RandomizedBlockChain(numBlocks, ctrlRand)
+
+		blocksQueue = append(blocksQueue, blocks[0:10]...)
+		for i := 99; i >= 89; i-- {
+			blocksQueue = append(blocksQueue, blocks[i])
+		}
+
+		sequentialTopBlock := blocks[9]
+		topBlock := blocks[99]
+		lastWrittenBlock := blocks[89]
+
+		rw := new(bytes.Buffer)
+		codec := &mockCodec{}
+
+		totalBytesRead := 0
+		codec.When("decode", mock.Any).Call(func(r io.Reader) (*protocol.BlockPairContainer, int, error) {
+			if len(blocksQueue) == 0 {
+				return nil, 0, io.EOF
+			}
+			randBlockSize := ctrlRand.Intn(500) + 1
+			totalBytesRead += randBlockSize
+			block, bytes := blocksQueue[0], randBlockSize
+			blocksQueue = blocksQueue[1:]
+			return block, bytes, nil
+		})
+
+		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
+
+		require.NoError(t, err, "expected index to construct with no error")
+		require.EqualValues(t, getBlockHeight(sequentialTopBlock), blockHeightIndex.getLastBlockHeight(), "expected index to reach sequential top height")
+		require.EqualValues(t, getBlockHeight(blockHeightIndex.sequentialTopBlock), primitives.BlockHeight(10), "expected index sequentialTopBlock height to be 10")
+		test.RequireCmpEqual(t, blockHeightIndex.getLastBlock(), sequentialTopBlock, "expected index to cache sequentialTopBlock")
+		require.EqualValues(t, getBlockHeight(blockHeightIndex.topBlock), primitives.BlockHeight(100), "expected index topBlock height to be 100")
+		test.RequireCmpEqual(t, blockHeightIndex.topBlock, topBlock, "expected index topBlock to match topBlock")
+		require.EqualValues(t, getBlockHeight(blockHeightIndex.lastWrittenBlock), primitives.BlockHeight(90), "expected index lastWrittenBlock height to be 90")
+		test.RequireCmpEqual(t, blockHeightIndex.lastWrittenBlock, lastWrittenBlock, "expected index lastWrittenBlock to match lastWrittenBlock")
+		require.EqualValues(t, totalBytesRead, blockHeightIndex.fetchNextOffset(), "expected next block offset to be the buffer size")
+	})
+}
+
 func newBlockFileReadStream(t *testing.T, ctrlRand *rand.ControlledRand, numBlocks int32, maxTransactions uint32, maxStateDiffs uint32, codec *codec) (io.Reader, chan int) {
 	blocksQueue := builders.RandomizedBlockChainWithLimit(numBlocks, ctrlRand, maxTransactions, maxStateDiffs)
 
