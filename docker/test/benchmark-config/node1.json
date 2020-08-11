@@ -1,5 +1,6 @@
 {
   "virtual-chain-id": 42,
+  "gossip-listen-port": 4400,
   "node-address": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
   "benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
   "ethereum-endpoint": "http://192.168.199.6:8545",

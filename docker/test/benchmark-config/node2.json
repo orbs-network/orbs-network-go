@@ -1,5 +1,6 @@
 {
   "virtual-chain-id": 42,
+  "gossip-listen-port": 4400,
   "node-address": "d27e2e7398e2582f63d0800330010b3e58952ff6",
   "node-private-key": "87a210586f57890ae3642c62ceb58f0f0a54e787891054a5a54c80e1da418253",
   "benchmark-consensus-constant-leader": "a328846cd5b4979d68a8c58a9bdfeee657b34de7",
