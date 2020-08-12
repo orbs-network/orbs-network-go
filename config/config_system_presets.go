@@ -18,6 +18,7 @@ import (
 func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
+	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
 	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
 	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50*(1<<20)) // 50 MB
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
@@ -96,7 +97,7 @@ func defaultProductionConfig() mutableNodeConfig {
 
 // config for a production node (either main net or test net)
 func ForProduction(processorArtifactPath string) mutableNodeConfig {
-	cfg := defaultProductionConfig()
+	cfg := defaultProductionConfig()t
 
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
