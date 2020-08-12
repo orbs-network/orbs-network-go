@@ -97,7 +97,7 @@ func defaultProductionConfig() mutableNodeConfig {
 
 // config for a production node (either main net or test net)
 func ForProduction(processorArtifactPath string) mutableNodeConfig {
-	cfg := defaultProductionConfig()t
+	cfg := defaultProductionConfig()
 
 	if processorArtifactPath != "" {
 		cfg.SetString(PROCESSOR_ARTIFACT_PATH, processorArtifactPath)
