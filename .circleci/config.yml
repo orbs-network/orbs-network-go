@@ -114,12 +114,12 @@ jobs:
       - run: ./docker/build/build-docker-gamma.sh
       - run: ./.circleci/release-gamma-to-ecr.sh
 
-  release:
+  release-gamma:
     machine:
       image: ubuntu-1604:201903-01
     steps:
       - checkout
-      - run: ./.circleci/release.sh
+      - run: ./.circleci/release-gamma.sh
 
   node_e2e:
     machine:
@@ -227,9 +227,8 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - release:
+      - release-gamma:
           requires:
-            - node_e2e
             - gamma_e2e
           filters:
             tags:
