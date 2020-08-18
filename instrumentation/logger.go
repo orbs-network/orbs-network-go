@@ -32,19 +32,8 @@ func GetBootstrapCrashLogger() log.Logger {
 }
 
 func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
-	if path == "" {
-		path = "./orbs-network.log"
-	}
 
-	logFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-
-	fileWriter := log.NewTruncatingFileWriter(logFile, cfg.LoggerFileTruncationInterval())
-	outputs := []log.Output{
-		log.NewFormattingOutput(fileWriter, log.NewJsonFormatter()),
-	}
+	outputs := make([]log.Output, 0, 3)
 
 	if !silent {
 		outputs = append(outputs, log.NewFormattingOutput(os.Stdout, log.NewJsonFormatter()))
@@ -58,6 +47,16 @@ func GetLogger(path string, silent bool, cfg config.NodeConfig) log.Logger {
 		}
 
 		outputs = append(outputs, log.NewBulkOutput(log.NewHttpWriter(cfg.LoggerHttpEndpoint()), customJSONFormatter, bulkSize))
+	}
+
+	if path != "" {
+		logFile, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+
+		fileWriter := log.NewTruncatingFileWriter(logFile, cfg.LoggerFileTruncationInterval())
+		outputs = append(outputs, log.NewFormattingOutput(fileWriter, log.NewJsonFormatter()))
 	}
 
 	logger := log.GetLogger().WithOutput(outputs...)
