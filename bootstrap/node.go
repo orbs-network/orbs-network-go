@@ -94,7 +94,8 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		blockPersistence: blockPersistence,
 	}
 
-	ethereumConnection.ReportConnectionStatus(ctx)
+	// TODO re-enable Ethereum access (with refTime based finality)
+	// ethereumConnection.ReportConnectionStatus(ctx)
 
 	n.Supervise(ethereumConnection)
 	n.Supervise(nodeLogic)
