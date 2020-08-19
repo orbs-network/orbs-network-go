@@ -14,6 +14,7 @@ import (
 	"strings"
 )
 
+// This reads only /metrics without the payload part of /status
 func NewReader(endpoint string) (exportedMap, error) {
 	res, err := http.Get(endpoint)
 	if err != nil {
@@ -23,19 +24,17 @@ func NewReader(endpoint string) (exportedMap, error) {
 		return nil, err
 	}
 
-	readBytes, err := ioutil.ReadAll(res.Body)
+	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	status := struct {
-		Payload   exportedMap
-	}{}
-	err = json.Unmarshal(readBytes, &status)
-	if err != nil {
+	var status exportedMap
+	if err := json.Unmarshal(data, &status); err != nil {
 		return nil, err
+	} else {
+		return status, nil
 	}
-	return status.Payload, nil
 }
 
 func (mr exportedMap) GetAsInt(name string) (int64, bool) {

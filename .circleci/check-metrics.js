@@ -19,7 +19,7 @@ class Metrics {
     }
 
     _get(names){
-        let curr = this._metrics.Payload;
+        let curr = this._metrics;
         for (let i = 0;i < names.length; i++) {
             if (curr[names[i]]) {
                 curr = curr[names[i]];
