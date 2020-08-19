@@ -69,7 +69,7 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg.SetDuration(TRANSACTION_POOL_PROPAGATION_BATCHING_TIMEOUT, 100*time.Millisecond)
 
 	cfg.SetDuration(GOSSIP_CONNECTION_KEEP_ALIVE_INTERVAL, 1*time.Second)
-	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Second)
+	cfg.SetDuration(GOSSIP_RECONNECT_INTERVAL, 1*time.Minute)
 	cfg.SetDuration(GOSSIP_NETWORK_TIMEOUT, 30*time.Second)
 
 	// TODO: remove with Ethereum connector
