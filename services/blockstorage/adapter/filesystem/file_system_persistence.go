@@ -285,6 +285,10 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 	}
 	defer closeSilently(file, f.logger)
 
+	if err = f.seekBlockOffset(from, file); err != nil {
+		return err
+	}
+
 	fromHeight := from
 	wantsMore := true
 	eof := false
@@ -294,7 +298,6 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 			toHeight = sequentialHeight
 		}
 		page := make([]*protocol.BlockPairContainer, 0, pageSize)
-		// TODO: Gad allow update of sequence height inside page
 		for height := fromHeight; height <= toHeight; height++ {
 			aBlock, err := f.fetchBlockFromFile(height, file)
 			if err != nil {
@@ -316,16 +319,27 @@ func (f *BlockPersistence) ScanBlocks(from primitives.BlockHeight, pageSize uint
 	return nil
 }
 
-func (f *BlockPersistence) fetchBlockFromFile(height primitives.BlockHeight, file *os.File) (*protocol.BlockPairContainer, error) {
+func (f *BlockPersistence) seekBlockOffset(height primitives.BlockHeight, file *os.File) error {
 	initialOffset, ok := f.bhIndex.fetchBlockOffset(height)
 	if !ok {
-		return nil, fmt.Errorf("failed to find requested block %d", uint64(height))
+		return fmt.Errorf("failed to find requested block %d", uint64(height))
 	}
 	newOffset, err := file.Seek(initialOffset, io.SeekStart)
 	if newOffset != initialOffset || err != nil {
-		return nil, errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
+		return errors.Wrapf(err, "failed to seek in blocks file to position %v", initialOffset)
 	}
+	return nil
+}
+
+// optimistically decode first - assumes consecutive in order decoding
+func (f *BlockPersistence) fetchBlockFromFile(height primitives.BlockHeight, file *os.File) (*protocol.BlockPairContainer, error) {
 	aBlock, _, err := f.codec.decode(file)
+	if getBlockHeight(aBlock) != height {
+		if err := f.seekBlockOffset(height, file); err != nil {
+			return nil, err
+		}
+		aBlock, _, err = f.codec.decode(file)
+	}
 	return aBlock, err
 }
 
