@@ -1,7 +1,7 @@
 #!/bin/bash
 
 multilog_err=1
-multilog_cmd="multilog s16777215 n2 '!tai64nlocal' /opt/orbs/logs"
+multilog_cmd="multilog s16777215 n10 '!tai64nlocal' /opt/orbs/logs"
 
 while [[ "${multilog_err}" -ne "0" ]]; do
     sleep 1
