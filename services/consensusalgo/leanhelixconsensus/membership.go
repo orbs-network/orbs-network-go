@@ -92,7 +92,7 @@ func toMembers(nodeAddresses []primitives.NodeAddress, weights []primitives.Weig
 func toMembersString(nodeAddresses []primitives.NodeAddress, weights []primitives.Weight) string {
 	members := make([]string, len(nodeAddresses))
 	for i := range nodeAddresses {
-		members[i] = fmt.Sprintf("{\"Address:\": \"%v\", \"Weight\": %d}", nodeAddresses[i], weights[i])  // %v is because NodeAddress has .String()
+		members[i] = fmt.Sprintf("{\"Address\": \"%v\", \"Weight\": %d}", nodeAddresses[i], weights[i])  // %v is because NodeAddress has .String()
 	}
 	return strings.Join(members, ",")
 }
