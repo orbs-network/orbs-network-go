@@ -25,7 +25,8 @@ func TestE2EStress(t *testing.T) {
 	h := NewAppHarness()
 	ctrlRand := rand.NewControlledRand(t)
 
-	config := GetConfig().StressTest
+	generalConfig := GetConfig()
+	config := generalConfig.StressTest
 
 	if !config.enabled {
 		t.Skip("Skipping stress test")
@@ -41,40 +42,47 @@ func TestE2EStress(t *testing.T) {
 	var errors []error
 	var errorTransactionStatuses []string
 
+	var clients []*orbsClient.OrbsClient
+	for _, apiEndpoint := range config.apiEndpoints {
+		clients = append(clients, orbsClient.NewClient(apiEndpoint, uint32(generalConfig.AppVcid), codec.NETWORK_TYPE_TEST_NET))
+	}
+
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.Background()); err == nil {
 			wg.Add(1)
 
-			go func() {
+			go func(i int64) {
 				defer wg.Done()
 
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
+				client := clients[i%int64(len(clients))] // select one of the clients
+
 				var response *codec.TransactionResponse
 				var err2 error
 
 				if config.async {
-					response, _, err2 = h.SendTransactionAsync(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+					response, _, err2 = h.SendTransactionAsyncWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 				} else {
-					response, _, err2 = h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+					response, _, err2 = h.SendTransactionWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 				}
 
 				if err2 != nil {
-					fmt.Println("Encountered an error sending a transaction while stress testing", err2)
+					fmt.Println("Encountered an error sending a transaction while stress testing", client.Endpoint, err2)
 					mutex.Lock()
 					defer mutex.Unlock()
 					fmt.Println("")
 					errors = append(errors, err2)
 					if response != nil {
-						errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
+						errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus), "endpoint", client.Endpoint)
 					}
 				}
 
-				if i%100 == 0 {
-					fmt.Println(fmt.Sprintf("processed transactions: %d/%d", i, config.numberOfTransactions))
+				if i+1%100 == 0 {
+					fmt.Println(fmt.Sprintf("processed transactions: %d/%d", i+1, config.numberOfTransactions))
 				}
-			}()
+			}(i)
 		} else {
 			mutex.Lock()
 			defer mutex.Unlock()
@@ -84,6 +92,7 @@ func TestE2EStress(t *testing.T) {
 
 	wg.Wait()
 
+	// very bad and unreliable metric, does not take into account multiple endpoints yet
 	txCount := float64(getTransactionCount(t, h) - baseTxCount)
 
 	expectedNumberOfTx := float64(100-config.acceptableFailureRate) / 100 * float64(config.numberOfTransactions)
