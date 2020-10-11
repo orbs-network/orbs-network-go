@@ -34,7 +34,7 @@ func TestE2EStress(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	limiter := rate.NewLimiter(1000, 50)
+	limiter := rate.NewLimiter(rate.Limit(config.targetTPS), 50)
 
 	var mutex sync.Mutex
 	var errors []error
