@@ -99,6 +99,21 @@ func (h *Harness) SendTransaction(senderPublicKey []byte, senderPrivateKey []byt
 		return nil, txId, err
 	}
 	out, err := h.client.SendTransaction(payload)
+	if err != nil {
+		return nil, txId, err
+	}
+	return out.TransactionResponse, txId, err
+}
+
+func (h *Harness) SendTransactionAsync(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
+	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	if err != nil {
+		return nil, txId, err
+	}
+	out, err := h.client.SendTransactionAsync(payload)
+	if err != nil {
+		return nil, txId, err
+	}
 	return out.TransactionResponse, txId, err
 }
 
@@ -163,7 +178,7 @@ func (h *Harness) GetBlockHeight() primitives.BlockHeight {
 
 	if blockHeight, found := metricReader.GetAsInt(blockstorage.MetricBlockHeight); !found {
 		return 0
-	} else  {
+	} else {
 		return primitives.BlockHeight(blockHeight)
 	}
 }
@@ -176,7 +191,7 @@ func (h *Harness) GetTransactionCount() int64 {
 
 	if txCount, found := metricReader.GetAsInt(transactionpool.MetricCommittedPoolTransactions); !found {
 		return 0
-	} else  {
+	} else {
 		return txCount
 	}
 }
@@ -204,7 +219,7 @@ func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 		if lastCommittedTimestamp, found := metricReader.GetAsInt(transactionpool.MetricLastCommittedTime); !found {
 			return false
-		} else  {
+		} else {
 			diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
 			return diff >= 0
 		}

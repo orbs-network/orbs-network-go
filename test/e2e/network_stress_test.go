@@ -50,7 +50,7 @@ func TestE2EStress(t *testing.T) {
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				response, _, err2 := h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				response, _, err2 := h.SendTransactionAsync(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
 
 				if err2 != nil {
 					fmt.Println("Encountered an error sending a transaction while stress testing", err2)
