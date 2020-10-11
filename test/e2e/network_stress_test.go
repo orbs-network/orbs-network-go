@@ -70,6 +70,10 @@ func TestE2EStress(t *testing.T) {
 						errorTransactionStatuses = append(errorTransactionStatuses, string(response.TransactionStatus))
 					}
 				}
+
+				if i%100 == 0 {
+					fmt.Println(fmt.Sprintf("processed transactions: %d/%d", i, config.numberOfTransactions))
+				}
 			}()
 		} else {
 			mutex.Lock()
