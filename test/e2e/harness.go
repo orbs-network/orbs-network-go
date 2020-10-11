@@ -37,6 +37,7 @@ type E2EConfig struct {
 
 type StressTestConfig struct {
 	enabled               bool
+	async                 bool
 	numberOfTransactions  int64
 	acceptableFailureRate int64
 	targetTPS             float64
@@ -274,6 +275,7 @@ func GetConfig() E2EConfig {
 	stressTestNumberOfTransactions := int64(10000)
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
+	stressTestAsync := os.Getenv("STRESS_TEST_ASYNC") == "true"
 
 	ethereumEndpoint := "http://127.0.0.1:8545"
 
@@ -296,6 +298,7 @@ func GetConfig() E2EConfig {
 		AppChainUrl:       appChainUrl,
 		StressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
+			async:                 stressTestAsync,
 			numberOfTransactions:  stressTestNumberOfTransactions,
 			acceptableFailureRate: stressTestFailureRate,
 			targetTPS:             stressTestTargetTPS,

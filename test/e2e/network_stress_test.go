@@ -9,6 +9,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/orbs-network/orbs-client-sdk-go/codec"
 	"sync"
 	"testing"
 	"time"
@@ -50,7 +51,14 @@ func TestE2EStress(t *testing.T) {
 				target, _ := orbsClient.CreateAccount()
 				amount := uint64(ctrlRand.Intn(10))
 
-				response, _, err2 := h.SendTransactionAsync(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				var response *codec.TransactionResponse
+				var err2 error
+
+				if config.async {
+					response, _, err2 = h.SendTransactionAsync(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				} else {
+					response, _, err2 = h.SendTransaction(OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+				}
 
 				if err2 != nil {
 					fmt.Println("Encountered an error sending a transaction while stress testing", err2)
