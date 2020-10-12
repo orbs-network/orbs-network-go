@@ -9,11 +9,16 @@ import (
 	"github.com/orbs-network/orbs-network-go/synchronization/supervised"
 	"github.com/orbs-network/orbs-network-go/test/with"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestProfile(t *testing.T) {
+	if os.Getenv("ENABLE_PROFILE") == "true" {
+		t.Skip()
+	}
+
 	with.Context(func(ctx context.Context) {
 		logger := instrumentation.GetBootstrapCrashLogger()
 		var node *bootstrap.Node
@@ -39,7 +44,7 @@ func TestProfile(t *testing.T) {
 		)
 
 		supervised.NewShutdownListener(logger, node).ListenToOSShutdownSignal()
-		<-time.After(30 * time.Second)
+		<-time.After(2 * time.Minute)
 
 		node.GracefulShutdown(ctx)
 	})
