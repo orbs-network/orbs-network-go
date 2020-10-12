@@ -15,7 +15,7 @@ import (
 )
 
 func TestProfile(t *testing.T) {
-	if os.Getenv("ENABLE_PROFILE") == "true" {
+	if os.Getenv("ENABLE_PROFILE") != "true" {
 		t.Skip()
 	}
 
