@@ -133,7 +133,7 @@ func (p *blockProvider) RequestNewBlockProposal(ctx context.Context, blockHeight
 
 }
 
-func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer, softVerify bool) error {
 	if ctx.Err() != nil {
 		return errors.New("context canceled")
 	}
@@ -148,7 +148,7 @@ func (s *Service) validateBlockConsensus(ctx context.Context, blockPair *protoco
 		prevBlockProof = prevBlockPair.TransactionsBlock.BlockProof.LeanHelix()
 	}
 
-	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, ToLeanHelixBlock(prevBlockPair), prevBlockProof)
+	err := s.leanHelix.ValidateBlockConsensus(ctx, ToLeanHelixBlock(blockPair), blockProof, ToLeanHelixBlock(prevBlockPair), prevBlockProof, softVerify)
 	if err != nil {
 		return errors.Wrapf(err, "validateBlockConsensus(): error when calling leanHelix.ValidateBlockConsensus()")
 	}

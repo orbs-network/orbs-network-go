@@ -128,7 +128,7 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	blockType := input.BlockType
 	blockPair := input.BlockPair
-	prevBlockPair := input.PrevCommittedBlockPair
+	prevBlockPair := input.PrevBlockPair
 	var lhBlockProof []byte
 	var lhBlock lh.Block
 
@@ -141,7 +141,11 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		//Validate no matter what Should be changed with the full implementation of audit nodes.
 		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
 
-		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
+		var softVerify bool
+		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_SOFT_VERIFY_ONLY {
+			softVerify = true
+		}
+		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair, softVerify)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
@@ -277,7 +281,7 @@ func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
 }
 
 func shouldValidateBlockConsensusWithLeanHelix(mode handlers.HandleBlockConsensusMode) bool {
-	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_SOFT_VERIFY_ONLY
 }
 
 func shouldUpdateStateInLeanHelix(mode handlers.HandleBlockConsensusMode) bool {

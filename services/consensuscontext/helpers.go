@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) prevReferenceOrGenesis(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
+func (s *service) adjustPrevReference(ctx context.Context, blockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds) (primitives.TimestampSeconds, error) {
 	if blockHeight == 1 { // genesis block
 		reference, err := s.management.GetGenesisReference(ctx, &services.GetGenesisReferenceInput{SystemTime: prevBlockReferenceTime})
 		if err != nil {
@@ -28,6 +28,13 @@ func (s *service) prevReferenceOrGenesis(ctx context.Context, blockHeight primit
 			return 0, errors.Errorf("failed genesis time reference (%d) cannot be after current time reference (%d)", reference.GenesisReference, reference.CurrentReference)
 		}
 		prevBlockReferenceTime = reference.GenesisReference
+	} else if prevBlockReferenceTime == 0 { // prev is not genesis - used for syncing against current committee (PoS) if prev reference is too old
+		reference, err := s.management.GetCurrentReference(ctx, &services.GetCurrentReferenceInput{})
+		if err != nil {
+			s.logger.Error("management.GetCurrentReference should not return error", log.Error(err))
+			return 0, err
+		}
+		prevBlockReferenceTime = reference.CurrentReference
 	}
 	return prevBlockReferenceTime, nil
 }

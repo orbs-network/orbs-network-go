@@ -136,11 +136,11 @@ func validateTxTransactionOrdering(ctx context.Context, cfg config.ConsensusCont
 	}
 
 	validationInput := &services.ValidateTransactionsForOrderingInput{
-		BlockProtocolVersion:       transactionBlock.Header.ProtocolVersion(),
-		CurrentBlockHeight:         transactionBlock.Header.BlockHeight(),
-		CurrentBlockTimestamp:      transactionBlock.Header.Timestamp(),
-		CurrentBlockReferenceTime:  transactionBlock.Header.ReferenceTime(),
-		SignedTransactions:         txs,
+		BlockProtocolVersion:      transactionBlock.Header.ProtocolVersion(),
+		CurrentBlockHeight:        transactionBlock.Header.BlockHeight(),
+		CurrentBlockTimestamp:     transactionBlock.Header.Timestamp(),
+		CurrentBlockReferenceTime: transactionBlock.Header.ReferenceTime(),
+		SignedTransactions:        txs,
 	}
 	_, err := validateForOrderingFunc(ctx, validationInput)
 	if err != nil {
@@ -242,7 +242,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		return nil, err
 	}
 
-	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
+	prevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
 	if err != nil {
 		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateTransactionsBlock failed genesis time %s", err)
 	}
@@ -251,7 +251,7 @@ func (s *service) ValidateTransactionsBlock(ctx context.Context, input *services
 		return nil, err2
 	}
 
-	pvOutput, err3 := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference:input.TransactionsBlock.Header.ReferenceTime()})
+	pvOutput, err3 := s.management.GetProtocolVersion(ctx, &services.GetProtocolVersionInput{Reference: input.TransactionsBlock.Header.ReferenceTime()})
 	if err3 != nil {
 		s.logger.Error("management.GetProtocolVersion should not return error", log.Error(err))
 		return nil, err3

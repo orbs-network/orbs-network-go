@@ -21,7 +21,7 @@ func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.
 
 func (s *service) RequestValidationCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
 	// both committee and weights needs same block height and prevRefTime, and refTime might be adjusted to genesis if blockHeight is 1
-	adjustedPrevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	adjustedPrevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetOrderedCommittee")
 	}
@@ -44,7 +44,7 @@ func (s *service) RequestValidationCommittee(ctx context.Context, input *service
 	s.metrics.committeeSize.Update(int64(len(committee)))
 	committeeStringArray := make([]string, len(committee))
 	for j, nodeAddress := range committee {
-		committeeStringArray[j] = fmt.Sprintf("{\"Address\": \"%v\", \"Weight\": %d}", nodeAddress, orderedWeights[j])  // %v is because NodeAddress has .String()
+		committeeStringArray[j] = fmt.Sprintf("{\"Address\": \"%v\", \"Weight\": %d}", nodeAddress, orderedWeights[j]) // %v is because NodeAddress has .String()
 	}
 	s.metrics.committeeMembers.Update("[" + strings.Join(committeeStringArray, ", ") + "]")
 	s.metrics.committeeRefTime.Update(int64(input.PrevBlockReferenceTime))
@@ -80,14 +80,13 @@ func orderCommitteeWeights(orderedCommittee []primitives.NodeAddress, committeeM
 	return orderedWeights, nil
 }
 
-
 func (s *service) RequestBlockProofOrderingCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
 	return s.RequestBlockProofValidationCommittee(ctx, input)
 }
 
 func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, input *services.RequestBlockProofCommitteeInput) (*services.RequestBlockProofCommitteeOutput, error) {
 	// refTime might be adjusted to genesis if block height is 1
-	adjustedPrevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	adjustedPrevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "GetOrderedCommittee")
 	}

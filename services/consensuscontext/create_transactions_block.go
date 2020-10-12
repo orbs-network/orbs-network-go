@@ -22,7 +22,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 	start := time.Now()
 	defer s.metrics.createTxBlockTime.RecordSince(start)
 
-	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
+	prevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime) // For completeness, can't really fail
 	if err != nil {
 		return nil, errors.Wrapf(ErrFailedGenesisRefTime, "CreateTransactionsBlock failed genesis time %s", err)
 	}
@@ -90,7 +90,7 @@ func (s *service) proposeBlockReferenceTime(ctx context.Context, prevReferenceTi
 		return 0, errors.Errorf("leader reference time %d (before grace adjustment) is not upto date compared to previous block reference time %d", leaderReferenceTime.CurrentReference, prevReferenceTime)
 	}
 
-	proposedReferenceTime := leaderReferenceTime.CurrentReference - primitives.TimestampSeconds(s.config.ManagementConsensusGraceTimeout() / time.Second)
+	proposedReferenceTime := leaderReferenceTime.CurrentReference - primitives.TimestampSeconds(s.config.ManagementConsensusGraceTimeout()/time.Second)
 	if prevReferenceTime > proposedReferenceTime {
 		proposedReferenceTime = prevReferenceTime
 	}

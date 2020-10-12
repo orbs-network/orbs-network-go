@@ -36,10 +36,10 @@ func TestService_StartsActivityOnlyAfterHandleBlockConsensus(t *testing.T) {
 		h.dontBeFirstInCommitee()
 
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              nil,
-			PrevCommittedBlockPair: nil,
+			Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     nil,
+			PrevBlockPair: nil,
 		})
 
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
@@ -56,10 +56,10 @@ func TestService_LeaderProposesBlock(t *testing.T) {
 		h.expectGossipSendLeanHelixMessage()
 
 		_, _ = h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              nil,
-			PrevCommittedBlockPair: nil,
+			Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     nil,
+			PrevBlockPair: nil,
 		})
 
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext, h.gossip))

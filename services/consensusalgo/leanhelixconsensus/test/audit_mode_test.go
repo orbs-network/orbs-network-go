@@ -42,10 +42,10 @@ func TestHandleBlockConsensus_ExecutesBlocksYoungerThanThreshold_AndModeIsVerify
 			Return(&services.RequestNewResultsBlockOutput{}, nil).Times(1)
 
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              block,
-			PrevCommittedBlockPair: prevBlock,
+			Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     block,
+			PrevBlockPair: prevBlock,
 		})
 
 		_, err := h.consensusContext.Verify()
@@ -62,10 +62,10 @@ func TestHandleBlockConsensus_DoesNotExecuteBlocksOlderThanThreshold_AndModeIsVe
 		h.consensusContext.Never("RequestNewResultsBlock", mock.Any, mock.Any)
 
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              block,
-			PrevCommittedBlockPair: nil,
+			Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     block,
+			PrevBlockPair: nil,
 		})
 
 		_, err := h.consensusContext.Verify()

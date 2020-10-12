@@ -37,10 +37,10 @@ func TestService_MemoryLeakOnBlockSync(t *testing.T) {
 
 		b5 := builders.BlockPair().WithHeight(5).WithEmptyLeanHelixBlockProof().Build()
 		h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              b5,
-			PrevCommittedBlockPair: nil,
+			Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     b5,
+			PrevBlockPair: nil,
 		})
 
 		require.NoError(t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))

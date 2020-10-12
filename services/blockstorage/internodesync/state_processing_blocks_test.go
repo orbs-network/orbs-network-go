@@ -14,6 +14,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
 	"github.com/orbs-network/orbs-spec/types/go/protocol/gossipmessages"
+	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -252,8 +253,14 @@ func TestStateProcessingBlocksDescending_ValidatePosChainRefTimeFailure(t *testi
 			syncState := SyncState{InOrderBlock: blockPair, TopBlock: blockPair, LastSyncedBlock: blockPair}
 			h.storage.When("GetSyncState").Return(syncState).Times(1)
 			h.storage.When("GetBlock", mock.Any).Return(nil)
-			h.storage.Never("ValidateBlockForCommit", mock.Any, mock.Any)
-			h.storage.Never("NodeSyncCommitBlock", mock.Any, mock.Any)
+
+			h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error) {
+				if input.BlockPair.TransactionsBlock.Header.BlockHeight() == 11 && input.PrevBlockPair != nil {
+					t.Fatalf("block chunk is out of PoS honesty assumption (12hr) - should use current committee for validation using prevblock nil")
+				}
+				return &services.ValidateBlockForCommitOutput{}, nil
+			}).Times(11)
+			h.storage.When("NodeSyncCommitBlock", mock.Any, mock.Any).Return(nil, nil).Times(10)
 
 			var blocks []*protocol.BlockPairContainer
 			var prevBlock *protocol.BlockPairContainer
