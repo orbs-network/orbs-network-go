@@ -189,3 +189,33 @@ func validLeanHelixBlockPair(blockPair *protocol.BlockPairContainer) error {
 func (p *blockProvider) GenerateGenesisBlockProposal(ctx context.Context) (lh.Block, lhprimitives.BlockHash) {
 	return nil, nil
 }
+
+func (s *Service) verifyChainTip(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+	if err := s.blockProvider.validateBlockCommittee(ctx, blockPair, prevBlockPair); err != nil {
+		s.logger.Info("HandleBlockConsensus()::verifyChainTip - Failed to validate block committee", log.Error(err))
+		return s.validateBlockConsensus(ctx, blockPair, nil, true) // prevBlock nil => use current ref time (committee)
+	}
+	return nil
+}
+
+func (p *blockProvider) validateBlockCommittee(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+	_, err := p.consensusContext.ValidateBlockCommittee(ctx, &services.ValidateBlockCommitteeInput{
+		BlockHeight:            getBlockHeight(blockPair),
+		PrevBlockReferenceTime: getBlockReferenceTime(prevBlockPair),
+	})
+	return err
+}
+
+func getBlockHeight(block *protocol.BlockPairContainer) primitives.BlockHeight {
+	if block == nil {
+		return 0
+	}
+	return block.TransactionsBlock.Header.BlockHeight()
+}
+
+func getBlockReferenceTime(block *protocol.BlockPairContainer) primitives.TimestampSeconds {
+	if block == nil {
+		return 0
+	}
+	return block.TransactionsBlock.Header.ReferenceTime()
+}

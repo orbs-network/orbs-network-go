@@ -67,3 +67,11 @@ func (s *blockSyncStorageMock) GetSyncState() SyncState {
 	}
 }
 
+func (s *blockSyncStorageMock) ValidateChainTip(ctx context.Context, input *services.ValidateChainTipInput) (*services.ValidateChainTipOutput, error) {
+	ret := s.Called(ctx, input)
+	if out := ret.Get(0); out != nil {
+		return out.(*services.ValidateChainTipOutput), ret.Error(1)
+	} else {
+		return nil, ret.Error(1)
+	}
+}

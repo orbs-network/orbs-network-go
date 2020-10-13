@@ -59,6 +59,7 @@ func TestStateProcessingBlocksDescending_CommitsAccordinglyAndMovesToCollectingA
 			h.expectBlockValidationQueriesFromStorage(11)
 			h.expectBlockCommitsToStorage(11)
 			state := h.factory.CreateProcessingBlocksState(message)
+			h.storage.When("ValidateChainTip", mock.Any, mock.Any).Return(nil, nil).Times(1)
 			nextState := state.processState(ctx)
 			require.IsType(t, &collectingAvailabilityResponsesState{}, nextState, "next state after commit should be collecting availability responses")
 
@@ -77,6 +78,8 @@ func TestStateProcessingBlocksDescending_CommitsAccordinglyAndMovesToCollectingA
 			h.storage.When("GetSyncState").Return(syncState).Times(1)
 			h.storage.When("GetBlock", mock.Any).Return(nil).Times(1)
 			h.storage.When("ValidateBlockForCommit", mock.Any, mock.Any).Return(nil, nil).Times(10)
+			h.storage.When("ValidateChainTip", mock.Any, mock.Any).Return(nil, nil).Times(1)
+
 			h.expectBlockCommitsToStorage(10)
 
 			state = h.factory.CreateProcessingBlocksState(message)

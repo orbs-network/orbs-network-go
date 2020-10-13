@@ -72,7 +72,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		logger.Info("failed to verify the blocks chunk range received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	}
-	if err := s.validatePosChain(ctx, s.blocks.BlockPairs, syncState, s.factory.config.CommitteeGracePeriod(), receivedSyncBlocksOrder); err != nil {
+	if err := s.validateChainFork(ctx, s.blocks.BlockPairs, syncState, s.factory.config.CommitteeGracePeriod(), receivedSyncBlocksOrder); err != nil {
 		s.metrics.failedValidationBlocks.Inc()
 		logger.Info("failed to verify the blocks chunk PoS received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
@@ -165,7 +165,7 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 }
 
 // assumes blocks range is correct. Specifically in descending (blockStorage.lastSynced.height - 1 == blocks[0].height ) or ( blocks[0].height > blockStorage.top.height)
-func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*protocol.BlockPairContainer, syncState SyncState, committeeGraePeriod time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validateChainFork(ctx context.Context, blocks []*protocol.BlockPairContainer, syncState SyncState, committeeGraePeriod time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	syncBlocksOrder := s.factory.getSyncBlocksOrder()
 	topHeight, _, lastSyncedHeight := syncState.GetSyncStateBlockHeights()
 
@@ -185,20 +185,9 @@ func (s *processingBlocksState) validatePosChain(ctx context.Context, blocks []*
 			}
 		} else if firstBlockHeight > topHeight { // verify the first block complies with PoS honesty assumption (1. committee - refTime - is up to date (between now and now-12hrs) or 2. soft: block has at least one honest (weight > f) of current committee (ref = now)
 			prevBlockPair := s.getPrevBlock(0, receivedSyncBlocksOrder)
-			now := time.Duration(time.Now().Unix()) * time.Second
-			var prevBlockReferenceTime primitives.TimestampSeconds
-			if prevBlockPair != nil {
-				prevBlockReferenceTime = prevBlockPair.TransactionsBlock.Header.ReferenceTime()
-			} else if firstBlockHeight == primitives.BlockHeight(1) { // prev = genesis
-
-			} else {
-				return errors.New(fmt.Sprintf("blocks chunk received (firstHeight %d) could not obtain prev block reference for PoS validation", firstBlockHeight))
-			}
-			if (time.Duration(prevBlockReferenceTime)*time.Second)+committeeGraePeriod < now { // refTime-committee is too old => check for soft - at least one honest in current committee (weight > f)
-				_, err := s.storage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: firstBlock, PrevBlockPair: nil, SoftConsensusVerification: true})
-				if err != nil {
-					return err
-				}
+			_, err := s.storage.ValidateChainTip(ctx, &services.ValidateChainTipInput{BlockPair: firstBlock, PrevBlockPair: prevBlockPair})
+			if err != nil {
+				return err
 			}
 		} else {
 			return errors.New(fmt.Sprintf("blocks chunk received (firstHeight %d) does not match current syncState (%v)", firstBlockHeight, syncState))

@@ -32,7 +32,8 @@ func TestSyncPetitioner_CompleteSyncFlow(t *testing.T) {
 			withSyncCollectChunksTimeout(50 * time.Millisecond).
 			withBlockSyncDescendingEnabled(false) // ascending order
 
-			testSyncPetitionerCompleteSyncFlow(ctx, t, harness)	})
+		testSyncPetitionerCompleteSyncFlow(ctx, t, harness)
+	})
 }
 
 func TestSyncPetitioner_CompleteSyncFlowDescending(t *testing.T) {
@@ -47,7 +48,6 @@ func TestSyncPetitioner_CompleteSyncFlowDescending(t *testing.T) {
 		testSyncPetitionerCompleteSyncFlow(ctx, t, harness)
 	})
 }
-
 
 func testSyncPetitionerCompleteSyncFlow(ctx context.Context, t *testing.T, harness *harness) {
 	const NUM_BLOCKS = 20
@@ -110,6 +110,7 @@ func requireValidHandleBlockConsensusMode(t *testing.T, mode handlers.HandleBloc
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE,
 		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY,
+		handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP,
 	}, mode, "consensus updates must be update or update+verify")
 }
 
@@ -162,7 +163,6 @@ func (s *syncFlowResults) logHandleBlockConsensusCalls(t *testing.T, input *hand
 	}
 }
 
-
 func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, input *gossiptopics.BlockSyncRequestInput, availableBlocks primitives.BlockHeight, sources ...int) {
 	sourceAddresses := make([]primitives.NodeAddress, 0, len(sources))
 	for _, sourceIndex := range sources {
@@ -177,7 +177,7 @@ func requireBlockSyncRequestConformsToBlockAvailabilityResponse(t *testing.T, in
 	if blocksOrder == gossipmessages.SYNC_BLOCKS_ORDER_DESCENDING {
 		require.Conditionf(t, func() (success bool) {
 			return (lastRequestedBlock >= 1 && lastRequestedBlock <= availableBlocks) && (firstRequestedBlock == 0 || (firstRequestedBlock >= lastRequestedBlock && firstRequestedBlock <= availableBlocks))
-		}, "request is not consistent with my BlockAvailabilityResponse: first (%d) and last (%d) requested block must be smaller than total (%d); either first requested block is unknown(0) or first must be larger than last", firstRequestedBlock, lastRequestedBlock, availableBlocks )
+		}, "request is not consistent with my BlockAvailabilityResponse: first (%d) and last (%d) requested block must be smaller than total (%d); either first requested block is unknown(0) or first must be larger than last", firstRequestedBlock, lastRequestedBlock, availableBlocks)
 
 	} else {
 		require.Conditionf(t, func() (success bool) {

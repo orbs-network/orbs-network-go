@@ -136,16 +136,20 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		return nil, errors.Errorf("HandleBlockConsensus(): LeanHelix: received unsupported block type %s", blockType)
 	}
 
+	if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP {
+		err := s.verifyChainTip(ctx, blockPair, prevBlockPair)
+		if err != nil {
+			s.logger.Info("HandleBlockConsensus()::VERIFY_CHAIN_TIP - Failed to verify chain tip with LeanHelix", log.Error(err))
+			return nil, err
+		}
+	}
+
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
 		//Validate no matter what Should be changed with the full implementation of audit nodes.
 		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
 
-		var softVerify bool
-		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_SOFT_VERIFY_ONLY {
-			softVerify = true
-		}
-		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair, softVerify)
+		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair, false)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err
@@ -281,7 +285,7 @@ func shouldCreateGenesisBlock(blockPair *protocol.BlockPairContainer) bool {
 }
 
 func shouldValidateBlockConsensusWithLeanHelix(mode handlers.HandleBlockConsensusMode) bool {
-	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_SOFT_VERIFY_ONLY
+	return mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE || mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
 }
 
 func shouldUpdateStateInLeanHelix(mode handlers.HandleBlockConsensusMode) bool {

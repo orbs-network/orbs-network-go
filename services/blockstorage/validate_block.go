@@ -31,21 +31,35 @@ func (s *Service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_ONLY", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	mode := handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
-	if input.SoftConsensusVerification {
-		mode = handlers.HANDLE_BLOCK_CONSENSUS_MODE_SOFT_VERIFY_ONLY
-	}
 	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, mode); err != nil {
 		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
 			logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		}
 		return nil, err
 	} else {
-		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with no error", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
+}
+
+func (s *Service) ValidateChainTip(ctx context.Context, input *services.ValidateChainTipInput) (*services.ValidateChainTipOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("ValidateChainTipCommit calling notifyConsensusAlgos", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	mode := handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP
+	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, mode); err != nil {
+		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
+			logger.Error("ValidateChainTip(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
+		}
+		return nil, err
+	} else {
+		logger.Info("ValidateChainTip returned from notifyConsensusAlgos with no error", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	}
+
+	return &services.ValidateChainTipOutput{}, nil
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
@@ -124,7 +138,8 @@ func (s *Service) notifyConsensusAlgos(
 	mode handlers.HandleBlockConsensusMode) error {
 
 	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
-		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY ||
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP
 
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()

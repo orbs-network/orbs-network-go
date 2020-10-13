@@ -13,6 +13,7 @@ import (
 	"github.com/orbs-network/orbs-spec/types/go/services"
 	"github.com/pkg/errors"
 	"strings"
+	"time"
 )
 
 func (s *service) RequestOrderingCommittee(ctx context.Context, input *services.RequestCommitteeInput) (*services.RequestCommitteeOutput, error) {
@@ -100,4 +101,20 @@ func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, inpu
 		Weights:       out.Weights,
 	}
 	return res, nil
+}
+
+func (s *service) ValidateBlockCommittee(ctx context.Context, input *services.ValidateBlockCommitteeInput) (*services.ValidateBlockCommitteeOutput, error) {
+	// refTime might be adjusted to genesis if block height is 1
+	adjustedPrevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.BlockHeight, input.PrevBlockReferenceTime)
+	if err != nil {
+		return nil, errors.Wrap(err, "ValidateBlockCommittee")
+	}
+
+	now := time.Duration(time.Now().Unix()) * time.Second
+	if (time.Duration(adjustedPrevBlockReferenceTime)*time.Second)+s.config.ManagementConsensusGraceTimeout() < now { // prevRefTime-committee is too old
+		return nil, errors.New("ValidateBlockCommittee: block committee (:=prevBlock.RefTime) is outdated")
+	}
+
+	return &services.ValidateBlockCommitteeOutput{}, nil
+
 }
