@@ -47,6 +47,8 @@ func TestE2EStress(t *testing.T) {
 		clients = append(clients, orbsClient.NewClient(apiEndpoint, uint32(generalConfig.AppVcid), codec.NETWORK_TYPE_TEST_NET))
 	}
 
+	defaultTarget, _ := orbsClient.CreateAccount()
+
 	for i := int64(0); i < config.numberOfTransactions; i++ {
 		if err := limiter.Wait(context.Background()); err == nil {
 			wg.Add(1)
@@ -54,7 +56,11 @@ func TestE2EStress(t *testing.T) {
 			go func(i int64) {
 				defer wg.Done()
 
-				target, _ := orbsClient.CreateAccount()
+				target := defaultTarget
+				if !config.skipState {
+					target, _ = orbsClient.CreateAccount()
+				}
+
 				amount := uint64(ctrlRand.Intn(10))
 
 				client := clients[i%int64(len(clients))] // select one of the clients
@@ -63,9 +69,9 @@ func TestE2EStress(t *testing.T) {
 				var err2 error
 
 				if config.async {
-					response, _, err2 = h.SendTransactionAsyncWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+					response, _, err2 = h.SendTransactionAsyncWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount, target.AddressAsBytes())
 				} else {
-					response, _, err2 = h.SendTransactionWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", uint64(amount), target.AddressAsBytes())
+					response, _, err2 = h.SendTransactionWithClient(client, OwnerOfAllSupply.PublicKey(), OwnerOfAllSupply.PrivateKey(), "BenchmarkToken", "transfer", amount, target.AddressAsBytes())
 				}
 
 				if err2 != nil {

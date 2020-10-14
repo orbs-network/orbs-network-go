@@ -38,6 +38,7 @@ type E2EConfig struct {
 type StressTestConfig struct {
 	enabled               bool
 	async                 bool
+	skipState             bool
 	numberOfTransactions  int64
 	acceptableFailureRate int64
 	targetTPS             float64
@@ -285,6 +286,7 @@ func GetConfig() E2EConfig {
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
 	stressTestAsync := os.Getenv("STRESS_TEST_ASYNC") == "true"
+	stressTestSkipState := os.Getenv("STRESS_TEST_SKIP_STATE") == "true"
 
 	ethereumEndpoint := "http://127.0.0.1:8545"
 
@@ -317,6 +319,7 @@ func GetConfig() E2EConfig {
 			acceptableFailureRate: stressTestFailureRate,
 			targetTPS:             stressTestTargetTPS,
 			apiEndpoints:          stressTestAPIEndpoints,
+			skipState:             stressTestSkipState,
 		},
 		EthereumEndpoint: ethereumEndpoint,
 	}
