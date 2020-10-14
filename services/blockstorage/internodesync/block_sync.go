@@ -70,6 +70,7 @@ type BlockSyncStorage interface {
 	GetLastCommittedBlockHeight(ctx context.Context, input *services.GetLastCommittedBlockHeightInput) (*services.GetLastCommittedBlockHeightOutput, error)
 	NodeSyncCommitBlock(ctx context.Context, input *services.CommitBlockInput) (*services.CommitBlockOutput, error)
 	ValidateBlockForCommit(ctx context.Context, input *services.ValidateBlockForCommitInput) (*services.ValidateBlockForCommitOutput, error)
+	ValidateChainTip(ctx context.Context, input *services.ValidateChainTipInput) (*services.ValidateChainTipOutput, error)
 	UpdateConsensusAlgosAboutLastCommittedBlockInLocalPersistence(ctx context.Context)
 	GetBlock(height primitives.BlockHeight) (*protocol.BlockPairContainer, error)
 	GetSyncState() SyncState

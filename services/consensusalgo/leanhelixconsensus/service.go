@@ -128,7 +128,7 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 
 	blockType := input.BlockType
 	blockPair := input.BlockPair
-	prevBlockPair := input.PrevCommittedBlockPair
+	prevBlockPair := input.PrevBlockPair
 	var lhBlockProof []byte
 	var lhBlock lh.Block
 
@@ -136,12 +136,20 @@ func (s *Service) HandleBlockConsensus(ctx context.Context, input *handlers.Hand
 		return nil, errors.Errorf("HandleBlockConsensus(): LeanHelix: received unsupported block type %s", blockType)
 	}
 
+	if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP {
+		err := s.verifyChainTip(ctx, blockPair, prevBlockPair)
+		if err != nil {
+			s.logger.Info("HandleBlockConsensus()::VERIFY_CHAIN_TIP - Failed to verify chain tip with LeanHelix", log.Error(err))
+			return nil, err
+		}
+	}
+
 	// validate the lhBlock consensus (lhBlock and proof)
 	if shouldValidateBlockConsensusWithLeanHelix(input.Mode) {
 		//Validate no matter what Should be changed with the full implementation of audit nodes.
 		s.validateBlockExecutionIfYoung(ctx, blockPair, prevBlockPair)
 
-		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair)
+		err := s.validateBlockConsensus(ctx, blockPair, prevBlockPair, false)
 		if err != nil {
 			s.logger.Info("HandleBlockConsensus(): Failed validating block consensus with LeanHelix", log.Error(err))
 			return nil, err

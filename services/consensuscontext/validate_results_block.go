@@ -218,7 +218,7 @@ func compare(expectedDiffs []*protocol.ContractStateDiff, calculatedDiffs []*pro
 }
 
 func (s *service) ValidateResultsBlock(ctx context.Context, input *services.ValidateResultsBlockInput) (*services.ValidateResultsBlockOutput, error) {
-	prevBlockReferenceTime, err := s.prevReferenceOrGenesis(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
+	prevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.CurrentBlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
 		return &services.ValidateResultsBlockOutput{}, errors.Wrapf(ErrFailedGenesisRefTime, "ValidateResultsBlock failed genesis time %s", err)
 	}

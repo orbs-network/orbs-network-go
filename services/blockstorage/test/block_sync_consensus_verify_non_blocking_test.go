@@ -24,7 +24,6 @@ import (
 	"time"
 )
 
-
 // Node Sync assumes consensus verifies block without blocking
 // Start syncing - in parallel to consensus service progressing
 // During HandleBlockConsensus and before block proof verification, commit blocks from consensus:
@@ -68,7 +67,7 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	virtualMachine := &services.MockVirtualMachine{}
 	cfg := config.ForConsensusContextTests(false)
 	management := &services.MockManagement{}
-	management.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: 5000, GenesisReference: 0,}, nil)
+	management.When("GetGenesisReference", mock.Any, mock.Any).Return(&services.GetGenesisReferenceOutput{CurrentReference: 5000, GenesisReference: 0}, nil)
 	consensusContext := consensuscontext.NewConsensusContext(harness.txPool, virtualMachine, harness.stateStorage, management, cfg, harness.Logger, metric.NewRegistry())
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -97,7 +96,7 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	virtualMachine.When("CallSystemContract", mock.Any, mock.Any).Call(func(ctx context.Context, input *services.CallSystemContractInput) (*services.CallSystemContractOutput, error) {
 		output, _ := harness.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
 		currentHeight := output.BlockHeight
-		if currentHeight >= input.BlockHeight + primitives.BlockHeight(numOfStateRevisionsToRetain) {
+		if currentHeight >= input.BlockHeight+primitives.BlockHeight(numOfStateRevisionsToRetain) {
 			return nil, errors.New(fmt.Sprintf("unsupported block height: block %d too old. currently at %d. keeping %d back", input.BlockHeight, currentHeight, numOfStateRevisionsToRetain))
 		}
 		return &services.CallSystemContractOutput{
@@ -107,8 +106,12 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	})
 
 	harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY  {
-			simulateVerifyBlockConsensus(ctx, t, consensusContext, input.BlockPair.TransactionsBlock.Header.BlockHeight(), done)
+		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY {
+			var prevBlockReferenceTime primitives.TimestampSeconds
+			if input.PrevBlockPair != nil {
+				prevBlockReferenceTime = input.PrevBlockPair.TransactionsBlock.Header.ReferenceTime()
+			}
+			simulateVerifyBlockConsensus(ctx, t, consensusContext, input.BlockPair.TransactionsBlock.Header.BlockHeight(), prevBlockReferenceTime, done)
 		}
 		return nil, nil
 	})
@@ -130,7 +133,6 @@ func testSyncPetitionerConsensusVerifyNonBlocking(ctx context.Context, t *testin
 	}
 }
 
-
 func simulateConsensusCommits(ctx context.Context, harness *harness, blocks []*protocol.BlockPairContainer, committedBlockHeights chan primitives.BlockHeight, target int) {
 	for i := 0; i < target; i++ {
 		_, err := harness.commitBlock(ctx, blocks[i])
@@ -140,12 +142,13 @@ func simulateConsensusCommits(ctx context.Context, harness *harness, blocks []*p
 	}
 }
 
-func simulateVerifyBlockConsensus(ctx context.Context, tb testing.TB, consensusContext services.ConsensusContext, currentBlockHeight primitives.BlockHeight, done chan struct{}) {
+func simulateVerifyBlockConsensus(ctx context.Context, tb testing.TB, consensusContext services.ConsensusContext, currentBlockHeight primitives.BlockHeight, prevBlockReferenceTime primitives.TimestampSeconds, done chan struct{}) {
 	go func() {
 		consensusContext.RequestOrderingCommittee(ctx, &services.RequestCommitteeInput{
-			CurrentBlockHeight: currentBlockHeight,
-			RandomSeed:         0,
-			MaxCommitteeSize:   4,
+			CurrentBlockHeight:     currentBlockHeight,
+			RandomSeed:             0,
+			MaxCommitteeSize:       4,
+			PrevBlockReferenceTime: prevBlockReferenceTime,
 		})
 		done <- struct{}{}
 	}()

@@ -116,10 +116,10 @@ func (h *harness) verifyHandlerRegistrations(t *testing.T) {
 
 func (h *harness) handleBlockConsensus(ctx context.Context, mode handlers.HandleBlockConsensusMode, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
 	_, err := h.service.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-		Mode:                   mode,
-		BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-		BlockPair:              blockPair,
-		PrevCommittedBlockPair: prevBlockPair,
+		Mode:          mode,
+		BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+		BlockPair:     blockPair,
+		PrevBlockPair: prevBlockPair,
 	})
 	return err
 }

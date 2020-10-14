@@ -31,17 +31,35 @@ func (s *Service) ValidateBlockForCommit(ctx context.Context, input *services.Va
 		return nil, blockHeightError
 	}
 
-	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
-	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY); err != nil {
+	logger.Info("ValidateBlockForCommit calling notifyConsensusAlgos with VERIFY_ONLY", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	mode := handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, mode); err != nil {
 		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
 			logger.Error("ValidateBlockForCommit(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
 		}
 		return nil, err
 	} else {
-		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with VERIFY_AND_UPDATE", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+		logger.Info("ValidateBlockForCommit returned from notifyConsensusAlgos with no error", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
 	}
 
 	return &services.ValidateBlockForCommitOutput{}, nil
+}
+
+func (s *Service) ValidateChainTip(ctx context.Context, input *services.ValidateChainTipInput) (*services.ValidateChainTipOutput, error) {
+	logger := s.logger.WithTags(trace.LogFieldFrom(ctx))
+
+	logger.Info("ValidateChainTipCommit calling notifyConsensusAlgos", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	mode := handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP
+	if err := s.notifyConsensusAlgos(ctx, input.PrevBlockPair, input.BlockPair, mode); err != nil {
+		if ctx.Err() == nil { // this may fail rightfully on graceful shutdown (ctx.Done), we don't want to report an error in this case
+			logger.Error("ValidateChainTip(): notifyConsensusAlgos() failed (block validation by consensus algo failed)", log.Error(err), log.Stringable("tx-block-header", input.BlockPair.TransactionsBlock.Header))
+		}
+		return nil, err
+	} else {
+		logger.Info("ValidateChainTip returned from notifyConsensusAlgos with no error", logfields.BlockHeight(input.BlockPair.TransactionsBlock.Header.BlockHeight()))
+	}
+
+	return &services.ValidateChainTipOutput{}, nil
 }
 
 // how to check if a block already exists: https://github.com/orbs-network/orbs-spec/issues/50
@@ -103,7 +121,7 @@ func (s *Service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
 	if txBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions block header",txBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions block header", txBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
 	}
 
 	if rsBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
@@ -120,7 +138,8 @@ func (s *Service) notifyConsensusAlgos(
 	mode handlers.HandleBlockConsensusMode) error {
 
 	verifyMode := mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE ||
-		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_ONLY ||
+		mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_CHAIN_TIP
 
 	s.consensusBlocksHandlers.RLock()
 	defer s.consensusBlocksHandlers.RUnlock()
@@ -129,10 +148,10 @@ func (s *Service) notifyConsensusAlgos(
 	verifiedCount := 0
 	for _, handler := range s.consensusBlocksHandlers.handlers {
 		_, latestErr := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-			Mode:                   mode,
-			BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-			BlockPair:              blockPair,
-			PrevCommittedBlockPair: prevBlockPair, // TODO (v1) rename to HandleBlockConsensusInput.PrevCommittedBlockPair to PrevBlockPair
+			Mode:          mode,
+			BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+			BlockPair:     blockPair,
+			PrevBlockPair: prevBlockPair,
 		})
 
 		if verifyMode && latestErr == nil {

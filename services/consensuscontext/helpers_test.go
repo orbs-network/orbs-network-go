@@ -34,7 +34,7 @@ func TestFixRefForGenesis_IsGenesisAndCorrectGenesis(t *testing.T) {
 		prevRef := currRef - 10
 		genesis := currRef - 100
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.prevReferenceOrGenesis(ctx, 1, prevRef)
+		actualRef, err := s.adjustPrevReference(ctx, 1, prevRef)
 		require.NoError(t, err, "should not error, gensis correct")
 		require.Equal(t, genesis, actualRef, "should return the management genesis reference")
 	})
@@ -46,7 +46,7 @@ func TestFixRefForGenesis_IsGenesisAndGenesisInFuture(t *testing.T) {
 		prevRef := currRef - 10
 		genesis := currRef + 1
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.prevReferenceOrGenesis(ctx, 1, prevRef)
+		actualRef, err := s.adjustPrevReference(ctx, 1, prevRef)
 		require.Error(t, err, "should error, genesis in future")
 		require.Equal(t, primitives.TimestampSeconds(0), actualRef, "should return 0")
 	})
@@ -58,7 +58,7 @@ func TestFixRefForGenesis_NotGenesisAndGenInPast(t *testing.T) {
 		prevRef := currRef - 10
 		genesis := currRef - 100
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.prevReferenceOrGenesis(ctx, 2, prevRef)
+		actualRef, err := s.adjustPrevReference(ctx, 2, prevRef)
 		require.NoError(t, err, "should not error, block height not genesis")
 		require.Equal(t, prevRef, actualRef, "should return the management genesis reference")
 	})
@@ -70,9 +70,8 @@ func TestFixRefForGenesis_NotGenesisAndGensisInFuture_Ignore(t *testing.T) {
 		prevRef := currRef - 10
 		genesis := currRef + 1
 		s := newHarnessWithManagement(currRef, genesis)
-		actualRef, err := s.prevReferenceOrGenesis(ctx, 2, prevRef)
+		actualRef, err := s.adjustPrevReference(ctx, 2, prevRef)
 		require.NoError(t, err, "should not error, its not genesis block")
 		require.Equal(t, prevRef, actualRef, "should return the management genesis reference")
 	})
 }
-

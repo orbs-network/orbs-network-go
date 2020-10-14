@@ -49,10 +49,10 @@ func TestLeaderInitWithExistingBlocks_DoesNotCreateGenesisBlock(t *testing.T) {
 		h.blockStorage.Reset().When("RegisterConsensusBlocksHandler", mock.Any).Call(func(handler handlers.ConsensusBlocksHandler) {
 			// this recreates how block storage updates us on last committed block on init (via the call to RegisterConsensusBlocksHandler)
 			_, err := handler.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-				Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
-				BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-				BlockPair:              block17,
-				PrevCommittedBlockPair: nil,
+				Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+				BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+				BlockPair:     block17,
+				PrevBlockPair: nil,
 			})
 			require.NoError(t, err, "failed calling HandleBlockConsensus")
 

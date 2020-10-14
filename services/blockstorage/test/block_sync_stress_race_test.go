@@ -73,9 +73,9 @@ func testSyncPetitionerStressCommitsDuringSync(ctx context.Context, t *testing.T
 	})
 
 	harness.consensus.When("HandleBlockConsensus", mock.Any, mock.Any).Call(func(ctx context.Context, input *handlers.HandleBlockConsensusInput) (*handlers.HandleBlockConsensusOutput, error) {
-		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE && input.PrevCommittedBlockPair != nil {
+		if input.Mode == handlers.HANDLE_BLOCK_CONSENSUS_MODE_VERIFY_AND_UPDATE && input.PrevBlockPair != nil {
 			currHeight := input.BlockPair.TransactionsBlock.Header.BlockHeight()
-			prevHeight := input.PrevCommittedBlockPair.TransactionsBlock.Header.BlockHeight()
+			prevHeight := input.PrevBlockPair.TransactionsBlock.Header.BlockHeight()
 			if currHeight != prevHeight+1 {
 				done <- struct{}{}
 				require.Failf(t, "HandleBlockConsensus given invalid args", "called with height %d and prev height %d", currHeight, prevHeight)

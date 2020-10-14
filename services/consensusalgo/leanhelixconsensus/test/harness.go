@@ -146,7 +146,7 @@ func (h *singleLhcNodeHarness) beFirstInCommittee() {
 func (h *singleLhcNodeHarness) expectConsensusContextRequestOrderingCommittee(leaderNodeIndex int) {
 	h.consensusContext.When("RequestOrderingCommittee", mock.Any, mock.Any).Return(&services.RequestCommitteeOutput{
 		NodeAddresses: h.getCommitteeWithNodeIndexAsLeader(leaderNodeIndex),
-		Weights: h.getCommitteeWeights(),
+		Weights:       h.getCommitteeWeights(),
 	}, nil).Times(1)
 }
 
@@ -184,10 +184,10 @@ func (h *singleLhcNodeHarness) handleBlockSync(ctx context.Context, blockHeight 
 	blockPair := builders.BlockPair().WithHeight(blockHeight).WithEmptyLeanHelixBlockProof().Build()
 
 	_, err := h.consensus.HandleBlockConsensus(ctx, &handlers.HandleBlockConsensusInput{
-		Mode:                   handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
-		BlockType:              protocol.BLOCK_TYPE_BLOCK_PAIR,
-		BlockPair:              blockPair,
-		PrevCommittedBlockPair: nil,
+		Mode:          handlers.HANDLE_BLOCK_CONSENSUS_MODE_UPDATE_ONLY,
+		BlockType:     protocol.BLOCK_TYPE_BLOCK_PAIR,
+		BlockPair:     blockPair,
+		PrevBlockPair: nil,
 	})
 	require.NoError(h.t, err, "expected HandleBlockConsensus to succeed")
 	require.NoError(h.t, test.EventuallyVerify(test.EVENTUALLY_ACCEPTANCE_TIMEOUT, h.consensusContext))
