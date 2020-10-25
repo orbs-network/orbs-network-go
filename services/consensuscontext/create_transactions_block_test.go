@@ -39,7 +39,7 @@ func requireTransactionToBeATriggerTransaction(t *testing.T, tx *protocol.Signed
 func TestConsensusContextCreateBlock_UpdateDoesntAddTriggerWhenDisabled(t *testing.T) {
 	s := newHarnessWithConfigOnly(false)
 	txs := []*protocol.SignedTransaction{builders.Transaction().Build()}
-	outputTxs := s.updateTransactions(txs, 1, 0)
+	outputTxs := s.updateTransactions(txs, 0)
 	require.Equal(t, len(txs), len(outputTxs), "should not add txs")
 	require.EqualValues(t, txs[0], outputTxs[0], "should be same tx")
 }
@@ -47,7 +47,7 @@ func TestConsensusContextCreateBlock_UpdateDoesntAddTriggerWhenDisabled(t *testi
 func TestConsensusContextCreateBlock_UpdateAddTriggerWhenEnabled(t *testing.T) {
 	s := newHarnessWithConfigOnly(true)
 	txs := []*protocol.SignedTransaction{builders.Transaction().Build()}
-	outputTxs := s.updateTransactions(txs, 1, 6)
+	outputTxs := s.updateTransactions(txs, 6)
 	require.Equal(t, len(txs)+1, len(outputTxs), "should not add txs")
 	require.EqualValues(t, txs[0], outputTxs[0], "should be same tx")
 	requireTransactionToBeATriggerTransaction(t, outputTxs[1], s.config)
