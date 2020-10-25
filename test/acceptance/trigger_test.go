@@ -22,7 +22,7 @@ func TestTriggers_ABlockContainsATriggerTransaction(t *testing.T) {
 
 			block, err := network.PublicApi(0).GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 					BlockHeight:     blockHeight,
 				}).Build(),

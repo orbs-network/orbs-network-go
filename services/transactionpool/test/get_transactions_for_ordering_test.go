@@ -18,7 +18,22 @@ import (
 	"time"
 )
 
-func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
+func TestGetTransactionsForOrdering_FirstBlockCloseFast(t *testing.T) {
+	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
+		h := newHarness(parent).start(ctx)
+
+		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
+			CurrentBlockHeight:      1,
+			PrevBlockTimestamp:      0,
+			MaxNumberOfTransactions: 1,
+		})
+		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
+		require.Zero(t, len(out.SignedTransactions), "number of transactions should not be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
+	})
+}
+
+func TestGetTransactionsForOrdering_AsOfFutureBlockHeightTimesOutWhenNoBlockIsCommitted(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
@@ -32,7 +47,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenNoBlockIsCom
 	})
 }
 
-func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
+func TestGetTransactionsForOrdering_AsOfFutureBlockHeightTimesOutWhenContextIsCancelled(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
@@ -50,7 +65,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightTimesOutWhenContextIsCan
 	})
 }
 
-func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
+func TestGetTransactionsForOrdering_AsOfFutureBlockHeightResolvesOutWhenBlockIsCommitted(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
@@ -72,7 +87,7 @@ func TestGetTransactionsForOrderingAsOfFutureBlockHeightResolvesOutWhenBlockIsCo
 	})
 }
 
-func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
+func TestGetTransactionsForOrdering_WaitsForAdditionalTransactionsIfUnderMinimum(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
 
@@ -93,7 +108,7 @@ func TestGetTransactionsForOrderingWaitsForAdditionalTransactionsIfUnderMinimum(
 	})
 }
 
-func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
+func TestGetTransactionsForOrdering_DoesNotWaitForAdditionalTransactionsIfContextIsCancelled(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarnessWithInfiniteTimeBetweenEmptyBlocks(parent).start(ctx)
 
@@ -108,13 +123,13 @@ func TestGetTransactionsForOrderingDoesNotWaitForAdditionalTransactionsIfContext
 	})
 }
 
-func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T) {
+func TestGetTransactionsForOrdering_FiltersOutTooBigClientProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+5).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_CLIENT_PROTOCOL_VERSION+5).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+			BlockProtocolVersion:    config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -125,14 +140,13 @@ func TestGetTransactionsForOrdering_FiltersOutTooBigProtocolVersion(t *testing.T
 	})
 }
 
-func TestGetTransactionsForOrdering_ReturnsEarlierProtocolVersioTransactions(t *testing.T) {
+func TestGetTransactionsForOrdering_ReturnsEarlierClientProtocolVersionTransactions(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
-		currentPv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(currentPv-1).Build())
+		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_CLIENT_PROTOCOL_VERSION-1).Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    currentPv,
+			BlockProtocolVersion:    config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -140,16 +154,17 @@ func TestGetTransactionsForOrdering_ReturnsEarlierProtocolVersioTransactions(t *
 
 		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
 		require.NotZero(t, len(out.SignedTransactions), "number of transactions should not be zero")
+		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
 	})
 }
 
-func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t *testing.T) {
+func TestGetTransactionsForOrdering_ReturnsNonZeroTransactions(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().Build())
 
 		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+			BlockProtocolVersion:    config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 			CurrentBlockHeight:      2,
 			PrevBlockTimestamp:      0,
 			MaxNumberOfTransactions: 1,
@@ -160,41 +175,3 @@ func TestGetTransactionsForOrderingAfterGenesisBlockReturnsNonZeroTransactions(t
 		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
 	})
 }
-
-func TestGetTransactionsForOrderingAfterGenesisBlock_ReturnsEarlierProtocolVersionThanBlock(t *testing.T) {
-	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newHarness(parent).start(ctx)
-		currentPv := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(currentPv-1).Build())
-
-		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    currentPv,
-			CurrentBlockHeight:      2,
-			PrevBlockTimestamp:      0,
-			MaxNumberOfTransactions: 1,
-		})
-
-		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
-		require.NotZero(t, len(out.SignedTransactions), "number of transactions should not be zero")
-		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
-	})
-}
-
-func TestGetTransactionsForOrderingAfterGenesisBlock_FiltersOutTxWithBiggerProtocolVersionThanBlock(t *testing.T) {
-	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
-		h := newHarness(parent).start(ctx)
-		h.handleForwardFrom(ctx, otherNodeKeyPair, builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+2).Build())
-
-		out, err := h.txpool.GetTransactionsForOrdering(ctx, &services.GetTransactionsForOrderingInput{
-			BlockProtocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1,
-			CurrentBlockHeight:      2,
-			PrevBlockTimestamp:      0,
-			MaxNumberOfTransactions: 1,
-		})
-
-		require.NoError(t, err, "GetTransactionsForOrdering should not fail")
-		require.Zero(t, len(out.SignedTransactions), "number of transactions should not be zero")
-		require.NotZero(t, out.ProposedBlockTimestamp, "proposed block timestamp should not be zero")
-	})
-}
-

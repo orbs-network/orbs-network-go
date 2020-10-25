@@ -41,9 +41,9 @@ func TestValidateBlockWithInvalidProtocolVersion(t *testing.T) {
 		block := builders.BlockPair().Build()
 		var prevBlock *protocol.BlockPairContainer
 
-		errorProtocolVersion := config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+100
-		expectedTxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", errorProtocolVersion, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
-		expectedRxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in results block header", errorProtocolVersion, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+		errorProtocolVersion := config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION +100
+		expectedTxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", errorProtocolVersion, config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION)
+		expectedRxErrMsg := fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in results block header", errorProtocolVersion, config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION)
 
 		block.TransactionsBlock.Header.MutateProtocolVersion(errorProtocolVersion)
 		_, err := harness.blockStorage.ValidateBlockForCommit(ctx, &services.ValidateBlockForCommitInput{BlockPair: block, PrevBlockPair: prevBlock})

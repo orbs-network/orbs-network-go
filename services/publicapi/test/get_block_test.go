@@ -30,7 +30,7 @@ func TestGetBlock_GetBlockStorageOk(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     8,
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -59,7 +59,7 @@ func TestGetBlock_GetBlockStorageFail(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     8,
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -89,7 +89,7 @@ func TestGetBlock_GetBlockStorageNoRecord(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     1000,
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -116,7 +116,7 @@ func TestGetBlock_GetBlockStorageNoRecordThenFailsToGetLast(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     1000,
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})
@@ -145,7 +145,7 @@ func TestGetBlock_RequestBlockZero(t *testing.T) {
 			result, err := harness.papi.GetBlock(ctx, &services.GetBlockInput{
 				ClientRequest: (&client.GetBlockRequestBuilder{
 					BlockHeight:     0,
-					ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+					ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 					VirtualChainId:  builders.DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				}).Build(),
 			})

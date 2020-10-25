@@ -82,9 +82,9 @@ func TestCommitBlockReturnsErrorWhenProtocolVersionMismatches(t *testing.T) {
 			allowingErrorsMatching("protocol version mismatch in transactions block header").
 			start(ctx)
 
-		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build())
+		_, err := harness.commitBlock(ctx, builders.BlockPair().WithProtocolVersion(config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION+1).Build())
 
-		require.EqualError(t, err, fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE))
+		require.EqualError(t, err, fmt.Sprintf("protocol version (%d) higher than maximal supported (%d) in transactions block header", config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION+1, config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION))
 	})
 }
 

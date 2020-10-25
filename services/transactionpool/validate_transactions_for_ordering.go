@@ -33,7 +33,7 @@ func (s *service) ValidateTransactionsForOrdering(ctx context.Context, input *se
 			return nil, errors.Errorf("transaction with hash %s already committed", txHash)
 		}
 
-		if err := s.validationContext.ValidateTransactionForOrdering(tx, input.BlockProtocolVersion, proposedBlockTimestamp); err != nil {
+		if err := s.validationContext.ValidateTransactionForOrdering(tx, proposedBlockTimestamp); err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("transaction with hash %s is invalid", txHash))
 		}
 	}

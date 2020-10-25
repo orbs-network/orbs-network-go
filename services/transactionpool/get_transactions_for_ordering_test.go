@@ -91,7 +91,7 @@ func TestTransactionBatchRejectsTransactionsFailingStaticValidation(t *testing.T
 			tx2 := builders.TransferTransaction().Build()
 
 			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
-			b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0, 0)
+			b.filterInvalidTransactions(ctx, &fakeValidator{invalid: Transactions{tx2}}, &fakeCommittedChecker{}, 0)
 
 			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
@@ -111,7 +111,7 @@ func TestTransactionBatchRejectsCommittedTransaction(t *testing.T) {
 			tx2 := builders.TransferTransaction().Build()
 
 			b := newTransactionBatch(parent.Logger, Transactions{tx1, tx2})
-			b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0, 0)
+			b.filterInvalidTransactions(ctx, &fakeValidator{}, &fakeCommittedChecker{Transactions{tx2}}, 0)
 
 			require.Empty(t, b.incomingTransactions, "did not empty incoming transaction list")
 
@@ -206,7 +206,7 @@ func (c *fakeCommittedChecker) has(txHash primitives.Sha256) bool {
 	return false
 }
 
-func (v *fakeValidator) ValidateTransactionForOrdering(txToValidate *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+func (v *fakeValidator) ValidateTransactionForOrdering(txToValidate *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
 	for _, tx := range v.invalid {
 		if tx == txToValidate {
 			return &ErrTransactionRejected{TransactionStatus: protocol.TRANSACTION_STATUS_RESERVED}

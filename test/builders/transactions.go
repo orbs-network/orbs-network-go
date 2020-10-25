@@ -34,7 +34,7 @@ func TransferTransaction() *TransactionBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+				ProtocolVersion: config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "transfer",
@@ -164,7 +164,7 @@ func TriggerTransaction() *TransactionBuilder {
 		dontSign: true,
 		builder: &protocol.SignedTransactionBuilder{
 			Transaction: &protocol.TransactionBuilder{
-				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+				ProtocolVersion: config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
 				MethodName:      primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER),

@@ -31,11 +31,11 @@ type txValidatorContext struct {
 
 func validateTxProtocolVersion(ctx context.Context, vctx *txValidatorContext) error {
 	checkedProtocolVersion := vctx.input.TransactionsBlock.Header.ProtocolVersion()
-	if checkedProtocolVersion > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "maximal %v actual %v", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, checkedProtocolVersion)
+	if checkedProtocolVersion > config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "maximal %v actual %v", config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION, checkedProtocolVersion)
 	}
-	if checkedProtocolVersion < config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return errors.Wrapf(ErrMismatchedProtocolVersion, "minimal %v actual %v", config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, checkedProtocolVersion)
+	if checkedProtocolVersion < config.MINIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION {
+		return errors.Wrapf(ErrMismatchedProtocolVersion, "minimal %v actual %v", config.MINIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION, checkedProtocolVersion)
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func validateTransactionsBlockTriggerCompliance(ctx context.Context, cfg config.
 		if !validateTransactionsBlockTxTriggerIsValidTime(txs[txCount-1], transactionsBlock.Header.Timestamp()) {
 			return ErrTriggerEnabledAndTriggerInvalidTime
 		}
-		if !validateTransactionsBlockTxTriggerIsValid(txs[txCount-1], transactionsBlock.Header.ProtocolVersion(), cfg) {
+		if !validateTransactionsBlockTxTriggerIsValid(txs[txCount-1], cfg) {
 			return ErrTriggerEnabledAndTriggerInvalid
 		}
 
@@ -213,13 +213,13 @@ func validateTransactionsBlockTxTriggerIsValidTime(signedTransaction *protocol.S
 	return signedTransaction.Transaction().Timestamp() == blockTime
 }
 
-func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.SignedTransaction, blockProtocolVersion primitives.ProtocolVersion, cfg config.ConsensusContextConfig) bool {
+func validateTransactionsBlockTxTriggerIsValid(signedTransaction *protocol.SignedTransaction, cfg config.ConsensusContextConfig) bool {
 	if len(signedTransaction.Signature()) != 0 {
 		return false
 	}
 
 	transaction := signedTransaction.Transaction()
-	if transaction.ProtocolVersion() != blockProtocolVersion ||
+	if transaction.ProtocolVersion() > config.MAXIMAL_CLIENT_PROTOCOL_VERSION ||
 		transaction.VirtualChainId() != cfg.VirtualChainId() ||
 		len(transaction.InputArgumentArray()) != 0 ||
 		len(transaction.Signer().Raw()) != 0 {

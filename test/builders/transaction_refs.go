@@ -23,7 +23,7 @@ type transactionRef struct {
 func TransactionRef() *transactionRef {
 	return &transactionRef{
 		builder: &client.TransactionRefBuilder{
-			ProtocolVersion:      config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+			ProtocolVersion:      config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 			VirtualChainId:       DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			TransactionTimestamp: primitives.TimestampNano(time.Now().UnixNano()),
 			Txhash:               hash.CalcSha256([]byte("some-tx-hash")),

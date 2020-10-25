@@ -28,7 +28,7 @@ func newHarnessWithConfigOnly(enableTriggers bool) *service {
 
 func requireTransactionToBeATriggerTransaction(t *testing.T, tx *protocol.SignedTransaction, cfg config.ConsensusContextConfig) {
 	require.Empty(t, tx.Signature())
-	require.Equal(t, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, tx.Transaction().ProtocolVersion())
+	require.Equal(t, config.MAXIMAL_CLIENT_PROTOCOL_VERSION, tx.Transaction().ProtocolVersion())
 	require.Equal(t, cfg.VirtualChainId(), tx.Transaction().VirtualChainId())
 	require.Equal(t, primitives.ContractName(triggers_systemcontract.CONTRACT_NAME), tx.Transaction().ContractName())
 	require.Equal(t, primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER), tx.Transaction().MethodName())
@@ -39,7 +39,7 @@ func requireTransactionToBeATriggerTransaction(t *testing.T, tx *protocol.Signed
 func TestConsensusContextCreateBlock_UpdateDoesntAddTriggerWhenDisabled(t *testing.T) {
 	s := newHarnessWithConfigOnly(false)
 	txs := []*protocol.SignedTransaction{builders.Transaction().Build()}
-	outputTxs := s.updateTransactions(txs, 1, 0)
+	outputTxs := s.updateTransactions(txs, 0)
 	require.Equal(t, len(txs), len(outputTxs), "should not add txs")
 	require.EqualValues(t, txs[0], outputTxs[0], "should be same tx")
 }
@@ -47,7 +47,7 @@ func TestConsensusContextCreateBlock_UpdateDoesntAddTriggerWhenDisabled(t *testi
 func TestConsensusContextCreateBlock_UpdateAddTriggerWhenEnabled(t *testing.T) {
 	s := newHarnessWithConfigOnly(true)
 	txs := []*protocol.SignedTransaction{builders.Transaction().Build()}
-	outputTxs := s.updateTransactions(txs, 1, 6)
+	outputTxs := s.updateTransactions(txs, 6)
 	require.Equal(t, len(txs)+1, len(outputTxs), "should not add txs")
 	require.EqualValues(t, txs[0], outputTxs[0], "should be same tx")
 	requireTransactionToBeATriggerTransaction(t, outputTxs[1], s.config)

@@ -42,8 +42,9 @@ func emptyConfig() mutableNodeConfig {
 }
 
 const (
-	MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests) cannot be smaller than min will fail
-	MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests)
+	MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION = primitives.ProtocolVersion(2) // do not re-define in other places (not even in tests) cannot be smaller than min will fail
+	MINIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION = primitives.ProtocolVersion(1) // do not re-define in other places (not even in tests)
+	MAXIMAL_CLIENT_PROTOCOL_VERSION          = primitives.ProtocolVersion(1) // maximal client protocol version (planned to be fully backwards compatible)
 	VIRTUAL_CHAIN_ID                         = "VIRTUAL_CHAIN_ID"
 	NETWORK_TYPE                             = "NETWORK_TYPE"
 
