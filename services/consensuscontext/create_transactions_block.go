@@ -9,6 +9,7 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
+	config2 "github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -48,7 +49,7 @@ func (s *service) createTransactionsBlock(ctx context.Context, input *services.R
 		return nil, errors.New("transactions pool GetTransactionsForOrdering returned proposed block timestamp of zero")
 	}
 
-	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedProtocolVersion.ProtocolVersion, proposedBlockTimestamp)
+	transactionsForBlock := s.updateTransactions(proposedTransactions.SignedTransactions, proposedBlockTimestamp)
 	txCount := len(transactionsForBlock)
 
 	merkleTransactionsRoot, err := digest.CalcTransactionsMerkleRoot(transactionsForBlock)
@@ -117,10 +118,10 @@ func (s *service) fetchTransactions(ctx context.Context, blockProtocolVersion pr
 	return proposedTransactions, nil
 }
 
-func (s *service) createTriggerTransaction(protocolVersion primitives.ProtocolVersion, blockTime primitives.TimestampNano) *protocol.SignedTransaction {
+func (s *service) createTriggerTransaction(blockTime primitives.TimestampNano) *protocol.SignedTransaction {
 	return (&protocol.SignedTransactionBuilder{
 		Transaction: &protocol.TransactionBuilder{
-			ProtocolVersion: protocolVersion,
+			ProtocolVersion: config2.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 			VirtualChainId:  s.config.VirtualChainId(),
 			Timestamp:       blockTime,
 			ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
@@ -129,9 +130,9 @@ func (s *service) createTriggerTransaction(protocolVersion primitives.ProtocolVe
 	}).Build()
 }
 
-func (s *service) updateTransactions(txs []*protocol.SignedTransaction, protocolVersion primitives.ProtocolVersion, blockTime primitives.TimestampNano) []*protocol.SignedTransaction {
+func (s *service) updateTransactions(txs []*protocol.SignedTransaction, blockTime primitives.TimestampNano) []*protocol.SignedTransaction {
 	if s.config.ConsensusContextTriggersEnabled() {
-		txs = append(txs, s.createTriggerTransaction(protocolVersion, blockTime))
+		txs = append(txs, s.createTriggerTransaction(blockTime))
 	}
 	return txs
 }

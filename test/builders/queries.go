@@ -31,7 +31,7 @@ func GetBalanceQuery() *QueryBuilder {
 		signer: keyPair.PrivateKey(),
 		builder: &protocol.SignedQueryBuilder{
 			Query: &protocol.QueryBuilder{
-				ProtocolVersion: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+				ProtocolVersion: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 				VirtualChainId:  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 				ContractName:    "BenchmarkToken",
 				MethodName:      "getBalance",

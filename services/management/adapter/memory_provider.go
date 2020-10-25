@@ -40,7 +40,7 @@ func NewMemoryProvider(committee []primitives.NodeAddress, topology []*services.
 		genesisReference:      primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
 		topology:              topology,
 		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee, Weights: generateWeightsForCommittee(committee)}},
-		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE}},
+		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION}},
 		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
 	}
 }

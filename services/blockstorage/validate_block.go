@@ -120,12 +120,12 @@ func (s *Service) validateProtocolVersion(blockPair *protocol.BlockPairContainer
 	txBlockHeader := blockPair.TransactionsBlock.Header
 	rsBlockHeader := blockPair.ResultsBlock.Header
 
-	if txBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions block header", txBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+	if txBlockHeader.ProtocolVersion() > config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION {
+		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in transactions block header", txBlockHeader.ProtocolVersion(), config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION)
 	}
 
-	if rsBlockHeader.ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in results block header", rsBlockHeader.ProtocolVersion(), config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE)
+	if rsBlockHeader.ProtocolVersion() > config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION {
+		return fmt.Errorf("protocol version (%d) higher than maximal supported (%d) in results block header", rsBlockHeader.ProtocolVersion(), config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION)
 	}
 
 	return nil

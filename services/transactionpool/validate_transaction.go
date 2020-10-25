@@ -47,8 +47,8 @@ func (c *validationContext) ValidateAddedTransaction(transaction *protocol.Signe
 	return nil
 }
 
-func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
-	if err := c.validateProtocolVersion(transaction, proposedBlockProtocolVersion); err != nil {
+func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol.SignedTransaction, proposedBlockTimestamp primitives.TimestampNano) *ErrTransactionRejected {
+	if err := c.validateProtocolVersion(transaction); err != nil {
 		return err
 	}
 	if err := c.validateSignatureType(transaction); err != nil {
@@ -67,15 +67,15 @@ func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol
 }
 
 func (c *validationContext) validateAddTransactionProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
-	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maximal-protocol-version", config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_CLIENT_PROTOCOL_VERSION {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }
 
-func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction, proposedBlockProtocolVersion primitives.ProtocolVersion) *ErrTransactionRejected {
-	if transaction.Transaction().ProtocolVersion() > proposedBlockProtocolVersion {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("block-protocol-version", proposedBlockProtocolVersion), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
+	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_CLIENT_PROTOCOL_VERSION {
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }

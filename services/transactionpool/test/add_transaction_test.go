@@ -161,7 +161,7 @@ func TestDoesNotAddTransactionWithFutureProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
-		tx := builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE+1).Build()
+		tx := builders.TransferTransaction().WithProtocolVersion(config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION +1).Build()
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
 
@@ -174,7 +174,7 @@ func TestDoesAddTransactionWithOldProtocolVersion(t *testing.T) {
 	with.Concurrency(t, func(ctx context.Context, parent *with.ConcurrencyHarness) {
 		h := newHarness(parent).start(ctx)
 
-		tx := builders.TransferTransaction().WithProtocolVersion(config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE-1).Build()
+		tx := builders.TransferTransaction().WithProtocolVersion(config.MINIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION -1).Build()
 		h.ignoringForwardMessages()
 		h.ignoringTransactionResults()
 

@@ -286,7 +286,7 @@ func parseProtocolVersion(protocolVersionEvents []protocolVersionEvent) []manage
 	}
 
 	if len(protocolVersionPeriods) == 0 {
-		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version: config.MINIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE})
+		protocolVersionPeriods = append(protocolVersionPeriods, management.ProtocolVersionTerm{AsOfReference: 0, Version: config.MINIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION})
 	}
 
 	// TODO POSV2 consider if last PV is larger than config.maximalpv -> fail ?

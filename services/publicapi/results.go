@@ -37,7 +37,7 @@ func isOutputPotentiallyOutOfSync(config config.PublicApiConfig, referenceBlockT
 
 func validateRequest(cfg config.PublicApiConfig, protocolVersion primitives.ProtocolVersion, vcId primitives.VirtualChainId) (protocol.TransactionStatus, error) {
 	// TODO V2 - revisit this logic once client PV is decided. (OdedW)
-	if protocolVersion > config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE{
+	if protocolVersion > config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION {
 		return protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, errors.Errorf("invalid protocol version %d", protocolVersion)
 	}
 

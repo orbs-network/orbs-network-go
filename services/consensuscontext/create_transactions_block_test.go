@@ -28,7 +28,7 @@ func newHarnessWithConfigOnly(enableTriggers bool) *service {
 
 func requireTransactionToBeATriggerTransaction(t *testing.T, tx *protocol.SignedTransaction, cfg config.ConsensusContextConfig) {
 	require.Empty(t, tx.Signature())
-	require.Equal(t, config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE, tx.Transaction().ProtocolVersion())
+	require.Equal(t, config.MAXIMAL_CLIENT_PROTOCOL_VERSION, tx.Transaction().ProtocolVersion())
 	require.Equal(t, cfg.VirtualChainId(), tx.Transaction().VirtualChainId())
 	require.Equal(t, primitives.ContractName(triggers_systemcontract.CONTRACT_NAME), tx.Transaction().ContractName())
 	require.Equal(t, primitives.MethodName(triggers_systemcontract.METHOD_TRIGGER), tx.Transaction().MethodName())

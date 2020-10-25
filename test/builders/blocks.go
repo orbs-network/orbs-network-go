@@ -42,7 +42,7 @@ func BlockPair() *blockPair {
 
 	b := &blockPair{
 		txHeader: &protocol.TransactionsBlockHeaderBuilder{
-			ProtocolVersion:            config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+			ProtocolVersion:            config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 			VirtualChainId:             DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                1,
 			PrevBlockHashPtr:           empty32ByteHash,
@@ -57,7 +57,7 @@ func BlockPair() *blockPair {
 		transactions: transactions,
 		txProof:      nil,
 		rxHeader: &protocol.ResultsBlockHeaderBuilder{
-			ProtocolVersion:                 config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+			ProtocolVersion:                 config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
 			VirtualChainId:                  DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 			BlockHeight:                     1,
 			PrevBlockHashPtr:                empty32ByteHash,
@@ -309,16 +309,18 @@ func (c *corruptBlockPair) WithEmptyResultsBlock() *corruptBlockPair {
 }
 
 type blockPairBuilder struct {
-	protocolVersion    primitives.ProtocolVersion
-	virtualChainId     primitives.VirtualChainId
-	currentBlockHeight primitives.BlockHeight
-	blockProposer      primitives.NodeAddress
-	tiggerEnabled      bool
+	protocolVersion       primitives.ProtocolVersion
+	clientProtocolVersion primitives.ProtocolVersion
+	virtualChainId        primitives.VirtualChainId
+	currentBlockHeight    primitives.BlockHeight
+	blockProposer         primitives.NodeAddress
+	tiggerEnabled         bool
 }
 
 func BlockPairBuilder() *blockPairBuilder {
 	return &blockPairBuilder{
-		protocolVersion:    config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE,
+		protocolVersion:    config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION,
+		clientProtocolVersion: config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 		virtualChainId:     DEFAULT_TEST_VIRTUAL_CHAIN_ID,
 		currentBlockHeight: 1000,
 		blockProposer:      hash.Make32EmptyBytes(),
@@ -330,10 +332,10 @@ func (b *blockPairBuilder) Build() *protocol.BlockPairContainer {
 	blockTime := time.Now()
 	validPrevBlock := BlockPair().WithHeight(b.currentBlockHeight - 1).Build()
 	validPrevBlockHash := digest.CalcTransactionsBlockHash(validPrevBlock.TransactionsBlock)
-	transaction := TransferTransaction().WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6)).Build()
+	transaction := TransferTransaction().WithProtocolVersion(b.clientProtocolVersion).WithVirtualChainId(b.virtualChainId).WithAmountAndTargetAddress(10, ClientAddressForEd25519SignerForTests(6)).Build()
 	transactionArray := []*protocol.SignedTransaction{transaction}
 	if b.tiggerEnabled {
-		transactionArray = append(transactionArray, TriggerTransaction().WithTimestamp(blockTime).WithProtocolVersion(b.protocolVersion).WithVirtualChainId(b.virtualChainId).Build())
+		transactionArray = append(transactionArray, TriggerTransaction().WithTimestamp(blockTime).WithProtocolVersion(b.clientProtocolVersion).WithVirtualChainId(b.virtualChainId).Build())
 	}
 	txMetadata := &protocol.TransactionsBlockMetadataBuilder{}
 	txRootHashForValidBlock, _ := digest.CalcTransactionsMerkleRoot(transactionArray)
@@ -374,9 +376,14 @@ type blockPairBuilderConfig interface {
 }
 
 func (b *blockPairBuilder) WithCfg(cfg blockPairBuilderConfig) *blockPairBuilder {
-	b.protocolVersion = config.MAXIMAL_PROTOCOL_VERSION_SUPPORTED_VALUE
+	b.protocolVersion = config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION
 	b.virtualChainId = cfg.VirtualChainId()
 	b.tiggerEnabled = cfg.ConsensusContextTriggersEnabled()
+	return b
+}
+
+func (b *blockPairBuilder) WithClientProtocolVersion(cpv primitives.ProtocolVersion) *blockPairBuilder {
+	b.clientProtocolVersion = cpv
 	return b
 }
 
