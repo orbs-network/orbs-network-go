@@ -68,14 +68,14 @@ func (c *validationContext) ValidateTransactionForOrdering(transaction *protocol
 
 func (c *validationContext) validateAddTransactionProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_CLIENT_PROTOCOL_VERSION {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maxiaml client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("actual client-protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }
 
 func (c *validationContext) validateProtocolVersion(transaction *protocol.SignedTransaction) *ErrTransactionRejected {
 	if transaction.Transaction().ProtocolVersion() > config.MAXIMAL_CLIENT_PROTOCOL_VERSION {
-		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("protocol-version", transaction.Transaction().ProtocolVersion())}
+		return &ErrTransactionRejected{protocol.TRANSACTION_STATUS_REJECTED_UNSUPPORTED_VERSION, log.Stringable("maxiaml client-protocol-version", config.MAXIMAL_CLIENT_PROTOCOL_VERSION), log.Stringable("actual client-protocol-version", transaction.Transaction().ProtocolVersion())}
 	}
 	return nil
 }

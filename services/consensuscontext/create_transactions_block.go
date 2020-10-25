@@ -9,7 +9,7 @@ package consensuscontext
 import (
 	"context"
 	"github.com/orbs-network/crypto-lib-go/crypto/digest"
-	config2 "github.com/orbs-network/orbs-network-go/config"
+    "github.com/orbs-network/orbs-network-go/config"
 	"github.com/orbs-network/orbs-network-go/services/processor/native/repository/Triggers"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/protocol"
@@ -121,7 +121,7 @@ func (s *service) fetchTransactions(ctx context.Context, blockProtocolVersion pr
 func (s *service) createTriggerTransaction(blockTime primitives.TimestampNano) *protocol.SignedTransaction {
 	return (&protocol.SignedTransactionBuilder{
 		Transaction: &protocol.TransactionBuilder{
-			ProtocolVersion: config2.MAXIMAL_CLIENT_PROTOCOL_VERSION,
+			ProtocolVersion: config.MAXIMAL_CLIENT_PROTOCOL_VERSION,
 			VirtualChainId:  s.config.VirtualChainId(),
 			Timestamp:       blockTime,
 			ContractName:    primitives.ContractName(triggers_systemcontract.CONTRACT_NAME),
