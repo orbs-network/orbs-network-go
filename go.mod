@@ -30,7 +30,7 @@ require (
 	github.com/orbs-network/healthcheck v1.3.0
 	github.com/orbs-network/lean-helix-go v0.5.1-0.20201011065550-9473b7e1df05
 	github.com/orbs-network/membuffers v0.4.0
-	github.com/orbs-network/orbs-client-sdk-go v0.18.0
+	github.com/orbs-network/orbs-client-sdk-go v0.19.0
 	github.com/orbs-network/orbs-contract-sdk v1.8.0
 	github.com/orbs-network/orbs-spec v0.0.0-20201013064336-2e9a104f3993
 	github.com/orbs-network/scribe v0.2.3

@@ -37,9 +37,12 @@ type E2EConfig struct {
 
 type StressTestConfig struct {
 	enabled               bool
+	async                 bool
+	skipState             bool
 	numberOfTransactions  int64
 	acceptableFailureRate int64
 	targetTPS             float64
+	apiEndpoints          []string
 }
 
 const START_HTTP_PORT = 8090
@@ -94,11 +97,34 @@ func (h *Harness) DeployNativeContract(from *keys.Ed25519KeyPair, contractName s
 }
 
 func (h *Harness) SendTransaction(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
-	payload, txId, err := h.client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	return h.SendTransactionWithClient(h.client, senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+}
+
+func (h *Harness) SendTransactionWithClient(client *orbsClient.OrbsClient, senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
+	payload, txId, err := client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
 	if err != nil {
 		return nil, txId, err
 	}
-	out, err := h.client.SendTransaction(payload)
+	out, err := client.SendTransaction(payload)
+	if err != nil {
+		return nil, txId, err
+	}
+	return out.TransactionResponse, txId, err
+}
+
+func (h *Harness) SendTransactionAsync(senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
+	return h.SendTransactionAsyncWithClient(h.client, senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+}
+
+func (h *Harness) SendTransactionAsyncWithClient(client *orbsClient.OrbsClient, senderPublicKey []byte, senderPrivateKey []byte, contractName string, methodName string, args ...interface{}) (*codec.TransactionResponse, string, error) {
+	payload, txId, err := client.CreateTransaction(senderPublicKey, senderPrivateKey, contractName, methodName, args...)
+	if err != nil {
+		return nil, txId, err
+	}
+	out, err := client.SendTransactionAsync(payload)
+	if err != nil {
+		return nil, txId, err
+	}
 	return out.TransactionResponse, txId, err
 }
 
@@ -163,7 +189,7 @@ func (h *Harness) GetBlockHeight() primitives.BlockHeight {
 
 	if blockHeight, found := metricReader.GetAsInt(blockstorage.MetricBlockHeight); !found {
 		return 0
-	} else  {
+	} else {
 		return primitives.BlockHeight(blockHeight)
 	}
 }
@@ -176,7 +202,7 @@ func (h *Harness) GetTransactionCount() int64 {
 
 	if txCount, found := metricReader.GetAsInt(transactionpool.MetricCommittedPoolTransactions); !found {
 		return 0
-	} else  {
+	} else {
 		return txCount
 	}
 }
@@ -204,7 +230,7 @@ func (h *Harness) WaitUntilTransactionPoolIsReady(t *testing.T) {
 
 		if lastCommittedTimestamp, found := metricReader.GetAsInt(transactionpool.MetricLastCommittedTime); !found {
 			return false
-		} else  {
+		} else {
 			diff := lastCommittedTimestamp - time.Now().Add(recentBlockTimeDiff*-1).UnixNano()
 			return diff >= 0
 		}
@@ -259,6 +285,8 @@ func GetConfig() E2EConfig {
 	stressTestNumberOfTransactions := int64(10000)
 	stressTestFailureRate := int64(2)
 	stressTestTargetTPS := float64(700)
+	stressTestAsync := os.Getenv("STRESS_TEST_ASYNC") == "true"
+	stressTestSkipState := os.Getenv("STRESS_TEST_SKIP_STATE") == "true"
 
 	ethereumEndpoint := "http://127.0.0.1:8545"
 
@@ -268,10 +296,15 @@ func GetConfig() E2EConfig {
 		ethereumEndpoint = os.Getenv("ETHEREUM_ENDPOINT")
 	}
 
+	var stressTestAPIEndpoints = []string{os.Getenv("API_ENDPOINT")}
 	if stressTestEnabled {
 		stressTestNumberOfTransactions, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_NUMBER_OF_TRANSACTIONS"), 10, 0)
 		stressTestFailureRate, _ = strconv.ParseInt(os.Getenv("STRESS_TEST_FAILURE_RATE"), 10, 0)
 		stressTestTargetTPS, _ = strconv.ParseFloat(os.Getenv("STRESS_TEST_TARGET_TPS"), 0)
+		stressTestAPIEndpointsOverride := strings.Split(os.Getenv("STRESS_TEST_API_ENDPOINTS"), ",")
+		if len(stressTestAPIEndpointsOverride) > 0 {
+			stressTestAPIEndpoints = stressTestAPIEndpointsOverride
+		}
 	}
 
 	return E2EConfig{
@@ -281,9 +314,12 @@ func GetConfig() E2EConfig {
 		AppChainUrl:       appChainUrl,
 		StressTest: StressTestConfig{
 			enabled:               stressTestEnabled,
+			async:                 stressTestAsync,
 			numberOfTransactions:  stressTestNumberOfTransactions,
 			acceptableFailureRate: stressTestFailureRate,
 			targetTPS:             stressTestTargetTPS,
+			apiEndpoints:          stressTestAPIEndpoints,
+			skipState:             stressTestSkipState,
 		},
 		EthereumEndpoint: ethereumEndpoint,
 	}
