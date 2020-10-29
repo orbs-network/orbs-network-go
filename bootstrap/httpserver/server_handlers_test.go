@@ -287,7 +287,7 @@ func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 
 			require.Contains(t, res, "Timestamp")
 			require.Contains(t, res, "Error")
-			require.Equal(t, "LeanHelix Service has not committed any blocks yet", res["Status"])
+			require.Equal(t, "BlockStorage Service has not committed any NEW blocks yet", res["Status"])
 			require.NotEmpty(t, res["Payload"])
 		})
 	})
