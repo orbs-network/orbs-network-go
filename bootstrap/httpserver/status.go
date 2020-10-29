@@ -45,12 +45,12 @@ func (s *HttpServer) getStatusWarningMessage() string {
 	if maxTimeSinceLastBlock < 600000000 { // ten minutes
 		maxTimeSinceLastBlock = 600000000
 	}
-	leanHelixLastCommitteed := s.getGaugeValueFromMetrics("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano")
-	if leanHelixLastCommitteed == 0 {
-		return "LeanHelix Service has not committed any blocks yet"
+	lastTimeBlockWritten := s.getGaugeValueFromMetrics("BlockStorage.LastCommit.TimeNano")
+	if lastTimeBlockWritten == 0 {
+		return "BlockStorage Service has not committed any NEW blocks yet"
 	}
-	if leanHelixLastCommitteed + maxTimeSinceLastBlock < time.Now().UnixNano() {
-		return "Last Successful Committed Block was too long ago"
+	if lastTimeBlockWritten+maxTimeSinceLastBlock < time.Now().UnixNano() {
+		return "Last Successful block write to blockstorage was too long ago"
 	}
 
 	if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
@@ -59,7 +59,7 @@ func (s *HttpServer) getStatusWarningMessage() string {
 		if managementLastSuccessfullUpdate == 0 {
 			return "Management Service has never successfully updated"
 		}
-		if managementLastSuccessfullUpdate + maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
+		if managementLastSuccessfullUpdate+maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
 			return "Last successful Management Service update was too long ago"
 		}
 	}
