@@ -10,4 +10,5 @@ while [[ "${multilog_err}" -ne "0" ]]; do
 done
 
 echo "Running orbs-network-go.."
-/opt/orbs/orbs-node $@ 2>&1 | $multilog_cmd 2>&1
+
+/opt/orbs/orbs-node $@ 2>&1 | $multilog_cmd
