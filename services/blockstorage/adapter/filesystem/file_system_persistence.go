@@ -25,17 +25,20 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 type metrics struct {
-	sizeOnDisk *metric.Gauge
+	sizeOnDisk          *metric.Gauge
+	indexLastUpdateTime *metric.Gauge
 }
 
 const blocksFilename = "blocks"
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		sizeOnDisk: m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		sizeOnDisk:          m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
+		indexLastUpdateTime: m.NewGauge("BlockStorage.FileSystemIndex.LastUpdateTime"),
 	}
 }
 
@@ -76,7 +79,7 @@ func (f *BlockPersistence) GracefulShutdown(shutdownContext context.Context) {
 
 func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (*BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
-
+	metrics := newMetrics(metricFactory)
 	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
 
 	file, blocksOffset, err := openBlocksFile(conf, logger)
@@ -84,7 +87,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 		return nil, err
 	}
 
-	bhIndex, err := buildIndex(bufio.NewReaderSize(file, 1024*1024), blocksOffset, logger, codec)
+	bhIndex, err := buildIndex(bufio.NewReaderSize(file, 1024*1024), blocksOffset, logger, codec, metrics)
 	if err != nil {
 		closeSilently(file, logger)
 		return nil, err
@@ -100,7 +103,7 @@ func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent lo
 		bhIndex:      bhIndex,
 		config:       conf,
 		blockTracker: synchronization.NewBlockTracker(logger, uint64(bhIndex.getLastBlockHeight()), 5),
-		metrics:      newMetrics(metricFactory),
+		metrics:      metrics,
 		logger:       logger,
 		blockWriter:  newTip,
 		codec:        codec,
@@ -225,7 +228,7 @@ func newFileBlockWriter(file *os.File, codec blockCodec, nextBlockOffset int64) 
 	return result, nil
 }
 
-func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec) (*blockHeightIndex, error) {
+func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockCodec, metrics *metrics) (*blockHeightIndex, error) {
 	bhIndex := newBlockHeightIndex(logger, firstBlockOffset)
 	offset := int64(firstBlockOffset)
 	for {
@@ -241,6 +244,9 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 		err = bhIndex.appendBlock(offset+int64(blockSize), aBlock, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed building block height index")
+		}
+		if metrics != nil {
+			metrics.indexLastUpdateTime.Update(time.Now().Unix())
 		}
 		offset = offset + int64(blockSize)
 	}
@@ -268,6 +274,7 @@ func (f *BlockPersistence) WriteNextBlock(blockPair *protocol.BlockPairContainer
 		return false, f.bhIndex.getLastBlockHeight(), errors.Wrap(err, "failed to update index after writing block")
 	}
 
+	f.metrics.indexLastUpdateTime.Update(time.Now().Unix())
 	f.metrics.sizeOnDisk.Add(int64(n))
 	return true, f.bhIndex.getLastBlockHeight(), nil
 }

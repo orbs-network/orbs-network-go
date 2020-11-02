@@ -42,7 +42,7 @@ func TestConstructIndexFromReader(t *testing.T) {
 			return block, bytes, nil
 		})
 
-		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
+		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected index to construct with no error")
 		require.EqualValues(t, numBlocks, blockHeightIndex.getLastBlockHeight(), "expected index to reach topHeight block height")
@@ -88,7 +88,7 @@ func TestConstructIndexFromReaderInterleavedOrder(t *testing.T) {
 			return block, bytes, nil
 		})
 
-		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
+		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected index to construct with no error")
 		require.EqualValues(t, numBlocks, blockHeightIndex.getLastBlockHeight(), "expected index to reach topHeight block height")
@@ -135,7 +135,7 @@ func TestConstructIndexFromReaderInterleavedOrderWithGap(t *testing.T) {
 			return block, bytes, nil
 		})
 
-		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec)
+		blockHeightIndex, err := buildIndex(rw, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected index to construct with no error")
 		require.EqualValues(t, getBlockHeight(sequentialTopBlock), blockHeightIndex.getLastBlockHeight(), "expected index to reach sequential top height")
@@ -206,7 +206,7 @@ func TestBuildIndexSucceedsIndexingFromReader(t *testing.T) {
 		codec := newCodec(1024 * 1024)
 		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, maxTransactions, maxStateDiffs, codec)
 
-		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected buildIndex to succeed")
 		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
@@ -231,7 +231,7 @@ func TestBuildIndexHandlesPartialReads(t *testing.T) {
 		r, done := newBlockFileReadStream(t, ctrlRand, numBlocks, maxTransactions, maxStateDiffs, codec)
 
 		rBuffered, done2 := OneByteAtATimeReader(t, r)
-		bhIndex, err := buildIndex(rBuffered, 0, harness.Logger, codec)
+		bhIndex, err := buildIndex(rBuffered, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected buildIndex to succeed with a buffered reader")
 		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(numBlocks), "expected block height to match the encoded block count")
@@ -246,7 +246,7 @@ func TestBuildIndexHandlesEmptyFile(t *testing.T) {
 		codec := newCodec(1024 * 1024)
 
 		r := bytes.NewReader(make([]byte, 0, 0))
-		bhIndex, err := buildIndex(r, 0, harness.Logger, codec)
+		bhIndex, err := buildIndex(r, 0, harness.Logger, codec, nil)
 
 		require.NoError(t, err, "expected buildIndex to succeed")
 		require.Equal(t, bhIndex.getLastBlockHeight(), primitives.BlockHeight(0), "expected block height to be zero")

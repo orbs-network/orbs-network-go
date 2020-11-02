@@ -3,6 +3,7 @@ package httpserver
 import (
 	"encoding/json"
 	"github.com/orbs-network/scribe/log"
+	"github.com/pkg/errors"
 	"net/http"
 	"time"
 )
@@ -41,40 +42,39 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) getStatusWarningMessage() string {
-	maxTimeSinceLastBlock := s.config.TransactionPoolTimeBetweenEmptyBlocks().Nanoseconds() * 10
-	if maxTimeSinceLastBlock < 600000000 { // ten minutes
-		maxTimeSinceLastBlock = 600000000
+	maxTimeSinceLastBlockStorageUpdate := s.config.TransactionPoolTimeBetweenEmptyBlocks().Nanoseconds() * 10
+	if maxTimeSinceLastBlockStorageUpdate < 600000000 { // ten minutes
+		maxTimeSinceLastBlockStorageUpdate = 600000000
 	}
-	lastTimeBlockWritten := s.getGaugeValueFromMetrics("BlockStorage.LastCommit.TimeNano")
-	if lastTimeBlockWritten == 0 {
-		return "BlockStorage Service has not committed any NEW blocks yet"
-	}
-	if lastTimeBlockWritten+maxTimeSinceLastBlock < time.Now().UnixNano() {
-		return "Last Successful block write to blockstorage was too long ago"
+	if lastBlockStorageUpdateTime, err := s.getGaugeValueFromMetrics("BlockStorage.FileSystemIndex.LastUpdateTime"); err == nil {
+		if lastBlockStorageUpdateTime+maxTimeSinceLastBlockStorageUpdate < time.Now().UnixNano() {
+			return "Last successful blockstorage update (including index update on boot) was too long ago"
+		}
 	}
 
 	if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
 		maxIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
-		managementLastSuccessfullUpdate := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")
-		if managementLastSuccessfullUpdate == 0 {
-			return "Management Service has never successfully updated"
-		}
-		if managementLastSuccessfullUpdate+maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
-			return "Last successful Management Service update was too long ago"
+		if managementLastSuccessfullUpdate, err := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime"); err == nil {
+			if managementLastSuccessfullUpdate == 0 {
+				return "Management Service has never successfully updated"
+			}
+			if managementLastSuccessfullUpdate+maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
+				return "Last successful Management Service update was too long ago"
+			}
 		}
 	}
 
 	return "OK"
 }
 
-func (s *HttpServer) getGaugeValueFromMetrics(name string) int64 {
+func (s *HttpServer) getGaugeValueFromMetrics(name string) (int64, error) {
 	metricObj := s.metricRegistry.Get(name)
 	if metricObj == nil {
-		return 0
+		return 0, errors.New("error retrieving metric value")
 	}
 	if value, ok := metricObj.Value().(int64); !ok {
-		return 0
+		return 0, errors.New("error retrieving metric value")
 	} else {
-		return value
+		return value, nil
 	}
 }
