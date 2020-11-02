@@ -35,7 +35,7 @@ type metrics struct {
 
 const blocksFilename = "blocks"
 
-func newMetrics(m metric.Factory) *metrics {
+func generateBlockStorageMetrics(m metric.Factory) *metrics {
 	return &metrics{
 		sizeOnDisk:          m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
 		indexLastUpdateTime: m.NewGauge("BlockStorage.FileSystemIndex.LastUpdateTime"),
@@ -79,7 +79,7 @@ func (f *BlockPersistence) GracefulShutdown(shutdownContext context.Context) {
 
 func NewBlockPersistence(conf config.FilesystemBlockPersistenceConfig, parent log.Logger, metricFactory metric.Factory) (*BlockPersistence, error) {
 	logger := parent.WithTags(log.String("adapter", "block-storage"))
-	metrics := newMetrics(metricFactory)
+	metrics := generateBlockStorageMetrics(metricFactory)
 	codec := newCodec(conf.BlockStorageFileSystemMaxBlockSizeInBytes())
 
 	file, blocksOffset, err := openBlocksFile(conf, logger)
@@ -245,9 +245,7 @@ func buildIndex(r io.Reader, firstBlockOffset int64, logger log.Logger, c blockC
 		if err != nil {
 			return nil, errors.Wrap(err, "failed building block height index")
 		}
-		if metrics != nil {
-			metrics.indexLastUpdateTime.Update(time.Now().Unix())
-		}
+		metrics.indexLastUpdateTime.Update(time.Now().Unix())
 		offset = offset + int64(blockSize)
 	}
 	return bhIndex, nil
