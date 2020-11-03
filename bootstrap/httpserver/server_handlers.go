@@ -84,7 +84,7 @@ func (s *HttpServer) filterOff(w http.ResponseWriter, r *http.Request) {
 
 func (s *HttpServer) dumpMetricsAsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	bytes, _ := json.Marshal(s.metricRegistry.ExportAllNested())
+	bytes, _ := json.Marshal(s.metricRegistry.ExportAllNested(s.logger))
 	_, err := w.Write(bytes)
 	if err != nil {
 		s.logger.Info("error writing response", log.Error(err))
