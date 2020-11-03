@@ -44,11 +44,11 @@ type outgoingConnection struct {
 
 func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, metricFactory metric.Registry, sharedMetrics *outgoingConnectionMetrics, transportConfig timingsConfig) *outgoingConnection {
 	networkAddress := fmt.Sprintf("%s:%d", peer.Endpoint(), peer.Port())
-	hexAddressSliceForLogging := peer.HexOrbsAddress()[:6]
+	peerHexAddress := peer.HexOrbsAddress()
 
-	logger := parentLogger.WithTags(log.String("peer-node-address", hexAddressSliceForLogging), log.String("peer-network-address", networkAddress))
+	logger := parentLogger.WithTags(log.String("peer-node-address", peerHexAddress[:6]), log.String("peer-network-address", networkAddress))
 
-	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, hexAddressSliceForLogging)
+	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
@@ -58,9 +58,9 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 		metricRegistry:  metricFactory,
 		config:          transportConfig,
 		queue:           queue,
-		peerHexAddress:  hexAddressSliceForLogging,
-		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", hexAddressSliceForLogging)),
-		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", hexAddressSliceForLogging)),
+		peerHexAddress:  peerHexAddress,
+		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
+		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
 	}
 
 	return client
@@ -87,7 +87,7 @@ func (c *outgoingConnection) connectionMainLoop(parentCtx context.Context) {
 		if parentCtx.Err() != nil {
 			return // because otherwise the continue statement below could prevent us from ever shutting down
 		}
-		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress))
+		ctx := trace.NewContext(parentCtx, fmt.Sprintf("Gossip.Transport.TCP.Client.%s", c.peerHexAddress[:6]))
 		logger := c.logger.WithTags(trace.LogFieldFrom(ctx))
 
 		logger.Info("attempting outgoing transport connection")

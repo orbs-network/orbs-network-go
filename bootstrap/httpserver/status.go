@@ -27,7 +27,7 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now(),
 		Status:    statusString,
 		Error:     errorString,
-		Payload:   s.metricRegistry.ExportAllNested(),
+		Payload:   s.metricRegistry.ExportAllNested(s.logger),
 	}
 
 	data, _ := json.MarshalIndent(status, "", "\t")

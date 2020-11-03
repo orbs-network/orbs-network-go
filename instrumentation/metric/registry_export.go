@@ -7,6 +7,8 @@
 package metric
 
 import (
+	"fmt"
+	"github.com/orbs-network/scribe/log"
 	"strings"
 )
 
@@ -19,7 +21,7 @@ import (
  * 5) There is a e2e test that tries to call this function with panic if fail, this will prevent bad names
  */
 
-func (r *inMemoryRegistry) ExportAllNested() exportedMap {
+func (r *inMemoryRegistry) ExportAllNested(log log.Logger) exportedMap {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -29,7 +31,14 @@ func (r *inMemoryRegistry) ExportAllNested() exportedMap {
 		metricValue := metric.Export()
 		nameParts := strings.Split(metric.Name(), ".")
 
-		parseNextNestedLevel(0, nameParts, result, metricValue)
+		func () {
+			defer func () {
+				if r := recover(); r != nil {
+					log.Error(fmt.Sprintf("Export of metrics failed: key %s, value %v, error: %s", metric.Name(), metricValue, r))
+				}
+			}()
+			parseNextNestedLevel(0, nameParts, result, metricValue)
+		}()
 	}
 
 	return result
@@ -50,12 +59,8 @@ func getOrCreateLeaf(leafName string, currentNestedLevel exportedMap, value inte
 	if potentialLeaf, exists := currentNestedLevel[leafName]; !exists {
 		currentNestedLevel[leafName] = value
 	} else {
-		if nextLevel, ok := potentialLeaf.(exportedMap); ok {
-			nextLevel["Value"] = value
-		} else {
-			currentNestedLevel["Value"] = value
-			currentNestedLevel[leafName] = potentialLeaf
-		}
+		nextLevel := potentialLeaf.(exportedMap) // Cannot be otherwise caught by recover above
+		nextLevel["Value"] = value
 	}
 }
 
