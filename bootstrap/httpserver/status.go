@@ -41,26 +41,27 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) getStatusWarningMessage() string {
-	maxTimeSinceLastBlock := s.config.TransactionPoolTimeBetweenEmptyBlocks().Nanoseconds() * 10
-	if maxTimeSinceLastBlock < 600000000 { // ten minutes
-		maxTimeSinceLastBlock = 600000000
-	}
-	leanHelixLastCommitteed := s.getGaugeValueFromMetrics("ConsensusAlgo.LeanHelix.LastCommitted.TimeNano")
-	if leanHelixLastCommitteed == 0 {
-		return "LeanHelix Service has not committed any blocks yet"
-	}
-	if leanHelixLastCommitteed + maxTimeSinceLastBlock < time.Now().UnixNano() {
-		return "Last Successful Committed Block was too long ago"
+	if metricObj := s.metricRegistry.Get("BlockStorage.FileSystemIndex.LastUpdateTime"); metricObj != nil {
+		maxTimeSinceLastBlockStorageUpdate := s.config.TransactionPoolTimeBetweenEmptyBlocks().Nanoseconds() * 10
+		if maxTimeSinceLastBlockStorageUpdate < 600000000 { // ten minutes
+			maxTimeSinceLastBlockStorageUpdate = 600000000
+		}
+		lastBlockStorageUpdateTime := s.getGaugeValueFromMetrics("BlockStorage.FileSystemIndex.LastUpdateTime")
+		if lastBlockStorageUpdateTime+maxTimeSinceLastBlockStorageUpdate < time.Now().UnixNano() {
+			return "Last successful blockstorage update (including index update on boot) was too long ago"
+		}
 	}
 
-	if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
-		maxIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
-		managementLastSuccessfullUpdate := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")
-		if managementLastSuccessfullUpdate == 0 {
-			return "Management Service has never successfully updated"
-		}
-		if managementLastSuccessfullUpdate + maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
-			return "Last successful Management Service update was too long ago"
+	if metricObj := s.metricRegistry.Get("Management.Data.LastSuccessfulUpdateTime"); metricObj != nil {
+		if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
+			maxIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
+			managementLastSuccessfullUpdate := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")
+			if managementLastSuccessfullUpdate == 0 {
+				return "Management Service has never successfully updated"
+			}
+			if managementLastSuccessfullUpdate+maxIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
+				return "Last successful Management Service update was too long ago"
+			}
 		}
 	}
 

@@ -286,8 +286,21 @@ func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 			json.Unmarshal(rec.Body.Bytes(), &res)
 
 			require.Contains(t, res, "Timestamp")
+
+			h.server.metricRegistry.NewGauge("BlockStorage.FileSystemIndex.LastUpdateTime")
+			req, _ = http.NewRequest("Get", "/status", nil)
+			rec = httptest.NewRecorder()
+			h.server.getStatus(rec, req)
+
+			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
+
+			res = make(map[string]interface{})
+			json.Unmarshal(rec.Body.Bytes(), &res)
+
+			require.Contains(t, res, "Timestamp")
 			require.Contains(t, res, "Error")
-			require.Equal(t, "LeanHelix Service has not committed any blocks yet", res["Status"])
+			require.Equal(t, "Last successful blockstorage update (including index update on boot) was too long ago", res["Status"])
 			require.NotEmpty(t, res["Payload"])
 		})
 	})
