@@ -50,8 +50,12 @@ func getOrCreateLeaf(leafName string, currentNestedLevel exportedMap, value inte
 	if potentialLeaf, exists := currentNestedLevel[leafName]; !exists {
 		currentNestedLevel[leafName] = value
 	} else {
-		nextLevel := potentialLeaf.(exportedMap) // Cannot be otherwise
-		nextLevel["Value"] = value
+		if nextLevel, ok := potentialLeaf.(exportedMap); ok {
+			nextLevel["Value"] = value
+		} else {
+			currentNestedLevel["Value"] = value
+			currentNestedLevel[leafName] = potentialLeaf
+		}
 	}
 }
 
