@@ -273,35 +273,42 @@ func TestHttpServer_NonPublicApiIsAvailableImmediately(t *testing.T) {
 func TestHttpServer_PublicApiGetStatus(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		withServerHarness(parent, func(h *harness) {
+			h.AllowErrorsMatching("vc status issue")
 			h.server.metricRegistry.NewGauge("test.string.not.real").Update(100)
 
 			req, _ := http.NewRequest("Get", "/status", nil)
 			rec := httptest.NewRecorder()
 			h.server.getStatus(rec, req)
-
 			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
-
 			res := make(map[string]interface{})
 			json.Unmarshal(rec.Body.Bytes(), &res)
-
 			require.Contains(t, res, "Timestamp")
+			require.NotContains(t, res, "Error")
 
-			h.server.metricRegistry.NewGauge("BlockStorage.FileSystemIndex.LastUpdateTime")
-			req, _ = http.NewRequest("Get", "/status", nil)
+			now := time.Now()
+			bsg := h.server.metricRegistry.NewGaugeWithValue("BlockStorage.FileSystemIndex.LastUpdateTime",
+				now.Add(-h.server.config.TransactionPoolTimeBetweenEmptyBlocks()*20).Unix())
 			rec = httptest.NewRecorder()
 			h.server.getStatus(rec, req)
-
 			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
 			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
-
 			res = make(map[string]interface{})
 			json.Unmarshal(rec.Body.Bytes(), &res)
-
-			require.Contains(t, res, "Timestamp")
 			require.Contains(t, res, "Error")
-			require.Equal(t, "Last successful blockstorage update (including index update on boot) was too long ago", res["Status"])
+			require.Contains(t, res["Status"], "Last successful blockstorage update")
 			require.NotEmpty(t, res["Payload"])
+
+			bsg.Update(now.Unix())
+			rec = httptest.NewRecorder()
+			h.server.getStatus(rec, req)
+			require.Equal(t, http.StatusOK, rec.Code, "should succeed")
+			require.Equal(t, "application/json", rec.Header().Get("Content-Type"), "should have our content type")
+			res = make(map[string]interface{})
+			json.Unmarshal(rec.Body.Bytes(), &res)
+			require.Contains(t, res, "Timestamp")
+			require.NotContains(t, res, "Error")
+
 		})
 	})
 }

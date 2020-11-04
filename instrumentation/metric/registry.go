@@ -27,6 +27,7 @@ type Factory interface {
 	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewLatencyWithPrometheusName(name string, pName string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
+	NewGaugeWithValue(name string, value int64) *Gauge
 	NewGaugeWithPrometheusName(name string, pName string) *Gauge
 	NewRate(name string) *Rate
 	NewText(name string, defaultValue ...string) *Text
@@ -100,12 +101,39 @@ func (r *inMemoryRegistry) Remove(m metric) {
 func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
 	key := fmt.Sprintf("%p", m)
-	if _, isMetricInMap := r.mu.metrics[key]; isMetricInMap {
+	if exists(r, m.Name(), key) {
 		err := errors.Errorf("a metric with name %s is already registered", m.Name())
 		panic(err)
 	}
 
+	r.mu.metrics[key] = m
+}
+
+func exists(r *inMemoryRegistry, metricName string, metricKey string) bool {
+	for _, metric := range r.mu.metrics {
+		if metric.Name() == metricName {
+			return true
+		}
+	}
+	if _, isMetricInMap := r.mu.metrics[metricKey]; isMetricInMap {
+		return true
+	}
+	return false
+}
+
+func (r *inMemoryRegistry) registerWithValue(m metric, value int64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := fmt.Sprintf("%p", m)
+	if exists(r, m.Name(), key) {
+		err := errors.Errorf("a metric with name %s is already registered", m.Name())
+		panic(err)
+	}
+
+	m.(*Gauge).Update(value)
 	r.mu.metrics[key] = m
 }
 
@@ -122,6 +150,12 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 func (r *inMemoryRegistry) NewGaugeWithPrometheusName(name string, pName string) *Gauge {
 	g := newGauge(name, pName)
 	r.register(g)
+	return g
+}
+
+func (r *inMemoryRegistry) NewGaugeWithValue(name string, value int64) *Gauge {
+	g := newGauge(name, name)
+	r.registerWithValue(g, value)
 	return g
 }
 

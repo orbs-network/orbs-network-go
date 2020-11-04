@@ -38,7 +38,7 @@ const blocksFilename = "blocks"
 func generateBlockStorageMetrics(m metric.Factory) *metrics {
 	return &metrics{
 		sizeOnDisk:          m.NewGauge("BlockStorage.FileSystemSize.Bytes"),
-		indexLastUpdateTime: m.NewGauge("BlockStorage.FileSystemIndex.LastUpdateTime"),
+		indexLastUpdateTime: m.NewGaugeWithValue("BlockStorage.FileSystemIndex.LastUpdateTime", time.Now().Unix()),
 	}
 }
 
