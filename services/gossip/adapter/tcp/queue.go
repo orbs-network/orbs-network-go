@@ -28,10 +28,9 @@ type transportQueue struct {
 		disabled  bool // not under mutex on purpose
 	}
 	usagePercentageMetric *metric.Gauge
-	logger                log.Logger
 }
 
-func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Registry, peerNodeAddress string) *transportQueue {
+func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metric.Registry, peerNodeAddress string, logger log.Logger) *transportQueue {
 	q := &transportQueue{
 		channel:     make(chan *adapter.TransportData, maxSizeMessages),
 		maxBytes:    maxSizeBytes,
@@ -43,8 +42,9 @@ func NewTransportQueue(maxSizeBytes int, maxSizeMessages int, metricFactory metr
 	queueUsageName := fmt.Sprintf("Gossip.OutgoingConnection.QueueUsage.%s.Percent", peerNodeAddress)
 	queueUsageMetric := metricFactory.Get(queueUsageName)
 	if queueUsageMetric != nil {
-		metricFactory.Remove(queueUsageMetric)
+		logger.Info("TransportQueue ctor issue", log.Error(errors.Errorf("Metric %s still existed when new connection created", queueUsageName)))
 	}
+	metricFactory.Remove(queueUsageMetric)
 	q.usagePercentageMetric = metricFactory.NewGaugeWithPrometheusName(queueUsageName, fmt.Sprintf("Gossip.OutgoingConnection.Queue.Usage.%s.Percent", peerNodeAddress))
 
 	return q
