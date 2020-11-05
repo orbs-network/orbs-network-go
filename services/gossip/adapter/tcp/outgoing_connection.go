@@ -48,11 +48,11 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 
 	logger := parentLogger.WithTags(log.String("peer-node-address", peerHexAddress[:6]), log.String("peer-network-address", networkAddress))
 
-	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress)
+	queue := NewTransportQueue(SEND_QUEUE_MAX_BYTES, SEND_QUEUE_MAX_MESSAGES, metricFactory, peerHexAddress, logger)
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
-	sendErrors, sendQueueErrors := generateMetrics(peerHexAddress, metricFactory)
+	sendErrors, sendQueueErrors := generateMetrics(peerHexAddress, metricFactory, logger)
 
 	client := &outgoingConnection{
 		logger:          logger,
@@ -69,16 +69,22 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 }
 
 // This is a round-about way to clean up these metrics that can be left over from previous connection
-func generateMetrics(peerHexAddress string, metricFactory metric.Registry) (*metric.Gauge, *metric.Gauge) {
-	sendErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)
-	sendErrorMetric := metricFactory.Get(sendErrorsName)
+func generateMetrics(peerHexAddress string, metricFactory metric.Registry, logger log.Logger) (*metric.Gauge, *metric.Gauge) {
+	sendErrorName := fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)
+	sendErrorMetric := metricFactory.Get(sendErrorName)
+	if sendErrorMetric != nil {
+		logger.Info("New Outgoing connection issue", log.Error(errors.Errorf("Metric %s still existed when new connection created", sendErrorName)))
+	}
 	metricFactory.Remove(sendErrorMetric)
 
 	sendQueueErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)
 	sendQueueErrorMetric := metricFactory.Get(sendQueueErrorsName)
+	if sendQueueErrorMetric != nil {
+		logger.Info("New Outgoing connection issue", log.Error(errors.Errorf("Metric %s still existed when new connection created", sendQueueErrorsName)))
+	}
 	metricFactory.Remove(sendQueueErrorMetric)
 
-	return metricFactory.NewGauge(sendErrorsName), metricFactory.NewGauge(sendQueueErrorsName)
+	return metricFactory.NewGauge(sendErrorName), metricFactory.NewGauge(sendQueueErrorsName)
 }
 
 func (c *outgoingConnection) connect(parent context.Context) {
