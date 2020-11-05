@@ -86,6 +86,10 @@ func (r *inMemoryRegistry) Get(metricName string) metric {
 func (r *inMemoryRegistry) Remove(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if m == nil {
+		return
+	}
+
 	if mapMetric, isMetricInMap := r.mu.metrics[m.Name()]; isMetricInMap {
 		if mapMetric == m {
 			delete(r.mu.metrics, m.Name())

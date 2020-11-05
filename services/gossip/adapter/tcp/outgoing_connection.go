@@ -72,14 +72,12 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 func generateMetrics(peerHexAddress string, metricFactory metric.Registry) (*metric.Gauge, *metric.Gauge){
 	sendErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)
 	sendErrorMetric := metricFactory.Get(sendErrorsName)
-	if sendErrorMetric != nil {
-		metricFactory.Remove(sendErrorMetric)
-	}
+	metricFactory.Remove(sendErrorMetric)
+
 	sendQueueErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)
 	sendQueueErrorMetric := metricFactory.Get(sendQueueErrorsName)
-	if sendQueueErrorMetric != nil {
-		metricFactory.Remove(sendQueueErrorMetric)
-	}
+	metricFactory.Remove(sendQueueErrorMetric)
+
 	return metricFactory.NewGauge(sendErrorsName),  metricFactory.NewGauge(sendQueueErrorsName)
 }
 
