@@ -26,6 +26,7 @@ type Factory interface {
 	NewLatency(name string, maxDuration time.Duration) *Histogram
 	NewLatencyWithPrometheusName(name string, pName string, maxDuration time.Duration) *Histogram
 	NewGauge(name string) *Gauge
+	NewGaugeWithValue(name string, value int64) *Gauge
 	NewGaugeWithPrometheusName(name string, pName string) *Gauge
 	NewRate(name string) *Rate
 	NewText(name string, defaultValue ...string) *Text
@@ -120,6 +121,13 @@ func (r *inMemoryRegistry) NewGauge(name string) *Gauge {
 
 func (r *inMemoryRegistry) NewGaugeWithPrometheusName(name string, pName string) *Gauge {
 	g := newGauge(name, pName)
+	r.register(g)
+	return g
+}
+
+func (r *inMemoryRegistry) NewGaugeWithValue(name string, value int64) *Gauge {
+	g := newGauge(name, name)
+	g.Update(value)
 	r.register(g)
 	return g
 }
