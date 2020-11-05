@@ -8,7 +8,6 @@ package metric
 
 import (
 	"context"
-	"fmt"
 	"github.com/orbs-network/govnr"
 	"github.com/orbs-network/orbs-network-go/synchronization"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
@@ -80,33 +79,29 @@ func (r *inMemoryRegistry) WithNodeAddress(nodeAddress primitives.NodeAddress) R
 func (r *inMemoryRegistry) Get(metricName string) metric {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	for _, metric := range r.mu.metrics {
-		if metric.Name() == metricName {
-			return metric
-		}
-	}
-	return nil
+	return r.mu.metrics[metricName]
 }
 
+// Only if the actual metric (the object/pointer) is the same remove metric
 func (r *inMemoryRegistry) Remove(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	key := fmt.Sprintf("%p", m)
-	if _, isMetricInMap := r.mu.metrics[key]; isMetricInMap {
-		delete(r.mu.metrics, key)
+	if mapMetric, isMetricInMap := r.mu.metrics[m.Name()]; isMetricInMap {
+		if mapMetric == m {
+			delete(r.mu.metrics, m.Name())
+		}
 	}
 }
 
 func (r *inMemoryRegistry) register(m metric) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	key := fmt.Sprintf("%p", m)
-	if _, isMetricInMap := r.mu.metrics[key]; isMetricInMap {
+	if _, isMetricInMap := r.mu.metrics[m.Name()]; isMetricInMap {
 		err := errors.Errorf("a metric with name %s is already registered", m.Name())
 		panic(err)
 	}
 
-	r.mu.metrics[key] = m
+	r.mu.metrics[m.Name()] = m
 }
 
 func (r *inMemoryRegistry) NewRate(name string) *Rate {
