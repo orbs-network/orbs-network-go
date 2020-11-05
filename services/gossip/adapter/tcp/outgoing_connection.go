@@ -52,6 +52,8 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 	queue.networkAddress = networkAddress
 	queue.Disable() // until connection is established
 
+	sendErrors, sendQueueErrors := generateMetrics(peerHexAddress, metricFactory)
+
 	client := &outgoingConnection{
 		logger:          logger,
 		sharedMetrics:   sharedMetrics,
@@ -59,11 +61,24 @@ func newOutgoingConnection(peer adapter.TransportPeer, parentLogger log.Logger, 
 		config:          transportConfig,
 		queue:           queue,
 		peerHexAddress:  peerHexAddress,
-		sendErrors:      metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)),
-		sendQueueErrors: metricFactory.NewGauge(fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)),
+		sendErrors:      sendErrors,
+		sendQueueErrors: sendQueueErrors,
 	}
 
 	return client
+}
+
+// This is a round-about way to clean up these metrics that can be left over from previous connection
+func generateMetrics(peerHexAddress string, metricFactory metric.Registry) (*metric.Gauge, *metric.Gauge) {
+	sendErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.SendError.%s.Count", peerHexAddress)
+	sendErrorMetric := metricFactory.Get(sendErrorsName)
+	metricFactory.Remove(sendErrorMetric)
+
+	sendQueueErrorsName := fmt.Sprintf("Gossip.OutgoingConnection.EnqueueErrors.%s.Count", peerHexAddress)
+	sendQueueErrorMetric := metricFactory.Get(sendQueueErrorsName)
+	metricFactory.Remove(sendQueueErrorMetric)
+
+	return metricFactory.NewGauge(sendErrorsName), metricFactory.NewGauge(sendQueueErrorsName)
 }
 
 func (c *outgoingConnection) connect(parent context.Context) {

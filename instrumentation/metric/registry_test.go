@@ -75,14 +75,50 @@ func TestInMemoryRegistry_ExportThenGet(t *testing.T) {
 	})
 }
 
+func TestInMemoryRegistry_Get(t *testing.T) {
+	registry := NewRegistry()
+	gauge := registry.NewGauge("hello")
+	gaugeFromReg := registry.Get("hello")
+
+	require.Equal(t, gauge, gaugeFromReg)
+	require.NotEmpty(t, registry.mu.metrics)
+}
+
 func TestInMemoryRegistry_Remove(t *testing.T) {
 	registry := NewRegistry()
 	gauge := registry.NewGauge("hello")
 	registry.Remove(gauge)
 
-	registry.mu.Lock()
 	require.Empty(t, registry.mu.metrics)
-	registry.mu.Unlock()
+}
+
+func TestInMemoryRegistry_RemoveSameNameDifferentObject(t *testing.T) {
+	registry := NewRegistry()
+	gauge := registry.NewGauge("hello")
+	otherGaugeSameName := newGauge("hello", "hello")
+	registry.Remove(otherGaugeSameName)
+
+	require.NotEmpty(t, registry.mu.metrics)
+	gaugeFromReg := registry.Get("hello")
+	require.Equal(t, gauge, gaugeFromReg)
+}
+
+func TestInMemoryRegistry_RegisterSameNamePanics(t *testing.T) {
+	registry := NewRegistry()
+	registry.NewGauge("hello")
+
+	require.Panics(t, func() {
+		registry.NewGauge("hello")
+	}, "should have rejected same name")
+}
+
+func TestInMemoryRegistry_RegisterSameNameDiffTypePanics(t *testing.T) {
+	registry := NewRegistry()
+	registry.NewGauge("hello")
+
+	require.Panics(t, func() {
+		registry.NewText("hello")
+	}, "should have rejected same name")
 }
 
 func createItem(registry Registry, name string, value int64) {
