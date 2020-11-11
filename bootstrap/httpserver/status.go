@@ -36,33 +36,38 @@ func (s *HttpServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write(data)
 	if err != nil {
 		s.logger.Info("error writing index.json response", log.Error(err))
-
 	}
-
 }
 
 func (s *HttpServer) getStatusWarningMessage() string {
 	var status string
 
-	if metricObj := s.metricRegistry.Get("BlockStorage.FileSystemIndex.LastUpdateTime"); metricObj != nil {
-		graceTimeSinceLastBlockStorageUpdate := s.config.TransactionPoolTimeBetweenEmptyBlocks() * 10
-		if graceTimeSinceLastBlockStorageUpdate < time.Minute*10 {
-			graceTimeSinceLastBlockStorageUpdate = time.Minute * 10
+	// if no genesis exists nothing to do
+	if metricObj := s.metricRegistry.Get("Management.Data.GenesisRefTime"); metricObj != nil {
+		genesisRefTime := s.getGaugeValueFromMetrics("Management.Data.GenesisRefTime")
+		currentRefTime := s.getGaugeValueFromMetrics("Management.Data.CurrentRefTime")
+		if (genesisRefTime > 0 && currentRefTime > genesisRefTime) || genesisRefTime == 0 { // blocks should be closing
+			if metricObj := s.metricRegistry.Get("BlockStorage.FileSystemIndex.LastUpdateTime"); metricObj != nil {
+				graceTimeSinceLastBlockStorageUpdate := s.config.TransactionPoolTimeBetweenEmptyBlocks() * 10
+				if graceTimeSinceLastBlockStorageUpdate < time.Minute*10 {
+					graceTimeSinceLastBlockStorageUpdate = time.Minute * 10
+				}
+				lastBlockStorageUpdateTime := s.getGaugeValueFromMetrics("BlockStorage.FileSystemIndex.LastUpdateTime")
+				if lastBlockStorageUpdateTime+int64(graceTimeSinceLastBlockStorageUpdate.Seconds()) < time.Now().Unix() {
+					status += fmt.Sprintf("Last successful blockstorage update:  %v,  was too long ago (last update includes indexing on boot) ;", lastBlockStorageUpdateTime)
+				}
+			}
 		}
-		lastBlockStorageUpdateTime := s.getGaugeValueFromMetrics("BlockStorage.FileSystemIndex.LastUpdateTime")
-		if lastBlockStorageUpdateTime+int64(graceTimeSinceLastBlockStorageUpdate.Seconds()) < time.Now().Unix() {
-			status += fmt.Sprintf("Last successful blockstorage update:  %v,  was too long ago (last update includes indexing on boot) ;", lastBlockStorageUpdateTime)
-		}
-	}
 
-	if metricObj := s.metricRegistry.Get("Management.Data.LastSuccessfulUpdateTime"); metricObj != nil {
-		if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
-			graceIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
-			managementLastSuccessfullUpdate := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")
-			if managementLastSuccessfullUpdate == 0 {
-				status += "Management Service has never successfully updated ;"
-			} else if managementLastSuccessfullUpdate+graceIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
-				status += fmt.Sprintf("Last successful Management Service update:  %v, was too long ago ;", managementLastSuccessfullUpdate)
+		if metricObj := s.metricRegistry.Get("Management.Data.LastSuccessfulUpdateTime"); metricObj != nil {
+			if len(s.config.ManagementFilePath()) != 0 && s.config.ManagementPollingInterval() > 0 {
+				graceIntervalSinceLastSuccessfulManagementUpdate := int64(s.config.ManagementPollingInterval().Seconds()) * 20
+				managementLastSuccessfulUpdate := s.getGaugeValueFromMetrics("Management.Data.LastSuccessfulUpdateTime")
+				if managementLastSuccessfulUpdate == 0 {
+					status += "Management Service has never successfully updated ;"
+				} else if managementLastSuccessfulUpdate+graceIntervalSinceLastSuccessfulManagementUpdate < time.Now().Unix() {
+					status += fmt.Sprintf("Last successful Management Service update:  %v, was too long ago ;", managementLastSuccessfulUpdate)
+				}
 			}
 		}
 	}
