@@ -191,15 +191,15 @@ func (p *blockProvider) GenerateGenesisBlockProposal(ctx context.Context) (lh.Bl
 }
 
 func (s *Service) verifyChainTip(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
-	if err := s.blockProvider.validateBlockCommittee(ctx, blockPair, prevBlockPair); err != nil {
-		s.logger.Info("HandleBlockConsensus()::verifyChainTip - Failed to validate block committee", log.Error(err))
+	if err := s.blockProvider.ValidateBlockReferenceTime(ctx, blockPair, prevBlockPair); err != nil {
+		s.logger.Info("HandleBlockConsensus()::verifyChainTip - Failed to validate block reference time", log.Error(err))
 		return s.validateBlockConsensus(ctx, blockPair, nil, true) // prevBlock nil => use current ref time (committee)
 	}
 	return nil
 }
 
-func (p *blockProvider) validateBlockCommittee(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
-	_, err := p.consensusContext.ValidateBlockCommittee(ctx, &services.ValidateBlockCommitteeInput{
+func (p *blockProvider) ValidateBlockReferenceTime(ctx context.Context, blockPair *protocol.BlockPairContainer, prevBlockPair *protocol.BlockPairContainer) error {
+	_, err := p.consensusContext.ValidateBlockReferenceTime(ctx, &services.ValidateBlockReferenceTimeInput{
 		BlockHeight:            getBlockHeight(blockPair),
 		PrevBlockReferenceTime: getBlockReferenceTime(prevBlockPair),
 	})
