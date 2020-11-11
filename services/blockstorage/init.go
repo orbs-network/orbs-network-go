@@ -66,7 +66,7 @@ func newMetrics(m metric.Factory) *metrics {
 		inOrderBlockTime:         m.NewGauge("BlockStorage.InOrderBlock.BlockTime.TimeNano"),
 		topBlockHeight:           m.NewGauge("BlockStorage.TopBlock.BlockHeight"),
 		topBlockTime:             m.NewGauge("BlockStorage.TopBlock.BlockTime.TimeNano"),
-		lastCommitTime:           m.NewGauge("BlockStorage.LastCommit.TimeNano"),
+		lastCommitTime:           m.NewGaugeWithValue("BlockStorage.LastCommit.TimeNano", time.Now().UnixNano()),
 	}
 }
 
