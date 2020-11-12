@@ -103,18 +103,18 @@ func (s *service) RequestBlockProofValidationCommittee(ctx context.Context, inpu
 	return res, nil
 }
 
-func (s *service) ValidateBlockCommittee(ctx context.Context, input *services.ValidateBlockCommitteeInput) (*services.ValidateBlockCommitteeOutput, error) {
+func (s *service) ValidateBlockReferenceTime(ctx context.Context, input *services.ValidateBlockReferenceTimeInput) (*services.ValidateBlockReferenceTimeOutput, error) {
 	// refTime might be adjusted to genesis if block height is 1
 	adjustedPrevBlockReferenceTime, err := s.adjustPrevReference(ctx, input.BlockHeight, input.PrevBlockReferenceTime)
 	if err != nil {
-		return nil, errors.Wrap(err, "ValidateBlockCommittee")
+		return nil, errors.Wrap(err, "ValidateBlockReferenceTime")
 	}
 
 	now := time.Duration(time.Now().Unix()) * time.Second
 	if (time.Duration(adjustedPrevBlockReferenceTime)*time.Second)+s.config.ManagementConsensusGraceTimeout() < now { // prevRefTime-committee is too old
-		return nil, errors.New("ValidateBlockCommittee: block committee (:=prevBlock.RefTime) is outdated")
+		return nil, errors.New("ValidateBlockReferenceTime: block reference time is outdated ( used on :=prevBlock.RefTime for current consensus round committee grace time ) ")
 	}
 
-	return &services.ValidateBlockCommitteeOutput{}, nil
+	return &services.ValidateBlockReferenceTimeOutput{}, nil
 
 }
