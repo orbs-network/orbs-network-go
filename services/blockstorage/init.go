@@ -99,7 +99,7 @@ func NewBlockStorage(
 	}
 	s.Supervise(s.nodeSync)
 	s.Supervise(s.startNotifyNodeSync(ctx))
-	s.updateMetrics(0)
+	s.updateMetrics(time.Now().UnixNano())
 	return s
 }
 
