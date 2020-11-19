@@ -104,11 +104,11 @@ func TestValidateResultsBlockFailsOnBadGenesis(t *testing.T) {
 		with.Logging(t, func(harness *with.LoggingHarness) {
 			s := newHarness(harness.Logger, false)
 			s.management.Reset()
-			setManagementValues(s.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix() + 5000))
+			setManagementValues(s.management, 1, primitives.TimestampSeconds(time.Now().Unix()), primitives.TimestampSeconds(time.Now().Unix()+5000))
 
 			input := &services.ValidateResultsBlockInput{
 				CurrentBlockHeight:     1,
-				PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Unix() -1000),
+				PrevBlockReferenceTime: primitives.TimestampSeconds(time.Now().Unix() - 1000),
 			}
 
 			_, err := s.service.ValidateResultsBlock(ctx, input)
@@ -117,3 +117,43 @@ func TestValidateResultsBlockFailsOnBadGenesis(t *testing.T) {
 	})
 }
 
+func TestValidateBlockReferenceTime(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(harness *with.LoggingHarness) {
+			s := newHarness(harness.Logger, false)
+			s.management.Reset()
+			now := time.Now()
+			currentRefTime := primitives.TimestampSeconds(now.Unix())
+			genesisRefTime := primitives.TimestampSeconds(now.Add(-s.config.CommitteeGracePeriod() * 2).Unix()) // invalid committee grace wise
+			setManagementValues(s.management, 1, currentRefTime, genesisRefTime)
+
+			// validate genesis block (prev refTime := Management.genesis)
+			input := &services.ValidateBlockReferenceTimeInput{
+				BlockHeight:            1,
+				PrevBlockReferenceTime: 0,
+			}
+
+			// genesis block with an invalid genesis ref time
+			_, err := s.service.ValidateBlockReferenceTime(ctx, input) // note: ValidateBlockReferenceTime uses time.now within function
+			require.Error(t, err, "validation should fail as genesis reference time is outdated (not within committee grace - honesty assumption time)")
+
+			// genesis block with valid genesis ref time
+			s.management.Reset()
+			genesisRefTime = primitives.TimestampSeconds(now.Add(-s.config.CommitteeGracePeriod() / 2).Unix())
+			setManagementValues(s.management, 1, currentRefTime, genesisRefTime)
+			_, err = s.service.ValidateBlockReferenceTime(ctx, input)
+			require.NoError(t, err, "validation should succeed as genesis reference time is within committee grace - honesty assumption time")
+
+			// too old ref time (non genesis)
+			input.BlockHeight = primitives.BlockHeight(10)
+			input.PrevBlockReferenceTime = primitives.TimestampSeconds(now.Add(-s.config.CommitteeGracePeriod() * 2).Unix()) // invalid committee grace wise
+			_, err = s.service.ValidateBlockReferenceTime(ctx, input)
+			require.Error(t, err, "validation should fail as prev block reference time is outdated (not within committee grace - honesty assumption time)")
+
+			// valid ref time
+			input.PrevBlockReferenceTime = primitives.TimestampSeconds(now.Add(-s.config.CommitteeGracePeriod() / 2).Unix()) // valid refTime - committee grace wise
+			_, err = s.service.ValidateBlockReferenceTime(ctx, input)
+			require.NoError(t, err, "validation should succeed as  prev reference time is within committee grace - honesty assumption time")
+		})
+	})
+}

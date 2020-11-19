@@ -38,7 +38,6 @@ type blockSyncConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	CommitteeGracePeriod() time.Duration
 }
 
 type SyncState struct {
@@ -132,8 +131,7 @@ func newBlockSyncWithFactory(ctx context.Context, config blockSyncConfig, factor
 		log.Stringable("collect-responses-timeout", bs.factory.config.BlockSyncCollectResponseTimeout()),
 		log.Stringable("collect-chunks-timeout", bs.factory.config.BlockSyncCollectChunksTimeout()),
 		log.Uint32("batch-size", bs.factory.config.BlockSyncNumBlocksInBatch()),
-		log.Stringable("blocks-order", bs.factory.getSyncBlocksOrder()),
-		log.Stringable("committee-grace-period", bs.factory.config.CommitteeGracePeriod()))
+		log.Stringable("blocks-order", bs.factory.getSyncBlocksOrder()))
 
 	bs.Supervise(govnr.Forever(ctx, "Node sync state machine", logfields.GovnrErrorer(logger), func() {
 		bs.syncLoop(ctx)

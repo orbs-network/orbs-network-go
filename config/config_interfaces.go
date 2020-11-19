@@ -26,7 +26,7 @@ type NodeConfig interface {
 	ManagementMaxFileSize() uint32
 	ManagementPollingInterval() time.Duration
 	ManagementConsensusGraceTimeout() time.Duration
-	CommitteeGracePeriod() time.Duration // also used in blockSync
+	CommitteeGracePeriod() time.Duration // also used in blockSync (via consensus context)
 
 	// consensus
 	ActiveConsensusAlgo() consensus.ConsensusAlgoType
@@ -142,7 +142,6 @@ type BlockStorageConfig interface {
 	BlockSyncCollectResponseTimeout() time.Duration
 	BlockSyncCollectChunksTimeout() time.Duration
 	BlockSyncDescendingEnabled() bool
-	CommitteeGracePeriod() time.Duration
 	BlockStorageTransactionReceiptQueryTimestampGrace() time.Duration
 	TransactionExpirationWindow() time.Duration
 	BlockTrackerGraceTimeout() time.Duration
@@ -163,7 +162,6 @@ type GossipTransportConfig interface {
 	GossipReconnectInterval() time.Duration
 }
 
-// Config based on https://github.com/orbs-network/orbs-spec/blob/master/behaviors/config/services.md#consensus-context
 type ConsensusContextConfig interface {
 	VirtualChainId() primitives.VirtualChainId
 	ConsensusContextMaximumTransactionsInBlock() uint32
@@ -171,6 +169,7 @@ type ConsensusContextConfig interface {
 	ConsensusContextSystemTimestampAllowedJitter() time.Duration
 	ConsensusContextTriggersEnabled() bool
 	ManagementConsensusGraceTimeout() time.Duration
+	CommitteeGracePeriod() time.Duration
 }
 
 type PublicApiConfig interface {
