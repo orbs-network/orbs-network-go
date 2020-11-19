@@ -111,8 +111,8 @@ func (s *service) ValidateBlockReferenceTime(ctx context.Context, input *service
 	}
 
 	now := time.Duration(time.Now().Unix()) * time.Second
-	if (time.Duration(adjustedPrevBlockReferenceTime)*time.Second)+s.config.ManagementConsensusGraceTimeout() < now { // prevRefTime-committee is too old
-		return nil, errors.New("ValidateBlockReferenceTime: block reference time is outdated ( used on :=prevBlock.RefTime for current consensus round committee grace time ) ")
+	if (time.Duration(adjustedPrevBlockReferenceTime)*time.Second)+s.config.CommitteeGracePeriod() < now { // prevRefTime-committee is too old
+		return nil, errors.New(fmt.Sprintf("ValidateBlockReferenceTime: block reference time is outdated ( verified against :=prevBlock.RefTime for current consensus round committee ) : blockheight=%d, prevblock.refTime(sec)=%d", uint(input.BlockHeight), input.PrevBlockReferenceTime))
 	}
 
 	return &services.ValidateBlockReferenceTimeOutput{}, nil

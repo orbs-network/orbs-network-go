@@ -72,7 +72,7 @@ func (s *processingBlocksState) processState(ctx context.Context) syncState {
 		logger.Info("failed to verify the blocks chunk range received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
 	}
-	if err := s.validateChainFork(ctx, s.blocks.BlockPairs, syncState, s.factory.config.CommitteeGracePeriod(), receivedSyncBlocksOrder); err != nil {
+	if err := s.validateChainFork(ctx, s.blocks.BlockPairs, syncState, receivedSyncBlocksOrder); err != nil {
 		s.metrics.failedValidationBlocks.Inc()
 		logger.Info("failed to verify the blocks chunk PoS received via sync", log.Error(err))
 		return s.factory.CreateCollectingAvailabilityResponseState()
@@ -165,7 +165,7 @@ func (s *processingBlocksState) validateBlocksRange(blocks []*protocol.BlockPair
 }
 
 // assumes blocks range is correct. Specifically in descending (blockStorage.lastSynced.height - 1 == blocks[0].height ) or ( blocks[0].height > blockStorage.top.height)
-func (s *processingBlocksState) validateChainFork(ctx context.Context, blocks []*protocol.BlockPairContainer, syncState SyncState, committeeGraePeriod time.Duration, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
+func (s *processingBlocksState) validateChainFork(ctx context.Context, blocks []*protocol.BlockPairContainer, syncState SyncState, receivedSyncBlocksOrder gossipmessages.SyncBlocksOrder) error {
 	syncBlocksOrder := s.factory.getSyncBlocksOrder()
 	topHeight, _, lastSyncedHeight := syncState.GetSyncStateBlockHeights()
 

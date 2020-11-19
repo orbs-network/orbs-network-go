@@ -49,6 +49,7 @@ func ForConsensusContextTests(triggersEnabled bool) ConsensusContextConfig {
 	cfg.SetDuration(CONSENSUS_CONTEXT_SYSTEM_TIMESTAMP_ALLOWED_JITTER, 2*time.Second)
 	cfg.SetBool(CONSENSUS_CONTEXT_TRIGGERS_ENABLED, triggersEnabled)
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 1*time.Minute)
+	cfg.SetDuration(COMMITTEE_GRACE_PERIOD, 1*time.Hour)
 
 	return cfg
 }
