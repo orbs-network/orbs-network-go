@@ -4,7 +4,7 @@ These Terms of Use (“<u>Terms</u>”) are a multi-party contract among you
 and all other participants in the current and future decentralized,
 blockchain infrastructure-as-a-service network, branded “Orbs” and made
 available in open source code form at the GitHub repositories located at
-<https://github.com/orbs-network(the “<u>Network</u>”), including
+https://github.com/orbs-network (the “<u>Network</u>”), including
 without limitation the Network’s: (1) consensus-based decentralized
 computing services, (2) consensus-based decentralized storage services,
 (3) consensus-as-a-service services, and (4) security, governance and
