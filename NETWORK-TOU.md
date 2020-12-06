@@ -830,7 +830,9 @@ Network and obligates such End-User to be subject to these Terms.  Such
 Developer or other participant is solely responsible for the
 effectiveness of such arrangement with the applicable End Users. 
 
-**<u>Exhibit A Declaration of Guardians</u>**
+# Exhibit A
+ 
+## Declaration of Guardians
 
 In registering to become eligible to serve as a Guardian and operate a
 validator node on the Orbs Network, I \[we\] hereby declare to all other
