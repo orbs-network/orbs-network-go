@@ -23,6 +23,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
 type FileConfig interface {
@@ -34,10 +35,14 @@ type FileConfig interface {
 type FileProvider struct {
 	logger log.Logger
 	config FileConfig
+	client *http.Client
 }
 
 func NewFileProvider(config FileConfig, logger log.Logger) *FileProvider {
-	return &FileProvider{config: config, logger: logger}
+	client := &http.Client{
+		Timeout: 45 * time.Second,
+	}
+	return &FileProvider{config: config, logger: logger, client:client}
 }
 
 func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
@@ -78,7 +83,8 @@ func (mp *FileProvider) generatePath(referenceTime primitives.TimestampSeconds) 
 }
 
 func (mp *FileProvider) readUrl(path string) ([]byte, error) {
-	res, err := http.Get(path)
+	res, err := mp.client.Get(path)
+	defer res.Body.Close()
 
 	if err != nil || res == nil {
 		return nil, errors.Wrapf(err, "Failed http get of url %s", path)

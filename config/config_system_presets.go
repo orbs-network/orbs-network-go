@@ -19,8 +19,8 @@ func defaultProductionConfig() mutableNodeConfig {
 	cfg := emptyConfig()
 
 	cfg.SetUint32(GOSSIP_LISTEN_PORT, 4400)
-	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 10*time.Second)
-	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 50*(1<<20)) // 50 MB
+	cfg.SetDuration(MANAGEMENT_POLLING_INTERVAL, 30*time.Second)
+	cfg.SetUint32(MANAGEMENT_MAX_FILE_SIZE, 500*(1<<20)) // 50 MB
 	cfg.SetDuration(MANAGEMENT_CONSENSUS_GRACE_TIMEOUT, 10*time.Minute)
 	// for private consider changing this to 2^62 nanos (100 years) for PoS v2
 	cfg.SetDuration(COMMITTEE_GRACE_PERIOD, 12*time.Hour)
