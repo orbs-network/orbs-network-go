@@ -79,6 +79,9 @@ func (mp *FileProvider) generatePath(referenceTime primitives.TimestampSeconds) 
 
 func (mp *FileProvider) readUrl(path string) ([]byte, error) {
 	res, err := mp.client.Get(path)
+	if res != nil && res.Body != nil {
+		defer res.Body.Close()
+	}
 
 	if err != nil || res == nil {
 		return nil, errors.Wrapf(err, "Failed http get of url %s", path)
@@ -86,13 +89,7 @@ func (mp *FileProvider) readUrl(path string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "Failed http get response too big %d", res.ContentLength)
 	}
 
-	contents, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read http body")
-	}
-	defer res.Body.Close()
-
-	return contents, err
+	return ioutil.ReadAll(res.Body)
 }
 
 func (mp *FileProvider) readFile(filePath string) ([]byte, error) {
