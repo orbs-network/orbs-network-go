@@ -68,7 +68,7 @@ func NewNode(nodeConfig config.NodeConfig, logger log.Logger) *Node {
 		nodeLogger.Error("Cannot start node without a ManagementFilePath", log.Error(err))
 		panic(err)
 	} else {
-		managementProvider = managementAdapter.NewFileProvider(nodeConfig, nodeLogger)
+		managementProvider = managementAdapter.NewFileProvider(nodeConfig)
 	}
 
 	blockPersistence, err := filesystem.NewBlockPersistence(nodeConfig, nodeLogger, metricRegistry)

@@ -23,7 +23,7 @@ func TestManagementFileProvider_GeneratePath(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		const url = "x1"
 		cfg := newConfig(42, url)
-		fileProvider := NewFileProvider(cfg, parent.Logger)
+		fileProvider := NewFileProvider(cfg)
 		path := fileProvider.generatePath(0)
 		pathWithRef := fileProvider.generatePath(100)
 		require.Equal(t, url, path)
@@ -35,7 +35,7 @@ func TestManagementFileProvider_NoMatchVc(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		with.Context(func(ctx context.Context) {
 			cfg := newConfig(42, "")
-			fileProvider := NewFileProvider(cfg, parent.Logger)
+			fileProvider := NewFileProvider(cfg)
 			_, err := fileProvider.parseData([]byte(`{
 	"CurrentRefTime": 3, 
 	"PageStartRefTime": 0, 
@@ -55,7 +55,7 @@ func TestManagementFileProvider_BadCurrentInPage(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		with.Context(func(ctx context.Context) {
 			cfg := newConfig(42, "")
-			fileProvider := NewFileProvider(cfg, parent.Logger)
+			fileProvider := NewFileProvider(cfg)
 			_, err := fileProvider.parseData([]byte(`{
 	"CurrentRefTime": 3, 
 	"PageStartRefTime": 0, 
@@ -112,7 +112,7 @@ func TestManagementFileProvider_ReadFile(t *testing.T) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			topologyFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "good.json")
 			cfg := newConfig(42, topologyFilePath)
-			fileProvider := NewFileProvider(cfg, parent.Logger)
+			fileProvider := NewFileProvider(cfg)
 			expectFileProviderToReadCorrectly(t, ctx, fileProvider)
 		})
 	})
@@ -123,7 +123,7 @@ func TestManagementFileProvider_ReadUrl(t *testing.T) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
 			const url = "https://raw.githubusercontent.com/orbs-network/management-service/master/static-tests/management-vc-file.json"
 			cfg := newConfig(42, url)
-			fileProvider := NewFileProvider(cfg, parent.Logger)
+			fileProvider := NewFileProvider(cfg)
 			expectFileProviderToReadCorrectly(t, ctx, fileProvider)
 		})
 	})

@@ -16,13 +16,13 @@ import (
 	"github.com/orbs-network/orbs-network-go/services/management"
 	"github.com/orbs-network/orbs-spec/types/go/primitives"
 	"github.com/orbs-network/orbs-spec/types/go/services"
-	"github.com/orbs-network/scribe/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
 type FileConfig interface {
@@ -32,12 +32,15 @@ type FileConfig interface {
 }
 
 type FileProvider struct {
-	logger log.Logger
 	config FileConfig
+	client *http.Client
 }
 
-func NewFileProvider(config FileConfig, logger log.Logger) *FileProvider {
-	return &FileProvider{config: config, logger: logger}
+func NewFileProvider(config FileConfig) *FileProvider {
+	client := &http.Client{
+		Timeout: 45 * time.Second,
+	}
+	return &FileProvider{config: config, client:client}
 }
 
 func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.TimestampSeconds) (*management.VirtualChainManagementData, error) {
@@ -47,21 +50,18 @@ func (mp *FileProvider) Get(ctx context.Context, referenceTime primitives.Timest
 
 	if strings.HasPrefix(path, "http") {
 		if contents, err = mp.readUrl(path); err != nil {
-			mp.logger.Error("Provider url reading error", log.Error(err))
-			return nil, err
+			return nil, errors.Wrap(err, "Provider url reading error")
 		}
 	} else {
 		if contents, err = mp.readFile(path); err != nil {
-			mp.logger.Error("Provider path file reading error", log.Error(err))
-			return nil, err
+			return nil, errors.Wrap(err, "Provider path file reading error")
 		}
 	}
 
 	isHistoric := referenceTime != 0
 	managementData, parseErr := mp.parseData(contents, isHistoric)
 	if parseErr != nil {
-		mp.logger.Error("Provider file parsing error", log.Error(parseErr))
-		return nil, parseErr
+		return nil, errors.Wrap(err, "Provider file parsing error")
 	}
 
 	return managementData, nil
@@ -78,7 +78,10 @@ func (mp *FileProvider) generatePath(referenceTime primitives.TimestampSeconds) 
 }
 
 func (mp *FileProvider) readUrl(path string) ([]byte, error) {
-	res, err := http.Get(path)
+	res, err := mp.client.Get(path)
+	if res != nil && res.Body != nil {
+		defer res.Body.Close()
+	}
 
 	if err != nil || res == nil {
 		return nil, errors.Wrapf(err, "Failed http get of url %s", path)
