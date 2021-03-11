@@ -118,6 +118,20 @@ func TestManagementFileProvider_ReadFile(t *testing.T) {
 	})
 }
 
+func TestManagementFileProvider_ReadFileWithSizes(t *testing.T) {
+	with.Context(func(ctx context.Context) {
+		with.Logging(t, func(parent *with.LoggingHarness) {
+			topologyFilePath := filepath.Join(config.GetCurrentSourceFileDirPath(), "_data", "good_with_sizes.json")
+			cfg := newConfig(42, topologyFilePath)
+			fileProvider := NewFileProvider(cfg)
+			data, err := fileProvider.Get(ctx, 0)
+			require.NoError(t, err)
+			require.EqualValues(t, 2048, data.Subscriptions[0].StorageMaxSize)
+			require.EqualValues(t, 512, data.Subscriptions[0].StorageMaxKeys)
+		})
+	})
+}
+
 func TestManagementFileProvider_ReadUrl(t *testing.T) {
 	with.Context(func(ctx context.Context) {
 		with.Logging(t, func(parent *with.LoggingHarness) {
@@ -150,6 +164,18 @@ func TestManagementFileProvider_parseCommittee(t *testing.T) {
 	require.Contains(t, weightErr.Error(), "Weight of node")
 }
 
+func TestManagementFileProvider_parseSubscription(t *testing.T) {
+	sub, err := parseSubscription([]subscriptionEvent{{RefTime: 4, Data: subscription{Status: "active"} }} )
+	require.NoError(t, err)
+	require.EqualValues(t, management.SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT, sub[0].StorageMaxSize)
+	require.EqualValues(t, management.SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT, sub[0].StorageMaxKeys)
+
+	sub, err = parseSubscription([]subscriptionEvent{{RefTime: 5, Data: subscription{Status: "active", MaxKeys: 512, MaxSizeMB: 2048 } }} )
+	require.NoError(t, err)
+	require.EqualValues(t, 2048, sub[0].StorageMaxSize)
+	require.EqualValues(t, 512, sub[0].StorageMaxKeys)
+}
+
 func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp management.Provider) {
 	data, err := fp.Get(ctx, 0)
 	require.NoError(t, err)
@@ -159,15 +185,7 @@ func expectFileProviderToReadCorrectly(t *testing.T, ctx context.Context, fp man
 	requireTopologyToBeSameAsStatic(t, data.CurrentTopology)
 	require.Len(t, data.Committees, 3)
 	requireCommitteeToBeSameAsStatic(t, data.Committees)
-}
-
-func requireTopologyToBeSameAsStatic(t *testing.T, peers []*services.GossipPeer) {
-	var staticTopology []*services.GossipPeer
-	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), Endpoint: "192.168.199.2", Port: 4400})
-	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(), Endpoint: "192.168.199.3", Port: 4400})
-	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress(), Endpoint: "192.168.199.4", Port: 4400})
-	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(3).NodeAddress(), Endpoint: "192.168.199.5", Port: 4400})
-	require.ElementsMatch(t, staticTopology, peers)
+	requireSubscriptionToBeSameAsStatic(t, data.Subscriptions)
 }
 
 func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm) {
@@ -185,6 +203,25 @@ func requireCommitteeToBeSameAsStatic(t *testing.T, c []management.CommitteeTerm
 	require.ElementsMatch(t, committee, c[2].Members)
 	require.ElementsMatch(t, weights, c[2].Weights)
 }
+
+func requireSubscriptionToBeSameAsStatic(t *testing.T, subs []management.SubscriptionTerm) {
+	staticSubscription := []management.SubscriptionTerm{
+		{AsOfReference:1582613011, IsActive:true, StorageMaxKeys:management.SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT, StorageMaxSize:management.SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT},
+		{AsOfReference:1582615003, IsActive:true, StorageMaxKeys:management.SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT, StorageMaxSize:management.SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT},
+	}
+
+	require.ElementsMatch(t, staticSubscription, subs)
+}
+
+func requireTopologyToBeSameAsStatic(t *testing.T, peers []*services.GossipPeer) {
+	var staticTopology []*services.GossipPeer
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(0).NodeAddress(), Endpoint: "192.168.199.2", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(1).NodeAddress(), Endpoint: "192.168.199.3", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(2).NodeAddress(), Endpoint: "192.168.199.4", Port: 4400})
+	staticTopology = append(staticTopology, &services.GossipPeer{Address: testKeys.EcdsaSecp256K1KeyPairForTests(3).NodeAddress(), Endpoint: "192.168.199.5", Port: 4400})
+	require.ElementsMatch(t, staticTopology, peers)
+}
+
 
 type fconfig struct {
 	vcId primitives.VirtualChainId

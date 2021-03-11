@@ -35,7 +35,7 @@ func TestStaleManagementRef(t *testing.T) {
 			t.Log("set RefTime To Now")
 			now := time.Now()
 			refTime := primitives.TimestampSeconds(now.Unix() + 1)
-			err = network.committeeProvider.AddSubscription(refTime, true)
+			err = network.committeeProvider.AddSubscription(refTime, true, 10, 100)
 			require.NoError(t, err)
 
 			changedBlock, err2 := network.WaitForManagementChange(ctx, 0, refTime)

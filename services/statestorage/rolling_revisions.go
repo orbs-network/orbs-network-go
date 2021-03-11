@@ -44,6 +44,8 @@ type rollingRevisions struct {
 	currentMerkleRoot    primitives.Sha256
 	currentProposer      primitives.NodeAddress
 	currentRefTime       primitives.TimestampSeconds
+	currentNumKeys		 primitives.StorageKeys
+	currentSize			 uint64
 	prevRefTime          primitives.TimestampSeconds
 	persistedHeight      primitives.BlockHeight
 	persistedRoot        primitives.Sha256
@@ -101,10 +103,23 @@ func (ls *rollingRevisions) getCurrentProposerAddress() primitives.NodeAddress {
 	return ls.currentProposer
 }
 
+func (ls *rollingRevisions) getCurrentNumKeys() primitives.StorageKeys {
+	return ls.currentNumKeys
+}
+
+func (ls *rollingRevisions) getCurrentSize() primitives.StorageSizeMegabyte {
+	return primitives.StorageSizeMegabyte(ls.currentSize / 1048576)
+}
+
 func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primitives.TimestampNano, refTime primitives.TimestampSeconds, proposer primitives.NodeAddress, diff adapter.ChainState) error {
 	newRoot, err := ls.merkle.Update(ls.currentMerkleRoot, toMerkleInput(diff))
 	if err != nil {
 		return errors.Wrapf(err, "failed to updated merkle tree")
+	}
+
+	newNumKeys, newSize, err2 := ls.calcNewSizes(diff)
+	if err2 != nil {
+		return errors.Wrapf(err, "failed to read current storage sizes")
 	}
 
 	ls.revisions = append(ls.revisions, &revisionDiff{
@@ -122,6 +137,8 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	ls.currentRefTime = refTime
 	ls.currentProposer = proposer
 	ls.currentMerkleRoot = newRoot
+	ls.currentNumKeys = newNumKeys
+	ls.currentSize = newSize
 
 	ls.logger.Info("rollingRevisions received revision", logfields.BlockHeight(height))
 
@@ -129,6 +146,29 @@ func (ls *rollingRevisions) addRevision(height primitives.BlockHeight, ts primit
 	// TODO(v1) - consider blocking the maximum length of revisions - to prevent crashing in case of failed flushes
 
 	return ls.evictRevisions()
+}
+
+func (ls *rollingRevisions) calcNewSizes(diff adapter.ChainState) (primitives.StorageKeys, uint64, error) {
+	currStorageKeys := ls.currentNumKeys
+	currStorageSize := ls.currentSize
+
+	for contractName, contractState := range diff {
+		for key, value := range contractState {
+			currentSize, err:= ls.getRevisionRecordCurrentSize(contractName, key)
+			if err != nil {
+				return 0, 0, err
+			}
+			newSize := len(value)
+			if currentSize == 0 && newSize > 0 {
+				currStorageKeys++
+			} else if currentSize >0 && newSize == 0 {
+				currStorageKeys--
+			}
+			currStorageSize = currStorageSize - uint64(currentSize) + uint64(newSize)
+		}
+	}
+
+	return currStorageKeys, currStorageSize, nil
 }
 
 func toMerkleInput(diff adapter.ChainState) merkle.TrieDiffs {
@@ -196,6 +236,23 @@ func (ls *rollingRevisions) getRevisionHash(height primitives.BlockHeight) (prim
 	}
 
 	return ls.persistedRoot, nil
+}
+
+func (ls *rollingRevisions) getRevisionRecordCurrentSize(contract primitives.ContractName, key string) (int, error) {
+	for i := len(ls.revisions) - 1; i >= 0; i-- {
+		if record, exists := ls.revisions[i].diff[contract][key]; exists {
+			return len(record), nil
+		}
+	}
+
+	record, exists, err := ls.persist.Read(contract, key)
+	if err != nil {
+		return 0, err
+	}
+	if !exists {
+		return 0, nil
+	}
+	return len(record), nil
 }
 
 func isZeroValue(value []byte) bool {

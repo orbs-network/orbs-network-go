@@ -26,7 +26,7 @@ func TestWriteAtHeight(t *testing.T) {
 		persistenceMock.
 			When("Read", primitives.ContractName("c"), "k1").
 			Return((*protocol.StateRecord)(nil), false, nil).
-			Times(1)
+			Times(2)
 
 		d.write(1, "c", "k1", "v1")
 
@@ -48,12 +48,46 @@ func TestWriteAtHeight(t *testing.T) {
 	})
 }
 
+func TestCountStorage(t *testing.T) {
+	with.Logging(t, func(parent *with.LoggingHarness) {
+		persistenceMock := statePersistenceMockWithWriteAnyNoErrors(0)
+		d := newDriver(parent.Logger, persistenceMock, 2, nil)
+		persistenceMock.
+			When("Read", primitives.ContractName("c"), "k1").
+			Return((*protocol.StateRecord)(nil), false, nil).
+			Times(1)
+		persistenceMock.
+			When("Read", primitives.ContractName("c"), "k2").
+			Return((*protocol.StateRecord)(nil), false, nil).
+			Times(1)
+		d.write(1, "c", "k1", "v1")
+
+		require.EqualValues(t, 1, d.inner.getCurrentNumKeys())
+		require.EqualValues(t, 0, d.inner.getCurrentSize())
+
+		aMB := make([]byte, 1024*1024)
+		d.write(2, "c", "k2", string(aMB))
+
+		require.EqualValues(t, 2, d.inner.getCurrentNumKeys())
+		require.EqualValues(t, 1, d.inner.getCurrentSize())
+
+		d.write(3, "c", "k2", "")
+
+		require.EqualValues(t, 1, d.inner.getCurrentNumKeys())
+		require.EqualValues(t, 0, d.inner.getCurrentSize())
+	})
+}
+
 func TestNoLayers(t *testing.T) {
 	with.Logging(t, func(parent *with.LoggingHarness) {
 		persistenceMock := &StatePersistenceMock{}
 		persistenceMock.
 			When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
 			Return(nil).
+			Times(2)
+		persistenceMock.
+			When("Read", primitives.ContractName("c"), "k").
+			Return((*protocol.StateRecord)(nil), false, nil).
 			Times(2)
 		d := newDriver(parent.Logger, persistenceMock, 0, nil)
 		d.write(1, "c", "k", "v1")
@@ -105,6 +139,10 @@ func TestMergeToPersistence(t *testing.T) {
 				return nil
 			}).
 			Times(2)
+		persistenceMock.
+			When("Read", primitives.ContractName("c"), "k").
+			Return((*protocol.StateRecord)(nil), false, nil).
+			Times(1)
 		d := newDriver(parent.Logger, persistenceMock, 2, nil)
 		d.writeFull(1, 1, 1, []byte{0x01}, "c", "k", "v1")
 		d.writeFull(2, 2, 2, []byte{0x01}, "c", "k", "v2")
@@ -232,6 +270,9 @@ func statePersistenceMockWithWriteAnyNoErrors(writeTimes int) *StatePersistenceM
 		When("Write", mock.Any, mock.Any, mock.Any, mock.Any, mock.Any, mock.Any, mock.Any).
 		Return(nil).
 		Times(writeTimes)
+	persistenceMock.
+		When("Read", mock.Any, mock.Any).
+		Return((*protocol.StateRecord)(nil), false, nil)
 	return persistenceMock
 }
 

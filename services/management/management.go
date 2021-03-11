@@ -33,9 +33,14 @@ type CommitteeTerm struct {
 	Weights		  []primitives.Weight
 }
 
+const SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT = primitives.StorageKeys(1000000)
+const SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT = primitives.StorageSizeMegabyte(500)
+
 type SubscriptionTerm struct {
-	AsOfReference primitives.TimestampSeconds
-	IsActive      bool
+	AsOfReference  primitives.TimestampSeconds
+	IsActive       bool
+	StorageMaxKeys primitives.StorageKeys
+	StorageMaxSize primitives.StorageSizeMegabyte
 }
 
 type ProtocolVersionTerm struct {
@@ -238,8 +243,11 @@ func (s *service) GetSubscriptionStatus(ctx context.Context, input *services.Get
 		return nil, err
 	}
 
+	subscription := getSubscriptionStatus(input.Reference, data.Subscriptions)
 	return &services.GetSubscriptionStatusOutput{
-		SubscriptionStatusIsActive: getSubscriptionStatus(input.Reference, data.Subscriptions).IsActive,
+		SubscriptionStatusIsActive: subscription.IsActive,
+		SubscriptionMaxKeys: subscription.StorageMaxKeys,
+		SubscriptionMaxSize: subscription.StorageMaxSize,
 	}, nil
 }
 

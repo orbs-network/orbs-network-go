@@ -159,6 +159,8 @@ func (s *service) GetLastCommittedBlockInfo(ctx context.Context, input *services
 		CurrentReferenceTime: s.revisions.getCurrentReferenceTime(),
 		PrevReferenceTime:    s.revisions.getPrevReferenceTime(),
 		BlockProposerAddress: s.revisions.getCurrentProposerAddress(),
+		CurrentNumKeys: 	  s.revisions.getCurrentNumKeys(),
+		CurrentSize: 		  s.revisions.getCurrentSize(),
 	}
 	s.logger.Info("state storage block height requested", logfields.BlockHeight(result.BlockHeight))
 	return result, nil

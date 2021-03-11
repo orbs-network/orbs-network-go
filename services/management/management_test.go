@@ -40,7 +40,7 @@ func TestManagement_getCurrentReference_NoRef(t *testing.T) {
 		data: &VirtualChainManagementData{
 			CurrentReference:   0,
 			Committees:         []CommitteeTerm{{now-5000, nil, nil}, {now+5000, nil, nil}},
-			Subscriptions:      []SubscriptionTerm{{now-40000, false}, {now-4000, false}, {now+100, false}},
+			Subscriptions:      []SubscriptionTerm{{now-40000, false, 0, 0}, {now-4000, false, 0, 0}, {now+100, false, 0, 0}},
 			ProtocolVersions:   []ProtocolVersionTerm{{now-200, 5} /*unreachable*/, {now-4500, 5}, {now+1000, 5}},
 		},
 	}

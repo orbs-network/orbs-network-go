@@ -131,6 +131,8 @@ type subscription struct {
 	Tier         string
 	RolloutGroup string
 	IdentityType uint
+	MaxKeys      uint64
+	MaxSizeMB    uint64
 }
 
 type subscriptionEvent struct {
@@ -276,7 +278,15 @@ func parseSubscription(subscriptionEvents []subscriptionEvent) ([]management.Sub
 		if event.Data.Status == "active" {
 			isActive = true
 		}
-		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive: isActive})
+		maxSize := management.SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT
+		if event.Data.MaxSizeMB > 0 {
+			maxSize = primitives.StorageSizeMegabyte(event.Data.MaxSizeMB)
+		}
+		maxKeys := management.SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT
+		if event.Data.MaxKeys > 0 {
+			maxKeys = primitives.StorageKeys(event.Data.MaxKeys)
+		}
+		subscriptionPeriods = append(subscriptionPeriods, management.SubscriptionTerm{AsOfReference: primitives.TimestampSeconds(event.RefTime), IsActive: isActive, StorageMaxSize:maxSize, StorageMaxKeys:maxKeys})
 	}
 
 	return subscriptionPeriods, nil
