@@ -32,7 +32,7 @@ require (
 	github.com/orbs-network/membuffers v0.4.0
 	github.com/orbs-network/orbs-client-sdk-go v0.19.0
 	github.com/orbs-network/orbs-contract-sdk v1.8.0
-	github.com/orbs-network/orbs-spec v0.0.0-20201111202205-46827c8fe793
+	github.com/orbs-network/orbs-spec v0.0.0-20210311094831-b6021fdb93ae
 	github.com/orbs-network/scribe v0.2.3
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1
@@ -54,5 +54,3 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 )
-
-replace github.com/orbs-network/orbs-spec => ../orbs-spec

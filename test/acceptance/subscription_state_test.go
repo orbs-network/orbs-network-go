@@ -78,9 +78,9 @@ func TestSubscription_WhenSubscriptionNumKeysFullCreateEmptyBlocks(t *testing.T)
 			require.NoError(t, err)
 			require.EqualValues(t, 2, txs.Header.NumSignedTransactions(), "should have 2 tx : transfer + trigger")
 
-			t.Log("make num keys 5")
+			t.Log("make num keys 2")
 			newRefTime := GenerateNewManagementReferenceTime(0)
-			setSubscriptionSizeAndWait(t, ctx, network,  newRefTime, 5, 100)
+			setSubscriptionSizeAndWait(t, ctx, network,  newRefTime, 2, 100)
 
 			response, _ = token.Transfer(ctx, 0, 17, 5, 7)
 			require.Equal(t, response.TransactionStatus(), protocol.TRANSACTION_STATUS_REJECTED_GLOBAL_PRE_ORDER)
