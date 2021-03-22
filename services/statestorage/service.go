@@ -27,16 +27,20 @@ import (
 var LogTag = log.Service("state-storage")
 
 type metrics struct {
-	readKeys    *metric.Rate
-	writeKeys   *metric.Rate
-	blockHeight *metric.Gauge
+	readKeys       *metric.Rate
+	writeKeys      *metric.Rate
+	blockHeight    *metric.Gauge
+	currentNumKeys *metric.Gauge
+	currentSizeMB  *metric.Gauge
 }
 
 func newMetrics(m metric.Factory) *metrics {
 	return &metrics{
-		readKeys:    m.NewRate("StateStorage.ReadRequestedKeys"),
-		writeKeys:   m.NewRate("StateStorage.WriteRequestedKeys"),
-		blockHeight: m.NewGauge("StateStorage.BlockHeight"),
+		readKeys:       m.NewRate("StateStorage.ReadRequestedKeys"),
+		writeKeys:      m.NewRate("StateStorage.WriteRequestedKeys"),
+		blockHeight:    m.NewGauge("StateStorage.BlockHeight"),
+		currentNumKeys: m.NewGaugeWithValue("StateStorage.CurrentNumKeys", 0),
+		currentSizeMB:  m.NewGaugeWithValue("StateStorage.CurrentSizeMB", 0),
 	}
 }
 
@@ -103,6 +107,8 @@ func (s *service) CommitStateDiff(ctx context.Context, input *services.CommitSta
 	s.blockTracker.IncrementTo(commitBlockHeight)
 	s.heightReporter.IncrementTo(commitBlockHeight)
 	s.metrics.blockHeight.Update(int64(commitBlockHeight))
+	s.metrics.currentNumKeys.Update(int64(s.revisions.getCurrentNumKeys()))
+	s.metrics.currentSizeMB.Update(int64(s.revisions.getCurrentSize()))
 
 	return &services.CommitStateDiffOutput{NextDesiredBlockHeight: commitBlockHeight + 1}, nil
 }
