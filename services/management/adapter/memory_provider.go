@@ -24,24 +24,24 @@ type MemoryProvider struct {
 	logger log.Logger
 
 	sync.RWMutex
-	currentReference      primitives.TimestampSeconds
-	genesisReference      primitives.TimestampSeconds
-	topology              []*services.GossipPeer
-	committees            []management.CommitteeTerm
-	protocolVersions      []management.ProtocolVersionTerm
-	isSubscriptionActives []management.SubscriptionTerm
+	currentReference primitives.TimestampSeconds
+	genesisReference primitives.TimestampSeconds
+	topology         []*services.GossipPeer
+	committees       []management.CommitteeTerm
+	protocolVersions []management.ProtocolVersionTerm
+	subscriptions    []management.SubscriptionTerm
 }
 
 // order of committee is important so make sure all calls from all nodes in a single network have same order !!
 func NewMemoryProvider(committee []primitives.NodeAddress, topology []*services.GossipPeer, logger log.Logger) *MemoryProvider {
 	return &MemoryProvider{
-		logger:                logger,
-		currentReference:      primitives.TimestampSeconds(time.Now().Unix()),
-		genesisReference:      primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
-		topology:              topology,
-		committees:            []management.CommitteeTerm{{AsOfReference: 0, Members: committee, Weights: generateWeightsForCommittee(committee)}},
-		protocolVersions:      []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION}},
-		isSubscriptionActives: []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true}},
+		logger:           logger,
+		currentReference: primitives.TimestampSeconds(time.Now().Unix()),
+		genesisReference: primitives.TimestampSeconds(time.Now().Unix() - DEFAULT_GENESIS_ONSET),
+		topology:         topology,
+		committees:       []management.CommitteeTerm{{AsOfReference: 0, Members: committee, Weights: generateWeightsForCommittee(committee)}},
+		protocolVersions: []management.ProtocolVersionTerm{{AsOfReference: 0, Version: config.MAXIMAL_CONSENSUS_BLOCK_PROTOCOL_VERSION}},
+		subscriptions:    []management.SubscriptionTerm{{AsOfReference: 0, IsActive: true, StorageMaxKeys: management.SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT, StorageMaxSize: management.SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT}},
 	}
 }
 
@@ -56,7 +56,7 @@ func (mp *MemoryProvider) Get(ctx context.Context, referenceTime primitives.Time
 		EndPageReference:   mp.currentReference,
 		CurrentTopology:    mp.topology,
 		Committees:         mp.committees,
-		Subscriptions:      mp.isSubscriptionActives,
+		Subscriptions:      mp.subscriptions,
 		ProtocolVersions:   mp.protocolVersions,
 	}, nil
 }
@@ -83,15 +83,15 @@ func (mp *MemoryProvider) AddCommittee(reference primitives.TimestampSeconds, co
 	return nil
 }
 
-func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds, isActive bool) error {
+func (mp *MemoryProvider) AddSubscription(reference primitives.TimestampSeconds, isActive bool, maxKeys primitives.StorageKeys, maxSize primitives.StorageSizeMegabyte) error {
 	mp.Lock()
 	defer mp.Unlock()
 
-	if mp.committees[len(mp.isSubscriptionActives)-1].AsOfReference > reference {
-		return errors.Errorf("new subscription cannot have an 'asOf' reference smaller than %d (and not %d)", mp.isSubscriptionActives[len(mp.isSubscriptionActives)-1].AsOfReference, reference)
+	if mp.committees[len(mp.subscriptions)-1].AsOfReference > reference {
+		return errors.Errorf("new subscription cannot have an 'asOf' reference smaller than %d (and not %d)", mp.subscriptions[len(mp.subscriptions)-1].AsOfReference, reference)
 	}
 
-	mp.isSubscriptionActives = append(mp.isSubscriptionActives, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive})
+	mp.subscriptions = append(mp.subscriptions, management.SubscriptionTerm{AsOfReference: reference, IsActive: isActive, StorageMaxKeys: maxKeys, StorageMaxSize:maxSize})
 	mp.currentReference = reference
 	return nil
 }

@@ -58,7 +58,17 @@ func newHarness(logger log.Logger) *harness {
 	management := &services.MockManagement{}
 	management.When("GetCommittee", mock.Any, &services.GetCommitteeInput{Reference: 800}).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[1:5]}, nil)
 	management.When("GetCommittee", mock.Any, mock.Any).Return(&services.GetCommitteeOutput{Members: testKeys.NodeAddressesForTests()[:4]}, nil)
-	management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(&services.GetSubscriptionStatusOutput{SubscriptionStatusIsActive: true}, nil)
+	management.When("GetSubscriptionStatus", mock.Any, mock.Any).Return(
+		&services.GetSubscriptionStatusOutput{
+			SubscriptionStatusIsActive: true,
+			SubscriptionMaxKeys: 1000,
+			SubscriptionMaxSize: 1000,
+		}, nil)
+	stateStorage.When("GetLastCommittedBlockInfo", mock.Any, mock.Any).Return(
+		&services.GetLastCommittedBlockInfoOutput{
+			CurrentNumKeys:       10,
+			CurrentSize:          10,
+		}, nil)
 
 	service := virtualmachine.NewVirtualMachine(stateStorage, processorsForService, crosschainConnectorsForService, management, cfg, logger)
 

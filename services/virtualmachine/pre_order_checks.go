@@ -45,6 +45,21 @@ func (s *service) verifySubscription(ctx context.Context, reference primitives.T
 		s.logger.Error("management.GetSubscriptionStatus should not return error", log.Error(err))
 		return false
 	}
+	if res.SubscriptionStatusIsActive {
+		lastCommittedBlock, err := s.stateStorage.GetLastCommittedBlockInfo(ctx, &services.GetLastCommittedBlockInfoInput{})
+		if err != nil {
+			s.logger.Error("stateStorage.GetLastCommittedBlockInfo should not return error", log.Error(err))
+			return false
+		}
+		if lastCommittedBlock.CurrentNumKeys > res.SubscriptionMaxKeys {
+			s.logger.Error("current VC has reached the limit of storage keys", log.Uint64("Current Storage Num Keys", uint64(lastCommittedBlock.CurrentNumKeys)), log.Uint64("Subscription Max Keys", uint64(res.SubscriptionMaxKeys)))
+			return false
+		}
+		if lastCommittedBlock.CurrentSize > res.SubscriptionMaxSize {
+			s.logger.Error("current VC has reached the limit of storage size", log.Uint64("Current Storage Size (MB)", uint64(lastCommittedBlock.CurrentSize)), log.Uint64("Subscription Max Size (MB)", uint64(res.SubscriptionMaxSize)))
+			return false
+		}
+	}
 	return res.SubscriptionStatusIsActive
 }
 
