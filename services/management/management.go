@@ -33,7 +33,7 @@ type CommitteeTerm struct {
 	Weights		  []primitives.Weight
 }
 
-const SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT = primitives.StorageKeys(4000000)
+const SUBSCRIPTION_STORAGE_MAK_KEYS_DEFAULT = primitives.StorageKeys(1000000)
 const SUBSCRIPTION_STORAGE_MAK_SIZE_DEFAULT = primitives.StorageSizeMegabyte(1024)
 
 type SubscriptionTerm struct {
