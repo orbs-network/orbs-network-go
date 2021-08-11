@@ -94,7 +94,6 @@ jobs:
     steps:
       - checkout
       - run: ./docker/build/build-docker-node.sh
-      - run: ./.circleci/release-node-to-ecr.sh
       - run: ./.circleci/release-node-to-staging.sh
 
   circleci_scripts:
@@ -131,7 +130,7 @@ jobs:
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
-      - run: ./docker/test/import-node-ecr.sh
+      - run: ./docker/test/import-node-staging.sh
       # Logs here belong to root
       - run: sudo rm -rf _logs
       - run:
