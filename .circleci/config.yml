@@ -111,7 +111,7 @@ jobs:
     steps:
       - checkout
       - run: ./docker/build/build-docker-gamma.sh
-      - run: ./.circleci/release-gamma-to-ecr.sh
+      - run: ./.circleci/release-gamma-to-staging.sh
 
   release-gamma:
     machine:
@@ -155,7 +155,7 @@ jobs:
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
-      - run: ./docker/test/import-gamma-ecr.sh
+      - run: ./docker/test/import-gamma-staging.sh
       - run: ./docker/test/gamma-e2e.sh
       - store_test_results:
           path: _reports
