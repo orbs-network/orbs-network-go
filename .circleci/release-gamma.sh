@@ -13,7 +13,9 @@ docker login -u $DOCKER_HUB_LOGIN -p $DOCKER_HUB_PASSWORD
 # we are only releasing gamma
 # node releases are manual
 
-docker pull $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh)
+docker pull orbsnetworkstaging/gamma:$(./docker/hash.sh)
 
-docker tag $GAMMA_DOCKER_IMAGE:$(./docker/hash.sh) orbsnetwork/gamma:$VERSION
+docker tag orbsnetworkstaging/gamma:$(./docker/hash.sh) orbsnetwork/gamma:$VERSION
+
+# Push a new official Gamma to the main Orbs DockerHub account
 docker push orbsnetwork/gamma:$VERSION
