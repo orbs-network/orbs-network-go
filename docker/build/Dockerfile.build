@@ -2,9 +2,7 @@ FROM golang:1.12.9
 
 WORKDIR /src
 
-# RUN apt update ; apt-get install apt-transport-https ca-certificates -y ; update-ca-certificates
 RUN apt update && apt install ca-certificates libgnutls30 -y
-
 
 RUN apt-get install -y git bash libc6-dev
 
