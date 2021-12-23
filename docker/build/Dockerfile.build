@@ -2,7 +2,7 @@ FROM golang:1.12.9
 
 WORKDIR /src
 
-RUN apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
+RUN apt-get install apt-transport-https ca-certificates -y ; update-ca-certificates
 
 RUN apt-get install -y git bash libc6-dev
 
