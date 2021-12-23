@@ -2,6 +2,8 @@ FROM golang:1.12.9
 
 WORKDIR /src
 
+RUN sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
+
 RUN apt-get install -y git bash libc6-dev
 
 ADD ./go.* /src/
