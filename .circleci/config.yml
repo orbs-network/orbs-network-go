@@ -5,8 +5,8 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: large
     steps:
+      - go get -u github.com/orbs-network/go-junit-report
       - checkout
-      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.sh
           no_output_timeout: 15m
