@@ -2,10 +2,9 @@ version: 2
 jobs:
   tests:
     docker:
-      - image: circleci/golang:1.12.9
+      - image: circleci/golang:1.15
     resource_class: large
     steps:
-      - run: go get -u
       - checkout
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
