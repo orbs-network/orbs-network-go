@@ -2,9 +2,10 @@ version: 2
 jobs:
   tests:
     docker:
-      - image: circleci/golang:1.15
+      - image: circleci/golang:1.12.9
     resource_class: large
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
       - run: go get -u github.com/orbs-network/go-junit-report
       - run:
