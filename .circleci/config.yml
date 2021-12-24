@@ -131,9 +131,13 @@ jobs:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
     steps:
+      - run: |
+	  sudo apt update
+          # sudo apt install --only-upgrade openssl
+          sudo apt install --only-upgrade ca-certificates
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-go.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/import-node-staging.sh
@@ -157,8 +161,8 @@ jobs:
       docker_layer_caching: true
     steps:
       - checkout
-      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-go.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/import-gamma-staging.sh
