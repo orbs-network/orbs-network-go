@@ -25,8 +25,9 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: large
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.races.sh
           no_output_timeout: 25m
@@ -44,8 +45,9 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: xlarge
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./test.goroutine-leaks.sh
       - run: ./test.memory-leaks.sh
 
@@ -55,8 +57,9 @@ jobs:
     parallelism: 6
     resource_class: xlarge
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
@@ -75,8 +78,9 @@ jobs:
     parallelism: 6
     resource_class: xlarge
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./.circleci/nightly.sh
           no_output_timeout: 300m
@@ -94,8 +98,9 @@ jobs:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./docker/build/build-docker-node.sh
       - run: ./.circleci/release-node-to-staging.sh
 
@@ -112,8 +117,9 @@ jobs:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./docker/build/build-docker-gamma.sh
       - run: ./.circleci/release-gamma-to-staging.sh
 
@@ -129,8 +135,9 @@ jobs:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/install-docker-compose.sh
@@ -154,8 +161,9 @@ jobs:
       image: ubuntu-1604:201903-01
       docker_layer_caching: true
     steps:
-      - run: go get -u github.com/orbs-network/go-junit-report
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-go.sh
       - run: ./.circleci/install-node.sh #TODO is this really needed?
       - run: ./.circleci/install-docker-compose.sh
@@ -171,8 +179,9 @@ jobs:
 #    machine:
 #      image: ubuntu-1604:201903-01
 #    steps:
-#      - run: go get -u github.com/orbs-network/go-junit-report
+#      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
 #      - checkout
+#      - run: go get -u github.com/orbs-network/go-junit-report
 #      - run: ./.circleci/install-go.sh
 #      - run: ./docker/test/ganache-related-test.sh
 #      - store_artifacts:
