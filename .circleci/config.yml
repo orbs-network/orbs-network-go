@@ -132,8 +132,8 @@ jobs:
       docker_layer_caching: true
     steps:
       - run: |
-	  sudo apt update
-          # sudo apt install --only-upgrade openssl
+          sudo apt update
+          sudo apt install --only-upgrade openssl
           sudo apt install --only-upgrade ca-certificates
       - checkout
       - run: ./.circleci/install-go.sh
