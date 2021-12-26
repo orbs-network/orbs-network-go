@@ -154,9 +154,10 @@ jobs:
 
   gamma_e2e:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-01
       docker_layer_caching: true
     steps:
+      - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
       - checkout
       - run: ./.circleci/install-go.sh
       - run: go get -u github.com/orbs-network/go-junit-report
@@ -172,9 +173,9 @@ jobs:
 # TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
 #  ganache_related_tests:
 #    machine:
-#      image: ubuntu-1604:201903-01
+#      image: ubuntu-2004:202111-01
 #    steps:
-#      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
+#      - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
 #      - checkout
 #      - run: go get -u github.com/orbs-network/go-junit-report
 #      - run: ./.circleci/install-go.sh
