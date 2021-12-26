@@ -128,7 +128,7 @@ jobs:
 
   node_e2e:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-01
       docker_layer_caching: true
     steps:
       - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
