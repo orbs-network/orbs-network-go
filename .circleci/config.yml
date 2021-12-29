@@ -5,8 +5,9 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: large
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
-      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.sh
           no_output_timeout: 15m
@@ -24,8 +25,9 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: large
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
-      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.races.sh
           no_output_timeout: 25m
@@ -43,8 +45,9 @@ jobs:
       - image: circleci/golang:1.12.9
     resource_class: xlarge
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
-      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./test.goroutine-leaks.sh
       - run: ./test.memory-leaks.sh
 
@@ -54,8 +57,9 @@ jobs:
     parallelism: 6
     resource_class: xlarge
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
-      - run: ./.circleci/retry.sh 5 go get -u github.com/orbs-network/go-junit-report
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./test.flakiness.sh
           no_output_timeout: 25m
@@ -74,7 +78,9 @@ jobs:
     parallelism: 6
     resource_class: xlarge
     steps:
+      - run: sudo apt update && sudo apt install ca-certificates libgnutls30 -y
       - checkout
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run:
           command: ./.circleci/nightly.sh
           no_output_timeout: 300m
@@ -122,13 +128,14 @@ jobs:
 
   node_e2e:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-01
       docker_layer_caching: true
     steps:
+      - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
       - checkout
       - run: ./.circleci/install-go.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-node.sh #TODO is this really needed?
-      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/import-node-staging.sh
       # Logs here belong to root
@@ -147,13 +154,14 @@ jobs:
 
   gamma_e2e:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202111-01
       docker_layer_caching: true
     steps:
+      - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
       - checkout
       - run: ./.circleci/install-go.sh
+      - run: go get -u github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-node.sh #TODO is this really needed?
-      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
       - run: ./.circleci/install-docker-compose.sh
       - run: ./docker/test/import-gamma-staging.sh
       - run: ./docker/test/gamma-e2e.sh
@@ -165,11 +173,12 @@ jobs:
 # TODO re-enable if Ethereum access (with refTime based finality) is restored to test it
 #  ganache_related_tests:
 #    machine:
-#      image: ubuntu-1604:201903-01
+#      image: ubuntu-2004:202111-01
 #    steps:
+#      - run: sudo apt update ; sudo apt-get install apt-transport-https ca-certificates -y ; sudo update-ca-certificates
 #      - checkout
+#      - run: go get -u github.com/orbs-network/go-junit-report
 #      - run: ./.circleci/install-go.sh
-#      - run: ./.circleci/retry.sh 5 go get github.com/orbs-network/go-junit-report
 #      - run: ./docker/test/ganache-related-test.sh
 #      - store_artifacts:
 #          path: _out
