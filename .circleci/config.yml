@@ -243,14 +243,3 @@ workflows:
               only: /^v.*/
             branches:
               only: master
-
-  nightly:
-    triggers:
-      - schedule:
-          cron: "0 23 * * *"
-          filters:
-            branches:
-              only:
-                - master
-    jobs:
-      - nightly
