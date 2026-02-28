@@ -58,9 +58,8 @@ func TestNonLeaderDeploysNativeContract(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping compilation of contracts in short mode")
 	}
-
-	t.Run("Benchmark", testDeployNativeContractWithConfig(""))
-	t.Run("LeanHelix", testDeployNativeContractWithConfig(fmt.Sprintf(`{"active-consensus-algo":%d}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX)))
+	t.Run("Benchmark", testDeployNativeContractWithConfig(fmt.Sprintf(`{"processor-perform-warm-up-compilation":%t}`, true)))
+	t.Run("LeanHelix", testDeployNativeContractWithConfig(fmt.Sprintf(`{"active-consensus-algo":%d, "processor-perform-warm-up-compilation":%t}`, consensus.CONSENSUS_ALGO_TYPE_LEAN_HELIX, true)))
 }
 
 func TestDeployNativeContractFailsWhenUsingSystemContractName(t *testing.T) {
